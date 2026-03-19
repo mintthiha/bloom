@@ -7,13 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccountType {
+  CHEQUING
+  SAVINGS
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER_OUT
+  TRANSFER_IN
+}
+
 model Account {
-  id        String   @id @default(cuid())
-  ownerName String
-  balance   Float    @default(0)
-  frozen    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String      @id @default(cuid())
+  ownerName   String
+  accountType AccountType @default(CHEQUING)
+  balance     Float       @default(0)
+  frozen      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
@@ -24,6 +37,7 @@ model Transaction {
   type         TransactionType
   amount       Float
   balanceAfter Float
+  description  String?
   createdAt    DateTime        @default(now())
 
   fromAccountId String?
@@ -31,11 +45,4 @@ model Transaction {
 
   toAccountId String?
   toAccount   Account? @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
-}
-
-enum TransactionType {
-  DEPOSIT
-  WITHDRAWAL
-  TRANSFER_OUT
-  TRANSFER_IN
 }

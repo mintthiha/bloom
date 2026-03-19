@@ -14,6 +14,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [op, setOp] = useState<Op>("deposit");
   const [amount, setAmount] = useState("");
   const [toId, setToId] = useState("");
+  const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [opError, setOpError] = useState<string | null>(null);
   const [opSuccess, setOpSuccess] = useState<string | null>(null);
@@ -39,16 +40,18 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) { setOpError("Enter a valid positive amount"); return; }
     setSubmitting(true);
+    const desc = description.trim() || undefined;
     try {
-      if (op === "deposit")  await api.deposit(id, amt);
-      if (op === "withdraw") await api.withdraw(id, amt);
+      if (op === "deposit")  await api.deposit(id, amt, desc);
+      if (op === "withdraw") await api.withdraw(id, amt, desc);
       if (op === "transfer") {
         if (!toId.trim()) { setOpError("Destination account ID required"); setSubmitting(false); return; }
-        await api.transfer(id, toId.trim(), amt);
+        await api.transfer(id, toId.trim(), amt, desc);
       }
       setOpSuccess(`${op.charAt(0).toUpperCase() + op.slice(1)} successful`);
       setAmount("");
       setToId("");
+      setDescription("");
       await refresh();
     } catch (err) {
       setOpError(err instanceof Error ? err.message : "Operation failed");
@@ -57,154 +60,249 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  function fmt(n: number) {
-    return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
-  }
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
 
-  function txnLabel(t: Transaction) {
+  function txnMeta(t: Transaction): { label: string; color: string; sign: string; icon: string } {
     switch (t.type) {
-      case "DEPOSIT":      return { label: "Deposit",        color: "text-green-400",  sign: "+" };
-      case "WITHDRAWAL":   return { label: "Withdrawal",     color: "text-red-400",    sign: "−" };
-      case "TRANSFER_OUT": return { label: "Transfer sent",  color: "text-orange-400", sign: "−" };
-      case "TRANSFER_IN":  return { label: "Transfer recv.", color: "text-green-400",  sign: "+" };
+      case "DEPOSIT":      return { label: "Deposit",       color: "#22c55e",  sign: "+", icon: "↓" };
+      case "WITHDRAWAL":   return { label: "Withdrawal",    color: "#f87171",  sign: "−", icon: "↑" };
+      case "TRANSFER_OUT": return { label: "Transfer out",  color: "#fb923c",  sign: "−", icon: "→" };
+      case "TRANSFER_IN":  return { label: "Transfer in",   color: "#22c55e",  sign: "+", icon: "←" };
     }
   }
 
+  const inputStyle = {
+    width: '100%',
+    background: 'var(--surface-2)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    fontSize: '14px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    fontFamily: 'inherit',
+  };
+
   if (loading) return (
-    <div className="max-w-3xl mx-auto px-6 py-12 space-y-4">
-      <div className="skeleton h-6 w-32" />
-      <div className="skeleton h-20" />
-      <div className="skeleton h-40" />
+    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="skeleton" style={{ height: '24px', width: '120px' }} />
+      <div className="skeleton" style={{ height: '100px' }} />
+      <div className="skeleton" style={{ height: '200px' }} />
     </div>
   );
 
   if (error) return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      <p className="text-red-400 num text-sm">{error}</p>
-      <Link href="/" className="text-amber-500 text-sm mt-4 inline-block hover:underline">← Back</Link>
+    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
+      <p className="num" style={{ color: '#f87171', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
+      <Link href="/" style={{ color: '#f59e0b', fontSize: '14px' }}>← Back to accounts</Link>
     </div>
   );
 
   if (!account) return null;
 
+  const isSavings = account.accountType === "SAVINGS";
+  const accentColor = isSavings ? "#22c55e" : "#f59e0b";
+
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      <Link href="/" className="text-[#6b6b6b] text-xs num tracking-widest uppercase hover:text-amber-500 transition-colors fade-up inline-flex items-center gap-1 mb-8">
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
+
+      {/* Back */}
+      <Link href="/" className="fade-up" style={{
+        display: 'inline-flex', alignItems: 'center', gap: '6px',
+        fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em',
+        color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '32px',
+        transition: 'color 0.15s',
+      }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#f59e0b')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+      >
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        All Accounts
+        Accounts
       </Link>
 
-      <div className="border border-[#1e1e1e] rounded-lg p-6 mb-6 fade-up fade-up-1">
-        <div className="flex items-start justify-between">
+      {/* Account card */}
+      <div className="fade-up fade-up-1" style={{
+        background: 'var(--surface-1)', border: '1px solid var(--border)',
+        borderRadius: '16px', padding: '28px', marginBottom: '16px',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Decorative glow */}
+        <div style={{
+          position: 'absolute', top: '-40px', right: '-40px',
+          width: '160px', height: '160px', borderRadius: '50%',
+          background: `${accentColor}10`, filter: 'blur(40px)', pointerEvents: 'none',
+        }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-extrabold">{account.ownerName}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+              <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.3px' }}>{account.ownerName}</h1>
+              <span style={{
+                fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+                padding: '3px 8px', borderRadius: '5px',
+                background: `${accentColor}20`, color: accentColor,
+              }}>
+                {account.accountType}
+              </span>
               {account.frozen && (
-                <span className="text-xs num text-blue-400 border border-blue-400/30 px-2 py-0.5 rounded">FROZEN</span>
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '3px 8px', borderRadius: '5px', background: '#3b82f620', color: '#60a5fa' }}>
+                  FROZEN
+                </span>
               )}
             </div>
-            <p className="num text-xs text-[#6b6b6b]">{account.id}</p>
+            <p className="num" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{account.id}</p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-[#6b6b6b] uppercase tracking-widest mb-1">Balance</p>
-            <p className="num text-3xl font-bold text-amber-400">{fmt(account.balance)}</p>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Available Balance</p>
+            <p className="num" style={{ fontSize: '30px', fontWeight: 500, color: accentColor }}>{fmt(account.balance)}</p>
           </div>
         </div>
       </div>
 
+      {/* Operations */}
       {!account.frozen && (
-        <div className="border border-[#1e1e1e] rounded-lg p-6 mb-6 fade-up fade-up-2">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6b6b6b] mb-4">Transaction</h2>
-          <div className="flex gap-1 mb-5 bg-[#161616] p-1 rounded-md w-fit">
-            {(["deposit", "withdraw", "transfer"] as Op[]).map((o) => (
+        <div className="fade-up fade-up-2" style={{
+          background: 'var(--surface-1)', border: '1px solid var(--border)',
+          borderRadius: '16px', padding: '24px', marginBottom: '16px',
+        }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            New Transaction
+          </p>
+
+          {/* Op selector */}
+          <div style={{ display: 'flex', gap: '4px', background: 'var(--surface-2)', padding: '4px', borderRadius: '10px', marginBottom: '18px', width: 'fit-content' }}>
+            {(["deposit", "withdraw", "transfer"] as Op[]).map(o => (
               <button
                 key={o}
                 onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); }}
-                className={`px-4 py-1.5 rounded text-xs font-semibold uppercase tracking-wide transition-colors ${
-                  op === o ? "bg-amber-500 text-black" : "text-[#6b6b6b] hover:text-white"
-                }`}
+                style={{
+                  padding: '8px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer',
+                  fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em',
+                  transition: 'all 0.15s',
+                  background: op === o ? '#f59e0b' : 'transparent',
+                  color: op === o ? '#000' : 'var(--text-secondary)',
+                }}
               >
-                {o}
+                {o.charAt(0).toUpperCase() + o.slice(1)}
               </button>
             ))}
           </div>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {op === "transfer" && (
               <input
                 type="text"
                 value={toId}
-                onChange={(e) => setToId(e.target.value)}
+                onChange={e => setToId(e.target.value)}
                 placeholder="Destination account ID"
-                className="bg-[#161616] border border-[#272727] rounded px-4 py-2.5 text-sm num outline-none focus:border-amber-500 transition-colors placeholder:text-[#444]"
+                style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
               />
             )}
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b6b6b] num text-sm">$</span>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <span className="num" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', fontSize: '14px', pointerEvents: 'none' }}>$</span>
                 <input
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={e => setAmount(e.target.value)}
                   placeholder="0.00"
                   min="0.01"
                   step="0.01"
-                  className="w-full bg-[#161616] border border-[#272727] rounded pl-8 pr-4 py-2.5 text-sm num outline-none focus:border-amber-500 transition-colors placeholder:text-[#444]"
+                  style={{ ...inputStyle, paddingLeft: '28px' }}
                 />
               </div>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2.5 bg-amber-500 text-black text-sm font-bold rounded hover:bg-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed capitalize"
+                style={{
+                  padding: '10px 24px', background: '#f59e0b', color: '#000',
+                  fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '8px',
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  opacity: submitting ? 0.45 : 1, transition: 'opacity 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
               >
-                {submitting ? "…" : op}
+                {submitting ? "…" : op.charAt(0).toUpperCase() + op.slice(1)}
               </button>
             </div>
+            <input
+              type="text"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Description (optional)"
+              style={inputStyle}
+            />
           </form>
-          {opError   && <p className="mt-3 text-red-400 text-xs num">{opError}</p>}
-          {opSuccess && <p className="mt-3 text-green-400 text-xs num">{opSuccess}</p>}
+
+          {opError   && <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{opError}</p>}
+          {opSuccess && <p className="num" style={{ color: '#22c55e', fontSize: '12px', marginTop: '10px' }}>{opSuccess}</p>}
         </div>
       )}
 
       {account.frozen && (
-        <div className="border border-blue-400/20 bg-blue-400/5 rounded-lg px-5 py-4 mb-6 fade-up fade-up-2">
-          <p className="text-blue-400 text-sm">This account is frozen. All transactions are disabled.</p>
+        <div className="fade-up fade-up-2" style={{ border: '1px solid #3b82f630', background: '#3b82f608', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
+          <p style={{ color: '#60a5fa', fontSize: '14px' }}>This account is frozen. All transactions have been suspended.</p>
         </div>
       )}
 
-      <div className="fade-up fade-up-3">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6b6b6b]">Transaction History</h2>
-          <span className="num text-xs text-[#444]">{txns.length} records</span>
+      {/* Transaction history */}
+      <div className="fade-up fade-up-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+            Transaction History
+          </p>
+          <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{txns.length} records</span>
         </div>
+
         {txns.length === 0 ? (
-          <div className="border border-dashed border-[#272727] rounded-lg p-8 text-center">
-            <p className="text-[#444] text-sm">No transactions yet.</p>
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No transactions yet.</p>
           </div>
         ) : (
-          <ul className="space-y-1">
-            {txns.map((t) => {
-              const { label, color, sign } = txnLabel(t);
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {txns.map(t => {
+              const { label, color, sign, icon } = txnMeta(t);
               return (
-                <li key={t.id} className="flex items-center justify-between px-5 py-3.5 bg-[#161616] border border-[#1e1e1e] rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-1.5 h-1.5 rounded-full ${sign === "+" ? "bg-green-400" : "bg-red-400"}`} />
+                <div key={t.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '14px 16px', borderRadius: '10px', transition: 'background 0.1s',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{
+                      width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0,
+                      background: `${color}18`, border: `1px solid ${color}30`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '14px', fontWeight: 700, color,
+                    }}>
+                      {icon}
+                    </div>
                     <div>
-                      <p className={`text-xs font-semibold uppercase tracking-wide ${color}`}>{label}</p>
-                      <p className="num text-xs text-[#444] mt-0.5">
+                      <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px' }}>
+                        {t.description || label}
+                      </p>
+                      <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
                         {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`num text-sm font-semibold ${color}`}>{sign} {fmt(t.amount)}</p>
-                    <p className="num text-xs text-[#444] mt-0.5">bal: {fmt(t.balanceAfter)}</p>
+                  <div style={{ textAlign: 'right' }}>
+                    <p className="num" style={{ fontSize: '14px', fontWeight: 600, color, marginBottom: '3px' }}>
+                      {sign} {fmt(t.amount)}
+                    </p>
+                    <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {fmt(t.balanceAfter)}
+                    </p>
                   </div>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
       </div>
     </div>

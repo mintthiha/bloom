@@ -1,12 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { api, Account } from "@/lib/api";
+import { api, Account, AccountType } from "@/lib/api";
 
 export default function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
+  const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [knownIds, setKnownIds] = useState<string[]>([]);
@@ -33,7 +34,7 @@ export default function Home() {
     setCreating(true);
     setError(null);
     try {
-      const account = await api.createAccount(ownerName.trim());
+      const account = await api.createAccount(ownerName.trim(), accountType);
       const next = [account.id, ...knownIds];
       localStorage.setItem("bloom_ids", JSON.stringify(next));
       setKnownIds(next);
@@ -46,80 +47,197 @@ export default function Home() {
     }
   }
 
-  function fmt(n: number) {
-    return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
-  }
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
+
+  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const chequingCount = accounts.filter(a => a.accountType === "CHEQUING").length;
+  const savingsCount = accounts.filter(a => a.accountType === "SAVINGS").length;
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      <div className="mb-12 fade-up">
-        <p className="text-[#6b6b6b] text-xs num tracking-widest uppercase mb-3">Pulse Demo Target</p>
-        <h1 className="text-4xl font-extrabold tracking-tight">Accounts</h1>
+    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
+
+      {/* Welcome */}
+      <div className="fade-up" style={{ marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>
+          Good morning.
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+          Here's your financial overview.
+        </p>
       </div>
 
-      <div className="border border-[#1e1e1e] rounded-lg p-6 mb-10 fade-up fade-up-1">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6b6b6b] mb-4">Open Account</h2>
-        <form onSubmit={handleCreate} className="flex gap-3">
-          <input
-            type="text"
-            value={ownerName}
-            onChange={(e) => setOwnerName(e.target.value)}
-            placeholder="Account holder name"
-            className="flex-1 bg-[#161616] border border-[#272727] rounded px-4 py-2.5 text-sm outline-none focus:border-amber-500 transition-colors placeholder:text-[#444]"
-          />
-          <button
-            type="submit"
-            disabled={creating || !ownerName.trim()}
-            className="px-5 py-2.5 bg-amber-500 text-black text-sm font-bold rounded hover:bg-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {creating ? "Opening…" : "Open"}
-          </button>
+      {/* Stats row */}
+      {accounts.length > 0 && (
+        <div className="fade-up fade-up-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '36px' }}>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Total Balance</p>
+            <p className="num" style={{ fontSize: '22px', fontWeight: 500, color: '#f59e0b' }}>{fmt(totalBalance)}</p>
+          </div>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Chequing</p>
+            <p className="num" style={{ fontSize: '22px', fontWeight: 500 }}>{chequingCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{chequingCount !== 1 ? 's' : ''}</span></p>
+          </div>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Savings</p>
+            <p className="num" style={{ fontSize: '22px', fontWeight: 500 }}>{savingsCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{savingsCount !== 1 ? 's' : ''}</span></p>
+          </div>
+        </div>
+      )}
+
+      {/* Open account */}
+      <div className="fade-up fade-up-2" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px', marginBottom: '32px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>Open New Account</p>
+        <form onSubmit={handleCreate}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+            <input
+              type="text"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+              placeholder="Account holder name"
+              style={{
+                flex: 1,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '14px',
+                color: 'var(--text-primary)',
+                outline: 'none',
+              }}
+              onFocus={e => (e.target.style.borderColor = '#f59e0b')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
+            {/* Account type toggle */}
+            <div style={{ display: 'flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+              {(["CHEQUING", "SAVINGS"] as AccountType[]).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setAccountType(t)}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    background: accountType === t ? '#f59e0b' : 'transparent',
+                    color: accountType === t ? '#000' : 'var(--text-secondary)',
+                  }}
+                >
+                  {t.charAt(0) + t.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+            <button
+              type="submit"
+              disabled={creating || !ownerName.trim()}
+              style={{
+                padding: '10px 20px',
+                background: '#f59e0b',
+                color: '#000',
+                fontWeight: 700,
+                fontSize: '14px',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: creating || !ownerName.trim() ? 'not-allowed' : 'pointer',
+                opacity: creating || !ownerName.trim() ? 0.45 : 1,
+                transition: 'opacity 0.15s',
+              }}
+            >
+              {creating ? "Opening…" : "Open"}
+            </button>
+          </div>
+          {error && <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '8px' }}>{error}</p>}
         </form>
-        {error && <p className="mt-3 text-red-400 text-xs num">{error}</p>}
       </div>
 
-      <div className="fade-up fade-up-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-[#6b6b6b]">Your Accounts</h2>
-          <span className="num text-xs text-[#444]">{accounts.length} total</span>
+      {/* Account list */}
+      <div className="fade-up fade-up-3">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Accounts</p>
+          <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{accounts.length}</span>
         </div>
 
         {loading ? (
-          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-16" />)}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: '72px' }} />)}
+          </div>
         ) : accounts.length === 0 ? (
-          <div className="border border-dashed border-[#272727] rounded-lg p-10 text-center">
-            <p className="text-[#444] text-sm">No accounts yet — open one above.</p>
+          <div style={{ border: '1px dashed var(--border)', borderRadius: '14px', padding: '48px 24px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No accounts yet.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Open one above to get started.</p>
           </div>
         ) : (
-          <ul className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {accounts.map((acc, i) => (
-              <li key={acc.id} className="fade-up" style={{ animationDelay: `${0.05 * i}s` }}>
-                <Link
-                  href={`/account/${acc.id}`}
-                  className="flex items-center justify-between px-5 py-4 bg-[#161616] border border-[#1e1e1e] rounded-lg hover:border-[#333] hover:bg-[#1a1a1a] transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-full bg-[#272727] flex items-center justify-center text-xs font-bold text-amber-500">
-                      {acc.ownerName[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{acc.ownerName}</p>
-                      <p className="num text-xs text-[#6b6b6b] mt-0.5">{acc.id}</p>
+              <Link
+                key={acc.id}
+                href={`/account/${acc.id}`}
+                className="fade-up"
+                style={{
+                  animationDelay: `${0.04 * i}s`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '16px 20px',
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '12px',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hover)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '10px',
+                    background: acc.accountType === 'SAVINGS' ? '#16a34a22' : '#f59e0b22',
+                    border: `1px solid ${acc.accountType === 'SAVINGS' ? '#16a34a44' : '#f59e0b44'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '15px', fontWeight: 700,
+                    color: acc.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b',
+                  }}>
+                    {acc.ownerName[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px' }}>{acc.ownerName}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
+                        padding: '2px 6px', borderRadius: '4px',
+                        background: acc.accountType === 'SAVINGS' ? '#16a34a22' : '#f59e0b22',
+                        color: acc.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b',
+                      }}>
+                        {acc.accountType}
+                      </span>
+                      {acc.frozen && (
+                        <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 6px', borderRadius: '4px', background: '#3b82f622', color: '#60a5fa' }}>
+                          FROZEN
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {acc.frozen && (
-                      <span className="text-xs num text-blue-400 border border-blue-400/30 px-2 py-0.5 rounded">FROZEN</span>
-                    )}
-                    <span className="num text-sm font-medium text-amber-400">{fmt(acc.balance)}</span>
-                    <svg className="w-4 h-4 text-[#444] group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-              </li>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span className="num" style={{ fontSize: '15px', fontWeight: 500, color: '#f59e0b' }}>{fmt(acc.balance)}</span>
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text-muted)">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </Link>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>

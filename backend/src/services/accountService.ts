@@ -1,14 +1,17 @@
-import { PrismaClient, TransactionType } from "@prisma/client";
+import { PrismaClient, TransactionType, AccountType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 
 const prisma = new PrismaClient();
 
-export async function createAccount(ownerName: string) {
+export async function createAccount(ownerName: string, accountType: AccountType = AccountType.CHEQUING) {
   if (!ownerName || ownerName.trim() === "") {
     throw new AppError(400, "ownerName is required");
   }
+  if (!Object.values(AccountType).includes(accountType)) {
+    throw new AppError(400, "accountType must be CHEQUING or SAVINGS");
+  }
   return prisma.account.create({
-    data: { ownerName: ownerName.trim() },
+    data: { ownerName: ownerName.trim(), accountType },
   });
 }
 
@@ -18,7 +21,7 @@ export async function getAccount(id: string) {
   return account;
 }
 
-export async function deposit(id: string, amount: number) {
+export async function deposit(id: string, amount: number, description?: string) {
   if (amount <= 0) throw new AppError(400, "Deposit amount must be positive");
   const account = await getAccount(id);
   if (account.frozen) throw new AppError(403, "Account is frozen");
@@ -26,12 +29,18 @@ export async function deposit(id: string, amount: number) {
   return prisma.$transaction([
     prisma.account.update({ where: { id }, data: { balance: newBalance } }),
     prisma.transaction.create({
-      data: { type: TransactionType.DEPOSIT, amount, balanceAfter: newBalance, toAccountId: id },
+      data: {
+        type: TransactionType.DEPOSIT,
+        amount,
+        balanceAfter: newBalance,
+        description: description ?? null,
+        toAccountId: id,
+      },
     }),
   ]);
 }
 
-export async function withdraw(id: string, amount: number) {
+export async function withdraw(id: string, amount: number, description?: string) {
   if (amount <= 0) throw new AppError(400, "Withdrawal amount must be positive");
   const account = await getAccount(id);
   if (account.frozen) throw new AppError(403, "Account is frozen");
@@ -40,12 +49,18 @@ export async function withdraw(id: string, amount: number) {
   return prisma.$transaction([
     prisma.account.update({ where: { id }, data: { balance: newBalance } }),
     prisma.transaction.create({
-      data: { type: TransactionType.WITHDRAWAL, amount, balanceAfter: newBalance, fromAccountId: id },
+      data: {
+        type: TransactionType.WITHDRAWAL,
+        amount,
+        balanceAfter: newBalance,
+        description: description ?? null,
+        fromAccountId: id,
+      },
     }),
   ]);
 }
 
-export async function transfer(fromId: string, toId: string, amount: number) {
+export async function transfer(fromId: string, toId: string, amount: number, description?: string) {
   if (amount <= 0) throw new AppError(400, "Transfer amount must be positive");
   if (fromId === toId) throw new AppError(400, "Cannot transfer to the same account");
   const from = await getAccount(fromId);
@@ -55,14 +70,29 @@ export async function transfer(fromId: string, toId: string, amount: number) {
   if (to.frozen) throw new AppError(403, "Destination account is frozen");
   const fromNewBalance = from.balance - amount;
   const toNewBalance = to.balance + amount;
+  const autoDesc = description ?? null;
   return prisma.$transaction([
     prisma.account.update({ where: { id: fromId }, data: { balance: fromNewBalance } }),
     prisma.account.update({ where: { id: toId }, data: { balance: toNewBalance } }),
     prisma.transaction.create({
-      data: { type: TransactionType.TRANSFER_OUT, amount, balanceAfter: fromNewBalance, fromAccountId: fromId, toAccountId: toId },
+      data: {
+        type: TransactionType.TRANSFER_OUT,
+        amount,
+        balanceAfter: fromNewBalance,
+        description: autoDesc,
+        fromAccountId: fromId,
+        toAccountId: toId,
+      },
     }),
     prisma.transaction.create({
-      data: { type: TransactionType.TRANSFER_IN, amount, balanceAfter: toNewBalance, fromAccountId: fromId, toAccountId: toId },
+      data: {
+        type: TransactionType.TRANSFER_IN,
+        amount,
+        balanceAfter: toNewBalance,
+        description: autoDesc,
+        fromAccountId: fromId,
+        toAccountId: toId,
+      },
     }),
   ]);
 }

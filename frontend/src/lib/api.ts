@@ -10,9 +10,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export type AccountType = "CHEQUING" | "SAVINGS";
+
 export type Account = {
   id: string;
   ownerName: string;
+  accountType: AccountType;
   balance: number;
   frozen: boolean;
   createdAt: string;
@@ -24,22 +27,23 @@ export type Transaction = {
   type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER_OUT" | "TRANSFER_IN";
   amount: number;
   balanceAfter: number;
+  description: string | null;
   createdAt: string;
   fromAccountId: string | null;
   toAccountId: string | null;
 };
 
 export const api = {
-  createAccount: (ownerName: string) =>
-    request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName }) }),
+  createAccount: (ownerName: string, accountType: AccountType) =>
+    request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType }) }),
   getAccount: (id: string) =>
     request<Account>(`/accounts/${id}`),
-  deposit: (id: string, amount: number) =>
-    request<Account>(`/accounts/${id}/deposit`, { method: "POST", body: JSON.stringify({ amount }) }),
-  withdraw: (id: string, amount: number) =>
-    request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount }) }),
-  transfer: (id: string, toAccountId: string, amount: number) =>
-    request<{ message: string }>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount }) }),
+  deposit: (id: string, amount: number, description?: string) =>
+    request<Account>(`/accounts/${id}/deposit`, { method: "POST", body: JSON.stringify({ amount, description }) }),
+  withdraw: (id: string, amount: number, description?: string) =>
+    request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, description }) }),
+  transfer: (id: string, toAccountId: string, amount: number, description?: string) =>
+    request<{ message: string }>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string) =>
     request<Transaction[]>(`/accounts/${id}/transactions`),
 };
