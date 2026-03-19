@@ -50,4 +50,18 @@ router.get("/:id/transactions", async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 });
 
+router.patch("/:id/freeze", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const account = await accountService.freezeAccount(pid(req));
+    res.json(account);
+  } catch (err) { next(err); }
+});
+
+router.patch("/:id/unfreeze", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const account = await accountService.unfreezeAccount(pid(req));
+    res.json(account);
+  } catch (err) { next(err); }
+});
+
 export default router;
