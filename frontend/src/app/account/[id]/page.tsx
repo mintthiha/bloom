@@ -2,6 +2,11 @@
 import { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import { api, Account, Transaction } from "@/lib/api";
+import {
+  ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
 
 type Op = "deposit" | "withdraw" | "transfer";
 
@@ -160,6 +165,79 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
       </div>
+
+      {/* Charts */}
+      {txns.length > 0 && (() => {
+        const chronological = [...txns].reverse();
+        const balanceData = chronological.map(t => ({
+          date: new Date(t.createdAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" }),
+          balance: t.balanceAfter,
+        }));
+
+        const typeCounts: Record<string, number> = {};
+        for (const t of txns) typeCounts[t.type] = (typeCounts[t.type] ?? 0) + 1;
+        const typeLabels: Record<string, string> = {
+          DEPOSIT: "Deposit", WITHDRAWAL: "Withdrawal",
+          TRANSFER_OUT: "Transfer Out", TRANSFER_IN: "Transfer In",
+        };
+        const typeColors: Record<string, string> = {
+          DEPOSIT: "#22c55e", WITHDRAWAL: "#f87171",
+          TRANSFER_OUT: "#fb923c", TRANSFER_IN: "#60a5fa",
+        };
+        const donutData = Object.entries(typeCounts).map(([type, value]) => ({
+          name: typeLabels[type] ?? type, value, color: typeColors[type] ?? "#888",
+        }));
+
+        return (
+          <div className="fade-up fade-up-2" style={{
+            background: 'var(--surface-1)', border: '1px solid var(--border)',
+            borderRadius: '16px', padding: '24px', marginBottom: '16px',
+          }}>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              Analytics
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              {/* Balance history */}
+              <div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Balance History</p>
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={balanceData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
+                    <Tooltip
+                      contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
+                      formatter={(v: number) => [fmt(v), "Balance"]}
+                      labelStyle={{ color: '#9ca3af' }}
+                    />
+                    <Line type="monotone" dataKey="balance" stroke={accentColor} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: accentColor }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Transaction type breakdown */}
+              <div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Transaction Types</p>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={donutData} cx="50%" cy="50%" innerRadius={42} outerRadius={64} dataKey="value" paddingAngle={3}>
+                      {donutData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
+                      formatter={(v: number, name: string) => [v, name]}
+                    />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', color: '#6b7280' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Operations */}
       {!account.frozen && (

@@ -4,6 +4,13 @@ import { AppError } from "../middleware/errorHandler";
 const prisma = new PrismaClient();
 
 /**
+ * Retrieves all accounts, ordered by most recently created first.
+ */
+export async function listAccounts() {
+  return prisma.account.findMany({ orderBy: { createdAt: "desc" } });
+}
+
+/**
  * Creates a new bank account with a zero balance.
  * Throws 400 if the owner name is empty or missing.
  * Throws 400 if the account type is not a valid AccountType enum value.

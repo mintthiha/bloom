@@ -2,6 +2,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { api, Account, AccountType } from "@/lib/api";
+import {
+  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
+} from "recharts";
 
 export default function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -10,23 +14,16 @@ export default function Home() {
   const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [knownIds, setKnownIds] = useState<string[]>([]);
 
-  const loadAccounts = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) { setLoading(false); return; }
-    const results = await Promise.allSettled(ids.map((id) => api.getAccount(id)));
-    const loaded = results
-      .filter((r): r is PromiseFulfilledResult<Account> => r.status === "fulfilled")
-      .map((r) => r.value);
-    setAccounts(loaded);
-    setLoading(false);
+  const loadAccounts = useCallback(async () => {
+    try {
+      setAccounts(await api.listAccounts());
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("bloom_ids") ?? "[]") as string[];
-    setKnownIds(stored);
-    loadAccounts(stored);
-  }, [loadAccounts]);
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -34,12 +31,9 @@ export default function Home() {
     setCreating(true);
     setError(null);
     try {
-      const account = await api.createAccount(ownerName.trim(), accountType);
-      const next = [account.id, ...knownIds];
-      localStorage.setItem("bloom_ids", JSON.stringify(next));
-      setKnownIds(next);
-      setAccounts((prev) => [account, ...prev]);
+      await api.createAccount(ownerName.trim(), accountType);
       setOwnerName("");
+      await loadAccounts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
@@ -82,6 +76,35 @@ export default function Home() {
             <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Savings</p>
             <p className="num" style={{ fontSize: '22px', fontWeight: 500 }}>{savingsCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{savingsCount !== 1 ? 's' : ''}</span></p>
           </div>
+        </div>
+      )}
+
+      {/* Balance bar chart */}
+      {accounts.length > 1 && (
+        <div className="fade-up fade-up-1" style={{
+          background: 'var(--surface-1)', border: '1px solid var(--border)',
+          borderRadius: '14px', padding: '24px', marginBottom: '32px',
+        }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            Account Balances
+          </p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={accounts.map(a => ({ name: a.ownerName.split(" ")[0], balance: a.balance, type: a.accountType }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
+              <Tooltip
+                contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
+                formatter={(v: number) => [fmt(v), "Balance"]}
+                labelStyle={{ color: '#9ca3af' }}
+                cursor={{ fill: '#ffffff06' }}
+              />
+              <Bar dataKey="balance" radius={[4, 4, 0, 0]}>
+                {accounts.map((a, i) => (
+                  <Cell key={i} fill={a.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 

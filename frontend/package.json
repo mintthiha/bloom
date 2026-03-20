@@ -10,7 +10,8 @@
   "dependencies": {
     "next": "15",
     "react": "19",
-    "react-dom": "19"
+    "react-dom": "19",
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
     "@types/node": "^22",

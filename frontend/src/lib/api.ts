@@ -34,6 +34,8 @@ export type Transaction = {
 };
 
 export const api = {
+  listAccounts: () =>
+    request<Account[]>("/accounts"),
   createAccount: (ownerName: string, accountType: AccountType) =>
     request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType }) }),
   getAccount: (id: string) =>

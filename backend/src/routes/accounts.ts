@@ -6,6 +6,12 @@ const router = Router();
 
 const pid = (req: Request): string => req.params["id"] as string;
 
+router.get("/", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await accountService.listAccounts());
+  } catch (err) { next(err); }
+});
+
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { ownerName, accountType } = req.body;
