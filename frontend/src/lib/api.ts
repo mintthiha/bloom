@@ -48,4 +48,8 @@ export const api = {
     request<{ message: string }>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string) =>
     request<Transaction[]>(`/accounts/${id}/transactions`),
+  freeze: (id: string) =>
+    request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
+  unfreeze: (id: string) =>
+    request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
 };

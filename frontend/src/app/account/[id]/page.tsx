@@ -23,6 +23,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [submitting, setSubmitting] = useState(false);
   const [opError, setOpError] = useState<string | null>(null);
   const [opSuccess, setOpSuccess] = useState<string | null>(null);
+  const [freezing, setFreezing] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -62,6 +63,17 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       setOpError(err instanceof Error ? err.message : "Operation failed");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleFreeze() {
+    setFreezing(true);
+    try {
+      if (account!.frozen) await api.unfreeze(id);
+      else await api.freeze(id);
+      await refresh();
+    } finally {
+      setFreezing(false);
     }
   }
 
@@ -159,9 +171,26 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             </div>
             <p className="num" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{account.id}</p>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Available Balance</p>
-            <p className="num" style={{ fontSize: '30px', fontWeight: 500, color: accentColor }}>{fmt(account.balance)}</p>
+          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Available Balance</p>
+              <p className="num" style={{ fontSize: '30px', fontWeight: 500, color: accentColor }}>{fmt(account.balance)}</p>
+            </div>
+            <button
+              onClick={handleFreeze}
+              disabled={freezing}
+              style={{
+                padding: '6px 14px', border: `1px solid ${account.frozen ? '#3b82f640' : '#f8717140'}`,
+                background: account.frozen ? '#3b82f610' : '#f8717110',
+                color: account.frozen ? '#60a5fa' : '#f87171',
+                borderRadius: '7px', fontSize: '11px', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                cursor: freezing ? 'not-allowed' : 'pointer',
+                opacity: freezing ? 0.5 : 1, transition: 'opacity 0.15s',
+              }}
+            >
+              {freezing ? '…' : account.frozen ? 'Unfreeze' : 'Freeze'}
+            </button>
           </div>
         </div>
       </div>
@@ -208,7 +237,6 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                     <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
                     <Tooltip
                       contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
-                      formatter={(v: number) => [fmt(v), "Balance"]}
                       labelStyle={{ color: '#9ca3af' }}
                     />
                     <Line type="monotone" dataKey="balance" stroke={accentColor} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: accentColor }} />
@@ -228,7 +256,6 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                     </Pie>
                     <Tooltip
                       contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
-                      formatter={(v: number, name: string) => [v, name]}
                     />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px', color: '#6b7280' }} />
                   </PieChart>

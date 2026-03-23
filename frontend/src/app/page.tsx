@@ -94,7 +94,6 @@ export default function Home() {
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
               <Tooltip
                 contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
-                formatter={(v: number) => [fmt(v), "Balance"]}
                 labelStyle={{ color: '#9ca3af' }}
                 cursor={{ fill: '#ffffff06' }}
               />
