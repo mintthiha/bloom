@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             backdropFilter: 'blur(12px)',
             zIndex: 100,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'inherit' }}>
               {/* Logo mark */}
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <rect width="28" height="28" rx="6" fill="#f59e0b"/>
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <path d="M8 16h7a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '-0.3px' }}>Bloom</span>
-            </div>
+            </Link>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e' }} />
               <span className="num" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>All systems operational</span>
