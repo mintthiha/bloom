@@ -171,3 +171,18 @@ export async function unfreezeAccount(id: string) {
     data: { frozen: false },
   });
 }
+
+/**
+ * Deletes an account and all of its associated transactions.
+ * Throws 404 if the account does not exist.
+ * Runs inside a Prisma transaction to ensure atomicity.
+ */
+export async function deleteAccount(id: string) {
+  await getAccount(id);
+  await prisma.$transaction([
+    prisma.transaction.deleteMany({
+      where: { OR: [{ fromAccountId: id }, { toAccountId: id }] },
+    }),
+    prisma.account.delete({ where: { id } }),
+  ]);
+}

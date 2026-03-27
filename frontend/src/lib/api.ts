@@ -52,4 +52,6 @@ export const api = {
     request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) =>
     request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
+  deleteAccount: (id: string) =>
+    request<void>(`/accounts/${id}`, { method: "DELETE" }),
 };

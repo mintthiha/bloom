@@ -70,4 +70,11 @@ router.patch("/:id/unfreeze", async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 });
 
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await accountService.deleteAccount(pid(req));
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
 export default router;

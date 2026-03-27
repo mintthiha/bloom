@@ -24,6 +24,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [opError, setOpError] = useState<string | null>(null);
   const [opSuccess, setOpSuccess] = useState<string | null>(null);
   const [freezing, setFreezing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -74,6 +76,17 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       await refresh();
     } finally {
       setFreezing(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await api.deleteAccount(id);
+      window.location.href = "/";
+    } catch {
+      setDeleting(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -191,6 +204,48 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             >
               {freezing ? '…' : account.frozen ? 'Unfreeze' : 'Freeze'}
             </button>
+            {confirmDelete ? (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  style={{
+                    padding: '6px 12px', border: '1px solid var(--border)',
+                    background: 'transparent', color: 'var(--text-secondary)',
+                    borderRadius: '7px', fontSize: '11px', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                    cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  style={{
+                    padding: '6px 12px', border: '1px solid #f8717160',
+                    background: '#f87171', color: '#000',
+                    borderRadius: '7px', fontSize: '11px', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                    cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1,
+                  }}
+                >
+                  {deleting ? '…' : 'Confirm'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                style={{
+                  padding: '6px 14px', border: '1px solid #f8717130',
+                  background: 'transparent', color: '#f87171',
+                  borderRadius: '7px', fontSize: '11px', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
+                }}
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
       </div>
