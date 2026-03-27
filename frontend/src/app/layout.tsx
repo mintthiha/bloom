@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="num" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>All systems operational</span>
             </div>
           </header>
+          <Toaster position="bottom-center" theme="dark" />
           <main style={{ flex: 1 }}>{children}</main>
           <footer style={{ borderTop: '1px solid var(--border)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>© 2026 Bloom Financial Inc.</span>

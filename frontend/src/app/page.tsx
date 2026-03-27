@@ -1,19 +1,31 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { api, Account, AccountType } from "@/lib/api";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from "recharts";
 
-export default function Home() {
+function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
   const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const deleted = searchParams.get("deleted");
+    if (deleted) {
+      toast.success(`${deleted} deleted`);
+      router.replace("/");
+    }
+  }, []);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -263,5 +275,13 @@ export default function Home() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <Home />
+    </Suspense>
   );
 }

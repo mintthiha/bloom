@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, use } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, Account, Transaction } from "@/lib/api";
 import {
@@ -12,6 +13,7 @@ type Op = "deposit" | "withdraw" | "transfer";
 
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     setDeleting(true);
     try {
       await api.deleteAccount(id);
-      window.location.href = "/";
+      router.push(`/?deleted=${encodeURIComponent(account!.ownerName)}`);
     } catch {
       setDeleting(false);
       setConfirmDelete(false);

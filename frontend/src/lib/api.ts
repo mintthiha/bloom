@@ -5,6 +5,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json" },
     ...init,
   });
+  if (res.status === 204) return undefined as T;
   const body = await res.json();
   if (!res.ok) throw new Error(body.error ?? "Request failed");
   return body as T;
