@@ -143,7 +143,12 @@ export async function transfer(fromId: string, toId: string, amount: number, des
 export async function getTransactions(id: string) {
   await getAccount(id);
   return prisma.transaction.findMany({
-    where: { OR: [{ fromAccountId: id }, { toAccountId: id }] },
+    where: {
+      OR: [
+        { fromAccountId: id, type: { in: [TransactionType.WITHDRAWAL, TransactionType.TRANSFER_OUT] } },
+        { toAccountId: id, type: { in: [TransactionType.DEPOSIT, TransactionType.TRANSFER_IN] } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
 }
