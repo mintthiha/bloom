@@ -11,6 +11,9 @@ import {
 
 type Op = "deposit" | "withdraw" | "transfer";
 
+const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Investment", "Other Income"];
+const EXPENSE_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other"];
+
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -25,6 +28,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [submitting, setSubmitting] = useState(false);
   const [opError, setOpError] = useState<string | null>(null);
   const [opSuccess, setOpSuccess] = useState<string | null>(null);
+  const [category, setCategory] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
   const [freezing, setFreezing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -50,7 +55,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) { setOpError("Enter a valid positive amount"); return; }
     setSubmitting(true);
-    const desc = description.trim() || undefined;
+    let desc: string | undefined;
+    if (op === "transfer") {
+      desc = description.trim() || undefined;
+    } else {
+      desc = category === "Custom..." ? (customCategory.trim() || undefined) : (category || undefined);
+    }
     try {
       if (op === "deposit")  await api.deposit(id, amt, desc);
       if (op === "withdraw") await api.withdraw(id, amt, desc);
@@ -62,6 +72,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       setAmount("");
       setToId("");
       setDescription("");
+      setCategory("");
+      setCustomCategory("");
       await refresh();
     } catch (err) {
       setOpError(err instanceof Error ? err.message : "Operation failed");
@@ -338,7 +350,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             {(["deposit", "withdraw", "transfer"] as Op[]).map(o => (
               <button
                 key={o}
-                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); }}
+                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); }}
                 style={{
                   padding: '8px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                   fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em',
@@ -389,13 +401,41 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                 {submitting ? "…" : op.charAt(0).toUpperCase() + op.slice(1)}
               </button>
             </div>
-            <input
-              type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Description (optional)"
-              style={inputStyle}
-            />
+            {op !== "transfer" ? (
+              <>
+                <select
+                  value={category}
+                  onChange={e => { setCategory(e.target.value); setCustomCategory(""); }}
+                  style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
+                >
+                  <option value="">Category (optional)</option>
+                  <optgroup label={op === "deposit" ? "Income" : "Expenses"}>
+                    {(op === "deposit" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                  <option value="Custom...">Custom...</option>
+                </select>
+                {category === "Custom..." && (
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={e => setCustomCategory(e.target.value)}
+                    placeholder="Enter custom category"
+                    style={inputStyle}
+                    autoFocus
+                  />
+                )}
+              </>
+            ) : (
+              <input
+                type="text"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Description (optional)"
+                style={inputStyle}
+              />
+            )}
           </form>
 
           {opError   && <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{opError}</p>}
