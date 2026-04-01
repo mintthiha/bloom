@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import React from "react";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Geist } from "next/font/google";
@@ -16,10 +17,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("dark font-sans", geist.variable)}>
       <body>
         <TooltipProvider>
-          <SidebarProvider>
+          <SidebarProvider style={{ minHeight: "100vh", "--sidebar-width": "8rem", "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}>
             <AppSidebar />
             <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
               <header style={{
@@ -33,12 +34,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 top: 0,
                 background: "rgba(8,8,8,0.85)",
                 backdropFilter: "blur(12px)",
-                zIndex: 100,
+                zIndex: 20,
               }}>
-                <SidebarTrigger />
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#22c55e" }} />
-                  <span className="num" style={{ fontSize: "11px", color: "var(--text-secondary)" }}>All systems operational</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <SidebarTrigger />
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#22c55e" }} />
+                    <span className="num" style={{ fontSize: "11px", color: "var(--text-secondary)" }}>All systems operational</span>
+                  </div>
                 </div>
               </header>
               <Toaster position="bottom-center" theme="dark" />
