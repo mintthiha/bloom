@@ -10,6 +10,12 @@ declare module "next-auth" {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   callbacks: {
+    jwt({ token, account, profile }) {
+      if (account && profile) {
+        token.sub = (profile as { sub: string }).sub;
+      }
+      return token;
+    },
     session({ session, token }) {
       session.user.id = token.sub!;
       return session;
