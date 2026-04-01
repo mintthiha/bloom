@@ -3,7 +3,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/:path*",
+        source: "/api/:path((?!auth|bloom).*)",
         destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/:path*`,
       },
     ];

@@ -4,18 +4,18 @@ import { AppError } from "../middleware/errorHandler";
 const prisma = new PrismaClient();
 
 /**
- * Retrieves all accounts, ordered by most recently created first.
+ * Retrieves all accounts for a given user, ordered by most recently created first.
  */
-export async function listAccounts() {
-  return prisma.account.findMany({ orderBy: { createdAt: "desc" } });
+export async function listAccounts(userId: string) {
+  return prisma.account.findMany({ where: { userId }, orderBy: { createdAt: "desc" } });
 }
 
 /**
- * Creates a new bank account with a zero balance.
+ * Creates a new bank account with a zero balance for the given user.
  * Throws 400 if the owner name is empty or missing.
  * Throws 400 if the account type is not a valid AccountType enum value.
  */
-export async function createAccount(ownerName: string, accountType: AccountType = AccountType.CHEQUING) {
+export async function createAccount(userId: string, ownerName: string, accountType: AccountType = AccountType.CHEQUING) {
   if (!ownerName || ownerName.trim() === "") {
     throw new AppError(400, "ownerName is required");
   }
@@ -23,7 +23,7 @@ export async function createAccount(ownerName: string, accountType: AccountType 
     throw new AppError(400, "accountType must be CHEQUING or SAVINGS");
   }
   return prisma.account.create({
-    data: { ownerName: ownerName.trim(), accountType },
+    data: { userId, ownerName: ownerName.trim(), accountType },
   });
 }
 

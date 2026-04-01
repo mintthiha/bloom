@@ -1,21 +1,27 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as accountService from "../services/accountService";
 import { AccountType } from "@prisma/client";
+import { AppError } from "../middleware/errorHandler";
 
 const router = Router();
 
 const pid = (req: Request): string => req.params["id"] as string;
+const uid = (req: Request): string => {
+  const id = req.headers["x-user-id"] as string;
+  if (!id) throw new AppError(401, "Unauthorized");
+  return id;
+};
 
-router.get("/", async (_req: Request, res: Response, next: NextFunction) => {
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.listAccounts());
+    res.json(await accountService.listAccounts(uid(req)));
   } catch (err) { next(err); }
 });
 
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { ownerName, accountType } = req.body;
-    const account = await accountService.createAccount(ownerName, accountType as AccountType);
+    const account = await accountService.createAccount(uid(req), ownerName, accountType as AccountType);
     res.status(201).json(account);
   } catch (err) { next(err); }
 });

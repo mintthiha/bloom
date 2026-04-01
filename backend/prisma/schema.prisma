@@ -21,6 +21,7 @@ enum TransactionType {
 
 model Account {
   id          String      @id @default(cuid())
+  userId      String
   ownerName   String
   accountType AccountType @default(CHEQUING)
   balance     Float       @default(0)

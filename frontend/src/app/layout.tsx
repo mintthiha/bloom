@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SessionProvider } from "next-auth/react";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={cn("dark font-sans", geist.variable)}>
       <body>
+        <SessionProvider>
         <TooltipProvider>
           <SidebarProvider defaultOpen={false} style={{ minHeight: "100vh", "--sidebar-width": "8rem", "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}>
             <AppSidebar />
@@ -53,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </SidebarProvider>
         </TooltipProvider>
+        </SessionProvider>
       </body>
     </html>
   );
