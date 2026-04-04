@@ -7,7 +7,8 @@ import { api } from "@/lib/api";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,9 @@ export default function ProfilePage() {
           return;
         }
 
-        setFullName(profile?.fullName ?? session?.user?.name ?? "");
+        const [sessionFirstName = "", ...sessionLastNameParts] = (session?.user?.name ?? "").trim().split(/\s+/).filter(Boolean);
+        setFirstName(profile?.firstName ?? sessionFirstName);
+        setLastName(profile?.lastName ?? sessionLastNameParts.join(" "));
         setUsername(profile?.username ?? "");
         setEmail(profile?.email ?? session?.user?.email ?? "");
       } catch (err) {
@@ -60,11 +63,13 @@ export default function ProfilePage() {
 
     try {
       const profile = await api.saveProfile({
-        fullName: fullName.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         username: username.trim(),
         email: email.trim(),
       });
-      setFullName(profile.fullName);
+      setFirstName(profile.firstName);
+      setLastName(profile.lastName);
       setUsername(profile.username);
       setEmail(profile.email);
       setSuccess("Profile saved");
@@ -115,13 +120,26 @@ export default function ProfilePage() {
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div>
               <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Full Name
+                First Name
               </label>
               <input
                 type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Your first name"
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Your last name"
                 style={inputStyle}
               />
             </div>

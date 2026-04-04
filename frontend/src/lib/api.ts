@@ -6,8 +6,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (res.status === 204) return undefined as T;
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Request failed");
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error(body?.error ?? "Request failed");
   return body as T;
 }
 
@@ -36,7 +37,8 @@ export type Transaction = {
 
 export type Profile = {
   userId: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   username: string;
   email: string;
   createdAt: string;
@@ -66,6 +68,6 @@ export const api = {
     request<void>(`/accounts/${id}`, { method: "DELETE" }),
   getProfile: () =>
     request<Profile | null>("/profile"),
-  saveProfile: (input: { fullName: string; username: string; email: string }) =>
+  saveProfile: (input: { firstName: string; lastName: string; username: string; email: string }) =>
     request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
 };

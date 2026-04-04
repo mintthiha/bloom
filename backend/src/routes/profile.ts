@@ -31,12 +31,13 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
  */
 router.put("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { fullName, username, email } = req.body as {
-      fullName?: string;
+    const { firstName, lastName, username, email } = req.body as {
+      firstName?: string;
+      lastName?: string;
       username?: string;
       email?: string;
     };
-    res.json(await profileService.upsertProfile(uid(req), { fullName, username, email }));
+    res.json(await profileService.upsertProfile(uid(req), { firstName, lastName, username, email }));
   } catch (err) {
     next(err);
   }

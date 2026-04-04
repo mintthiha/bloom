@@ -13,6 +13,7 @@ frontend/.env.local
 # Build outputs
 backend/dist/
 frontend/.next/
+*.tsbuildinfo
 
 # Prisma generated client
 backend/node_modules/.prisma/

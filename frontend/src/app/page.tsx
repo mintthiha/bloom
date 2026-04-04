@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType } from "@/lib/api";
+import { api, Account, AccountType, Profile } from "@/lib/api";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
@@ -13,6 +13,7 @@ function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,28 @@ function Home() {
   }, []);
 
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      try {
+        const nextProfile = await api.getProfile();
+        if (!cancelled) {
+          setProfile(nextProfile);
+        }
+      } catch {
+        if (!cancelled) {
+          setProfile(null);
+        }
+      }
+    }
+
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +89,7 @@ function Home() {
       {/* Welcome */}
       <div className="fade-up" style={{ marginBottom: '40px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>
-          Good morning.
+          {profile?.firstName ? `Good morning, ${profile.firstName}.` : "Good morning."}
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
           Here's your financial overview.

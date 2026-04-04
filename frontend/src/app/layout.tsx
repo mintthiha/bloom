@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SessionProvider>
         <TooltipProvider>
-          <SidebarProvider defaultOpen={false} style={{ minHeight: "100vh", "--sidebar-width": "8rem", "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}>
+          <SidebarProvider defaultOpen={false} style={{ minHeight: "100vh", "--sidebar-width": "14.5rem", "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}>
             <AppSidebar />
             <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
               <header style={{

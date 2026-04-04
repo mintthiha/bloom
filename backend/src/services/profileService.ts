@@ -4,14 +4,16 @@ import { AppError } from "../middleware/errorHandler";
 const prisma = new PrismaClient();
 
 type ProfileInput = {
-  fullName?: string;
+  firstName?: string;
+  lastName?: string;
   username?: string;
   email?: string;
 };
 
 type ProfileRecord = {
   userId: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   username: string;
   email: string;
   createdAt: Date;
@@ -24,7 +26,7 @@ type ProfileRecord = {
  */
 export async function getProfile(userId: string) {
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
-    SELECT "userId", "fullName", "username", "email", "createdAt", "updatedAt"
+    SELECT "userId", "firstName", "lastName", "username", "email", "createdAt", "updatedAt"
     FROM "Profile"
     WHERE "userId" = ${userId}
     LIMIT 1
@@ -39,12 +41,16 @@ export async function getProfile(userId: string) {
  * usernames already used by another user.
  */
 export async function upsertProfile(userId: string, input: ProfileInput) {
-  const fullName = input.fullName?.trim();
+  const firstName = input.firstName?.trim();
+  const lastName = input.lastName?.trim();
   const username = input.username?.trim().toLowerCase();
   const email = input.email?.trim().toLowerCase();
 
-  if (!fullName) {
-    throw new AppError(400, "Full name is required");
+  if (!firstName) {
+    throw new AppError(400, "First name is required");
+  }
+  if (!lastName) {
+    throw new AppError(400, "Last name is required");
   }
   if (!username) {
     throw new AppError(400, "Username is required");
@@ -73,15 +79,16 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   }
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
-    INSERT INTO "Profile" ("userId", "fullName", "username", "email", "createdAt", "updatedAt")
-    VALUES (${userId}, ${fullName}, ${username}, ${email}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email", "createdAt", "updatedAt")
+    VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId")
     DO UPDATE SET
-      "fullName" = EXCLUDED."fullName",
+      "firstName" = EXCLUDED."firstName",
+      "lastName" = EXCLUDED."lastName",
       "username" = EXCLUDED."username",
       "email" = EXCLUDED."email",
       "updatedAt" = CURRENT_TIMESTAMP
-    RETURNING "userId", "fullName", "username", "email", "createdAt", "updatedAt"
+    RETURNING "userId", "firstName", "lastName", "username", "email", "createdAt", "updatedAt"
   `;
 
   return rows[0];

@@ -34,12 +34,13 @@ model Account {
 }
 
 model Profile {
-  userId    String   @id
-  fullName  String
-  username  String   @unique
-  email     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  userId     String   @id
+  firstName  String
+  lastName   String
+  username   String   @unique
+  email      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Transaction {
