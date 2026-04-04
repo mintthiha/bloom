@@ -1,5 +1,6 @@
 import express from "express";
 import accountsRouter from "./routes/accounts";
+import profileRouter from "./routes/profile";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -10,6 +11,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/accounts", accountsRouter);
+app.use("/api/profile", profileRouter);
 app.use(errorHandler);
 
 export default app;

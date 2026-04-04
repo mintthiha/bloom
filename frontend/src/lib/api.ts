@@ -34,6 +34,15 @@ export type Transaction = {
   toAccountId: string | null;
 };
 
+export type Profile = {
+  userId: string;
+  fullName: string;
+  username: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
@@ -55,4 +64,8 @@ export const api = {
     request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
   deleteAccount: (id: string) =>
     request<void>(`/accounts/${id}`, { method: "DELETE" }),
+  getProfile: () =>
+    request<Profile | null>("/profile"),
+  saveProfile: (input: { fullName: string; username: string; email: string }) =>
+    request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
 };

@@ -1,5 +1,5 @@
 "use client";
-import { Settings, LogOut } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -47,10 +47,10 @@ export function AppSidebar() {
             <SidebarMenuButton
               className="group-data-[collapsible=icon]:!justify-center"
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}
-              onClick={() => window.location.href = "/settings"}
+              onClick={() => window.location.href = "/profile"}
             >
-              <Settings size={16} style={{ flexShrink: 0 }} />
-              <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}>Settings</span>
+              <User size={16} style={{ flexShrink: 0 }} />
+              <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}>Profile</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem className="flex justify-center">
