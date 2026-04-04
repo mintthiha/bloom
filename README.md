@@ -1,5 +1,7 @@
 # Bloom
 
+Full-stack banking demo application with Google sign-in, account management, profile onboarding, and financial dashboards.
+
 ## Tech Stack
 
 ### Frontend
@@ -21,6 +23,8 @@
 - Express 5
 - TypeScript
 - Prisma ORM
+- Vitest
+- Supertest
 
 ### Database
 
@@ -30,31 +34,53 @@
 
 - Google OAuth via NextAuth
 
+### Testing
+
+- Vitest
+- Testing Library
+- jsdom
+
 ## Project Structure
 
 - `frontend/` - Next.js application
 - `backend/` - Express API and Prisma schema
-
-
-## A full-stack financial tracking application that allows users to manage accounts, track transactions, and visualize their financial activity.
 
 ### Features
 
 #### Authentication
 
 - Google login integration
-- User-specific data isolation (each user sees only their own accounts)
+- Route protection via NextAuth middleware
+- User-specific data isolation
+
+#### Profile And Onboarding
+
+- First-time users are prompted to complete their Bloom profile
+- Profile fields stored in Prisma
+- Separate first name, last name, username, and email
+- Username uniqueness validation
+- Sidebar and greeting use Prisma profile data
+
 #### Account Management
 
-- Create multiple accounts (e.g., checking, savings)
+- Create multiple accounts
 - View balances per account
-- Support for transfers between accounts
+- Freeze, unfreeze, and delete accounts
+- Support transfers between accounts
 
 #### Transactions
+
 - Add deposits, withdrawals, and transfers
 - Track transaction history
 - Timestamped records for all actions
 
 #### Data Visualization
+
 - Graphs showing account balances over time
 - Visual overview of financial activity
+
+#### Test Coverage
+
+- Backend service tests for profile validation and username uniqueness
+- Backend API tests for `GET /api/profile` and `PUT /api/profile`
+- Frontend tests for first-time onboarding and returning-user dashboard rendering
