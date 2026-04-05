@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AppError } from "../middleware/errorHandler";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
@@ -28,7 +27,7 @@ describe("profileService", () => {
         username: "janedoe",
         email: "jane@example.com",
       })
-    ).rejects.toMatchObject<AppError>({ statusCode: 400, message: "First name is required" });
+    ).rejects.toMatchObject({ statusCode: 400, message: "First name is required" });
   });
 
   it("rejects when last name is missing", async () => {
@@ -41,7 +40,7 @@ describe("profileService", () => {
         username: "janedoe",
         email: "jane@example.com",
       })
-    ).rejects.toMatchObject<AppError>({ statusCode: 400, message: "Last name is required" });
+    ).rejects.toMatchObject({ statusCode: 400, message: "Last name is required" });
   });
 
   it("rejects usernames already used by another user", async () => {
@@ -55,7 +54,7 @@ describe("profileService", () => {
         username: "janedoe",
         email: "jane@example.com",
       })
-    ).rejects.toMatchObject<AppError>({ statusCode: 409, message: "Username is already taken" });
+    ).rejects.toMatchObject({ statusCode: 409, message: "Username is already taken" });
   });
 
   it("creates or updates a profile and normalizes username/email casing", async () => {

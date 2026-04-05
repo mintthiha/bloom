@@ -14,6 +14,7 @@ function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
+  const [nickname, setNickname] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
@@ -120,8 +121,9 @@ function Home() {
     setCreating(true);
     setError(null);
     try {
-      await api.createAccount(ownerName.trim(), accountType);
+      await api.createAccount(ownerName.trim(), accountType, nickname.trim() || undefined);
       setOwnerName("");
+      setNickname("");
       await loadAccounts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account");
@@ -178,12 +180,13 @@ function Home() {
             Account Balances
           </p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={accounts.map(a => ({ name: a.ownerName.split(" ")[0], balance: a.balance, type: a.accountType }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <BarChart data={accounts.map(a => ({ name: (a.nickname ?? a.ownerName).split(" ")[0], balance: a.balance, type: a.accountType }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
               <Tooltip
-                contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
+                contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
                 labelStyle={{ color: '#9ca3af' }}
+                itemStyle={{ color: '#f3f4f6' }}
                 cursor={{ fill: '#ffffff06' }}
               />
               <Bar dataKey="balance" radius={[4, 4, 0, 0]}>
@@ -200,7 +203,25 @@ function Home() {
       <div className="fade-up fade-up-2" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px', marginBottom: '32px' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>Open New Account</p>
         <form onSubmit={handleCreate}>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 140px auto', gap: '10px', marginBottom: '12px', alignItems: 'stretch' }}>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="Account nickname"
+              style={{
+                flex: 1,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '14px',
+                color: 'var(--text-primary)',
+                outline: 'none',
+              }}
+              onFocus={e => (e.target.style.borderColor = '#f59e0b')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            />
             <input
               type="text"
               value={ownerName}
@@ -219,29 +240,31 @@ function Home() {
               onFocus={e => (e.target.style.borderColor = '#f59e0b')}
               onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
-            {/* Account type toggle */}
-            <div style={{ display: 'flex', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-              {(["CHEQUING", "SAVINGS"] as AccountType[]).map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setAccountType(t)}
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    background: accountType === t ? '#f59e0b' : 'transparent',
-                    color: accountType === t ? '#000' : 'var(--text-secondary)',
-                  }}
-                >
-                  {t.charAt(0) + t.slice(1).toLowerCase()}
-                </button>
-              ))}
-            </div>
+            <select
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as AccountType)}
+              aria-label="Account type"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '13px',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                color: 'var(--text-primary)',
+                outline: 'none',
+                cursor: 'pointer',
+                appearance: 'none',
+                textAlign: 'center',
+                textAlignLast: 'center',
+              }}
+              onFocus={e => (e.target.style.borderColor = '#f59e0b')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            >
+              <option value="CHEQUING">Chequing</option>
+              <option value="SAVINGS">Savings</option>
+            </select>
             <button
               type="submit"
               disabled={creating || !ownerName.trim()}
@@ -319,10 +342,13 @@ function Home() {
                     fontSize: '15px', fontWeight: 700,
                     color: acc.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b',
                   }}>
-                    {acc.ownerName[0].toUpperCase()}
+                    {(acc.nickname ?? acc.ownerName)[0].toUpperCase()}
                   </div>
                   <div>
-                    <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px' }}>{acc.ownerName}</p>
+                    <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: acc.nickname ? '1px' : '3px' }}>{acc.nickname ?? acc.ownerName}</p>
+                    {acc.nickname && (
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>{acc.ownerName}</p>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{
                         fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',

@@ -17,6 +17,7 @@ export type AccountType = "CHEQUING" | "SAVINGS";
 export type Account = {
   id: string;
   ownerName: string;
+  nickname: string | null;
   accountType: AccountType;
   balance: number;
   frozen: boolean;
@@ -48,8 +49,8 @@ export type Profile = {
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
-  createAccount: (ownerName: string, accountType: AccountType) =>
-    request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType }) }),
+  createAccount: (ownerName: string, accountType: AccountType, nickname?: string) =>
+    request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType, nickname }) }),
   getAccount: (id: string) =>
     request<Account>(`/accounts/${id}`),
   deposit: (id: string, amount: number, description?: string) =>
@@ -64,6 +65,8 @@ export const api = {
     request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) =>
     request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
+  updateNickname: (id: string, nickname?: string) =>
+    request<Account>(`/accounts/${id}/nickname`, { method: "PATCH", body: JSON.stringify({ nickname }) }),
   deleteAccount: (id: string) =>
     request<void>(`/accounts/${id}`, { method: "DELETE" }),
   getProfile: () =>

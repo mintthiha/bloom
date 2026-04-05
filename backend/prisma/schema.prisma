@@ -23,6 +23,7 @@ model Account {
   id          String      @id @default(cuid())
   userId      String
   ownerName   String
+  nickname    String?
   accountType AccountType @default(CHEQUING)
   balance     Float       @default(0)
   frozen      Boolean     @default(false)

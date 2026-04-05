@@ -20,8 +20,8 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { ownerName, accountType } = req.body;
-    const account = await accountService.createAccount(uid(req), ownerName, accountType as AccountType);
+    const { ownerName, accountType, nickname } = req.body;
+    const account = await accountService.createAccount(uid(req), ownerName, accountType as AccountType, nickname);
     res.status(201).json(account);
   } catch (err) { next(err); }
 });
@@ -72,6 +72,17 @@ router.patch("/:id/freeze", async (req: Request, res: Response, next: NextFuncti
 router.patch("/:id/unfreeze", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const account = await accountService.unfreezeAccount(pid(req));
+    res.json(account);
+  } catch (err) { next(err); }
+});
+
+/**
+ * Updates or clears the nickname for an existing account.
+ */
+router.patch("/:id/nickname", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { nickname } = req.body;
+    const account = await accountService.updateNickname(pid(req), nickname);
     res.json(account);
   } catch (err) { next(err); }
 });
