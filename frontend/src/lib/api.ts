@@ -58,7 +58,7 @@ export const api = {
   withdraw: (id: string, amount: number, description?: string) =>
     request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, description }) }),
   transfer: (id: string, toAccountId: string, amount: number, description?: string) =>
-    request<{ message: string }>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
+    request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string) =>
     request<Transaction[]>(`/accounts/${id}/transactions`),
   freeze: (id: string) =>

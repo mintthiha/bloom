@@ -18,6 +18,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,10 +40,11 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
   const refresh = useCallback(async () => {
     try {
-      const [acc, transactions] = await Promise.all([api.getAccount(id), api.getTransactions(id)]);
+      const [acc, transactions, allAccounts] = await Promise.all([api.getAccount(id), api.getTransactions(id), api.listAccounts()]);
       setAccount(acc);
       setNickname(acc.nickname ?? "");
       setTxns(transactions);
+      setAccounts(allAccounts);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load account");
     } finally {
@@ -69,7 +71,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       if (op === "deposit")  await api.deposit(id, amt, desc);
       if (op === "withdraw") await api.withdraw(id, amt, desc);
       if (op === "transfer") {
-        if (!toId.trim()) { setOpError("Destination account ID required"); setSubmitting(false); return; }
+        if (!toId.trim()) { setOpError("Choose a destination account"); setSubmitting(false); return; }
         await api.transfer(id, toId.trim(), amt, desc);
       }
       setOpSuccess(`${op.charAt(0).toUpperCase() + op.slice(1)} successful`);
@@ -167,6 +169,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const isSavings = account.accountType === "SAVINGS";
   const accentColor = isSavings ? "#22c55e" : "#f59e0b";
   const displayName = account.nickname ?? account.ownerName;
+  const transferTargets = accounts.filter(a => a.id !== id);
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
@@ -441,7 +444,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             {(["deposit", "withdraw", "transfer"] as Op[]).map(o => (
               <button
                 key={o}
-                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); }}
+                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); setToId(""); setDescription(""); }}
                 style={{
                   padding: '8px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                   fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em',
@@ -457,13 +460,30 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {op === "transfer" && (
-              <input
-                type="text"
+              <select
                 value={toId}
                 onChange={e => setToId(e.target.value)}
-                placeholder="Destination account ID"
-                style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
-              />
+                aria-label="Destination account"
+                disabled={transferTargets.length === 0}
+                style={{
+                  ...inputStyle,
+                  cursor: transferTargets.length === 0 ? 'not-allowed' : 'pointer',
+                  appearance: 'none',
+                  color: transferTargets.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+                }}
+              >
+                <option value="">
+                  {transferTargets.length === 0 ? "No other accounts available" : "Choose destination account"}
+                </option>
+                {transferTargets.map(target => {
+                  const label = target.nickname ?? target.ownerName;
+                  return (
+                    <option key={target.id} value={target.id}>
+                      {label} - {target.accountType.toLowerCase()} - {target.id.slice(-6)}
+                    </option>
+                  );
+                })}
+              </select>
             )}
             <div style={{ display: 'flex', gap: '10px' }}>
               <div style={{ position: 'relative', flex: 1 }}>
@@ -480,12 +500,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
               </div>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || (op === "transfer" && transferTargets.length === 0)}
                 style={{
                   padding: '10px 24px', background: '#f59e0b', color: '#000',
                   fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '8px',
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  opacity: submitting ? 0.45 : 1, transition: 'opacity 0.15s',
+                  cursor: submitting || (op === "transfer" && transferTargets.length === 0) ? 'not-allowed' : 'pointer',
+                  opacity: submitting || (op === "transfer" && transferTargets.length === 0) ? 0.45 : 1, transition: 'opacity 0.15s',
                   whiteSpace: 'nowrap',
                 }}
               >
