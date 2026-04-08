@@ -26,6 +26,15 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * Returns this month's income, spending, net cash flow, and category totals.
+ */
+router.get("/summary/monthly", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await accountService.getMonthlySummary(uid(req)));
+  } catch (err) { next(err); }
+});
+
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.json(await accountService.getAccount(pid(req)));
@@ -34,24 +43,24 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
 
 router.post("/:id/deposit", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { amount, description } = req.body;
-    const [account] = await accountService.deposit(pid(req), amount, description);
+    const { amount, category, description } = req.body;
+    const [account] = await accountService.deposit(pid(req), amount, category, description);
     res.json(account);
   } catch (err) { next(err); }
 });
 
 router.post("/:id/withdraw", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { amount, description } = req.body;
-    const [account] = await accountService.withdraw(pid(req), amount, description);
+    const { amount, category, description } = req.body;
+    const [account] = await accountService.withdraw(pid(req), amount, category, description);
     res.json(account);
   } catch (err) { next(err); }
 });
 
 router.post("/:id/transfer", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { toAccountId, amount, description } = req.body;
-    const [fromAccount] = await accountService.transfer(pid(req), toAccountId, amount, description);
+    const { toAccountId, amount, description, category } = req.body;
+    const [fromAccount] = await accountService.transfer(pid(req), toAccountId, amount, description, category);
     res.json(fromAccount);
   } catch (err) { next(err); }
 });

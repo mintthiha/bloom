@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType, Profile } from "@/lib/api";
+import { api, Account, AccountType, MonthlySummary, Profile } from "@/lib/api";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
 import {
   ResponsiveContainer,
@@ -12,6 +12,7 @@ import {
 
 function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
   const [nickname, setNickname] = useState("");
@@ -33,7 +34,12 @@ function Home() {
 
   const loadAccounts = useCallback(async () => {
     try {
-      setAccounts(await api.listAccounts());
+      const [nextAccounts, nextSummary] = await Promise.all([
+        api.listAccounts(),
+        api.getMonthlySummary(),
+      ]);
+      setAccounts(nextAccounts);
+      setMonthlySummary(nextSummary);
     } finally {
       setLoading(false);
     }
@@ -138,6 +144,7 @@ function Home() {
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
   const chequingCount = accounts.filter(a => a.accountType === "CHEQUING").length;
   const savingsCount = accounts.filter(a => a.accountType === "SAVINGS").length;
+  const expenseCategories = monthlySummary?.categories.filter(category => category.spending > 0) ?? [];
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
@@ -167,6 +174,68 @@ function Home() {
             <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Savings</p>
             <p className="num" style={{ fontSize: '22px', fontWeight: 500 }}>{savingsCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{savingsCount !== 1 ? 's' : ''}</span></p>
           </div>
+        </div>
+      )}
+
+      {/* Monthly spending summary */}
+      {accounts.length > 0 && monthlySummary && (
+        <div className="fade-up fade-up-1" style={{
+          background: 'linear-gradient(135deg, #17120a 0%, var(--surface-1) 58%)',
+          border: '1px solid var(--border)',
+          borderRadius: '14px',
+          padding: '24px',
+          marginBottom: '32px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                Monthly Snapshot
+              </p>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px' }}>Cash flow by category</h2>
+            </div>
+            {monthlySummary.topExpenseCategory && (
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '5px' }}>Top Spend</p>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b' }}>{monthlySummary.topExpenseCategory}</p>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: expenseCategories.length ? '22px' : '0' }}>
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Income</p>
+              <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#22c55e' }}>{fmt(monthlySummary.income)}</p>
+            </div>
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Spending</p>
+              <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#f97316' }}>{fmt(monthlySummary.spending)}</p>
+            </div>
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Net</p>
+              <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: monthlySummary.netCashFlow >= 0 ? '#22c55e' : '#f97316' }}>{fmt(monthlySummary.netCashFlow)}</p>
+            </div>
+          </div>
+
+          {expenseCategories.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={expenseCategories} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
+                <Tooltip
+                  formatter={(value) => fmt(Number(value))}
+                  contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
+                  labelStyle={{ color: '#f59e0b' }}
+                  itemStyle={{ color: '#f3f4f6' }}
+                  cursor={{ fill: '#ffffff06' }}
+                />
+                <Bar dataKey="spending" fill="#f97316" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+              No spending has been categorized this month yet.
+            </p>
+          )}
         </div>
       )}
 
@@ -281,7 +350,7 @@ function Home() {
                 transition: 'opacity 0.15s',
               }}
             >
-              {creating ? "Opening…" : "Open"}
+              {creating ? "Opening..." : "Open"}
             </button>
           </div>
           {error && <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '8px' }}>{error}</p>}

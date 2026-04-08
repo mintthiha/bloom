@@ -30,6 +30,7 @@ export type Transaction = {
   type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER_OUT" | "TRANSFER_IN";
   amount: number;
   balanceAfter: number;
+  category: string | null;
   description: string | null;
   createdAt: string;
   fromAccountId: string | null;
@@ -46,17 +47,32 @@ export type Profile = {
   updatedAt: string;
 };
 
+export type MonthlySummary = {
+  month: string;
+  income: number;
+  spending: number;
+  netCashFlow: number;
+  topExpenseCategory: string | null;
+  categories: Array<{
+    category: string;
+    income: number;
+    spending: number;
+  }>;
+};
+
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
+  getMonthlySummary: () =>
+    request<MonthlySummary>("/accounts/summary/monthly"),
   createAccount: (ownerName: string, accountType: AccountType, nickname?: string) =>
     request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType, nickname }) }),
   getAccount: (id: string) =>
     request<Account>(`/accounts/${id}`),
-  deposit: (id: string, amount: number, description?: string) =>
-    request<Account>(`/accounts/${id}/deposit`, { method: "POST", body: JSON.stringify({ amount, description }) }),
-  withdraw: (id: string, amount: number, description?: string) =>
-    request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, description }) }),
+  deposit: (id: string, amount: number, input?: { category?: string; description?: string }) =>
+    request<Account>(`/accounts/${id}/deposit`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
+  withdraw: (id: string, amount: number, input?: { category?: string; description?: string }) =>
+    request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
   transfer: (id: string, toAccountId: string, amount: number, description?: string) =>
     request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string) =>

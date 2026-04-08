@@ -49,6 +49,7 @@ model Transaction {
   type         TransactionType
   amount       Float
   balanceAfter Float
+  category     String?
   description  String?
   createdAt    DateTime        @default(now())
 

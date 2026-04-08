@@ -7,6 +7,7 @@ const { apiMock } = vi.hoisted(() => ({
   apiMock: {
     getProfile: vi.fn(),
     listAccounts: vi.fn(),
+    getMonthlySummary: vi.fn(),
   },
 }));
 
@@ -18,6 +19,7 @@ vi.mock("@/lib/api", async () => {
       ...actual.api,
       getProfile: apiMock.getProfile,
       listAccounts: apiMock.listAccounts,
+      getMonthlySummary: apiMock.getMonthlySummary,
     },
   };
 });
@@ -55,7 +57,16 @@ describe("home page", () => {
   beforeEach(() => {
     apiMock.getProfile.mockReset();
     apiMock.listAccounts.mockReset();
+    apiMock.getMonthlySummary.mockReset();
     apiMock.listAccounts.mockResolvedValue([]);
+    apiMock.getMonthlySummary.mockResolvedValue({
+      month: "2026-04",
+      income: 0,
+      spending: 0,
+      netCashFlow: 0,
+      topExpenseCategory: null,
+      categories: [],
+    });
   });
 
   it("shows onboarding when the user has no saved profile", async () => {
@@ -83,5 +94,43 @@ describe("home page", () => {
     await waitFor(() => {
       expect(screen.getByText("Good morning, Jane.")).toBeInTheDocument();
     });
+  });
+
+  it("shows the monthly snapshot when accounts and summary data exist", async () => {
+    apiMock.getProfile.mockResolvedValue({
+      userId: "user-1",
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      createdAt: "2026-04-04T00:00:00.000Z",
+      updatedAt: "2026-04-04T00:00:00.000Z",
+    });
+    apiMock.listAccounts.mockResolvedValue([
+      {
+        id: "account-1",
+        ownerName: "Jane Doe",
+        nickname: "Main",
+        accountType: "CHEQUING",
+        balance: 1200,
+        frozen: false,
+        createdAt: "2026-04-04T00:00:00.000Z",
+        updatedAt: "2026-04-04T00:00:00.000Z",
+      },
+    ]);
+    apiMock.getMonthlySummary.mockResolvedValue({
+      month: "2026-04",
+      income: 2500,
+      spending: 400,
+      netCashFlow: 2100,
+      topExpenseCategory: "Groceries",
+      categories: [{ category: "Groceries", income: 0, spending: 400 }],
+    });
+
+    render(<Page />);
+
+    expect(await screen.findByText("Monthly Snapshot")).toBeInTheDocument();
+    expect(screen.getByText("Groceries")).toBeInTheDocument();
+    expect(screen.getByText("$400.00")).toBeInTheDocument();
   });
 });

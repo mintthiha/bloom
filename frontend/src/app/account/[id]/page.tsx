@@ -62,14 +62,15 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     if (isNaN(amt) || amt <= 0) { setOpError("Enter a valid positive amount"); return; }
     setSubmitting(true);
     let desc: string | undefined;
+    let transactionCategory: string | undefined;
     if (op === "transfer") {
       desc = description.trim() || undefined;
     } else {
-      desc = category === "Custom..." ? (customCategory.trim() || undefined) : (category || undefined);
+      transactionCategory = category === "Custom..." ? (customCategory.trim() || undefined) : (category || undefined);
     }
     try {
-      if (op === "deposit")  await api.deposit(id, amt, desc);
-      if (op === "withdraw") await api.withdraw(id, amt, desc);
+      if (op === "deposit")  await api.deposit(id, amt, { category: transactionCategory });
+      if (op === "withdraw") await api.withdraw(id, amt, { category: transactionCategory });
       if (op === "transfer") {
         if (!toId.trim()) { setOpError("Choose a destination account"); setSubmitting(false); return; }
         await api.transfer(id, toId.trim(), amt, desc);
@@ -600,6 +601,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                       </p>
                       <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                         {t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
+                        {t.category && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{t.category}</span>}
                         {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
                       </p>
                     </div>
