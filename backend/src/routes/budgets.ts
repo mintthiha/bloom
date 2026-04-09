@@ -1,0 +1,55 @@
+import { Router, Request, Response, NextFunction } from "express";
+import * as budgetService from "../services/budgetService";
+import { AppError } from "../middleware/errorHandler";
+
+const router = Router();
+
+/**
+ * Extracts the authenticated user id from the request headers.
+ * Throws 401 when the frontend proxy did not attach an `X-User-Id`.
+ */
+function uid(req: Request): string {
+  const id = req.headers["x-user-id"] as string | undefined;
+  if (!id) throw new AppError(401, "Unauthorized");
+  return id;
+}
+
+/**
+ * Returns the current user's saved category budgets with live monthly spending.
+ */
+router.get("/", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await budgetService.listBudgets(uid(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Creates or updates the current user's budget for a category.
+ */
+router.put("/", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { category, monthlyLimit } = req.body as {
+      category?: string;
+      monthlyLimit?: number;
+    };
+    res.json(await budgetService.upsertBudget(uid(req), { category, monthlyLimit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Deletes one saved budget by id for the current user.
+ */
+router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await budgetService.deleteBudget(uid(req), req.params["id"] as string);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;

@@ -60,11 +60,30 @@ export type MonthlySummary = {
   }>;
 };
 
+export type Budget = {
+  id: string;
+  userId: string;
+  category: string;
+  monthlyLimit: number;
+  currentSpending: number;
+  remaining: number;
+  percentageUsed: number;
+  isOverBudget: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
   getMonthlySummary: () =>
     request<MonthlySummary>("/accounts/summary/monthly"),
+  getBudgets: () =>
+    request<Budget[]>("/budgets"),
+  saveBudget: (category: string, monthlyLimit: number) =>
+    request<Budget>("/budgets", { method: "PUT", body: JSON.stringify({ category, monthlyLimit }) }),
+  deleteBudget: (id: string) =>
+    request<void>(`/budgets/${id}`, { method: "DELETE" }),
   createAccount: (ownerName: string, accountType: AccountType, nickname?: string) =>
     request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType, nickname }) }),
   getAccount: (id: string) =>

@@ -3,15 +3,18 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType, MonthlySummary, Profile } from "@/lib/api";
+import { api, Account, AccountType, Budget, MonthlySummary, Profile } from "@/lib/api";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
 } from "recharts";
 
+const EXPENSE_BUDGET_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other", "Custom..."];
+
 function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
@@ -21,6 +24,12 @@ function Home() {
   const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [budgetCategory, setBudgetCategory] = useState("Groceries");
+  const [customBudgetCategory, setCustomBudgetCategory] = useState("");
+  const [budgetAmount, setBudgetAmount] = useState("");
+  const [budgetSaving, setBudgetSaving] = useState(false);
+  const [budgetError, setBudgetError] = useState<string | null>(null);
+  const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -34,12 +43,14 @@ function Home() {
 
   const loadAccounts = useCallback(async () => {
     try {
-      const [nextAccounts, nextSummary] = await Promise.all([
+      const [nextAccounts, nextSummary, nextBudgets] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(),
+        api.getBudgets(),
       ]);
       setAccounts(nextAccounts);
       setMonthlySummary(nextSummary);
+      setBudgets(nextBudgets);
     } finally {
       setLoading(false);
     }
@@ -138,6 +149,48 @@ function Home() {
     }
   }
 
+  async function handleSaveBudget(e: React.FormEvent) {
+    e.preventDefault();
+    setBudgetError(null);
+    const monthlyLimit = parseFloat(budgetAmount);
+    const category = budgetCategory === "Custom..." ? customBudgetCategory.trim() : budgetCategory;
+
+    if (!category) {
+      setBudgetError("Choose a category");
+      return;
+    }
+    if (Number.isNaN(monthlyLimit) || monthlyLimit <= 0) {
+      setBudgetError("Enter a valid monthly limit");
+      return;
+    }
+
+    setBudgetSaving(true);
+    try {
+      await api.saveBudget(category, monthlyLimit);
+      setBudgetAmount("");
+      setCustomBudgetCategory("");
+      setBudgetCategory("Groceries");
+      await loadAccounts();
+    } catch (err) {
+      setBudgetError(err instanceof Error ? err.message : "Failed to save budget");
+    } finally {
+      setBudgetSaving(false);
+    }
+  }
+
+  async function handleDeleteBudget(id: string) {
+    setDeletingBudgetId(id);
+    setBudgetError(null);
+    try {
+      await api.deleteBudget(id);
+      await loadAccounts();
+    } catch (err) {
+      setBudgetError(err instanceof Error ? err.message : "Failed to delete budget");
+    } finally {
+      setDeletingBudgetId(null);
+    }
+  }
+
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
 
@@ -145,6 +198,11 @@ function Home() {
   const chequingCount = accounts.filter(a => a.accountType === "CHEQUING").length;
   const savingsCount = accounts.filter(a => a.accountType === "SAVINGS").length;
   const expenseCategories = monthlySummary?.categories.filter(category => category.spending > 0) ?? [];
+  const knownBudgetCategories = Array.from(new Set([
+    ...EXPENSE_BUDGET_CATEGORIES.filter((category) => category !== "Custom..."),
+    ...expenseCategories.map((category) => category.category),
+    ...budgets.map((budget) => budget.category),
+  ])).sort((left, right) => left.localeCompare(right));
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
@@ -235,6 +293,176 @@ function Home() {
             <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
               No spending has been categorized this month yet.
             </p>
+          )}
+        </div>
+      )}
+
+      {/* Budgets */}
+      {accounts.length > 0 && monthlySummary && (
+        <div className="fade-up fade-up-2" style={{
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          borderRadius: '14px',
+          padding: '24px',
+          marginBottom: '32px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '18px' }}>
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                Budgets
+              </p>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px', marginBottom: '6px' }}>
+                Set monthly limits by category
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '460px' }}>
+                Budgets compare this month&apos;s withdrawal totals against your category limits.
+              </p>
+            </div>
+            <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{budgets.length} saved</span>
+          </div>
+
+          <form onSubmit={handleSaveBudget} style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 180px) auto', gap: '10px', alignItems: 'stretch' }}>
+              <select
+                value={budgetCategory}
+                onChange={(e) => setBudgetCategory(e.target.value)}
+                aria-label="Budget category"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                }}
+              >
+                {knownBudgetCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+                <option value="Custom...">Custom...</option>
+              </select>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(e.target.value)}
+                placeholder="Monthly limit"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="submit"
+                disabled={budgetSaving}
+                style={{
+                  padding: '10px 18px',
+                  background: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: budgetSaving ? 'not-allowed' : 'pointer',
+                  opacity: budgetSaving ? 0.45 : 1,
+                }}
+              >
+                {budgetSaving ? "Saving..." : "Save Budget"}
+              </button>
+            </div>
+
+            {budgetCategory === "Custom..." && (
+              <input
+                type="text"
+                value={customBudgetCategory}
+                onChange={(e) => setCustomBudgetCategory(e.target.value)}
+                placeholder="Custom category"
+                style={{
+                  marginTop: '10px',
+                  width: '100%',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                }}
+              />
+            )}
+
+            {budgetError && (
+              <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{budgetError}</p>
+            )}
+          </form>
+
+          {budgets.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+              No budgets yet. Add one above to start tracking category limits.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {budgets.map((budget) => {
+                const progress = Math.min(budget.percentageUsed, 100);
+
+                return (
+                  <div key={budget.id} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
+                      <div>
+                        <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>{budget.category}</p>
+                        <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {fmt(budget.currentSpending)} spent of {fmt(budget.monthlyLimit)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBudget(budget.id)}
+                        disabled={deletingBudgetId === budget.id}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid var(--border)',
+                          color: 'var(--text-secondary)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '12px',
+                          cursor: deletingBudgetId === budget.id ? 'not-allowed' : 'pointer',
+                          opacity: deletingBudgetId === budget.id ? 0.45 : 1,
+                        }}
+                      >
+                        {deletingBudgetId === budget.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+
+                    <div style={{ height: '10px', borderRadius: '999px', background: '#ffffff0a', overflow: 'hidden', marginBottom: '10px' }}>
+                      <div
+                        style={{
+                          width: `${progress}%`,
+                          height: '100%',
+                          background: budget.isOverBudget ? '#ef4444' : '#f59e0b',
+                          transition: 'width 0.2s ease',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '12px' }}>
+                      <span className="num" style={{ color: budget.isOverBudget ? '#f87171' : 'var(--text-secondary)' }}>
+                        {budget.isOverBudget ? `${fmt(Math.abs(budget.remaining))} over budget` : `${fmt(budget.remaining)} remaining`}
+                      </span>
+                      <span className="num" style={{ color: 'var(--text-muted)' }}>
+                        {budget.percentageUsed.toFixed(0)}% used
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}

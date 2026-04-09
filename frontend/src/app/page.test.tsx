@@ -8,6 +8,7 @@ const { apiMock } = vi.hoisted(() => ({
     getProfile: vi.fn(),
     listAccounts: vi.fn(),
     getMonthlySummary: vi.fn(),
+    getBudgets: vi.fn(),
   },
 }));
 
@@ -20,6 +21,7 @@ vi.mock("@/lib/api", async () => {
       getProfile: apiMock.getProfile,
       listAccounts: apiMock.listAccounts,
       getMonthlySummary: apiMock.getMonthlySummary,
+      getBudgets: apiMock.getBudgets,
     },
   };
 });
@@ -58,6 +60,7 @@ describe("home page", () => {
     apiMock.getProfile.mockReset();
     apiMock.listAccounts.mockReset();
     apiMock.getMonthlySummary.mockReset();
+    apiMock.getBudgets.mockReset();
     apiMock.listAccounts.mockResolvedValue([]);
     apiMock.getMonthlySummary.mockResolvedValue({
       month: "2026-04",
@@ -67,6 +70,7 @@ describe("home page", () => {
       topExpenseCategory: null,
       categories: [],
     });
+    apiMock.getBudgets.mockResolvedValue([]);
   });
 
   it("shows onboarding when the user has no saved profile", async () => {
@@ -130,7 +134,51 @@ describe("home page", () => {
     render(<Page />);
 
     expect(await screen.findByText("Monthly Snapshot")).toBeInTheDocument();
-    expect(screen.getByText("Groceries")).toBeInTheDocument();
+    expect(screen.getByText("Top Spend")).toBeInTheDocument();
     expect(screen.getByText("$400.00")).toBeInTheDocument();
+  });
+
+  it("shows saved budgets with current progress", async () => {
+    apiMock.getProfile.mockResolvedValue({
+      userId: "user-1",
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      createdAt: "2026-04-04T00:00:00.000Z",
+      updatedAt: "2026-04-04T00:00:00.000Z",
+    });
+    apiMock.listAccounts.mockResolvedValue([
+      {
+        id: "account-1",
+        ownerName: "Jane Doe",
+        nickname: "Main",
+        accountType: "CHEQUING",
+        balance: 1200,
+        frozen: false,
+        createdAt: "2026-04-04T00:00:00.000Z",
+        updatedAt: "2026-04-04T00:00:00.000Z",
+      },
+    ]);
+    apiMock.getBudgets.mockResolvedValue([
+      {
+        id: "budget-1",
+        userId: "user-1",
+        category: "Dining",
+        monthlyLimit: 300,
+        currentSpending: 180,
+        remaining: 120,
+        percentageUsed: 60,
+        isOverBudget: false,
+        createdAt: "2026-04-04T00:00:00.000Z",
+        updatedAt: "2026-04-04T00:00:00.000Z",
+      },
+    ]);
+
+    render(<Page />);
+
+    expect(await screen.findByText("Set monthly limits by category")).toBeInTheDocument();
+    expect(screen.getByText("$120.00 remaining")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 });
