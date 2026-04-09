@@ -205,10 +205,10 @@ function Home() {
   ])).sort((left, right) => left.localeCompare(right));
 
   return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 48px' }}>
 
       {/* Welcome */}
-      <div className="fade-up" style={{ marginBottom: '40px' }}>
+      <div className="fade-up" style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>
           {profile?.firstName ? `Good morning, ${profile.firstName}.` : "Good morning."}
         </h1>
@@ -235,14 +235,15 @@ function Home() {
         </div>
       )}
 
-      {/* Monthly spending summary */}
       {accounts.length > 0 && monthlySummary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
+          {/* Monthly spending summary */}
         <div className="fade-up fade-up-1" style={{
           background: 'linear-gradient(135deg, #17120a 0%, var(--surface-1) 58%)',
           border: '1px solid var(--border)',
           borderRadius: '14px',
           padding: '24px',
-          marginBottom: '32px',
+          minHeight: '100%',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
             <div>
@@ -295,16 +296,14 @@ function Home() {
             </p>
           )}
         </div>
-      )}
 
-      {/* Budgets */}
-      {accounts.length > 0 && monthlySummary && (
+          {/* Budgets */}
         <div className="fade-up fade-up-2" style={{
           background: 'var(--surface-1)',
           border: '1px solid var(--border)',
           borderRadius: '14px',
           padding: '24px',
-          marginBottom: '32px',
+          minHeight: '100%',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '18px' }}>
             <div>
@@ -322,7 +321,7 @@ function Home() {
           </div>
 
           <form onSubmit={handleSaveBudget} style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 180px) auto', gap: '10px', alignItems: 'stretch' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 150px) auto', gap: '10px', alignItems: 'stretch' }}>
               <select
                 value={budgetCategory}
                 onChange={(e) => setBudgetCategory(e.target.value)}
@@ -465,13 +464,15 @@ function Home() {
             </div>
           )}
         </div>
+        </div>
       )}
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
       {/* Balance bar chart */}
       {accounts.length > 1 && (
         <div className="fade-up fade-up-1" style={{
           background: 'var(--surface-1)', border: '1px solid var(--border)',
-          borderRadius: '14px', padding: '24px', marginBottom: '32px',
+          borderRadius: '14px', padding: '24px', minHeight: '100%',
         }}>
           <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Account Balances
@@ -497,10 +498,10 @@ function Home() {
       )}
 
       {/* Open account */}
-      <div className="fade-up fade-up-2" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px', marginBottom: '32px' }}>
+      <div className="fade-up fade-up-2" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px', minHeight: '100%' }}>
         <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>Open New Account</p>
         <form onSubmit={handleCreate}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 140px auto', gap: '10px', marginBottom: '12px', alignItems: 'stretch' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px', marginBottom: '12px', alignItems: 'stretch' }}>
             <input
               type="text"
               value={nickname}
@@ -537,52 +538,55 @@ function Home() {
               onFocus={e => (e.target.style.borderColor = '#f59e0b')}
               onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
-            <select
-              value={accountType}
-              onChange={(e) => setAccountType(e.target.value as AccountType)}
-              aria-label="Account type"
-              style={{
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '10px 14px',
-                fontSize: '13px',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                color: 'var(--text-primary)',
-                outline: 'none',
-                cursor: 'pointer',
-                appearance: 'none',
-                textAlign: 'center',
-                textAlignLast: 'center',
-              }}
-              onFocus={e => (e.target.style.borderColor = '#f59e0b')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-            >
-              <option value="CHEQUING">Chequing</option>
-              <option value="SAVINGS">Savings</option>
-            </select>
-            <button
-              type="submit"
-              disabled={creating || !ownerName.trim()}
-              style={{
-                padding: '10px 20px',
-                background: '#f59e0b',
-                color: '#000',
-                fontWeight: 700,
-                fontSize: '14px',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: creating || !ownerName.trim() ? 'not-allowed' : 'pointer',
-                opacity: creating || !ownerName.trim() ? 0.45 : 1,
-                transition: 'opacity 0.15s',
-              }}
-            >
-              {creating ? "Opening..." : "Open"}
-            </button>
+            <div style={{ display: 'grid', gridTemplateColumns: '140px auto', gap: '10px' }}>
+              <select
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value as AccountType)}
+                aria-label="Account type"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  textAlign: 'center',
+                  textAlignLast: 'center',
+                }}
+                onFocus={e => (e.target.style.borderColor = '#f59e0b')}
+                onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+              >
+                <option value="CHEQUING">Chequing</option>
+                <option value="SAVINGS">Savings</option>
+              </select>
+              <button
+                type="submit"
+                disabled={creating || !ownerName.trim()}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f59e0b',
+                  color: '#000',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: creating || !ownerName.trim() ? 'not-allowed' : 'pointer',
+                  opacity: creating || !ownerName.trim() ? 0.45 : 1,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                {creating ? "Opening..." : "Open"}
+              </button>
+            </div>
           </div>
           {error && <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '8px' }}>{error}</p>}
         </form>
+      </div>
       </div>
 
       {/* Account list */}
