@@ -1,12 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
-import { LogOut } from "lucide-react";
+import { Columns2, LogOut, Rows3 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useDashboardView } from "@/components/dashboard-view-provider";
 import {
   Sidebar,
   SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
@@ -18,6 +22,7 @@ import {
 export function AppSidebar() {
   const { data: session } = useSession();
   const { state } = useSidebar();
+  const { view, setView } = useDashboardView();
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -74,7 +79,77 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent />
+      <SidebarContent>
+        <SidebarGroup>
+          {state !== "collapsed" && (
+            <SidebarGroupLabel
+              style={{
+                justifyContent: "center",
+                fontWeight: 900,
+                textAlign: "center",
+                paddingBottom: "12px",
+              }}
+            >
+              Dashboard View
+            </SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: state === "collapsed" ? "1fr" : "1fr 1fr",
+                gap: "8px",
+                padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setView("single")}
+                title="Single column"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "36px",
+                  borderRadius: "10px",
+                  border: view === "single" ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                  background: view === "single" ? "#f59e0b1a" : "var(--surface-1)",
+                  color: view === "single" ? "#f59e0b" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Rows3 size={15} />
+                <span className="group-data-[collapsible=icon]:hidden">Single</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("double")}
+                title="Two columns"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "36px",
+                  borderRadius: "10px",
+                  border: view === "double" ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                  background: view === "double" ? "#f59e0b1a" : "var(--surface-1)",
+                  color: view === "double" ? "#f59e0b" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Columns2 size={15} />
+                <span className="group-data-[collapsible=icon]:hidden">Double</span>
+              </button>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
       <SidebarFooter style={{ padding: "12px 0" }}>
         {session?.user && (

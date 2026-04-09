@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SessionProvider } from "next-auth/react";
+import { DashboardViewProvider } from "@/components/dashboard-view-provider";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SessionProvider>
         <TooltipProvider>
+          <DashboardViewProvider>
           <SidebarProvider defaultOpen={false} style={{ minHeight: "100vh", "--sidebar-width": "14.5rem", "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}>
             <AppSidebar />
             <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
@@ -54,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </footer>
             </div>
           </SidebarProvider>
+          </DashboardViewProvider>
         </TooltipProvider>
         </SessionProvider>
       </body>

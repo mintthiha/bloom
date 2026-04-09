@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { api, Account, AccountType, Budget, MonthlySummary, Profile } from "@/lib/api";
+import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
 import {
   ResponsiveContainer,
@@ -13,6 +14,7 @@ import {
 const EXPENSE_BUDGET_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other", "Custom..."];
 
 function Home() {
+  const { view } = useDashboardView();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
@@ -203,6 +205,7 @@ function Home() {
     ...expenseCategories.map((category) => category.category),
     ...budgets.map((budget) => budget.category),
   ])).sort((left, right) => left.localeCompare(right));
+  const dashboardColumns = view === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 48px' }}>
@@ -236,7 +239,7 @@ function Home() {
       )}
 
       {accounts.length > 0 && monthlySummary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: dashboardColumns, gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
           {/* Monthly spending summary */}
         <div className="fade-up fade-up-1" style={{
           background: 'linear-gradient(135deg, #17120a 0%, var(--surface-1) 58%)',
@@ -467,7 +470,7 @@ function Home() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: dashboardColumns, gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
       {/* Balance bar chart */}
       {accounts.length > 1 && (
         <div className="fade-up fade-up-1" style={{
