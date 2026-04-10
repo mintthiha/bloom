@@ -73,6 +73,32 @@ export type Budget = {
   updatedAt: string;
 };
 
+export type BudgetActivity = Budget & {
+  month: string;
+  activity: Array<{
+    id: string;
+    amount: number;
+    category: string | null;
+    description: string | null;
+    createdAt: string;
+    accountId: string;
+    accountName: string;
+    accountNickname: string | null;
+    accountOwnerName: string;
+  }>;
+  dailySpending: Array<{
+    day: string;
+    total: number;
+  }>;
+  accountTotals: Array<{
+    accountId: string;
+    accountName: string;
+    accountNickname: string | null;
+    accountOwnerName: string;
+    total: number;
+  }>;
+};
+
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
@@ -80,6 +106,8 @@ export const api = {
     request<MonthlySummary>("/accounts/summary/monthly"),
   getBudgets: () =>
     request<Budget[]>("/budgets"),
+  getBudgetActivity: (id: string) =>
+    request<BudgetActivity>(`/budgets/${id}/activity`),
   saveBudget: (category: string, monthlyLimit: number) =>
     request<Budget>("/budgets", { method: "PUT", body: JSON.stringify({ category, monthlyLimit }) }),
   deleteBudget: (id: string) =>

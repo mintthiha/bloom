@@ -5,6 +5,7 @@ import app from "../app";
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
     listBudgets: vi.fn(),
+    getBudgetActivity: vi.fn(),
     upsertBudget: vi.fn(),
     deleteBudget: vi.fn(),
   },
@@ -15,6 +16,7 @@ vi.mock("../services/budgetService", () => serviceMock);
 describe("budget routes", () => {
   beforeEach(() => {
     serviceMock.listBudgets.mockReset();
+    serviceMock.getBudgetActivity.mockReset();
     serviceMock.upsertBudget.mockReset();
     serviceMock.deleteBudget.mockReset();
   });
@@ -65,6 +67,30 @@ describe("budget routes", () => {
     expect(response.status).toBe(200);
     expect(serviceMock.upsertBudget).toHaveBeenCalledWith("user-1", { category: "Dining", monthlyLimit: 250 });
     expect(response.body).toMatchObject({ category: "Dining", monthlyLimit: 250 });
+  });
+
+  it("returns activity for a single budget", async () => {
+    serviceMock.getBudgetActivity.mockResolvedValue({
+      id: "budget-1",
+      category: "Entertainment",
+      month: "2026-04",
+      monthlyLimit: 300,
+      currentSpending: 69,
+      remaining: 231,
+      percentageUsed: 23,
+      isOverBudget: false,
+      activity: [],
+      dailySpending: [],
+      accountTotals: [],
+    });
+
+    const response = await request(app)
+      .get("/api/budgets/budget-1/activity")
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.getBudgetActivity).toHaveBeenCalledWith("user-1", "budget-1");
+    expect(response.body).toMatchObject({ category: "Entertainment", month: "2026-04" });
   });
 
   it("deletes a budget by id", async () => {

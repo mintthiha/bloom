@@ -22,6 +22,29 @@ type BudgetInput = {
   monthlyLimit?: number;
 };
 
+type BudgetActivityRecord = {
+  id: string;
+  amount: number | string;
+  category: string | null;
+  description: string | null;
+  createdAt: Date;
+  accountId: string;
+  accountNickname: string | null;
+  accountOwnerName: string;
+};
+
+type DailySpendingRow = {
+  day: Date;
+  total: number | string;
+};
+
+type AccountSpendingRow = {
+  accountId: string;
+  accountNickname: string | null;
+  accountOwnerName: string;
+  total: number | string;
+};
+
 function normalizeCategory(value?: string) {
   return value
     ?.trim()
@@ -32,12 +55,33 @@ function normalizeCategory(value?: string) {
     .join(" ");
 }
 
+function getMonthRange(now = new Date()) {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return { start, end };
+}
+
+async function getBudgetRecord(userId: string, budgetId: string) {
+  const rows = await prisma.$queryRaw<BudgetRecord[]>`
+    SELECT "id", "userId", "category", "monthlyLimit", "createdAt", "updatedAt"
+    FROM "CategoryBudget"
+    WHERE "id" = ${budgetId} AND "userId" = ${userId}
+    LIMIT 1
+  `;
+
+  const budget = rows[0];
+  if (!budget) {
+    throw new AppError(404, `Budget ${budgetId} not found`);
+  }
+
+  return budget;
+}
+
 /**
  * Returns all saved budgets for the current user with this month's spending progress.
  */
 export async function listBudgets(userId: string, now = new Date()) {
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const { start, end } = getMonthRange(now);
   const rows = await prisma.$queryRaw<BudgetProgressRow[]>`
     SELECT
       b."id",
@@ -79,6 +123,103 @@ export async function listBudgets(userId: string, now = new Date()) {
       updatedAt: row.updatedAt,
     };
   });
+}
+
+/**
+ * Returns a single budget plus the current month's matching withdrawals,
+ * daily totals, and account totals for drill-down views.
+ */
+export async function getBudgetActivity(userId: string, budgetId: string, now = new Date()) {
+  const budget = await getBudgetRecord(userId, budgetId);
+  const { start, end } = getMonthRange(now);
+  const transactions = await prisma.$queryRaw<BudgetActivityRecord[]>`
+    SELECT
+      t."id",
+      t."amount",
+      t."category",
+      t."description",
+      t."createdAt",
+      a."id" AS "accountId",
+      a."nickname" AS "accountNickname",
+      a."ownerName" AS "accountOwnerName"
+    FROM "Transaction" t
+    JOIN "Account" a ON t."fromAccountId" = a."id"
+    WHERE a."userId" = ${userId}
+      AND t."type" = 'WITHDRAWAL'::"TransactionType"
+      AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
+      AND t."createdAt" >= ${start}
+      AND t."createdAt" < ${end}
+    ORDER BY t."createdAt" DESC
+  `;
+  const dailySpending = await prisma.$queryRaw<DailySpendingRow[]>`
+    SELECT DATE_TRUNC('day', t."createdAt") AS "day", COALESCE(SUM(t."amount"), 0) AS "total"
+    FROM "Transaction" t
+    JOIN "Account" a ON t."fromAccountId" = a."id"
+    WHERE a."userId" = ${userId}
+      AND t."type" = 'WITHDRAWAL'::"TransactionType"
+      AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
+      AND t."createdAt" >= ${start}
+      AND t."createdAt" < ${end}
+    GROUP BY DATE_TRUNC('day', t."createdAt")
+    ORDER BY "day" ASC
+  `;
+  const accountTotals = await prisma.$queryRaw<AccountSpendingRow[]>`
+    SELECT
+      a."id" AS "accountId",
+      a."nickname" AS "accountNickname",
+      a."ownerName" AS "accountOwnerName",
+      COALESCE(SUM(t."amount"), 0) AS "total"
+    FROM "Transaction" t
+    JOIN "Account" a ON t."fromAccountId" = a."id"
+    WHERE a."userId" = ${userId}
+      AND t."type" = 'WITHDRAWAL'::"TransactionType"
+      AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
+      AND t."createdAt" >= ${start}
+      AND t."createdAt" < ${end}
+    GROUP BY a."id", a."nickname", a."ownerName"
+    ORDER BY "total" DESC, a."ownerName" ASC
+  `;
+
+  const normalizedTransactions = transactions.map((transaction) => ({
+    id: transaction.id,
+    amount: Number(transaction.amount),
+    category: transaction.category,
+    description: transaction.description,
+    createdAt: transaction.createdAt,
+    accountId: transaction.accountId,
+    accountName: transaction.accountNickname ?? transaction.accountOwnerName,
+    accountNickname: transaction.accountNickname,
+    accountOwnerName: transaction.accountOwnerName,
+  }));
+  const currentSpending = normalizedTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+  const monthlyLimit = Number(budget.monthlyLimit);
+  const remaining = monthlyLimit - currentSpending;
+
+  return {
+    id: budget.id,
+    userId: budget.userId,
+    category: budget.category,
+    month: start.toISOString().slice(0, 7),
+    monthlyLimit,
+    currentSpending,
+    remaining,
+    percentageUsed: monthlyLimit > 0 ? (currentSpending / monthlyLimit) * 100 : 0,
+    isOverBudget: remaining < 0,
+    createdAt: budget.createdAt,
+    updatedAt: budget.updatedAt,
+    activity: normalizedTransactions,
+    dailySpending: dailySpending.map((row) => ({
+      day: row.day,
+      total: Number(row.total),
+    })),
+    accountTotals: accountTotals.map((row) => ({
+      accountId: row.accountId,
+      accountName: row.accountNickname ?? row.accountOwnerName,
+      accountNickname: row.accountNickname,
+      accountOwnerName: row.accountOwnerName,
+      total: Number(row.total),
+    })),
+  };
 }
 
 /**

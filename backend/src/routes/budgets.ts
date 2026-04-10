@@ -26,6 +26,17 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
+ * Returns one budget plus its current month's activity breakdown.
+ */
+router.get("/:id/activity", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await budgetService.getBudgetActivity(uid(req), req.params["id"] as string));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * Creates or updates the current user's budget for a category.
  */
 router.put("/", async (req: Request, res: Response, next: NextFunction) => {

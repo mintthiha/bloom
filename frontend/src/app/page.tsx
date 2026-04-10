@@ -417,12 +417,15 @@ function Home() {
                 return (
                   <div key={budget.id} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
-                      <div>
+                      <Link
+                        href={`/budgets/${budget.id}`}
+                        style={{ minWidth: 0, flex: 1, textDecoration: 'none', color: 'inherit' }}
+                      >
                         <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>{budget.category}</p>
                         <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                           {fmt(budget.currentSpending)} spent of {fmt(budget.monthlyLimit)}
                         </p>
-                      </div>
+                      </Link>
                       <button
                         type="button"
                         onClick={() => handleDeleteBudget(budget.id)}
@@ -442,6 +445,10 @@ function Home() {
                       </button>
                     </div>
 
+                    <Link
+                      href={`/budgets/${budget.id}`}
+                      style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+                    >
                     <div style={{ height: '10px', borderRadius: '999px', background: '#ffffff0a', overflow: 'hidden', marginBottom: '10px' }}>
                       <div
                         style={{
@@ -461,6 +468,7 @@ function Home() {
                         {budget.percentageUsed.toFixed(0)}% used
                       </span>
                     </div>
+                    </Link>
                   </div>
                 );
               })}
