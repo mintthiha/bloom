@@ -233,6 +233,9 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
   if (!category) {
     throw new AppError(400, "Category is required");
   }
+  if (category.length > 50) {
+    throw new AppError(400, "Category must be at most 50 characters");
+  }
   if (!Number.isFinite(monthlyLimit) || monthlyLimit <= 0) {
     throw new AppError(400, "Monthly limit must be a positive number");
   }

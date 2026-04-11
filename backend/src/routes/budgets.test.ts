@@ -69,6 +69,17 @@ describe("budget routes", () => {
     expect(response.body).toMatchObject({ category: "Dining", monthlyLimit: 250 });
   });
 
+  it("rejects invalid budget payloads before hitting the service", async () => {
+    const response = await request(app)
+      .put("/api/budgets")
+      .set("X-User-Id", "user-1")
+      .send({ category: "", monthlyLimit: "250" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "category is required" });
+    expect(serviceMock.upsertBudget).not.toHaveBeenCalled();
+  });
+
   it("returns activity for a single budget", async () => {
     serviceMock.getBudgetActivity.mockResolvedValue({
       id: "budget-1",

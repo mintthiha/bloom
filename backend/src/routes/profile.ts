@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as profileService from "../services/profileService";
 import { AppError } from "../middleware/errorHandler";
+import { requireObject, requireString } from "../lib/validation";
 
 const router = Router();
 
@@ -31,12 +32,16 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
  */
 router.put("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { firstName, lastName, username, email } = req.body as {
-      firstName?: string;
-      lastName?: string;
-      username?: string;
-      email?: string;
-    };
+    const body = requireObject(req.body);
+    const firstName = requireString(body.firstName, "firstName", { max: 50 });
+    const lastName = requireString(body.lastName, "lastName", { max: 50 });
+    const username = requireString(body.username, "username", {
+      min: 3,
+      max: 20,
+      pattern: /^[a-z0-9_]+$/i,
+      patternMessage: "username must contain only letters, numbers, or underscores",
+    });
+    const email = requireString(body.email, "email", { max: 254 });
     res.json(await profileService.upsertProfile(uid(req), { firstName, lastName, username, email }));
   } catch (err) {
     next(err);

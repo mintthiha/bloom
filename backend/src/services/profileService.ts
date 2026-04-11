@@ -52,6 +52,12 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   if (!lastName) {
     throw new AppError(400, "Last name is required");
   }
+  if (firstName.length > 50) {
+    throw new AppError(400, "First name must be at most 50 characters");
+  }
+  if (lastName.length > 50) {
+    throw new AppError(400, "Last name must be at most 50 characters");
+  }
   if (!username) {
     throw new AppError(400, "Username is required");
   }
@@ -63,6 +69,9 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   }
   if (!email) {
     throw new AppError(400, "Email is required");
+  }
+  if (email.length > 254) {
+    throw new AppError(400, "Email must be at most 254 characters");
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new AppError(400, "Email is invalid");

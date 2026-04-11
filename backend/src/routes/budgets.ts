@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as budgetService from "../services/budgetService";
 import { AppError } from "../middleware/errorHandler";
+import { requireObject, requirePositiveNumber, requireString } from "../lib/validation";
 
 const router = Router();
 
@@ -41,10 +42,9 @@ router.get("/:id/activity", async (req: Request, res: Response, next: NextFuncti
  */
 router.put("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { category, monthlyLimit } = req.body as {
-      category?: string;
-      monthlyLimit?: number;
-    };
+    const body = requireObject(req.body);
+    const category = requireString(body.category, "category", { max: 50 });
+    const monthlyLimit = requirePositiveNumber(body.monthlyLimit, "monthlyLimit");
     res.json(await budgetService.upsertBudget(uid(req), { category, monthlyLimit }));
   } catch (err) {
     next(err);

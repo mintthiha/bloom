@@ -44,6 +44,16 @@ async function selectAccountById(id: string) {
   return rows[0] ?? null;
 }
 
+async function selectAccountByUserId(userId: string, id: string) {
+  const rows = await prisma.$queryRaw<AccountRecord[]>`
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    FROM "Account"
+    WHERE "id" = ${id} AND "userId" = ${userId}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
 async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input: {
   type: TransactionType;
   amount: number;
@@ -148,8 +158,8 @@ export async function createAccount(
  * Retrieves a single account by its ID.
  * Throws 404 if no account is found with the given ID.
  */
-export async function getAccount(id: string) {
-  const account = await selectAccountById(id);
+export async function getAccount(userId: string, id: string) {
+  const account = await selectAccountByUserId(userId, id);
   if (!account) throw new AppError(404, `Account ${id} not found`);
   return account;
 }
@@ -159,13 +169,13 @@ export async function getAccount(id: string) {
  * Passing an empty nickname clears the custom label.
  * Throws 404 if the account does not exist.
  */
-export async function updateNickname(id: string, nickname?: string) {
-  await getAccount(id);
+export async function updateNickname(userId: string, id: string, nickname?: string) {
+  await getAccount(userId, id);
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     UPDATE "Account"
     SET "nickname" = ${nickname?.trim() ? nickname.trim() : null},
         "updatedAt" = CURRENT_TIMESTAMP
-    WHERE "id" = ${id}
+    WHERE "id" = ${id} AND "userId" = ${userId}
     RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
   return rows[0];
@@ -177,9 +187,9 @@ export async function updateNickname(id: string, nickname?: string) {
  * Throws 403 if the account is frozen.
  * Uses a Prisma transaction to ensure the balance update and transaction record are atomic.
  */
-export async function deposit(id: string, amount: number, category?: string, description?: string) {
+export async function deposit(userId: string, id: string, amount: number, category?: string, description?: string) {
   if (amount <= 0) throw new AppError(400, "Deposit amount must be positive");
-  const account = await getAccount(id);
+  const account = await getAccount(userId, id);
   if (account.frozen) throw new AppError(403, "Account is frozen");
   const newBalance = account.balance + amount;
   const transaction = await prisma.$transaction(async (tx) => {
@@ -193,7 +203,7 @@ export async function deposit(id: string, amount: number, category?: string, des
       toAccountId: id,
     });
   });
-  return [await getAccount(id), transaction] as const;
+  return [await getAccount(userId, id), transaction] as const;
 }
 
 /**
@@ -203,9 +213,9 @@ export async function deposit(id: string, amount: number, category?: string, des
  * Throws 400 if the account has insufficient funds.
  * Uses a Prisma transaction to ensure the balance update and transaction record are atomic.
  */
-export async function withdraw(id: string, amount: number, category?: string, description?: string) {
+export async function withdraw(userId: string, id: string, amount: number, category?: string, description?: string) {
   if (amount <= 0) throw new AppError(400, "Withdrawal amount must be positive");
-  const account = await getAccount(id);
+  const account = await getAccount(userId, id);
   if (account.frozen) throw new AppError(403, "Account is frozen");
   if (account.balance < amount) throw new AppError(400, "Insufficient funds");
   const newBalance = account.balance - amount;
@@ -220,7 +230,7 @@ export async function withdraw(id: string, amount: number, category?: string, de
       fromAccountId: id,
     });
   });
-  return [await getAccount(id), transaction] as const;
+  return [await getAccount(userId, id), transaction] as const;
 }
 
 /**
@@ -232,13 +242,13 @@ export async function withdraw(id: string, amount: number, category?: string, de
  * Throws 400 if the source account has insufficient funds.
  * Uses a Prisma transaction to ensure all four operations (two balance updates, two transaction records) are atomic.
  */
-export async function transfer(fromId: string, toId: string, amount: number, description?: string, category: string = "Transfer") {
+export async function transfer(userId: string, fromId: string, toId: string, amount: number, description?: string, category: string = "Transfer") {
   if (amount <= 0) throw new AppError(400, "Transfer amount must be positive");
   if (fromId === toId) throw new AppError(400, "Cannot transfer to the same account");
-  const from = await getAccount(fromId);
+  const from = await getAccount(userId, fromId);
   if (from.frozen) throw new AppError(403, "Source account is frozen");
   if (from.balance < amount) throw new AppError(400, "Insufficient funds");
-  const to = await getAccount(toId);
+  const to = await getAccount(userId, toId);
   if (to.frozen) throw new AppError(403, "Destination account is frozen");
   const fromNewBalance = from.balance - amount;
   const toNewBalance = to.balance + amount;
@@ -265,7 +275,7 @@ export async function transfer(fromId: string, toId: string, amount: number, des
     });
     return [outgoing, incoming] as const;
   });
-  return [await getAccount(fromId), outgoingTransaction, incomingTransaction] as const;
+  return [await getAccount(userId, fromId), outgoingTransaction, incomingTransaction] as const;
 }
 
 /**
@@ -273,8 +283,8 @@ export async function transfer(fromId: string, toId: string, amount: number, des
  * Includes both sent and received transactions.
  * Throws 404 if the account does not exist.
  */
-export async function getTransactions(id: string) {
-  await getAccount(id);
+export async function getTransactions(userId: string, id: string) {
+  await getAccount(userId, id);
   return prisma.$queryRaw<TransactionRecord[]>`
     SELECT "id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
@@ -290,26 +300,26 @@ export async function getTransactions(id: string) {
  * Freezes an account, preventing all future transactions.
  * Throws 404 if the account does not exist.
  */
-export async function freezeAccount(id: string) {
-  await getAccount(id);
+export async function freezeAccount(userId: string, id: string) {
+  await getAccount(userId, id);
   await prisma.account.update({
     where: { id },
     data: { frozen: true },
   });
-  return getAccount(id);
+  return getAccount(userId, id);
 }
 
 /**
  * Unfreezes an account, restoring the ability to transact.
  * Throws 404 if the account does not exist.
  */
-export async function unfreezeAccount(id: string) {
-  await getAccount(id);
+export async function unfreezeAccount(userId: string, id: string) {
+  await getAccount(userId, id);
   await prisma.account.update({
     where: { id },
     data: { frozen: false },
   });
-  return getAccount(id);
+  return getAccount(userId, id);
 }
 
 /**
@@ -317,8 +327,8 @@ export async function unfreezeAccount(id: string) {
  * Throws 404 if the account does not exist.
  * Runs inside a Prisma transaction to ensure atomicity.
  */
-export async function deleteAccount(id: string) {
-  await getAccount(id);
+export async function deleteAccount(userId: string, id: string) {
+  await getAccount(userId, id);
   await prisma.$transaction([
     prisma.transaction.deleteMany({
       where: { OR: [{ fromAccountId: id }, { toAccountId: id }] },

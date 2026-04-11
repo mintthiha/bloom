@@ -27,6 +27,16 @@ describe("accountService", () => {
     prismaMock.$queryRaw.mockReset();
   });
 
+  it("rejects access to an account that does not belong to the current user", async () => {
+    const { getAccount } = await import("./accountService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(getAccount("user-1", "account-1")).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Account account-1 not found",
+    });
+  });
+
   it("builds the monthly summary from income and spending categories", async () => {
     const { getMonthlySummary } = await import("./accountService");
     prismaMock.$queryRaw.mockResolvedValueOnce([

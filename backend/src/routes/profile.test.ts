@@ -67,4 +67,15 @@ describe("profile routes", () => {
     expect(serviceMock.upsertProfile).toHaveBeenCalledWith("user-1", payload);
     expect(response.body).toMatchObject({ firstName: "Jane", username: "janedoe" });
   });
+
+  it("rejects invalid profile payloads before hitting the service", async () => {
+    const response = await request(app)
+      .put("/api/profile")
+      .set("X-User-Id", "user-1")
+      .send({ firstName: "", lastName: "Doe", username: "janedoe", email: "jane@example.com" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "firstName is required" });
+    expect(serviceMock.upsertProfile).not.toHaveBeenCalled();
+  });
 });
