@@ -78,4 +78,32 @@ describe("profile routes", () => {
     expect(response.body).toEqual({ error: "firstName is required" });
     expect(serviceMock.upsertProfile).not.toHaveBeenCalled();
   });
+
+  it("sanitizes profile fields before calling the service", async () => {
+    serviceMock.upsertProfile.mockResolvedValue({
+      userId: "user-1",
+      firstName: "Jane Doe",
+      lastName: "Smith",
+      username: "janedoe",
+      email: "jane@example.com",
+    });
+
+    const response = await request(app)
+      .put("/api/profile")
+      .set("X-User-Id", "user-1")
+      .send({
+        firstName: "  Jane\t\nDoe  ",
+        lastName: "  Smith\u0000 ",
+        username: "  JaneDoe ",
+        email: "  jane@example.com ",
+      });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.upsertProfile).toHaveBeenCalledWith("user-1", {
+      firstName: "Jane Doe",
+      lastName: "Smith",
+      username: "JaneDoe",
+      email: "jane@example.com",
+    });
+  });
 });

@@ -90,4 +90,24 @@ describe("account routes", () => {
     expect(response.body).toEqual({ error: "amount must be a number" });
     expect(serviceMock.deposit).not.toHaveBeenCalled();
   });
+
+  it("sanitizes account creation input before calling the service", async () => {
+    serviceMock.createAccount.mockResolvedValue({
+      id: "account-1",
+      userId: "user-1",
+      ownerName: "Jane Doe",
+      nickname: "Main Account",
+      accountType: "CHEQUING",
+      balance: 0,
+      frozen: false,
+    });
+
+    const response = await request(app)
+      .post("/api/accounts")
+      .set("X-User-Id", "user-1")
+      .send({ ownerName: "  Jane\t\nDoe  ", nickname: "  Main\u0000 \n Account ", accountType: "CHEQUING" });
+
+    expect(response.status).toBe(201);
+    expect(serviceMock.createAccount).toHaveBeenCalledWith("user-1", "Jane Doe", "CHEQUING", "Main Account");
+  });
 });

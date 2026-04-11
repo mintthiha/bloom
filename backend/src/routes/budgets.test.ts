@@ -80,6 +80,26 @@ describe("budget routes", () => {
     expect(serviceMock.upsertBudget).not.toHaveBeenCalled();
   });
 
+  it("sanitizes budget category before calling the service", async () => {
+    serviceMock.upsertBudget.mockResolvedValue({
+      id: "budget-1",
+      userId: "user-1",
+      category: "Entertainment Budget",
+      monthlyLimit: 250,
+    });
+
+    const response = await request(app)
+      .put("/api/budgets")
+      .set("X-User-Id", "user-1")
+      .send({ category: "  Entertainment\u0000 \n Budget ", monthlyLimit: 250 });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.upsertBudget).toHaveBeenCalledWith("user-1", {
+      category: "Entertainment Budget",
+      monthlyLimit: 250,
+    });
+  });
+
   it("returns activity for a single budget", async () => {
     serviceMock.getBudgetActivity.mockResolvedValue({
       id: "budget-1",

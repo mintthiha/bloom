@@ -1,5 +1,22 @@
 import { AppError } from "../middleware/errorHandler";
 
+type StringOptions = {
+  min?: number;
+  max?: number;
+  pattern?: RegExp;
+  patternMessage?: string;
+  collapseWhitespace?: boolean;
+};
+
+function sanitizeStringValue(value: string, collapseWhitespace = true) {
+  const normalized = value
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001F\u007F]/g, collapseWhitespace ? " " : "")
+    .trim();
+
+  return collapseWhitespace ? normalized.replace(/\s+/g, " ") : normalized;
+}
+
 export function requireObject(value: unknown, message = "Request body must be an object") {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new AppError(400, message);
@@ -10,12 +27,12 @@ export function requireObject(value: unknown, message = "Request body must be an
 export function requireString(
   value: unknown,
   field: string,
-  options?: { min?: number; max?: number; pattern?: RegExp; patternMessage?: string }
+  options?: StringOptions
 ) {
   if (typeof value !== "string") {
     throw new AppError(400, `${field} must be a string`);
   }
-  const normalized = value.trim();
+  const normalized = sanitizeStringValue(value, options?.collapseWhitespace ?? true);
   if (!normalized) {
     throw new AppError(400, `${field} is required`);
   }
@@ -31,14 +48,14 @@ export function requireString(
   return normalized;
 }
 
-export function optionalString(value: unknown, field: string, options?: { max?: number }) {
+export function optionalString(value: unknown, field: string, options?: Pick<StringOptions, "max" | "collapseWhitespace">) {
   if (value === undefined || value === null) {
     return undefined;
   }
   if (typeof value !== "string") {
     throw new AppError(400, `${field} must be a string`);
   }
-  const normalized = value.trim();
+  const normalized = sanitizeStringValue(value, options?.collapseWhitespace ?? true);
   if (!normalized) {
     return undefined;
   }
