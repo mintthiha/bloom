@@ -43,6 +43,12 @@ type TransactionFilters = {
   end?: Date;
 };
 
+type TransactionUpdateInput = {
+  amount: number;
+  category?: string;
+  description?: string;
+};
+
 async function selectAccountById(id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
@@ -61,6 +67,72 @@ async function selectAccountByUserId(userId: string, id: string) {
     LIMIT 1
   `;
   return rows[0] ?? null;
+}
+
+async function selectTransactionByAccount(userId: string, accountId: string, transactionId: string) {
+  const rows = await prisma.$queryRaw<TransactionRecord[]>`
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."category", t."description", t."createdAt", t."fromAccountId", t."toAccountId"
+    FROM "Transaction" t
+    JOIN "Account" a ON (
+      (t."fromAccountId" = a."id" AND t."type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+      OR
+      (t."toAccountId" = a."id" AND t."type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+    )
+    WHERE t."id" = ${transactionId}
+      AND a."id" = ${accountId}
+      AND a."userId" = ${userId}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+async function listTransactionsForBalanceReplay(client: Pick<PrismaClient, "$queryRaw">, accountId: string) {
+  return client.$queryRaw<TransactionRecord[]>`
+    SELECT "id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    FROM "Transaction"
+    WHERE
+      ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+      OR
+      ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+    ORDER BY "createdAt" ASC, "id" ASC
+  `;
+}
+
+function getTransactionDelta(transaction: TransactionRecord, accountId: string) {
+  if (transaction.type === TransactionType.DEPOSIT && transaction.toAccountId === accountId) {
+    return transaction.amount;
+  }
+  if (transaction.type === TransactionType.TRANSFER_IN && transaction.toAccountId === accountId) {
+    return transaction.amount;
+  }
+  if (transaction.type === TransactionType.WITHDRAWAL && transaction.fromAccountId === accountId) {
+    return -transaction.amount;
+  }
+  if (transaction.type === TransactionType.TRANSFER_OUT && transaction.fromAccountId === accountId) {
+    return -transaction.amount;
+  }
+  return 0;
+}
+
+async function replayAccountBalances(client: PrismaClient, accountId: string) {
+  const transactions = await listTransactionsForBalanceReplay(client, accountId);
+  let balance = 0;
+
+  for (const transaction of transactions) {
+    balance += getTransactionDelta(transaction, accountId);
+    if (balance < 0) {
+      throw new AppError(400, "This change would overdraw the account");
+    }
+    await client.transaction.update({
+      where: { id: transaction.id },
+      data: { balanceAfter: balance },
+    });
+  }
+
+  await client.account.update({
+    where: { id: accountId },
+    data: { balance },
+  });
 }
 
 async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input: {
@@ -322,6 +394,61 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
     }
     return true;
   });
+}
+
+/**
+ * Updates a manual deposit or withdrawal and replays the account balance history.
+ * Transfers are intentionally excluded because both sides must be edited together.
+ * Throws 404 if the transaction is not visible from this account for the current user.
+ * Throws 400 if the updated amount is not positive or the edit would overdraw the account.
+ */
+export async function updateTransaction(userId: string, accountId: string, transactionId: string, input: TransactionUpdateInput) {
+  if (input.amount <= 0) throw new AppError(400, "amount must be positive");
+  await getAccount(userId, accountId);
+  const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
+  if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
+  if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
+    throw new AppError(400, "Transfers cannot be edited yet");
+  }
+
+  const category = input.category?.trim() ? input.category.trim() : null;
+  const description = input.description?.trim() ? input.description.trim() : null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.transaction.update({
+      where: { id: transactionId },
+      data: {
+        amount: input.amount,
+        category,
+        description,
+      },
+    });
+    await replayAccountBalances(tx as PrismaClient, accountId);
+  });
+
+  return getAccount(userId, accountId);
+}
+
+/**
+ * Deletes a manual deposit or withdrawal and replays the account balance history.
+ * Transfers are intentionally excluded because both account histories would need to be adjusted together.
+ * Throws 404 if the transaction is not visible from this account for the current user.
+ * Throws 400 if deleting the transaction would invalidate later balances.
+ */
+export async function deleteTransaction(userId: string, accountId: string, transactionId: string) {
+  await getAccount(userId, accountId);
+  const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
+  if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
+  if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
+    throw new AppError(400, "Transfers cannot be deleted yet");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.transaction.delete({ where: { id: transactionId } });
+    await replayAccountBalances(tx as PrismaClient, accountId);
+  });
+
+  return getAccount(userId, accountId);
 }
 
 /**

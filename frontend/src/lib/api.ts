@@ -144,6 +144,10 @@ export const api = {
     request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string, query?: TransactionQuery) =>
     request<Transaction[]>(withQuery(`/accounts/${id}/transactions`, query)),
+  updateTransaction: (id: string, transactionId: string, input: { amount: number; category?: string; description?: string }) =>
+    request<Account>(`/accounts/${id}/transactions/${transactionId}`, { method: "PATCH", body: JSON.stringify(input) }),
+  deleteTransaction: (id: string, transactionId: string) =>
+    request<void>(`/accounts/${id}/transactions/${transactionId}`, { method: "DELETE" }),
   freeze: (id: string) =>
     request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) =>

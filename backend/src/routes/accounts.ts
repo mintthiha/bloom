@@ -112,6 +112,34 @@ router.get("/:id/transactions", async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 });
 
+/**
+ * Updates a manual deposit or withdrawal for the selected account.
+ */
+router.patch("/:id/transactions/:transactionId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const amount = requirePositiveNumber(body.amount, "amount");
+    const category = optionalString(body.category, "category", { max: 50 });
+    const description = optionalString(body.description, "description", { max: 240 });
+    const account = await accountService.updateTransaction(uid(req), pid(req), req.params["transactionId"] as string, {
+      amount,
+      category,
+      description,
+    });
+    res.json(account);
+  } catch (err) { next(err); }
+});
+
+/**
+ * Deletes a manual deposit or withdrawal for the selected account.
+ */
+router.delete("/:id/transactions/:transactionId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await accountService.deleteTransaction(uid(req), pid(req), req.params["transactionId"] as string);
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
 router.patch("/:id/freeze", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const account = await accountService.freezeAccount(uid(req), pid(req));

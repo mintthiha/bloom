@@ -5,6 +5,16 @@ import Link from "next/link";
 import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
@@ -50,6 +60,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [nickname, setNickname] = useState("");
   const [editingNickname, setEditingNickname] = useState(false);
   const [savingNickname, setSavingNickname] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [editingTransactionAmount, setEditingTransactionAmount] = useState("");
+  const [editingTransactionCategory, setEditingTransactionCategory] = useState("");
+  const [savingTransaction, setSavingTransaction] = useState(false);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
@@ -171,8 +187,69 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     }
   }
 
+  function startEditingTransaction(transaction: Transaction) {
+    setOpError(null);
+    setOpSuccess(null);
+    setEditingTransactionId(transaction.id);
+    setEditingTransactionAmount(transaction.amount.toString());
+    setEditingTransactionCategory(transaction.category ?? "");
+  }
+
+  function cancelEditingTransaction() {
+    setEditingTransactionId(null);
+    setEditingTransactionAmount("");
+    setEditingTransactionCategory("");
+  }
+
+  async function handleSaveTransaction(transactionId: string) {
+    const amountValue = parseFloat(editingTransactionAmount);
+    if (Number.isNaN(amountValue) || amountValue <= 0) {
+      setOpError("Enter a valid positive amount");
+      return;
+    }
+
+    setSavingTransaction(true);
+    setOpError(null);
+    setOpSuccess(null);
+    try {
+      await api.updateTransaction(id, transactionId, {
+        amount: amountValue,
+        category: editingTransactionCategory.trim() || undefined,
+      });
+      cancelEditingTransaction();
+      setOpSuccess("Transaction updated");
+      await refresh();
+    } catch (err) {
+      setOpError(err instanceof Error ? err.message : "Failed to update transaction");
+    } finally {
+      setSavingTransaction(false);
+    }
+  }
+
+  async function handleDeleteTransaction(transactionId: string) {
+    setDeletingTransactionId(transactionId);
+    setOpError(null);
+    setOpSuccess(null);
+    try {
+      await api.deleteTransaction(id, transactionId);
+      if (editingTransactionId === transactionId) {
+        cancelEditingTransaction();
+      }
+      setOpSuccess("Transaction deleted");
+      await refresh();
+    } catch (err) {
+      setOpError(err instanceof Error ? err.message : "Failed to delete transaction");
+    } finally {
+      setDeletingTransactionId(null);
+      setPendingDeleteTransactionId(null);
+    }
+  }
+
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
+
+  const isEditableTransaction = (transaction: Transaction) =>
+    transaction.type === "DEPOSIT" || transaction.type === "WITHDRAWAL";
 
   function txnMeta(t: Transaction): { label: string; color: string; sign: string; icon: string } {
     switch (t.type) {
@@ -218,6 +295,41 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const transferTargets = accounts.filter(a => a.id !== id);
   return (
     <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '48px 24px' }}>
+      <AlertDialog
+        open={pendingDeleteTransactionId !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingTransactionId) {
+            setPendingDeleteTransactionId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <div style={{ padding: "12px 14px" }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove the transaction and replay the account balance history.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                onClick={() => setPendingDeleteTransactionId(null)}
+                disabled={Boolean(deletingTransactionId)}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                type="button"
+                onClick={() => pendingDeleteTransactionId && handleDeleteTransaction(pendingDeleteTransactionId)}
+                disabled={Boolean(deletingTransactionId)}
+              >
+                {deletingTransactionId ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Back */}
       <Link href="/" className="fade-up" style={{
@@ -292,11 +404,11 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             >
               {freezing ? '…' : account.frozen ? 'Unfreeze' : 'Freeze'}
             </button>
-            {confirmDelete ? (
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  disabled={deleting}
+              {confirmDelete ? (
+                <div style={{ display: 'flex', gap: '6px', padding: '32px', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={deleting}
                   style={{
                     padding: '6px 12px', border: '1px solid var(--border)',
                     background: 'transparent', color: 'var(--text-secondary)',
@@ -678,15 +790,19 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {txns.map(t => {
               const { label, color, sign, icon } = txnMeta(t);
+              const isEditing = editingTransactionId === t.id;
+              const canEdit = isEditableTransaction(t);
               return (
                 <div key={t.id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  display: 'flex', alignItems: isEditing ? 'stretch' : 'center', justifyContent: 'space-between',
                   padding: '14px 16px', borderRadius: '10px', transition: 'background 0.1s',
+                  gap: '16px',
+                  flexWrap: isEditing ? 'wrap' : 'nowrap',
                 }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: isEditing ? 'flex-start' : 'center', gap: '14px', flex: isEditing ? '1 1 100%' : 1, minWidth: 0 }}>
                     <div style={{
                       width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0,
                       background: `${color}18`, border: `1px solid ${color}30`,
@@ -695,24 +811,155 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                     }}>
                       {icon}
                     </div>
-                    <div>
-                      <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px' }}>
-                        {t.description || label}
-                      </p>
-                      <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
-                        {t.category && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{t.category}</span>}
-                        {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
-                      </p>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      {isEditing ? (
+                        <div style={{ display: 'grid', gap: '12px', width: '100%' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: isDoubleColumn ? 'minmax(0, 180px) minmax(0, 1fr)' : '1fr', gap: '12px', alignItems: 'start' }}>
+                            <label style={{ display: 'grid', gap: '6px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                                Amount
+                              </span>
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={editingTransactionAmount}
+                                onChange={(e) => setEditingTransactionAmount(e.target.value)}
+                                aria-label="Transaction amount"
+                                style={inputStyle}
+                              />
+                            </label>
+                            <label style={{ display: 'grid', gap: '6px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                                Category
+                              </span>
+                              <select
+                                value={editingTransactionCategory}
+                                onChange={(e) => setEditingTransactionCategory(e.target.value)}
+                                aria-label="Transaction category"
+                                style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', width: '100%' }}
+                              >
+                                <option value="">No category</option>
+                                {(t.type === "DEPOSIT" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((categoryOption) => (
+                                  <option key={categoryOption} value={categoryOption}>
+                                    {categoryOption}
+                                  </option>
+                                ))}
+                                {editingTransactionCategory &&
+                                  !(t.type === "DEPOSIT" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).includes(editingTransactionCategory) && (
+                                    <option value={editingTransactionCategory}>{editingTransactionCategory}</option>
+                                  )}
+                              </select>
+                            </label>
+                          </div>
+                          <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {t.description || label}
+                          </p>
+                          <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
+                            {t.category && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{t.category}</span>}
+                            {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p className="num" style={{ fontSize: '14px', fontWeight: 600, color, marginBottom: '3px' }}>
-                      {sign} {fmt(t.amount)}
-                    </p>
-                    <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {fmt(t.balanceAfter)}
-                    </p>
+                  <div style={{ textAlign: isEditing ? 'left' : 'right', flexShrink: 0, minWidth: isEditing ? '100%' : '160px', marginLeft: isEditing ? '48px' : '0' }}>
+                    {isEditing ? (
+                      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveTransaction(t.id)}
+                          disabled={savingTransaction}
+                          style={{
+                            padding: '8px 12px', background: '#f59e0b', color: '#000',
+                            border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                            cursor: savingTransaction ? 'not-allowed' : 'pointer', opacity: savingTransaction ? 0.45 : 1,
+                          }}
+                        >
+                          {savingTransaction ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditingTransaction}
+                          disabled={savingTransaction}
+                          style={{
+                            padding: '8px 12px', border: '1px solid var(--border)', background: 'transparent',
+                            color: 'var(--text-secondary)', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                            cursor: savingTransaction ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteTransactionId(t.id)}
+                          disabled={savingTransaction || deletingTransactionId === t.id}
+                          style={{
+                            padding: '6px 10px', border: '1px solid #f8717130', background: 'transparent',
+                            color: '#f87171', borderRadius: '8px', fontSize: '11px', fontWeight: 600,
+                            cursor: savingTransaction || deletingTransactionId === t.id ? 'not-allowed' : 'pointer',
+                            opacity: savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
+                          }}
+                        >
+                          {deletingTransactionId === t.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="num" style={{ fontSize: '14px', fontWeight: 600, color, marginBottom: '3px' }}>
+                          {sign} {fmt(t.amount)}
+                        </p>
+                        <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: canEdit ? '10px' : '0' }}>
+                          {fmt(t.balanceAfter)}
+                        </p>
+                      </>
+                    )}
+
+                    {canEdit ? (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        {!isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => startEditingTransaction(t)}
+                            disabled={savingTransaction || deletingTransactionId === t.id}
+                            style={{
+                              padding: '6px 10px', border: '1px solid var(--border)', background: 'transparent',
+                              color: 'var(--text-secondary)', borderRadius: '8px', fontSize: '11px', fontWeight: 600,
+                              cursor: savingTransaction || deletingTransactionId === t.id ? 'not-allowed' : 'pointer',
+                              opacity: savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {!isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingDeleteTransactionId(t.id)}
+                            disabled={savingTransaction || deletingTransactionId === t.id}
+                            style={{
+                              padding: '6px 10px', border: '1px solid #f8717130', background: 'transparent',
+                              color: '#f87171', borderRadius: '8px', fontSize: '11px', fontWeight: 600,
+                              cursor: savingTransaction || deletingTransactionId === t.id ? 'not-allowed' : 'pointer',
+                              opacity: savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
+                            }}
+                          >
+                            {deletingTransactionId === t.id ? "Deleting..." : "Delete"}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        Transfers are read-only
+                      </p>
+                    )}
                   </div>
                 </div>
               );
