@@ -43,7 +43,7 @@ describe("account routes", () => {
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
-    expect(serviceMock.getMonthlySummary).toHaveBeenCalledWith("user-1");
+    expect(serviceMock.getMonthlySummary).toHaveBeenCalledWith("user-1", undefined);
     expect(response.body).toMatchObject({
       month: "2026-04",
       topExpenseCategory: "Groceries",

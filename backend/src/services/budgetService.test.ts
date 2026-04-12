@@ -78,7 +78,7 @@ describe("budgetService", () => {
       },
     ]);
 
-    const result = await listBudgets("user-1", new Date("2026-04-08T00:00:00.000Z"));
+    const result = await listBudgets("user-1", { now: new Date("2026-04-08T00:00:00.000Z") });
 
     expect(result).toEqual([
       expect.objectContaining({
@@ -136,7 +136,7 @@ describe("budgetService", () => {
         { accountId: "account-2", accountNickname: null, accountOwnerName: "Spending Account", total: 20 },
       ]);
 
-    const result = await getBudgetActivity("user-1", "budget-1", new Date("2026-04-08T00:00:00.000Z"));
+    const result = await getBudgetActivity("user-1", "budget-1", { now: new Date("2026-04-08T00:00:00.000Z") });
 
     expect(result).toMatchObject({
       id: "budget-1",

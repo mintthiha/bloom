@@ -47,7 +47,7 @@ describe("budget routes", () => {
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
-    expect(serviceMock.listBudgets).toHaveBeenCalledWith("user-1");
+    expect(serviceMock.listBudgets).toHaveBeenCalledWith("user-1", undefined);
     expect(response.body[0]).toMatchObject({ category: "Groceries", monthlyLimit: 500 });
   });
 
@@ -120,7 +120,7 @@ describe("budget routes", () => {
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
-    expect(serviceMock.getBudgetActivity).toHaveBeenCalledWith("user-1", "budget-1");
+    expect(serviceMock.getBudgetActivity).toHaveBeenCalledWith("user-1", "budget-1", undefined);
     expect(response.body).toMatchObject({ category: "Entertainment", month: "2026-04" });
   });
 

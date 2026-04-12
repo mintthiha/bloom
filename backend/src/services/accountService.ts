@@ -1,6 +1,7 @@
 import { PrismaClient, TransactionType, AccountType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
+import { resolveDateRange } from "../lib/date-range";
 
 const prisma = new PrismaClient();
 
@@ -79,9 +80,8 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
  * Includes deposits as income and withdrawals as spending; transfers are excluded
  * because they move money between accounts instead of changing total cash flow.
  */
-export async function getMonthlySummary(userId: string, now = new Date()) {
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+export async function getMonthlySummary(userId: string, input?: { start?: Date; end?: Date; now?: Date }) {
+  const { start, end } = resolveDateRange(input);
   const rows = await prisma.$queryRaw<MonthlySummaryRow[]>`
     SELECT
       COALESCE(t."category", 'Uncategorized') AS "category",

@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import * as accountService from "../services/accountService";
 import { AccountType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
+import { parseDateRangeQuery } from "../lib/date-range";
 import { optionalString, requireObject, requirePositiveNumber, requireString } from "../lib/validation";
 
 const router = Router();
@@ -38,7 +39,10 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
  */
 router.get("/summary/monthly", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.getMonthlySummary(uid(req)));
+    res.json(await accountService.getMonthlySummary(uid(req), parseDateRangeQuery({
+      start: req.query["start"],
+      end: req.query["end"],
+    })));
   } catch (err) { next(err); }
 });
 

@@ -1,5 +1,18 @@
 const BASE = "/api/bloom";
 
+export type DateRangeQuery = {
+  start?: string;
+  end?: string;
+};
+
+function withQuery(path: string, query?: DateRangeQuery) {
+  const params = new URLSearchParams();
+  if (query?.start) params.set("start", query.start);
+  if (query?.end) params.set("end", query.end);
+  const suffix = params.toString();
+  return suffix ? `${path}?${suffix}` : path;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -102,12 +115,12 @@ export type BudgetActivity = Budget & {
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
-  getMonthlySummary: () =>
-    request<MonthlySummary>("/accounts/summary/monthly"),
-  getBudgets: () =>
-    request<Budget[]>("/budgets"),
-  getBudgetActivity: (id: string) =>
-    request<BudgetActivity>(`/budgets/${id}/activity`),
+  getMonthlySummary: (query?: DateRangeQuery) =>
+    request<MonthlySummary>(withQuery("/accounts/summary/monthly", query)),
+  getBudgets: (query?: DateRangeQuery) =>
+    request<Budget[]>(withQuery("/budgets", query)),
+  getBudgetActivity: (id: string, query?: DateRangeQuery) =>
+    request<BudgetActivity>(withQuery(`/budgets/${id}/activity`, query)),
   saveBudget: (category: string, monthlyLimit: number) =>
     request<Budget>("/budgets", { method: "PUT", body: JSON.stringify({ category, monthlyLimit }) }),
   deleteBudget: (id: string) =>

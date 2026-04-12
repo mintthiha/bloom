@@ -2,11 +2,12 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, BudgetActivity } from "@/lib/api";
+import { api, BudgetActivity, DateRangeQuery } from "@/lib/api";
+import { DateRangeControls } from "@/components/date-range-controls";
+import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
 import {
   Bar,
   BarChart,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,13 +19,39 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const [budget, setBudget] = useState<BudgetActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
+
+  const rangeQuery: DateRangeQuery | undefined = useMemo(() => {
+    if (dateRange.preset === "custom") {
+      if (!dateRange.start || !dateRange.end) {
+        return undefined;
+      }
+      const endDate = new Date(`${dateRange.end}T00:00:00.000Z`);
+      endDate.setUTCDate(endDate.getUTCDate() + 1);
+      return {
+        start: `${dateRange.start}T00:00:00.000Z`,
+        end: endDate.toISOString(),
+      };
+    }
+
+    return {
+      start: `${dateRange.start}T00:00:00.000Z`,
+      end: `${dateRange.end}T00:00:00.000Z`,
+    };
+  }, [dateRange]);
+
+  useEffect(() => {
+    if (dateRange.preset !== "custom") {
+      setDateRange(getPresetDateRange(dateRange.preset));
+    }
+  }, [dateRange.preset]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadBudget() {
       try {
-        const nextBudget = await api.getBudgetActivity(id);
+        const nextBudget = await api.getBudgetActivity(id, rangeQuery);
         if (!cancelled) {
           setBudget(nextBudget);
         }
@@ -43,7 +70,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, rangeQuery]);
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
@@ -99,7 +126,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               Spending activity for {budget.month}.
             </p>
           </div>
-          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{budget.activity.length} transaction{budget.activity.length !== 1 ? "s" : ""}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{budget.activity.length} transaction{budget.activity.length !== 1 ? "s" : ""}</span>
+            <DateRangeControls value={dateRange} onChange={setDateRange} />
+          </div>
         </div>
       </div>
 

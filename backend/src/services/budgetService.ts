@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
+import { resolveDateRange } from "../lib/date-range";
 
 const prisma = new PrismaClient();
 
@@ -55,12 +56,6 @@ function normalizeCategory(value?: string) {
     .join(" ");
 }
 
-function getMonthRange(now = new Date()) {
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  return { start, end };
-}
-
 async function getBudgetRecord(userId: string, budgetId: string) {
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
     SELECT "id", "userId", "category", "monthlyLimit", "createdAt", "updatedAt"
@@ -80,8 +75,8 @@ async function getBudgetRecord(userId: string, budgetId: string) {
 /**
  * Returns all saved budgets for the current user with this month's spending progress.
  */
-export async function listBudgets(userId: string, now = new Date()) {
-  const { start, end } = getMonthRange(now);
+export async function listBudgets(userId: string, input?: { start?: Date; end?: Date; now?: Date }) {
+  const { start, end } = resolveDateRange(input);
   const rows = await prisma.$queryRaw<BudgetProgressRow[]>`
     SELECT
       b."id",
@@ -129,9 +124,9 @@ export async function listBudgets(userId: string, now = new Date()) {
  * Returns a single budget plus the current month's matching withdrawals,
  * daily totals, and account totals for drill-down views.
  */
-export async function getBudgetActivity(userId: string, budgetId: string, now = new Date()) {
+export async function getBudgetActivity(userId: string, budgetId: string, input?: { start?: Date; end?: Date; now?: Date }) {
   const budget = await getBudgetRecord(userId, budgetId);
-  const { start, end } = getMonthRange(now);
+  const { start, end } = resolveDateRange(input);
   const transactions = await prisma.$queryRaw<BudgetActivityRecord[]>`
     SELECT
       t."id",

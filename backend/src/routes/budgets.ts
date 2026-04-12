@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as budgetService from "../services/budgetService";
 import { AppError } from "../middleware/errorHandler";
+import { parseDateRangeQuery } from "../lib/date-range";
 import { requireObject, requirePositiveNumber, requireString } from "../lib/validation";
 
 const router = Router();
@@ -20,7 +21,10 @@ function uid(req: Request): string {
  */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await budgetService.listBudgets(uid(req)));
+    res.json(await budgetService.listBudgets(uid(req), parseDateRangeQuery({
+      start: req.query["start"],
+      end: req.query["end"],
+    })));
   } catch (err) {
     next(err);
   }
@@ -31,7 +35,10 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
  */
 router.get("/:id/activity", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await budgetService.getBudgetActivity(uid(req), req.params["id"] as string));
+    res.json(await budgetService.getBudgetActivity(uid(req), req.params["id"] as string, parseDateRangeQuery({
+      start: req.query["start"],
+      end: req.query["end"],
+    })));
   } catch (err) {
     next(err);
   }

@@ -45,7 +45,7 @@ describe("accountService", () => {
       { category: "Dining", income: 0, spending: "75.25" },
     ]);
 
-    const result = await getMonthlySummary("user-1", new Date("2026-04-08T12:00:00.000Z"));
+    const result = await getMonthlySummary("user-1", { now: new Date("2026-04-08T12:00:00.000Z") });
 
     expect(result).toEqual({
       month: "2026-04",
@@ -65,7 +65,7 @@ describe("accountService", () => {
     const { getMonthlySummary } = await import("./accountService");
     prismaMock.$queryRaw.mockResolvedValueOnce([]);
 
-    const result = await getMonthlySummary("user-1", new Date("2026-04-08T12:00:00.000Z"));
+    const result = await getMonthlySummary("user-1", { now: new Date("2026-04-08T12:00:00.000Z") });
 
     expect(result).toMatchObject({
       month: "2026-04",

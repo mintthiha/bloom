@@ -1,11 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType, Budget, MonthlySummary, Profile } from "@/lib/api";
+import { api, Account, AccountType, Budget, DateRangeQuery, MonthlySummary, Profile } from "@/lib/api";
+import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
+import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
@@ -32,8 +34,34 @@ function Home() {
   const [budgetSaving, setBudgetSaving] = useState(false);
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const rangeQuery: DateRangeQuery | undefined = useMemo(() => {
+    if (dateRange.preset === "custom") {
+      if (!dateRange.start || !dateRange.end) {
+        return undefined;
+      }
+      const endDate = new Date(`${dateRange.end}T00:00:00.000Z`);
+      endDate.setUTCDate(endDate.getUTCDate() + 1);
+      return {
+        start: `${dateRange.start}T00:00:00.000Z`,
+        end: endDate.toISOString(),
+      };
+    }
+
+    return {
+      start: `${dateRange.start}T00:00:00.000Z`,
+      end: `${dateRange.end}T00:00:00.000Z`,
+    };
+  }, [dateRange]);
+
+  useEffect(() => {
+    if (dateRange.preset !== "custom") {
+      setDateRange(getPresetDateRange(dateRange.preset));
+    }
+  }, [dateRange.preset]);
 
   useEffect(() => {
     const deleted = searchParams.get("deleted");
@@ -47,8 +75,8 @@ function Home() {
     try {
       const [nextAccounts, nextSummary, nextBudgets] = await Promise.all([
         api.listAccounts(),
-        api.getMonthlySummary(),
-        api.getBudgets(),
+        api.getMonthlySummary(rangeQuery),
+        api.getBudgets(rangeQuery),
       ]);
       setAccounts(nextAccounts);
       setMonthlySummary(nextSummary);
@@ -56,7 +84,7 @@ function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [rangeQuery]);
 
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
@@ -212,12 +240,17 @@ function Home() {
 
       {/* Welcome */}
       <div className="fade-up" style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>
-          {profile?.firstName ? `Good morning, ${profile.firstName}.` : "Good morning."}
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-          Here's your financial overview.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '6px' }}>
+              {profile?.firstName ? `Good morning, ${profile.firstName}.` : "Good morning."}
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+              Here's your financial overview.
+            </p>
+          </div>
+          <DateRangeControls value={dateRange} onChange={setDateRange} />
+        </div>
       </div>
 
       {/* Stats row */}
