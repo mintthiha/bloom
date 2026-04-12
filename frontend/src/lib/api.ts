@@ -5,10 +5,11 @@ export type DateRangeQuery = {
   end?: string;
 };
 
-function withQuery(path: string, query?: DateRangeQuery) {
+function withQuery(path: string, query?: Record<string, string | undefined>) {
   const params = new URLSearchParams();
-  if (query?.start) params.set("start", query.start);
-  if (query?.end) params.set("end", query.end);
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value) params.set(key, value);
+  }
   const suffix = params.toString();
   return suffix ? `${path}?${suffix}` : path;
 }
@@ -112,6 +113,12 @@ export type BudgetActivity = Budget & {
   }>;
 };
 
+export type TransactionQuery = DateRangeQuery & {
+  type?: Transaction["type"];
+  category?: string;
+  search?: string;
+};
+
 export const api = {
   listAccounts: () =>
     request<Account[]>("/accounts"),
@@ -135,8 +142,8 @@ export const api = {
     request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
   transfer: (id: string, toAccountId: string, amount: number, description?: string) =>
     request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
-  getTransactions: (id: string) =>
-    request<Transaction[]>(`/accounts/${id}/transactions`),
+  getTransactions: (id: string, query?: TransactionQuery) =>
+    request<Transaction[]>(withQuery(`/accounts/${id}/transactions`, query)),
   freeze: (id: string) =>
     request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) =>

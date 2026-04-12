@@ -35,6 +35,14 @@ type MonthlySummaryRow = {
   spending: number | string | null;
 };
 
+type TransactionFilters = {
+  type?: TransactionType;
+  category?: string;
+  search?: string;
+  start?: Date;
+  end?: Date;
+};
+
 async function selectAccountById(id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
@@ -283,9 +291,13 @@ export async function transfer(userId: string, fromId: string, toId: string, amo
  * Includes both sent and received transactions.
  * Throws 404 if the account does not exist.
  */
-export async function getTransactions(userId: string, id: string) {
+export async function getTransactions(userId: string, id: string, filters?: TransactionFilters) {
   await getAccount(userId, id);
-  return prisma.$queryRaw<TransactionRecord[]>`
+  const categoryFilter = filters?.category?.trim() ? filters.category.trim() : null;
+  const searchFilter = filters?.search?.trim().toLowerCase() ?? null;
+  const range = filters?.start && filters?.end ? resolveDateRange({ start: filters.start, end: filters.end }) : null;
+
+  const transactions = await prisma.$queryRaw<TransactionRecord[]>`
     SELECT "id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
@@ -294,6 +306,22 @@ export async function getTransactions(userId: string, id: string) {
       ("toAccountId" = ${id} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
     ORDER BY "createdAt" DESC
   `;
+
+  return transactions.filter((transaction) => {
+    if (filters?.type && transaction.type !== filters.type) {
+      return false;
+    }
+    if (categoryFilter && (transaction.category ?? "") !== categoryFilter) {
+      return false;
+    }
+    if (searchFilter && !((transaction.description ?? "").toLowerCase().includes(searchFilter))) {
+      return false;
+    }
+    if (range && !(transaction.createdAt >= range.start && transaction.createdAt < range.end)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 /**

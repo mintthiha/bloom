@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as accountService from "../services/accountService";
-import { AccountType } from "@prisma/client";
+import { AccountType, TransactionType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import { parseDateRangeQuery } from "../lib/date-range";
 import { optionalString, requireObject, requirePositiveNumber, requireString } from "../lib/validation";
@@ -88,7 +88,27 @@ router.post("/:id/transfer", async (req: Request, res: Response, next: NextFunct
 
 router.get("/:id/transactions", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.getTransactions(uid(req), pid(req)));
+    const type = req.query["type"];
+    const category = req.query["category"];
+    const search = req.query["search"];
+    if (type !== undefined && type !== "DEPOSIT" && type !== "WITHDRAWAL" && type !== "TRANSFER_OUT" && type !== "TRANSFER_IN") {
+      throw new AppError(400, "type must be DEPOSIT, WITHDRAWAL, TRANSFER_OUT, or TRANSFER_IN");
+    }
+    if (category !== undefined && typeof category !== "string") {
+      throw new AppError(400, "category must be a string");
+    }
+    if (search !== undefined && typeof search !== "string") {
+      throw new AppError(400, "search must be a string");
+    }
+    res.json(await accountService.getTransactions(uid(req), pid(req), {
+      type: type as TransactionType | undefined,
+      category: typeof category === "string" ? category : undefined,
+      search: typeof search === "string" ? search : undefined,
+      ...parseDateRangeQuery({
+        start: req.query["start"],
+        end: req.query["end"],
+      }),
+    }));
   } catch (err) { next(err); }
 });
 

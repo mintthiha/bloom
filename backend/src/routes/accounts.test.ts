@@ -8,6 +8,7 @@ const { serviceMock } = vi.hoisted(() => ({
     createAccount: vi.fn(),
     getAccount: vi.fn(),
     deposit: vi.fn(),
+    getTransactions: vi.fn(),
   },
 }));
 
@@ -19,6 +20,7 @@ describe("account routes", () => {
     serviceMock.createAccount.mockReset();
     serviceMock.getAccount.mockReset();
     serviceMock.deposit.mockReset();
+    serviceMock.getTransactions.mockReset();
   });
 
   it("returns 401 for monthly summary when x-user-id is missing", async () => {
@@ -109,5 +111,32 @@ describe("account routes", () => {
 
     expect(response.status).toBe(201);
     expect(serviceMock.createAccount).toHaveBeenCalledWith("user-1", "Jane Doe", "CHEQUING", "Main Account");
+  });
+
+  it("passes transaction filters through to the service", async () => {
+    serviceMock.getTransactions.mockResolvedValue([]);
+
+    const response = await request(app)
+      .get("/api/accounts/account-1/transactions?type=WITHDRAWAL&category=Dining&search=coffee&start=2026-04-01T00:00:00.000Z&end=2026-05-01T00:00:00.000Z")
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.getTransactions).toHaveBeenCalledWith("user-1", "account-1", {
+      type: "WITHDRAWAL",
+      category: "Dining",
+      search: "coffee",
+      start: new Date("2026-04-01T00:00:00.000Z"),
+      end: new Date("2026-05-01T00:00:00.000Z"),
+    });
+  });
+
+  it("rejects invalid transaction type filters", async () => {
+    const response = await request(app)
+      .get("/api/accounts/account-1/transactions?type=BAD_TYPE")
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "type must be DEPOSIT, WITHDRAWAL, TRANSFER_OUT, or TRANSFER_IN" });
+    expect(serviceMock.getTransactions).not.toHaveBeenCalled();
   });
 });

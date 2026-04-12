@@ -1,8 +1,10 @@
 "use client";
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, Account, Transaction } from "@/lib/api";
+import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
+import { DateRangeControls } from "@/components/date-range-controls";
+import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -13,6 +15,7 @@ type Op = "deposit" | "withdraw" | "transfer";
 
 const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Investment", "Other Income"];
 const EXPENSE_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other"];
+const TRANSACTION_FILTER_CATEGORIES = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES, "Transfer"];
 
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -37,10 +40,42 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [nickname, setNickname] = useState("");
   const [editingNickname, setEditingNickname] = useState(false);
   const [savingNickname, setSavingNickname] = useState(false);
+  const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
+  const [filterCategory, setFilterCategory] = useState("ALL");
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterDateRange, setFilterDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
+
+  const transactionQuery: DateRangeQuery & { type?: Transaction["type"]; category?: string; search?: string } = useMemo(() => {
+    const base: DateRangeQuery & { type?: Transaction["type"]; category?: string; search?: string } = {};
+
+    if (filterDateRange.preset === "custom") {
+      if (filterDateRange.start && filterDateRange.end) {
+        const endDate = new Date(`${filterDateRange.end}T00:00:00.000Z`);
+        endDate.setUTCDate(endDate.getUTCDate() + 1);
+        base.start = `${filterDateRange.start}T00:00:00.000Z`;
+        base.end = endDate.toISOString();
+      }
+    } else {
+      base.start = `${filterDateRange.start}T00:00:00.000Z`;
+      base.end = `${filterDateRange.end}T00:00:00.000Z`;
+    }
+
+    if (filterType !== "ALL") base.type = filterType;
+    if (filterCategory !== "ALL") base.category = filterCategory;
+    if (filterSearch.trim()) base.search = filterSearch.trim();
+
+    return base;
+  }, [filterCategory, filterDateRange, filterSearch, filterType]);
+
+  useEffect(() => {
+    if (filterDateRange.preset !== "custom") {
+      setFilterDateRange(getPresetDateRange(filterDateRange.preset));
+    }
+  }, [filterDateRange.preset]);
 
   const refresh = useCallback(async () => {
     try {
-      const [acc, transactions, allAccounts] = await Promise.all([api.getAccount(id), api.getTransactions(id), api.listAccounts()]);
+      const [acc, transactions, allAccounts] = await Promise.all([api.getAccount(id), api.getTransactions(id, transactionQuery), api.listAccounts()]);
       setAccount(acc);
       setNickname(acc.nickname ?? "");
       setTxns(transactions);
@@ -50,7 +85,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, transactionQuery]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -568,6 +603,44 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             Transaction History
           </p>
           <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{txns.length} records</span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 160px) minmax(0, 180px) minmax(0, 1fr)', gap: '10px', marginBottom: '16px' }}>
+          <select
+            aria-label="Transaction type filter"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as "ALL" | Transaction["type"])}
+            style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
+          >
+            <option value="ALL">All types</option>
+            <option value="DEPOSIT">Deposit</option>
+            <option value="WITHDRAWAL">Withdrawal</option>
+            <option value="TRANSFER_OUT">Transfer out</option>
+            <option value="TRANSFER_IN">Transfer in</option>
+          </select>
+          <select
+            aria-label="Transaction category filter"
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
+          >
+            <option value="ALL">All categories</option>
+            {TRANSACTION_FILTER_CATEGORIES.map((categoryOption) => (
+              <option key={categoryOption} value={categoryOption}>{categoryOption}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            aria-label="Transaction search"
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder="Search description"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: '18px' }}>
+          <DateRangeControls value={filterDateRange} onChange={setFilterDateRange} />
         </div>
 
         {txns.length === 0 ? (
