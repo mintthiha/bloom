@@ -22,6 +22,7 @@ type TransactionRecord = {
   type: TransactionType;
   amount: number;
   balanceAfter: number;
+  transferGroupId: string | null;
   category: string | null;
   description: string | null;
   createdAt: Date;
@@ -71,7 +72,7 @@ async function selectAccountByUserId(userId: string, id: string) {
 
 async function selectTransactionByAccount(userId: string, accountId: string, transactionId: string) {
   const rows = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount", t."balanceAfter", t."category", t."description", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."description", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -86,9 +87,21 @@ async function selectTransactionByAccount(userId: string, accountId: string, tra
   return rows[0] ?? null;
 }
 
+async function selectTransactionsByTransferGroup(userId: string, transferGroupId: string) {
+  return prisma.$queryRaw<TransactionRecord[]>`
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."description", t."createdAt", t."fromAccountId", t."toAccountId"
+    FROM "Transaction" t
+    LEFT JOIN "Account" fa ON fa."id" = t."fromAccountId"
+    LEFT JOIN "Account" ta ON ta."id" = t."toAccountId"
+    WHERE t."transferGroupId" = ${transferGroupId}
+      AND (fa."userId" = ${userId} OR ta."userId" = ${userId})
+    ORDER BY t."createdAt" ASC, t."id" ASC
+  `;
+}
+
 async function listTransactionsForBalanceReplay(client: Pick<PrismaClient, "$queryRaw">, accountId: string) {
   return client.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -139,6 +152,7 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
   type: TransactionType;
   amount: number;
   balanceAfter: number;
+  transferGroupId?: string;
   category?: string;
   description?: string;
   fromAccountId?: string;
@@ -148,9 +162,9 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
   const category = input.category?.trim() ? input.category.trim() : null;
   const description = input.description?.trim() ? input.description.trim() : null;
   const rows = await client.$queryRaw<TransactionRecord[]>`
-    INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId")
-    VALUES (${id}, ${input.type}::"TransactionType", ${input.amount}, ${input.balanceAfter}, ${category}, ${description}, CURRENT_TIMESTAMP, ${input.fromAccountId ?? null}, ${input.toAccountId ?? null})
-    RETURNING "id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId")
+    VALUES (${id}, ${input.type}::"TransactionType", ${input.amount}, ${input.balanceAfter}, ${input.transferGroupId ?? null}, ${category}, ${description}, CURRENT_TIMESTAMP, ${input.fromAccountId ?? null}, ${input.toAccountId ?? null})
+    RETURNING "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId"
   `;
   return rows[0];
 }
@@ -223,7 +237,7 @@ export async function createAccount(
     throw new AppError(400, "ownerName is required");
   }
   if (!Object.values(AccountType).includes(accountType)) {
-    throw new AppError(400, "accountType must be CHEQUING or SAVINGS");
+    throw new AppError(400, "accountType must be CHEQUING, SAVINGS, TFSA, RRSP, FHSA, or CREDIT");
   }
   const id = randomUUID();
   const rows = await prisma.$queryRaw<AccountRecord[]>`
@@ -332,6 +346,7 @@ export async function transfer(userId: string, fromId: string, toId: string, amo
   if (to.frozen) throw new AppError(403, "Destination account is frozen");
   const fromNewBalance = from.balance - amount;
   const toNewBalance = to.balance + amount;
+  const transferGroupId = randomUUID();
   const [outgoingTransaction, incomingTransaction] = await prisma.$transaction(async (tx) => {
     await tx.account.update({ where: { id: fromId }, data: { balance: fromNewBalance } });
     await tx.account.update({ where: { id: toId }, data: { balance: toNewBalance } });
@@ -339,6 +354,7 @@ export async function transfer(userId: string, fromId: string, toId: string, amo
       type: TransactionType.TRANSFER_OUT,
       amount,
       balanceAfter: fromNewBalance,
+      transferGroupId,
       category,
       description,
       fromAccountId: fromId,
@@ -348,6 +364,7 @@ export async function transfer(userId: string, fromId: string, toId: string, amo
       type: TransactionType.TRANSFER_IN,
       amount,
       balanceAfter: toNewBalance,
+      transferGroupId,
       category,
       description,
       fromAccountId: fromId,
@@ -370,7 +387,7 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
   const range = filters?.start && filters?.end ? resolveDateRange({ start: filters.start, end: filters.end }) : null;
 
   const transactions = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount", "balanceAfter", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${id} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -407,11 +424,41 @@ export async function updateTransaction(userId: string, accountId: string, trans
   await getAccount(userId, accountId);
   const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
   if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
-  if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
-    throw new AppError(400, "Transfers cannot be edited yet");
-  }
 
   const category = input.category?.trim() ? input.category.trim() : null;
+
+  if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
+    if (!transaction.transferGroupId) {
+      throw new AppError(400, "Only newly linked transfers can be edited");
+    }
+
+    const linkedTransactions = await selectTransactionsByTransferGroup(userId, transaction.transferGroupId);
+    if (linkedTransactions.length !== 2) {
+      throw new AppError(400, "Transfer records are incomplete");
+    }
+
+    const affectedAccountIds = Array.from(new Set(
+      linkedTransactions.flatMap((linkedTransaction) => [linkedTransaction.fromAccountId, linkedTransaction.toAccountId]).filter(Boolean)
+    )) as string[];
+
+    await prisma.$transaction(async (tx) => {
+      for (const linkedTransaction of linkedTransactions) {
+        await tx.transaction.update({
+          where: { id: linkedTransaction.id },
+          data: {
+            amount: input.amount,
+            category,
+          },
+        });
+      }
+      for (const affectedAccountId of affectedAccountIds) {
+        await replayAccountBalances(tx as PrismaClient, affectedAccountId);
+      }
+    });
+
+    return getAccount(userId, accountId);
+  }
+
   const description = input.description?.trim() ? input.description.trim() : null;
 
   await prisma.$transaction(async (tx) => {
@@ -440,7 +487,29 @@ export async function deleteTransaction(userId: string, accountId: string, trans
   const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
   if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
   if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
-    throw new AppError(400, "Transfers cannot be deleted yet");
+    if (!transaction.transferGroupId) {
+      throw new AppError(400, "Only newly linked transfers can be deleted");
+    }
+
+    const linkedTransactions = await selectTransactionsByTransferGroup(userId, transaction.transferGroupId);
+    if (linkedTransactions.length !== 2) {
+      throw new AppError(400, "Transfer records are incomplete");
+    }
+
+    const affectedAccountIds = Array.from(new Set(
+      linkedTransactions.flatMap((linkedTransaction) => [linkedTransaction.fromAccountId, linkedTransaction.toAccountId]).filter(Boolean)
+    )) as string[];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.deleteMany({
+        where: { transferGroupId: transaction.transferGroupId },
+      });
+      for (const affectedAccountId of affectedAccountIds) {
+        await replayAccountBalances(tx as PrismaClient, affectedAccountId);
+      }
+    });
+
+    return getAccount(userId, accountId);
   }
 
   await prisma.$transaction(async (tx) => {

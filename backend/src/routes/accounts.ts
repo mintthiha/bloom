@@ -26,8 +26,15 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     const ownerName = requireString(body.ownerName, "ownerName", { max: 100 });
     const nickname = optionalString(body.nickname, "nickname", { max: 60 });
     const rawAccountType = body.accountType;
-    if (rawAccountType !== "CHEQUING" && rawAccountType !== "SAVINGS") {
-      throw new AppError(400, "accountType must be CHEQUING or SAVINGS");
+    if (
+      rawAccountType !== "CHEQUING" &&
+      rawAccountType !== "SAVINGS" &&
+      rawAccountType !== "TFSA" &&
+      rawAccountType !== "RRSP" &&
+      rawAccountType !== "FHSA" &&
+      rawAccountType !== "CREDIT"
+    ) {
+      throw new AppError(400, "accountType must be CHEQUING, SAVINGS, TFSA, RRSP, FHSA, or CREDIT");
     }
     const account = await accountService.createAccount(uid(req), ownerName, rawAccountType as AccountType, nickname);
     res.status(201).json(account);

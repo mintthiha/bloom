@@ -10,6 +10,10 @@ vi.mock("@prisma/client", () => ({
   AccountType: {
     CHEQUING: "CHEQUING",
     SAVINGS: "SAVINGS",
+    TFSA: "TFSA",
+    RRSP: "RRSP",
+    FHSA: "FHSA",
+    CREDIT: "CREDIT",
   },
   TransactionType: {
     DEPOSIT: "DEPOSIT",

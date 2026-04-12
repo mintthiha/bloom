@@ -15,6 +15,21 @@ import {
 
 const EXPENSE_BUDGET_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other", "Custom..."];
 
+const ACCOUNT_TYPE_META: Record<AccountType, { label: string; color: string; soft: string; border: string }> = {
+  CHEQUING: { label: "Chequing", color: "#f59e0b", soft: "#f59e0b22", border: "#f59e0b44" },
+  SAVINGS: { label: "Savings", color: "#22c55e", soft: "#16a34a22", border: "#16a34a44" },
+  TFSA: { label: "TFSA", color: "#38bdf8", soft: "#0ea5e922", border: "#0ea5e944" },
+  RRSP: { label: "RRSP", color: "#a78bfa", soft: "#8b5cf622", border: "#8b5cf644" },
+  FHSA: { label: "FHSA", color: "#fb7185", soft: "#f43f5e22", border: "#f43f5e44" },
+  CREDIT: { label: "Credit", color: "#ef4444", soft: "#ef444422", border: "#ef444444" },
+};
+
+const ACCOUNT_GROUPS = [
+  { id: "cash", title: "Cash Accounts", description: "Daily banking and savings balances.", types: ["CHEQUING", "SAVINGS"] as AccountType[] },
+  { id: "registered", title: "Registered Accounts", description: "Tax-advantaged savings and investment accounts.", types: ["TFSA", "RRSP", "FHSA"] as AccountType[] },
+  { id: "credit", title: "Credit Accounts", description: "Debt balances tracked separately from cash.", types: ["CREDIT"] as AccountType[] },
+];
+
 function Home() {
   const { view } = useDashboardView();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -224,9 +239,19 @@ function Home() {
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
 
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
-  const chequingCount = accounts.filter(a => a.accountType === "CHEQUING").length;
-  const savingsCount = accounts.filter(a => a.accountType === "SAVINGS").length;
+  const cashAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
+  const creditAccounts = accounts.filter((account) => account.accountType === "CREDIT");
+  const chequingAccounts = accounts.filter((account) => account.accountType === "CHEQUING");
+  const savingsAccounts = accounts.filter((account) => account.accountType === "SAVINGS");
+  const registeredAccounts = accounts.filter((account) =>
+    account.accountType === "TFSA" || account.accountType === "RRSP" || account.accountType === "FHSA"
+  );
+  const totalCash = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
+  const totalCredit = creditAccounts.reduce((sum, a) => sum + a.balance, 0);
+  const chequingCount = chequingAccounts.length;
+  const savingsCount = savingsAccounts.length;
+  const registeredCount = registeredAccounts.length;
+  const creditCount = creditAccounts.length;
   const expenseCategories = monthlySummary?.categories.filter(category => category.spending > 0) ?? [];
   const knownBudgetCategories = Array.from(new Set([
     ...EXPENSE_BUDGET_CATEGORIES.filter((category) => category !== "Custom..."),
@@ -234,6 +259,140 @@ function Home() {
     ...budgets.map((budget) => budget.category),
   ])).sort((left, right) => left.localeCompare(right));
   const dashboardColumns = view === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
+  const groupedAccounts = ACCOUNT_GROUPS.map((group) => ({
+    ...group,
+    accounts: accounts.filter((account) => group.types.includes(account.accountType)),
+  })).filter((group) => group.accounts.length > 0);
+  const accountBalanceChartData = accounts.map((account) => ({
+    id: account.id,
+    name: (account.nickname ?? account.ownerName).split(" ")[0],
+    balance: account.balance,
+    type: account.accountType,
+  }));
+
+  function renderAccountCard(acc: Account, index: number) {
+    return (
+      <Link
+        key={acc.id}
+        href={`/account/${acc.id}`}
+        className="fade-up"
+        style={{
+          animationDelay: `${0.04 * index}s`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 20px',
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          textDecoration: 'none',
+          color: 'inherit',
+          transition: 'border-color 0.15s, background 0.15s',
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hover)';
+          (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)';
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+          (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)';
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '10px',
+            background: ACCOUNT_TYPE_META[acc.accountType].soft,
+            border: `1px solid ${ACCOUNT_TYPE_META[acc.accountType].border}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '15px', fontWeight: 700,
+            color: ACCOUNT_TYPE_META[acc.accountType].color,
+          }}>
+            {(acc.nickname ?? acc.ownerName)[0].toUpperCase()}
+          </div>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: acc.nickname ? '1px' : '3px' }}>{acc.nickname ?? acc.ownerName}</p>
+            {acc.nickname && (
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>{acc.ownerName}</p>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
+                padding: '2px 6px', borderRadius: '4px',
+                background: ACCOUNT_TYPE_META[acc.accountType].soft,
+                color: ACCOUNT_TYPE_META[acc.accountType].color,
+              }}>
+                {ACCOUNT_TYPE_META[acc.accountType].label}
+              </span>
+              {acc.frozen && (
+                <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 6px', borderRadius: '4px', background: '#3b82f622', color: '#60a5fa' }}>
+                  FROZEN
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span className="num" style={{ fontSize: '15px', fontWeight: 500, color: ACCOUNT_TYPE_META[acc.accountType].color }}>{fmt(acc.balance)}</span>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text-muted)">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
+    );
+  }
+
+  function renderSummaryCard({
+    title,
+    value,
+    color,
+    targetAccount,
+  }: {
+    title: string;
+    value: React.ReactNode;
+    color?: string;
+    targetAccount?: Account;
+  }) {
+    const clickable = Boolean(targetAccount);
+
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (targetAccount) {
+            router.push(`/account/${targetAccount.id}`);
+          }
+        }}
+        disabled={!clickable}
+        style={{
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '20px',
+          textAlign: 'left',
+          cursor: clickable ? 'pointer' : 'default',
+          opacity: clickable ? 1 : 0.9,
+          transition: 'border-color 0.15s, transform 0.15s',
+        }}
+        onMouseEnter={(e) => {
+          if (clickable) {
+            e.currentTarget.style.borderColor = 'var(--border-hover)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'var(--border)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
+      >
+        <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+          {title}
+        </p>
+        <div className="num" style={{ fontSize: '22px', fontWeight: 500, color: color ?? 'var(--text-primary)' }}>
+          {value}
+        </div>
+      </button>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 48px' }}>
@@ -255,19 +414,36 @@ function Home() {
 
       {/* Stats row */}
       {accounts.length > 0 && (
-        <div className="fade-up fade-up-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '36px' }}>
-          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Total Balance</p>
-            <p className="num" style={{ fontSize: '22px', fontWeight: 500, color: '#f59e0b' }}>{fmt(totalBalance)}</p>
-          </div>
-          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Chequing</p>
-            <p className="num" style={{ fontSize: '22px', fontWeight: 500 }}>{chequingCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{chequingCount !== 1 ? 's' : ''}</span></p>
-          </div>
-          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '10px' }}>Savings</p>
-            <p className="num" style={{ fontSize: '22px', fontWeight: 500 }}>{savingsCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{savingsCount !== 1 ? 's' : ''}</span></p>
-          </div>
+        <div className="fade-up fade-up-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '36px' }}>
+          {renderSummaryCard({
+            title: "Total Cash",
+            value: fmt(totalCash),
+            color: "#f59e0b",
+            targetAccount: cashAccounts[0],
+          })}
+          {renderSummaryCard({
+            title: "Chequing",
+            value: <>{chequingCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{chequingCount !== 1 ? 's' : ''}</span></>,
+            targetAccount: chequingAccounts[0],
+          })}
+          {renderSummaryCard({
+            title: "Savings",
+            value: <>{savingsCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{savingsCount !== 1 ? 's' : ''}</span></>,
+            targetAccount: savingsAccounts[0],
+          })}
+          {renderSummaryCard({
+            title: "Registered",
+            value: <>{registeredCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{registeredCount !== 1 ? 's' : ''}</span></>,
+            targetAccount: registeredAccounts[0],
+          })}
+          {renderSummaryCard({
+            title: "Credit",
+            value: creditCount > 0
+              ? <>{fmt(totalCredit)} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>owed</span></>
+              : <>{creditCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{creditCount !== 1 ? 's' : ''}</span></>,
+            color: creditCount > 0 ? '#ef4444' : undefined,
+            targetAccount: creditAccounts[0],
+          })}
         </div>
       )}
 
@@ -522,7 +698,7 @@ function Home() {
             Account Balances
           </p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={accounts.map(a => ({ name: (a.nickname ?? a.ownerName).split(" ")[0], balance: a.balance, type: a.accountType }))} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <BarChart data={accountBalanceChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
               <Tooltip
@@ -531,9 +707,18 @@ function Home() {
                 itemStyle={{ color: '#f3f4f6' }}
                 cursor={{ fill: '#ffffff06' }}
               />
-              <Bar dataKey="balance" radius={[4, 4, 0, 0]}>
-                {accounts.map((a, i) => (
-                  <Cell key={i} fill={a.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b'} />
+              <Bar
+                dataKey="balance"
+                radius={[4, 4, 0, 0]}
+                onClick={(data) => {
+                  if (data?.id) {
+                    router.push(`/account/${data.id}`);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                {accountBalanceChartData.map((account, i) => (
+                  <Cell key={i} fill={ACCOUNT_TYPE_META[account.type].color} />
                 ))}
               </Bar>
             </BarChart>
@@ -607,6 +792,10 @@ function Home() {
               >
                 <option value="CHEQUING">Chequing</option>
                 <option value="SAVINGS">Savings</option>
+                <option value="TFSA">TFSA</option>
+                <option value="RRSP">RRSP</option>
+                <option value="FHSA">FHSA</option>
+                <option value="CREDIT">Credit card</option>
               </select>
               <button
                 type="submit"
@@ -651,73 +840,18 @@ function Home() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {accounts.map((acc, i) => (
-              <Link
-                key={acc.id}
-                href={`/account/${acc.id}`}
-                className="fade-up"
-                style={{
-                  animationDelay: `${0.04 * i}s`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '16px 20px',
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  transition: 'border-color 0.15s, background 0.15s',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hover)';
-                  (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-                  (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '10px',
-                    background: acc.accountType === 'SAVINGS' ? '#16a34a22' : '#f59e0b22',
-                    border: `1px solid ${acc.accountType === 'SAVINGS' ? '#16a34a44' : '#f59e0b44'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '15px', fontWeight: 700,
-                    color: acc.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b',
-                  }}>
-                    {(acc.nickname ?? acc.ownerName)[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: acc.nickname ? '1px' : '3px' }}>{acc.nickname ?? acc.ownerName}</p>
-                    {acc.nickname && (
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>{acc.ownerName}</p>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
-                        padding: '2px 6px', borderRadius: '4px',
-                        background: acc.accountType === 'SAVINGS' ? '#16a34a22' : '#f59e0b22',
-                        color: acc.accountType === 'SAVINGS' ? '#22c55e' : '#f59e0b',
-                      }}>
-                        {acc.accountType}
-                      </span>
-                      {acc.frozen && (
-                        <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 6px', borderRadius: '4px', background: '#3b82f622', color: '#60a5fa' }}>
-                          FROZEN
-                        </span>
-                      )}
-                    </div>
-                  </div>
+            {groupedAccounts.map((group) => (
+              <div key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ padding: '6px 4px 2px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    {group.title}
+                  </p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {group.description}
+                  </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="num" style={{ fontSize: '15px', fontWeight: 500, color: '#f59e0b' }}>{fmt(acc.balance)}</span>
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text-muted)">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
+                {group.accounts.map((acc, index) => renderAccountCard(acc, index))}
+              </div>
             ))}
           </div>
         )}

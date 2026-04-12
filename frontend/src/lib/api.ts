@@ -26,7 +26,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export type AccountType = "CHEQUING" | "SAVINGS";
+export type AccountType = "CHEQUING" | "SAVINGS" | "TFSA" | "RRSP" | "FHSA" | "CREDIT";
 
 export type Account = {
   id: string;
@@ -44,6 +44,7 @@ export type Transaction = {
   type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER_OUT" | "TRANSFER_IN";
   amount: number;
   balanceAfter: number;
+  transferGroupId?: string | null;
   category: string | null;
   description: string | null;
   createdAt: string;

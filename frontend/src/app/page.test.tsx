@@ -181,4 +181,54 @@ describe("home page", () => {
     expect(screen.getByText("$120.00 remaining")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
+
+  it("groups account list sections by account family", async () => {
+    apiMock.getProfile.mockResolvedValue({
+      userId: "user-1",
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      createdAt: "2026-04-04T00:00:00.000Z",
+      updatedAt: "2026-04-04T00:00:00.000Z",
+    });
+    apiMock.listAccounts.mockResolvedValue([
+      {
+        id: "account-1",
+        ownerName: "Jane Doe",
+        nickname: "Main",
+        accountType: "CHEQUING",
+        balance: 1200,
+        frozen: false,
+        createdAt: "2026-04-04T00:00:00.000Z",
+        updatedAt: "2026-04-04T00:00:00.000Z",
+      },
+      {
+        id: "account-2",
+        ownerName: "Jane Doe",
+        nickname: "Long Term",
+        accountType: "TFSA",
+        balance: 3200,
+        frozen: false,
+        createdAt: "2026-04-05T00:00:00.000Z",
+        updatedAt: "2026-04-05T00:00:00.000Z",
+      },
+      {
+        id: "account-3",
+        ownerName: "Jane Doe",
+        nickname: "Visa",
+        accountType: "CREDIT",
+        balance: 450,
+        frozen: false,
+        createdAt: "2026-04-06T00:00:00.000Z",
+        updatedAt: "2026-04-06T00:00:00.000Z",
+      },
+    ]);
+
+    render(<Page />);
+
+    expect(await screen.findByText("Cash Accounts")).toBeInTheDocument();
+    expect(screen.getByText("Registered Accounts")).toBeInTheDocument();
+    expect(screen.getByText("Credit Accounts")).toBeInTheDocument();
+  });
 });

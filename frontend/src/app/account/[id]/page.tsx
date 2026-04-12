@@ -27,6 +27,14 @@ type Op = "deposit" | "withdraw" | "transfer";
 const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Investment", "Other Income"];
 const EXPENSE_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other"];
 const TRANSACTION_FILTER_CATEGORIES = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES, "Transfer"];
+const ACCOUNT_TYPE_META = {
+  CHEQUING: { label: "Chequing", color: "#f59e0b" },
+  SAVINGS: { label: "Savings", color: "#22c55e" },
+  TFSA: { label: "TFSA", color: "#38bdf8" },
+  RRSP: { label: "RRSP", color: "#a78bfa" },
+  FHSA: { label: "FHSA", color: "#fb7185" },
+  CREDIT: { label: "Credit", color: "#ef4444" },
+} as const;
 
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -249,7 +257,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
 
   const isEditableTransaction = (transaction: Transaction) =>
-    transaction.type === "DEPOSIT" || transaction.type === "WITHDRAWAL";
+    transaction.type === "DEPOSIT" ||
+    transaction.type === "WITHDRAWAL" ||
+    ((transaction.type === "TRANSFER_OUT" || transaction.type === "TRANSFER_IN") && Boolean(transaction.transferGroupId));
 
   function txnMeta(t: Transaction): { label: string; color: string; sign: string; icon: string } {
     switch (t.type) {
@@ -289,8 +299,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
   if (!account) return null;
 
-  const isSavings = account.accountType === "SAVINGS";
-  const accentColor = isSavings ? "#22c55e" : "#f59e0b";
+  const accentColor = ACCOUNT_TYPE_META[account.accountType].color;
   const displayName = account.nickname ?? account.ownerName;
   const transferTargets = accounts.filter(a => a.id !== id);
   return (
@@ -369,7 +378,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                 padding: '3px 8px', borderRadius: '5px',
                 background: `${accentColor}20`, color: accentColor,
               }}>
-                {account.accountType}
+                {ACCOUNT_TYPE_META[account.accountType].label}
               </span>
               {account.frozen && (
                 <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '3px 8px', borderRadius: '5px', background: '#3b82f620', color: '#60a5fa' }}>
@@ -386,7 +395,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           </div>
           <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', marginLeft: 'auto' }}>
             <div>
-              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Available Balance</p>
+                <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  {account.accountType === "CREDIT" ? "Outstanding Balance" : "Available Balance"}
+                </p>
               <p className="num" style={{ fontSize: '30px', fontWeight: 500, color: accentColor }}>{fmt(account.balance)}</p>
             </div>
             <button
@@ -653,7 +664,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   const label = target.nickname ?? target.ownerName;
                   return (
                     <option key={target.id} value={target.id}>
-                      {label} - {target.accountType.toLowerCase()} - {target.id.slice(-6)}
+                      {label} - {ACCOUNT_TYPE_META[target.accountType].label} - {target.id.slice(-6)}
                     </option>
                   );
                 })}
@@ -840,13 +851,21 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                                 style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', width: '100%' }}
                               >
                                 <option value="">No category</option>
-                                {(t.type === "DEPOSIT" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((categoryOption) => (
+                                {(t.type === "DEPOSIT"
+                                  ? INCOME_CATEGORIES
+                                  : t.type === "WITHDRAWAL"
+                                    ? EXPENSE_CATEGORIES
+                                    : ["Transfer"]).map((categoryOption) => (
                                   <option key={categoryOption} value={categoryOption}>
                                     {categoryOption}
                                   </option>
                                 ))}
                                 {editingTransactionCategory &&
-                                  !(t.type === "DEPOSIT" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).includes(editingTransactionCategory) && (
+                                  !(t.type === "DEPOSIT"
+                                    ? INCOME_CATEGORIES
+                                    : t.type === "WITHDRAWAL"
+                                      ? EXPENSE_CATEGORIES
+                                      : ["Transfer"]).includes(editingTransactionCategory) && (
                                     <option value={editingTransactionCategory}>{editingTransactionCategory}</option>
                                   )}
                               </select>
@@ -955,11 +974,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                           </button>
                         )}
                       </div>
-                    ) : (
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        Transfers are read-only
-                      </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
