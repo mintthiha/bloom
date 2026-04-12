@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
+import { useDashboardView } from "@/components/dashboard-view-provider";
 import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
@@ -19,6 +20,15 @@ const TRANSACTION_FILTER_CATEGORIES = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORI
 
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { view } = useDashboardView();
+  const isDoubleColumn = view === "double";
+  const pageWidth = isDoubleColumn ? "1200px" : "720px";
+  const summaryColumns = isDoubleColumn ? "minmax(0, 1.15fr) minmax(320px, 0.85fr)" : "1fr";
+  const detailColumns = isDoubleColumn ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "1fr";
+  const analyticsColumns = isDoubleColumn ? "1fr 1fr" : "1fr";
+  const historyFilterColumns = isDoubleColumn
+    ? "minmax(0, 160px) minmax(0, 180px) minmax(0, 1fr)"
+    : "1fr";
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -186,7 +196,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   };
 
   if (loading) return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '48px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="skeleton" style={{ height: '24px', width: '120px' }} />
       <div className="skeleton" style={{ height: '100px' }} />
       <div className="skeleton" style={{ height: '200px' }} />
@@ -194,7 +204,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   );
 
   if (error) return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
+    <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '48px 24px' }}>
       <p className="num" style={{ color: '#f87171', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
       <Link href="/" style={{ color: '#f59e0b', fontSize: '14px' }}>← Back to accounts</Link>
     </div>
@@ -206,9 +216,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const accentColor = isSavings ? "#22c55e" : "#f59e0b";
   const displayName = account.nickname ?? account.ownerName;
   const transferTargets = accounts.filter(a => a.id !== id);
-
   return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', padding: '48px 24px' }}>
+    <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '48px 24px' }}>
 
       {/* Back */}
       <Link href="/" className="fade-up" style={{
@@ -226,6 +235,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         Accounts
       </Link>
 
+      <div style={{ display: 'grid', gridTemplateColumns: summaryColumns, gap: '16px', marginBottom: '16px', alignItems: 'start' }}>
       {/* Account card */}
       <div className="fade-up fade-up-1" style={{
         background: 'var(--surface-1)', border: '1px solid var(--border)',
@@ -238,9 +248,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           width: '160px', height: '160px', borderRadius: '50%',
           background: `${accentColor}10`, filter: 'blur(40px)', pointerEvents: 'none',
         }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.3px' }}>{displayName}</h1>
               <span style={{
                 fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
@@ -262,7 +272,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             )}
             <p className="num" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{account.id}</p>
           </div>
-          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', marginLeft: 'auto' }}>
             <div>
               <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>Available Balance</p>
               <p className="num" style={{ fontSize: '30px', fontWeight: 500, color: accentColor }}>{fmt(account.balance)}</p>
@@ -356,13 +366,13 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {editingNickname ? (
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <input
               type="text"
               value={nickname}
               onChange={e => setNickname(e.target.value)}
               placeholder="Optional nickname"
-              style={{ ...inputStyle, flex: 1 }}
+              style={{ ...inputStyle, flex: '1 1 220px' }}
             />
             <button
               onClick={handleSaveNickname}
@@ -393,12 +403,15 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           </p>
         )}
       </div>
+      </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: detailColumns, gap: '16px', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Charts */}
       {txns.length > 0 && (() => {
         const chronological = [...txns].reverse();
         const balanceData = chronological.map(t => ({
-          date: new Date(t.createdAt).toLocaleDateString("en-CA", { month: "short", day: "numeric" }),
+          timestamp: t.createdAt,
           balance: t.balanceAfter,
         }));
 
@@ -425,18 +438,31 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
               Analytics
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: analyticsColumns, gap: '24px' }}>
               {/* Balance history */}
               <div>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Balance History</p>
                 <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={balanceData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} />
+                    <XAxis
+                      dataKey="timestamp"
+                      tick={{ fontSize: 10, fill: '#6b7280' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) =>
+                        new Date(value).toLocaleDateString("en-CA", { month: "short", day: "numeric" })
+                      }
+                      minTickGap={24}
+                    />
                     <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
                     <Tooltip
                       contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px' }}
                       labelStyle={{ color: '#9ca3af' }}
+                      labelFormatter={(value) =>
+                        new Date(value).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })
+                      }
+                      formatter={(value) => [fmt(Number(value)), "Balance"]}
                     />
                     <Line type="monotone" dataKey="balance" stroke={accentColor} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: accentColor }} />
                   </LineChart>
@@ -595,9 +621,10 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           <p style={{ color: '#60a5fa', fontSize: '14px' }}>This account is frozen. All transactions have been suspended.</p>
         </div>
       )}
+      </div>
 
       {/* Transaction history */}
-      <div className="fade-up fade-up-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+      <div className="fade-up fade-up-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', minHeight: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
           <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
             Transaction History
@@ -605,7 +632,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{txns.length} records</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 160px) minmax(0, 180px) minmax(0, 1fr)', gap: '10px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: historyFilterColumns, gap: '10px', marginBottom: '16px' }}>
           <select
             aria-label="Transaction type filter"
             value={filterType}
@@ -692,6 +719,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             })}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

@@ -2,6 +2,12 @@
 
 import { DateRangePreset, DateRangeState } from "@/lib/date-range";
 
+function shiftDate(value: string, days: number) {
+  const next = new Date(`${value}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
 export function DateRangeControls({
   value,
   onChange,
@@ -16,6 +22,15 @@ export function DateRangeControls({
         value={value.preset}
         onChange={(event) => {
           const preset = event.target.value as DateRangePreset;
+          if (preset === "custom") {
+            onChange({
+              ...value,
+              preset,
+              end: value.preset === "custom" ? value.end : shiftDate(value.end, -1),
+            });
+            return;
+          }
+
           onChange({ ...value, preset });
         }}
         style={{
@@ -39,7 +54,14 @@ export function DateRangeControls({
             type="date"
             aria-label="Start date"
             value={value.start}
-            onChange={(event) => onChange({ ...value, start: event.target.value })}
+            onChange={(event) => {
+              const start = event.target.value;
+              onChange({
+                ...value,
+                start,
+                end: value.end && value.end < start ? start : value.end,
+              });
+            }}
             style={{
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
@@ -53,7 +75,14 @@ export function DateRangeControls({
             type="date"
             aria-label="End date"
             value={value.end}
-            onChange={(event) => onChange({ ...value, end: event.target.value })}
+            onChange={(event) => {
+              const end = event.target.value;
+              onChange({
+                ...value,
+                start: value.start && end < value.start ? end : value.start,
+                end,
+              });
+            }}
             style={{
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
