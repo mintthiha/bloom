@@ -67,6 +67,7 @@ model Transaction {
   transferGroupId String?
   category     String?
   description  String?
+  effectiveAt  DateTime        @default(now())
   createdAt    DateTime        @default(now())
 
   fromAccountId String?

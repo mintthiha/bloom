@@ -47,6 +47,7 @@ export type Transaction = {
   transferGroupId?: string | null;
   category: string | null;
   description: string | null;
+  effectiveAt: string;
   createdAt: string;
   fromAccountId: string | null;
   toAccountId: string | null;
@@ -95,6 +96,7 @@ export type BudgetActivity = Budget & {
     amount: number;
     category: string | null;
     description: string | null;
+    effectiveAt: string;
     createdAt: string;
     accountId: string;
     accountName: string;
@@ -145,7 +147,7 @@ export const api = {
     request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string, query?: TransactionQuery) =>
     request<Transaction[]>(withQuery(`/accounts/${id}/transactions`, query)),
-  updateTransaction: (id: string, transactionId: string, input: { amount: number; category?: string; description?: string }) =>
+  updateTransaction: (id: string, transactionId: string, input: { amount: number; category?: string; description?: string; effectiveAt?: string }) =>
     request<Account>(`/accounts/${id}/transactions/${transactionId}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteTransaction: (id: string, transactionId: string) =>
     request<void>(`/accounts/${id}/transactions/${transactionId}`, { method: "DELETE" }),

@@ -237,10 +237,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               >
                 <div>
                   <p className="num" style={{ fontSize: "12px", fontWeight: 600 }}>
-                    {new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric" }).format(new Date(transaction.createdAt))}
+                    {new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric" }).format(new Date(transaction.effectiveAt))}
                   </p>
                   <p className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    {new Intl.DateTimeFormat("en-CA", { hour: "numeric", minute: "2-digit" }).format(new Date(transaction.createdAt))}
+                    {new Intl.DateTimeFormat("en-CA", { hour: "numeric", minute: "2-digit" }).format(new Date(transaction.effectiveAt))}
                   </p>
                 </div>
                 <div style={{ minWidth: 0 }}>

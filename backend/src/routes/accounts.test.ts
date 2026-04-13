@@ -158,13 +158,14 @@ describe("account routes", () => {
     const response = await request(app)
       .patch("/api/accounts/account-1/transactions/txn-1")
       .set("X-User-Id", "user-1")
-      .send({ amount: 20, category: "  Dining \n", description: "  Coffee\tshop " });
+      .send({ amount: 20, category: "  Dining \n", description: "  Coffee\tshop ", effectiveAt: "2026-04-08T12:00:00.000Z" });
 
     expect(response.status).toBe(200);
     expect(serviceMock.updateTransaction).toHaveBeenCalledWith("user-1", "account-1", "txn-1", {
       amount: 20,
       category: "Dining",
       description: "Coffee shop",
+      effectiveAt: new Date("2026-04-08T12:00:00.000Z"),
     });
   });
 

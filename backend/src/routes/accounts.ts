@@ -128,10 +128,19 @@ router.patch("/:id/transactions/:transactionId", async (req: Request, res: Respo
     const amount = requirePositiveNumber(body.amount, "amount");
     const category = optionalString(body.category, "category", { max: 50 });
     const description = optionalString(body.description, "description", { max: 240 });
+    const effectiveAtValue = body.effectiveAt;
+    if (effectiveAtValue !== undefined && typeof effectiveAtValue !== "string") {
+      throw new AppError(400, "effectiveAt must be an ISO date string");
+    }
+    const effectiveAt = typeof effectiveAtValue === "string" ? new Date(effectiveAtValue) : undefined;
+    if (effectiveAt && Number.isNaN(effectiveAt.getTime())) {
+      throw new AppError(400, "effectiveAt must be a valid ISO date");
+    }
     const account = await accountService.updateTransaction(uid(req), pid(req), req.params["transactionId"] as string, {
       amount,
       category,
       description,
+      effectiveAt,
     });
     res.json(account);
   } catch (err) { next(err); }

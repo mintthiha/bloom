@@ -71,6 +71,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingTransactionAmount, setEditingTransactionAmount] = useState("");
   const [editingTransactionCategory, setEditingTransactionCategory] = useState("");
+  const [editingTransactionDateTime, setEditingTransactionDateTime] = useState("");
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
@@ -195,18 +196,28 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     }
   }
 
+  function formatDateTimeLocal(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return localDate.toISOString().slice(0, 16);
+  }
+
   function startEditingTransaction(transaction: Transaction) {
     setOpError(null);
     setOpSuccess(null);
     setEditingTransactionId(transaction.id);
     setEditingTransactionAmount(transaction.amount.toString());
     setEditingTransactionCategory(transaction.category ?? "");
+    setEditingTransactionDateTime(formatDateTimeLocal(transaction.effectiveAt));
   }
 
   function cancelEditingTransaction() {
     setEditingTransactionId(null);
     setEditingTransactionAmount("");
     setEditingTransactionCategory("");
+    setEditingTransactionDateTime("");
   }
 
   async function handleSaveTransaction(transactionId: string) {
@@ -223,6 +234,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       await api.updateTransaction(id, transactionId, {
         amount: amountValue,
         category: editingTransactionCategory.trim() || undefined,
+        effectiveAt: editingTransactionDateTime ? new Date(editingTransactionDateTime).toISOString() : undefined,
       });
       cancelEditingTransaction();
       setOpSuccess("Transaction updated");
@@ -534,7 +546,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       {txns.length > 0 && (() => {
         const chronological = [...txns].reverse();
         const balanceData = chronological.map(t => ({
-          timestamp: t.createdAt,
+          timestamp: t.effectiveAt,
           balance: t.balanceAfter,
         }));
 
@@ -871,8 +883,20 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                               </select>
                             </label>
                           </div>
+                          <label style={{ display: 'grid', gap: '6px', maxWidth: isDoubleColumn ? '260px' : '100%' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                              Date and time
+                            </span>
+                            <input
+                              type="datetime-local"
+                              value={editingTransactionDateTime}
+                              onChange={(e) => setEditingTransactionDateTime(e.target.value)}
+                              aria-label="Transaction date and time"
+                              style={inputStyle}
+                            />
+                          </label>
                           <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
+                            Recorded {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
                           </p>
                         </div>
                       ) : (
@@ -883,7 +907,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                           <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                             {t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
                             {t.category && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{t.category}</span>}
-                            {new Date(t.createdAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
+                            {new Date(t.effectiveAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
                           </p>
                         </>
                       )}

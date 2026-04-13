@@ -25,6 +25,7 @@ type TransactionRecord = {
   transferGroupId: string | null;
   category: string | null;
   description: string | null;
+  effectiveAt: Date;
   createdAt: Date;
   fromAccountId: string | null;
   toAccountId: string | null;
@@ -48,6 +49,7 @@ type TransactionUpdateInput = {
   amount: number;
   category?: string;
   description?: string;
+  effectiveAt?: Date;
 };
 
 async function selectAccountById(id: string) {
@@ -72,7 +74,7 @@ async function selectAccountByUserId(userId: string, id: string) {
 
 async function selectTransactionByAccount(userId: string, accountId: string, transactionId: string) {
   const rows = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."description", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -89,7 +91,7 @@ async function selectTransactionByAccount(userId: string, accountId: string, tra
 
 async function selectTransactionsByTransferGroup(userId: string, transferGroupId: string) {
   return prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."description", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     LEFT JOIN "Account" fa ON fa."id" = t."fromAccountId"
     LEFT JOIN "Account" ta ON ta."id" = t."toAccountId"
@@ -101,13 +103,13 @@ async function selectTransactionsByTransferGroup(userId: string, transferGroupId
 
 async function listTransactionsForBalanceReplay(client: Pick<PrismaClient, "$queryRaw">, accountId: string) {
   return client.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
       OR
       ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
-    ORDER BY "createdAt" ASC, "id" ASC
+    ORDER BY "effectiveAt" ASC, "createdAt" ASC, "id" ASC
   `;
 }
 
@@ -155,6 +157,7 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
   transferGroupId?: string;
   category?: string;
   description?: string;
+  effectiveAt?: Date;
   fromAccountId?: string;
   toAccountId?: string;
 }) {
@@ -162,9 +165,9 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
   const category = input.category?.trim() ? input.category.trim() : null;
   const description = input.description?.trim() ? input.description.trim() : null;
   const rows = await client.$queryRaw<TransactionRecord[]>`
-    INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId")
-    VALUES (${id}, ${input.type}::"TransactionType", ${input.amount}, ${input.balanceAfter}, ${input.transferGroupId ?? null}, ${category}, ${description}, CURRENT_TIMESTAMP, ${input.fromAccountId ?? null}, ${input.toAccountId ?? null})
-    RETURNING "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId")
+    VALUES (${id}, ${input.type}::"TransactionType", ${input.amount}, ${input.balanceAfter}, ${input.transferGroupId ?? null}, ${category}, ${description}, ${input.effectiveAt ?? new Date()}, CURRENT_TIMESTAMP, ${input.fromAccountId ?? null}, ${input.toAccountId ?? null})
+    RETURNING "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
   `;
   return rows[0];
 }
@@ -184,8 +187,8 @@ export async function getMonthlySummary(userId: string, input?: { start?: Date; 
     FROM "Transaction" t
     JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
     WHERE a."userId" = ${userId}
-      AND t."createdAt" >= ${start}
-      AND t."createdAt" < ${end}
+      AND t."effectiveAt" >= ${start}
+      AND t."effectiveAt" < ${end}
       AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
     GROUP BY COALESCE(t."category", 'Uncategorized')
     ORDER BY "spending" DESC, "income" DESC
@@ -387,13 +390,13 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
   const range = filters?.start && filters?.end ? resolveDateRange({ start: filters.start, end: filters.end }) : null;
 
   const transactions = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${id} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
       OR
       ("toAccountId" = ${id} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
-    ORDER BY "createdAt" DESC
+    ORDER BY "effectiveAt" DESC, "createdAt" DESC
   `;
 
   return transactions.filter((transaction) => {
@@ -406,7 +409,7 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
     if (searchFilter && !((transaction.description ?? "").toLowerCase().includes(searchFilter))) {
       return false;
     }
-    if (range && !(transaction.createdAt >= range.start && transaction.createdAt < range.end)) {
+    if (range && !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)) {
       return false;
     }
     return true;
@@ -426,6 +429,7 @@ export async function updateTransaction(userId: string, accountId: string, trans
   if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
 
   const category = input.category?.trim() ? input.category.trim() : null;
+  const effectiveAt = input.effectiveAt ?? transaction.effectiveAt;
 
   if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
     if (!transaction.transferGroupId) {
@@ -443,13 +447,13 @@ export async function updateTransaction(userId: string, accountId: string, trans
 
     await prisma.$transaction(async (tx) => {
       for (const linkedTransaction of linkedTransactions) {
-        await tx.transaction.update({
-          where: { id: linkedTransaction.id },
-          data: {
-            amount: input.amount,
-            category,
-          },
-        });
+        await tx.$queryRaw`
+          UPDATE "Transaction"
+          SET "amount" = ${input.amount},
+              "category" = ${category},
+              "effectiveAt" = ${effectiveAt}
+          WHERE "id" = ${linkedTransaction.id}
+        `;
       }
       for (const affectedAccountId of affectedAccountIds) {
         await replayAccountBalances(tx as PrismaClient, affectedAccountId);
@@ -462,14 +466,14 @@ export async function updateTransaction(userId: string, accountId: string, trans
   const description = input.description?.trim() ? input.description.trim() : null;
 
   await prisma.$transaction(async (tx) => {
-    await tx.transaction.update({
-      where: { id: transactionId },
-      data: {
-        amount: input.amount,
-        category,
-        description,
-      },
-    });
+    await tx.$queryRaw`
+      UPDATE "Transaction"
+      SET "amount" = ${input.amount},
+          "category" = ${category},
+          "description" = ${description},
+          "effectiveAt" = ${effectiveAt}
+      WHERE "id" = ${transactionId}
+    `;
     await replayAccountBalances(tx as PrismaClient, accountId);
   });
 

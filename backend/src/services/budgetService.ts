@@ -28,6 +28,7 @@ type BudgetActivityRecord = {
   amount: number | string;
   category: string | null;
   description: string | null;
+  effectiveAt: Date;
   createdAt: Date;
   accountId: string;
   accountNickname: string | null;
@@ -92,8 +93,8 @@ export async function listBudgets(userId: string, input?: { start?: Date; end?: 
       ON t."fromAccountId" = a."id"
       AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = b."category"
-      AND t."createdAt" >= ${start}
-      AND t."createdAt" < ${end}
+      AND t."effectiveAt" >= ${start}
+      AND t."effectiveAt" < ${end}
     WHERE b."userId" = ${userId}
     GROUP BY b."id", b."userId", b."category", b."monthlyLimit", b."createdAt", b."updatedAt"
     ORDER BY b."category" ASC
@@ -133,6 +134,7 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
       t."amount",
       t."category",
       t."description",
+      t."effectiveAt",
       t."createdAt",
       a."id" AS "accountId",
       a."nickname" AS "accountNickname",
@@ -142,20 +144,20 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
     WHERE a."userId" = ${userId}
       AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
-      AND t."createdAt" >= ${start}
-      AND t."createdAt" < ${end}
-    ORDER BY t."createdAt" DESC
+      AND t."effectiveAt" >= ${start}
+      AND t."effectiveAt" < ${end}
+    ORDER BY t."effectiveAt" DESC, t."createdAt" DESC
   `;
   const dailySpending = await prisma.$queryRaw<DailySpendingRow[]>`
-    SELECT DATE_TRUNC('day', t."createdAt") AS "day", COALESCE(SUM(t."amount"), 0) AS "total"
+    SELECT DATE_TRUNC('day', t."effectiveAt") AS "day", COALESCE(SUM(t."amount"), 0) AS "total"
     FROM "Transaction" t
     JOIN "Account" a ON t."fromAccountId" = a."id"
     WHERE a."userId" = ${userId}
       AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
-      AND t."createdAt" >= ${start}
-      AND t."createdAt" < ${end}
-    GROUP BY DATE_TRUNC('day', t."createdAt")
+      AND t."effectiveAt" >= ${start}
+      AND t."effectiveAt" < ${end}
+    GROUP BY DATE_TRUNC('day', t."effectiveAt")
     ORDER BY "day" ASC
   `;
   const accountTotals = await prisma.$queryRaw<AccountSpendingRow[]>`
@@ -169,8 +171,8 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
     WHERE a."userId" = ${userId}
       AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
-      AND t."createdAt" >= ${start}
-      AND t."createdAt" < ${end}
+      AND t."effectiveAt" >= ${start}
+      AND t."effectiveAt" < ${end}
     GROUP BY a."id", a."nickname", a."ownerName"
     ORDER BY "total" DESC, a."ownerName" ASC
   `;
@@ -180,6 +182,7 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
     amount: Number(transaction.amount),
     category: transaction.category,
     description: transaction.description,
+    effectiveAt: transaction.effectiveAt,
     createdAt: transaction.createdAt,
     accountId: transaction.accountId,
     accountName: transaction.accountNickname ?? transaction.accountOwnerName,
