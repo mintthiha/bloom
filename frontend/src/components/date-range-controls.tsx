@@ -1,12 +1,6 @@
 "use client";
 
-import { DateRangePreset, DateRangeState } from "@/lib/date-range";
-
-function shiftDate(value: string, days: number) {
-  const next = new Date(`${value}T00:00:00.000Z`);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next.toISOString().slice(0, 10);
-}
+import { DateRangePreset, DateRangeState, shiftLocalDate } from "@/lib/date-range";
 
 export function DateRangeControls({
   value,
@@ -26,7 +20,7 @@ export function DateRangeControls({
             onChange({
               ...value,
               preset,
-              end: value.preset === "custom" ? value.end : shiftDate(value.end, -1),
+              end: value.preset === "custom" ? value.end : shiftLocalDate(value.end, -1),
             });
             return;
           }

@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, BudgetActivity, DateRangeQuery } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
-import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
+import { buildDateRangeQuery, DateRangeState, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   Bar,
   BarChart,
@@ -20,24 +20,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
+  const [timeZone, setTimeZone] = useState("UTC");
 
   const rangeQuery: DateRangeQuery | undefined = useMemo(() => {
-    if (dateRange.preset === "custom") {
-      if (!dateRange.start || !dateRange.end) {
-        return undefined;
-      }
-      const endDate = new Date(`${dateRange.end}T00:00:00.000Z`);
-      endDate.setUTCDate(endDate.getUTCDate() + 1);
-      return {
-        start: `${dateRange.start}T00:00:00.000Z`,
-        end: endDate.toISOString(),
-      };
-    }
-
-    return {
-      start: `${dateRange.start}T00:00:00.000Z`,
-      end: `${dateRange.end}T00:00:00.000Z`,
-    };
+    return buildDateRangeQuery(dateRange);
   }, [dateRange]);
 
   useEffect(() => {
@@ -45,6 +31,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       setDateRange(getPresetDateRange(dateRange.preset));
     }
   }, [dateRange.preset]);
+
+  useEffect(() => {
+    setTimeZone(getBrowserTimeZone());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +114,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
             </h1>
             <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>
               Spending activity for {budget.month}.
+            </p>
+            <p style={{ color: "var(--text-muted)", fontSize: "12px", marginTop: "6px" }}>
+              Times shown in {timeZone}.
             </p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end" }}>

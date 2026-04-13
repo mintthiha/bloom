@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
+import { buildDateRangeQuery, DateRangeState, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -79,21 +79,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
   const [filterDateRange, setFilterDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
+  const [timeZone, setTimeZone] = useState("UTC");
 
   const transactionQuery: DateRangeQuery & { type?: Transaction["type"]; category?: string; search?: string } = useMemo(() => {
-    const base: DateRangeQuery & { type?: Transaction["type"]; category?: string; search?: string } = {};
-
-    if (filterDateRange.preset === "custom") {
-      if (filterDateRange.start && filterDateRange.end) {
-        const endDate = new Date(`${filterDateRange.end}T00:00:00.000Z`);
-        endDate.setUTCDate(endDate.getUTCDate() + 1);
-        base.start = `${filterDateRange.start}T00:00:00.000Z`;
-        base.end = endDate.toISOString();
-      }
-    } else {
-      base.start = `${filterDateRange.start}T00:00:00.000Z`;
-      base.end = `${filterDateRange.end}T00:00:00.000Z`;
-    }
+    const base: DateRangeQuery & { type?: Transaction["type"]; category?: string; search?: string } = {
+      ...(buildDateRangeQuery(filterDateRange) ?? {}),
+    };
 
     if (filterType !== "ALL") base.type = filterType;
     if (filterCategory !== "ALL") base.category = filterCategory;
@@ -107,6 +98,10 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       setFilterDateRange(getPresetDateRange(filterDateRange.preset));
     }
   }, [filterDateRange.preset]);
+
+  useEffect(() => {
+    setTimeZone(getBrowserTimeZone());
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -761,9 +756,14 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       {/* Transaction history */}
       <div className="fade-up fade-up-3" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', minHeight: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-          <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
-            Transaction History
-          </p>
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+              Transaction History
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+              Times shown in {timeZone}.
+            </p>
+          </div>
           <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{txns.length} records</span>
         </div>
 

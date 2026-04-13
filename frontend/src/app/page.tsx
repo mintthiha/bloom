@@ -7,7 +7,7 @@ import { api, Account, AccountType, Budget, DateRangeQuery, MonthlySummary, Prof
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
-import { DateRangeState, getPresetDateRange } from "@/lib/date-range";
+import { buildDateRangeQuery, DateRangeState, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
@@ -50,26 +50,12 @@ function Home() {
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
+  const [timeZone, setTimeZone] = useState("UTC");
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const rangeQuery: DateRangeQuery | undefined = useMemo(() => {
-    if (dateRange.preset === "custom") {
-      if (!dateRange.start || !dateRange.end) {
-        return undefined;
-      }
-      const endDate = new Date(`${dateRange.end}T00:00:00.000Z`);
-      endDate.setUTCDate(endDate.getUTCDate() + 1);
-      return {
-        start: `${dateRange.start}T00:00:00.000Z`,
-        end: endDate.toISOString(),
-      };
-    }
-
-    return {
-      start: `${dateRange.start}T00:00:00.000Z`,
-      end: `${dateRange.end}T00:00:00.000Z`,
-    };
+    return buildDateRangeQuery(dateRange);
   }, [dateRange]);
 
   useEffect(() => {
@@ -77,6 +63,10 @@ function Home() {
       setDateRange(getPresetDateRange(dateRange.preset));
     }
   }, [dateRange.preset]);
+
+  useEffect(() => {
+    setTimeZone(getBrowserTimeZone());
+  }, []);
 
   useEffect(() => {
     const deleted = searchParams.get("deleted");
@@ -406,6 +396,9 @@ function Home() {
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
               Here's your financial overview.
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '6px' }}>
+              Times shown in {timeZone}.
             </p>
           </div>
           <DateRangeControls value={dateRange} onChange={setDateRange} />
