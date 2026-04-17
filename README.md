@@ -1,6 +1,6 @@
 # Bloom
 
-Full-stack banking demo application with Google sign-in, account management, profile onboarding, and financial dashboards.
+Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, budgeting, and account-level analytics.
 
 ## Tech Stack
 
@@ -16,6 +16,9 @@ Full-stack banking demo application with Google sign-in, account management, pro
 - Sonner
 - Lucide React
 - NextAuth v5 beta
+- Vitest
+- Testing Library
+- jsdom
 
 ### Backend
 
@@ -23,64 +26,118 @@ Full-stack banking demo application with Google sign-in, account management, pro
 - Express 5
 - TypeScript
 - Prisma ORM
+- PostgreSQL
 - Vitest
 - Supertest
-
-### Database
-
-- PostgreSQL
 
 ### Authentication
 
 - Google OAuth via NextAuth
 
-### Testing
-
-- Vitest
-- Testing Library
-- jsdom
-
 ## Project Structure
 
-- `frontend/` - Next.js application
-- `backend/` - Express API and Prisma schema
+- `frontend/` - Next.js app, auth integration, dashboard UI, profile onboarding, and account pages
+- `backend/` - Express API, Prisma schema, account/profile/budget services, and backend tests
 
-### Features
+## Core Features
 
-#### Authentication
+### Authentication And Onboarding
 
 - Google login integration
-- Route protection via NextAuth middleware
-- User-specific data isolation
+- Protected application routes via NextAuth
+- First-time user onboarding flow
+- Prisma-backed user profile
+- Unique Bloom username validation
 
-#### Profile And Onboarding
+### Profile Management
 
-- First-time users are prompted to complete their Bloom profile
-- Profile fields stored in Prisma
 - Separate first name, last name, username, and email
-- Username uniqueness validation
-- Sidebar and greeting use Prisma profile data
+- Sidebar identity uses Bloom profile data
+- Home page greeting uses the saved first name
+- Profile page for updating user information
 
-#### Account Management
+### Account Management
 
-- Create multiple accounts
-- View balances per account
-- Freeze, unfreeze, and delete accounts
-- Support transfers between accounts
+- Multiple account creation per user
+- Supported account types:
+  - Chequing
+  - Savings
+  - TFSA
+  - RRSP
+  - FHSA
+  - Credit
+- Optional account nicknames
+- Freeze and unfreeze controls
+- Account deletion
+- Dashboard grouping by account type
 
-#### Transactions
+### Transactions
 
-- Add deposits, withdrawals, and transfers
-- Track transaction history
-- Timestamped records for all actions
+- Deposits
+- Withdrawals
+- Transfers between accounts
+- Transaction categories
+- Transaction history filtering by:
+  - type
+  - category
+  - description search
+  - preset date range
+  - custom date range
+- Transaction editing
+- Transaction deletion with confirmation dialog
+- Linked transfer edit/delete support for newly created transfer pairs
 
-#### Data Visualization
+### Budgeting And Analytics
 
-- Graphs showing account balances over time
-- Visual overview of financial activity
+- Monthly category budgets
+- Budget usage, remaining amount, and over-budget state
+- Budget detail pages with:
+  - daily spending chart
+  - account totals
+  - transaction activity
+- Account analytics and balance history charts
+- Monthly cash-flow summary
 
-#### Test Coverage
+### Dashboard UX
 
-- Backend service tests for profile validation and username uniqueness
-- Backend API tests for `GET /api/profile` and `PUT /api/profile`
-- Frontend tests for first-time onboarding and returning-user dashboard rendering
+- Single-column and double-column dashboard layouts
+- Shared layout toggle across dashboard and account pages
+- Click-through navigation from dashboard summary cards and account cards
+
+### Date And Time Handling
+
+- Transaction editing supports date and time changes
+- Frontend date-range queries use local calendar boundaries
+- UI shows the detected browser timezone
+- Backend timestamps now use timezone-aware storage
+
+## Testing
+
+### Frontend Coverage
+
+- Vitest + Testing Library + jsdom
+- Dashboard and onboarding rendering coverage
+- Account grouping coverage
+
+### Backend Coverage
+
+- Service tests for account, profile, and budget logic
+- Route tests for account and budget endpoints
+- Validation coverage for profile and transaction updates
+
+## Development Notes
+
+- Prisma migrations should be applied after pulling schema changes:
+
+```bash
+cd backend
+npx prisma migrate dev
+```
+
+- The app now depends on timezone-aware database timestamps for correct local-time display and filtering.
+
+## Current Focus Areas For Future Automation
+
+- End-to-end coverage for onboarding, profile editing, transactions, transfers, budgets, and timezone-sensitive flows
+- Additional API regression coverage for transfer linkage, `effectiveAt`, filtering, and timezone-aware persistence
+
