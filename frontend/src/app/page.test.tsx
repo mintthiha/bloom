@@ -263,6 +263,7 @@ describe("home page", () => {
         id: "rule-1",
         userId: "user-1",
         accountId: "account-1",
+        name: "Monthly rent",
         type: "WITHDRAWAL",
         amount: 1200,
         category: "Rent",

@@ -12,6 +12,7 @@ type RecurringTransactionRecord = {
   id: string;
   userId: string;
   accountId: string;
+  name: string;
   type: RecurringTransactionType;
   amount: number;
   category: string | null;
@@ -31,6 +32,7 @@ type RecurringTransactionRecord = {
 
 type CreateRecurringTransactionInput = {
   accountId: string;
+  name: string;
   type: RecurringTransactionType;
   amount: number;
   category?: string;
@@ -39,6 +41,8 @@ type CreateRecurringTransactionInput = {
   startDate: Date;
   endDate?: Date;
 };
+
+type UpdateRecurringTransactionInput = CreateRecurringTransactionInput;
 
 type ApplyDueResult = {
   appliedCount: number;
@@ -80,12 +84,25 @@ function advanceRunDate(date: Date, frequency: RecurringFrequency) {
   return next;
 }
 
+function calculateNextRunAt(input: {
+  startDate: Date;
+  frequency: RecurringFrequency;
+  lastRunAt?: Date | null;
+}) {
+  if (!input.lastRunAt || input.lastRunAt < input.startDate) {
+    return new Date(input.startDate);
+  }
+
+  return advanceRunDate(input.lastRunAt, input.frequency);
+}
+
 async function selectRecurringTransactionById(userId: string, id: string) {
   const rows = await prisma.$queryRaw<RecurringTransactionRecord[]>`
     SELECT
       r."id",
       r."userId",
       r."accountId",
+      r."name",
       r."type",
       r."amount",
       r."category",
@@ -119,6 +136,7 @@ export async function listRecurringTransactions(userId: string) {
       r."id",
       r."userId",
       r."accountId",
+      r."name",
       r."type",
       r."amount",
       r."category",
@@ -148,6 +166,9 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
   if (input.amount <= 0) {
     throw new AppError(400, "amount must be positive");
   }
+  if (!input.name.trim()) {
+    throw new AppError(400, "name is required");
+  }
   if (input.endDate && input.endDate < input.startDate) {
     throw new AppError(400, "endDate must be on or after startDate");
   }
@@ -158,6 +179,7 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
   }
 
   const id = randomUUID();
+  const name = input.name.trim();
   const category = normalizeOptionalString(input.category);
   const description = normalizeOptionalString(input.description);
   const rows = await prisma.$queryRaw<RecurringTransactionRecord[]>`
@@ -165,6 +187,7 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
       "id",
       "userId",
       "accountId",
+      "name",
       "type",
       "amount",
       "category",
@@ -182,6 +205,7 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
       ${id},
       ${userId},
       ${input.accountId},
+      ${name},
       ${input.type}::"RecurringTransactionType",
       ${input.amount},
       ${category},
@@ -199,6 +223,79 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
       "id",
       "userId",
       "accountId",
+      "name",
+      "type",
+      "amount",
+      "category",
+      "description",
+      "frequency",
+      "startDate",
+      "endDate",
+      "nextRunAt",
+      "lastRunAt",
+      "active",
+      "createdAt",
+      "updatedAt",
+      ${account.ownerName} AS "accountOwnerName",
+      ${account.nickname} AS "accountNickname",
+      ${account.accountType} AS "accountType"
+  `;
+
+  return rows[0];
+}
+
+/**
+ * Updates a recurring rule. Previous generated transactions remain unchanged.
+ */
+export async function updateRecurringTransaction(userId: string, id: string, input: UpdateRecurringTransactionInput) {
+  if (input.amount <= 0) {
+    throw new AppError(400, "amount must be positive");
+  }
+  if (!input.name.trim()) {
+    throw new AppError(400, "name is required");
+  }
+  if (input.endDate && input.endDate < input.startDate) {
+    throw new AppError(400, "endDate must be on or after startDate");
+  }
+
+  const existing = await selectRecurringTransactionById(userId, id);
+  if (!existing) {
+    throw new AppError(404, `Recurring transaction ${id} not found`);
+  }
+
+  const account = await getAccount(userId, input.accountId);
+  if (!account) {
+    throw new AppError(404, `Account ${input.accountId} not found`);
+  }
+
+  const name = input.name.trim();
+  const category = normalizeOptionalString(input.category);
+  const description = normalizeOptionalString(input.description);
+  const nextRunAt = calculateNextRunAt({
+    startDate: input.startDate,
+    frequency: input.frequency,
+    lastRunAt: existing.lastRunAt,
+  });
+
+  const rows = await prisma.$queryRaw<RecurringTransactionRecord[]>`
+    UPDATE "RecurringTransaction"
+    SET "accountId" = ${input.accountId},
+        "name" = ${name},
+        "type" = ${input.type}::"RecurringTransactionType",
+        "amount" = ${input.amount},
+        "category" = ${category},
+        "description" = ${description},
+        "frequency" = ${input.frequency}::"RecurringFrequency",
+        "startDate" = ${input.startDate},
+        "endDate" = ${input.endDate ?? null},
+        "nextRunAt" = ${nextRunAt},
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${id} AND "userId" = ${userId}
+    RETURNING
+      "id",
+      "userId",
+      "accountId",
+      "name",
       "type",
       "amount",
       "category",
@@ -237,6 +334,7 @@ export async function setRecurringTransactionActive(userId: string, id: string, 
       "id",
       "userId",
       "accountId",
+      "name",
       "type",
       "amount",
       "category",
@@ -282,6 +380,7 @@ export async function applyDueRecurringTransactions(userId: string, now = new Da
       r."id",
       r."userId",
       r."accountId",
+      r."name",
       r."type",
       r."amount",
       r."category",

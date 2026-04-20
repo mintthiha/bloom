@@ -61,6 +61,7 @@ function Home() {
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
   const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
   const [recurringAccountId, setRecurringAccountId] = useState("");
+  const [recurringName, setRecurringName] = useState("");
   const [recurringType, setRecurringType] = useState<RecurringTransactionType>("WITHDRAWAL");
   const [recurringAmount, setRecurringAmount] = useState("");
   const [recurringCategory, setRecurringCategory] = useState("Rent");
@@ -69,6 +70,7 @@ function Home() {
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>("MONTHLY");
   const [recurringStartDate, setRecurringStartDate] = useState(() => formatLocalDate(new Date()));
   const [recurringEndDate, setRecurringEndDate] = useState("");
+  const [editingRecurringRuleId, setEditingRecurringRuleId] = useState<string | null>(null);
   const [recurringSaving, setRecurringSaving] = useState(false);
   const [recurringApplying, setRecurringApplying] = useState(false);
   const [recurringError, setRecurringError] = useState<string | null>(null);
@@ -261,6 +263,47 @@ function Home() {
     }
   }
 
+  function resetRecurringForm() {
+    setEditingRecurringRuleId(null);
+    setRecurringName("");
+    setRecurringAmount("");
+    setRecurringDescription("");
+    setRecurringEndDate("");
+    setRecurringType("WITHDRAWAL");
+    setRecurringFrequency("MONTHLY");
+    setRecurringCategory("Rent");
+    setRecurringCustomCategory("");
+    setRecurringStartDate(formatLocalDate(new Date()));
+  }
+
+  function startEditingRecurringRule(rule: RecurringTransaction) {
+    setRecurringError(null);
+    setEditingRecurringRuleId(rule.id);
+    setRecurringAccountId(rule.accountId);
+    setRecurringName(rule.name);
+    setRecurringType(rule.type);
+    setRecurringAmount(rule.amount.toString());
+    setRecurringFrequency(rule.frequency);
+    setRecurringDescription(rule.description ?? "");
+    setRecurringStartDate(rule.startDate.slice(0, 10));
+    setRecurringEndDate(rule.endDate?.slice(0, 10) ?? "");
+
+    const supportedCategories = rule.type === "DEPOSIT"
+      ? ["Salary", "Freelance", "Gift", "Investment", "Other Income"]
+      : ["Rent", "Utilities", "Transport", "Dining", "Healthcare", "Entertainment", "Other"];
+
+    if (rule.category && supportedCategories.includes(rule.category)) {
+      setRecurringCategory(rule.category);
+      setRecurringCustomCategory("");
+    } else if (rule.category) {
+      setRecurringCategory("Custom...");
+      setRecurringCustomCategory(rule.category);
+    } else {
+      setRecurringCategory(rule.type === "DEPOSIT" ? "Salary" : "Rent");
+      setRecurringCustomCategory("");
+    }
+  }
+
   async function handleSaveRecurringTransaction(e: React.FormEvent) {
     e.preventDefault();
     setRecurringError(null);
@@ -269,6 +312,10 @@ function Home() {
 
     if (!recurringAccountId) {
       setRecurringError("Choose an account");
+      return;
+    }
+    if (!recurringName.trim()) {
+      setRecurringError("Enter a rule name");
       return;
     }
     if (Number.isNaN(amount) || amount <= 0) {
@@ -282,21 +329,27 @@ function Home() {
 
     setRecurringSaving(true);
     try {
-      await api.createRecurringTransaction({
+      const payload = {
         accountId: recurringAccountId,
+        name: recurringName.trim(),
         type: recurringType,
         amount,
-        category: category && category !== "Custom..." ? category : undefined,
+        category: category || undefined,
         description: recurringDescription.trim() || undefined,
         frequency: recurringFrequency,
         startDate: new Date(`${recurringStartDate}T12:00:00`).toISOString(),
         endDate: recurringEndDate ? new Date(`${recurringEndDate}T12:00:00`).toISOString() : undefined,
-      });
-      setRecurringAmount("");
-      setRecurringDescription("");
-      setRecurringEndDate("");
-      setRecurringCategory(recurringType === "DEPOSIT" ? "Salary" : "Rent");
-      setRecurringCustomCategory("");
+      };
+
+      if (editingRecurringRuleId) {
+        await api.updateRecurringTransaction(editingRecurringRuleId, payload);
+        toast.success("Recurring rule updated");
+      } else {
+        await api.createRecurringTransaction(payload);
+        toast.success("Recurring rule created");
+      }
+
+      resetRecurringForm();
       await loadAccounts();
     } catch (err) {
       setRecurringError(err instanceof Error ? err.message : "Failed to save recurring transaction");
@@ -344,7 +397,7 @@ function Home() {
     try {
       await api.deleteRecurringTransaction(id);
       await loadAccounts();
-      const deletedRuleName = pendingDeleteRecurringRule?.description ?? pendingDeleteRecurringRule?.category ?? "Recurring rule";
+      const deletedRuleName = pendingDeleteRecurringRule?.name ?? "Recurring rule";
       toast.success(`Recurring transaction "${deletedRuleName}" deleted`);
     } catch (err) {
       setRecurringError(err instanceof Error ? err.message : "Failed to delete recurring transaction");
@@ -528,13 +581,15 @@ function Home() {
         }}
       >
         <AlertDialogContent>
-          <div style={{ padding: "12px 14px" }}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete recurring rule?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This only removes the recurring schedule. Transactions already created from this rule will remain in the account history.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+            <div style={{ padding: "12px 14px" }}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete recurring rule?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {pendingDeleteRecurringRule?.name
+                    ? `This will remove "${pendingDeleteRecurringRule.name}" from the recurring schedule. Transactions already created from this rule will remain in the account history.`
+                    : "This only removes the recurring schedule. Transactions already created from this rule will remain in the account history."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel
                 type="button"
@@ -890,7 +945,29 @@ function Home() {
             </div>
 
             <form onSubmit={handleSaveRecurringTransaction} style={{ marginBottom: '20px' }}>
+              {editingRecurringRuleId && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '12px', padding: '12px 14px', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Editing recurring rule
+                  </p>
+                  <button
+                    type="button"
+                    onClick={resetRecurringForm}
+                    style={{ padding: '8px 12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Cancel edit
+                  </button>
+                  </div>
+                )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  value={recurringName}
+                  onChange={(e) => setRecurringName(e.target.value)}
+                  placeholder="Rule name"
+                  aria-label="Recurring rule name"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                />
                 <select
                   value={recurringAccountId}
                   onChange={(e) => setRecurringAccountId(e.target.value)}
@@ -978,7 +1055,7 @@ function Home() {
                   disabled={recurringSaving}
                   style={{ padding: '10px 18px', background: '#f59e0b', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '8px', cursor: recurringSaving ? 'not-allowed' : 'pointer', opacity: recurringSaving ? 0.45 : 1 }}
                 >
-                  {recurringSaving ? "Saving..." : "Save rule"}
+                  {recurringSaving ? "Saving..." : editingRecurringRuleId ? "Save changes" : "Save rule"}
                 </button>
               </div>
               {recurringCategory === "Custom..." && (
@@ -1010,15 +1087,20 @@ function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {recurringRules.map((rule) => (
                   <div key={rule.id} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
-                      <div>
-                        <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>
-                          {rule.description || rule.category || (rule.type === "DEPOSIT" ? "Recurring deposit" : "Recurring withdrawal")}
-                        </p>
-                        <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {fmt(rule.amount)} · {rule.frequency.toLowerCase()} · {rule.accountNickname ?? rule.accountOwnerName}
-                        </p>
-                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <div>
+                          <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>
+                          {rule.name}
+                          </p>
+                          <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            {fmt(rule.amount)} · {rule.frequency.toLowerCase()} · {rule.accountNickname ?? rule.accountOwnerName}
+                          </p>
+                          {(rule.category || rule.description) && (
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                              {[rule.category, rule.description].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                        </div>
                       <span style={{
                         fontSize: '10px',
                         fontWeight: 700,
@@ -1044,6 +1126,14 @@ function Home() {
                           )}
                         </div>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => startEditingRecurringRule(rule)}
+                          disabled={Boolean(editingRecurringRuleId && editingRecurringRuleId !== rule.id) || togglingRecurringId === rule.id}
+                          style={{ padding: '8px 12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', borderRadius: '8px', fontSize: '12px', cursor: Boolean(editingRecurringRuleId && editingRecurringRuleId !== rule.id) || togglingRecurringId === rule.id ? 'not-allowed' : 'pointer', opacity: Boolean(editingRecurringRuleId && editingRecurringRuleId !== rule.id) || togglingRecurringId === rule.id ? 0.45 : 1 }}
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleToggleRecurringTransaction(rule)}

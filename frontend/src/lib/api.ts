@@ -123,6 +123,7 @@ export type RecurringTransaction = {
   id: string;
   userId: string;
   accountId: string;
+  name: string;
   type: RecurringTransactionType;
   amount: number;
   category: string | null;
@@ -177,6 +178,7 @@ export const api = {
     request<RecurringTransaction[]>("/recurring"),
   createRecurringTransaction: (input: {
     accountId: string;
+    name: string;
     type: RecurringTransactionType;
     amount: number;
     category?: string;
@@ -186,6 +188,18 @@ export const api = {
     endDate?: string;
   }) =>
     request<RecurringTransaction>("/recurring", { method: "POST", body: JSON.stringify(input) }),
+  updateRecurringTransaction: (id: string, input: {
+    accountId: string;
+    name: string;
+    type: RecurringTransactionType;
+    amount: number;
+    category?: string;
+    description?: string;
+    frequency: RecurringFrequency;
+    startDate: string;
+    endDate?: string;
+  }) =>
+    request<RecurringTransaction>(`/recurring/${id}`, { method: "PUT", body: JSON.stringify(input) }),
   applyDueRecurringTransactions: () =>
     request<ApplyRecurringResult>("/recurring/apply-due", { method: "POST" }),
   setRecurringTransactionActive: (id: string, active: boolean) =>

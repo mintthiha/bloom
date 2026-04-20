@@ -33,6 +33,7 @@ describe("recurringTransactionService", () => {
     await expect(
       createRecurringTransaction("user-1", {
         accountId: "account-1",
+        name: "Rent",
         type: "WITHDRAWAL",
         amount: 100,
         frequency: "MONTHLY",
@@ -55,6 +56,7 @@ describe("recurringTransactionService", () => {
         id: "rule-1",
         userId: "user-1",
         accountId: "account-1",
+        name: "Monthly rent",
         type: "WITHDRAWAL",
         amount: 1200,
         category: "Rent",
@@ -75,6 +77,7 @@ describe("recurringTransactionService", () => {
 
     const result = await createRecurringTransaction("user-1", {
       accountId: "account-1",
+      name: "Monthly rent",
       type: "WITHDRAWAL",
       amount: 1200,
       category: " Rent ",
@@ -99,6 +102,7 @@ describe("recurringTransactionService", () => {
           id: "rule-1",
           userId: "user-1",
           accountId: "account-1",
+          name: "Payroll",
           type: "DEPOSIT",
           amount: 2500,
           category: "Salary",
@@ -133,6 +137,81 @@ describe("recurringTransactionService", () => {
     expect(result.failedCount).toBe(0);
   });
 
+  it("updates a recurring rule and recalculates the next run date from the last run", async () => {
+    const { updateRecurringTransaction } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          id: "rule-1",
+          userId: "user-1",
+          accountId: "account-1",
+          name: "Rent",
+          type: "WITHDRAWAL",
+          amount: 1200,
+          category: "Rent",
+          description: "Monthly rent",
+          frequency: "MONTHLY",
+          startDate: new Date("2026-04-01T12:00:00.000Z"),
+          endDate: null,
+          nextRunAt: new Date("2026-05-01T12:00:00.000Z"),
+          lastRunAt: new Date("2026-04-01T12:00:00.000Z"),
+          active: true,
+          createdAt: new Date("2026-03-01T12:00:00.000Z"),
+          updatedAt: new Date("2026-04-01T12:00:00.000Z"),
+          accountOwnerName: "Jane Doe",
+          accountNickname: "Main",
+          accountType: "CHEQUING",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "rule-1",
+          userId: "user-1",
+          accountId: "account-1",
+          name: "Housing payment",
+          type: "WITHDRAWAL",
+          amount: 1250,
+          category: "Housing",
+          description: "Updated rent",
+          frequency: "BIWEEKLY",
+          startDate: new Date("2026-04-10T12:00:00.000Z"),
+          endDate: null,
+          nextRunAt: new Date("2026-04-15T12:00:00.000Z"),
+          lastRunAt: new Date("2026-04-01T12:00:00.000Z"),
+          active: true,
+          createdAt: new Date("2026-03-01T12:00:00.000Z"),
+          updatedAt: new Date("2026-04-19T12:00:00.000Z"),
+          accountOwnerName: "Jane Doe",
+          accountNickname: "Main",
+          accountType: "CHEQUING",
+        },
+      ]);
+    accountServiceMock.getAccount.mockResolvedValue({
+      id: "account-1",
+      ownerName: "Jane Doe",
+      nickname: "Main",
+      accountType: "CHEQUING",
+    });
+
+    const result = await updateRecurringTransaction("user-1", "rule-1", {
+      accountId: "account-1",
+      name: "Housing payment",
+      type: "WITHDRAWAL",
+      amount: 1250,
+      category: "Housing",
+      description: "Updated rent",
+      frequency: "BIWEEKLY",
+      startDate: new Date("2026-04-10T12:00:00.000Z"),
+    });
+
+    expect(accountServiceMock.getAccount).toHaveBeenCalledWith("user-1", "account-1");
+    expect(result).toMatchObject({
+      id: "rule-1",
+      amount: 1250,
+      frequency: "BIWEEKLY",
+    });
+  });
+
   it("reports failures when a due recurring withdrawal cannot be applied", async () => {
     const { applyDueRecurringTransactions } = await import("./recurringTransactionService");
     prismaMock.$queryRaw
@@ -141,6 +220,7 @@ describe("recurringTransactionService", () => {
           id: "rule-1",
           userId: "user-1",
           accountId: "account-1",
+          name: "Rent",
           type: "WITHDRAWAL",
           amount: 1500,
           category: "Rent",

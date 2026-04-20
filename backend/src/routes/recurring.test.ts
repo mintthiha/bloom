@@ -6,6 +6,7 @@ const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
     listRecurringTransactions: vi.fn(),
     createRecurringTransaction: vi.fn(),
+    updateRecurringTransaction: vi.fn(),
     applyDueRecurringTransactions: vi.fn(),
     setRecurringTransactionActive: vi.fn(),
     deleteRecurringTransaction: vi.fn(),
@@ -18,6 +19,7 @@ describe("recurring routes", () => {
   beforeEach(() => {
     serviceMock.listRecurringTransactions.mockReset();
     serviceMock.createRecurringTransaction.mockReset();
+    serviceMock.updateRecurringTransaction.mockReset();
     serviceMock.applyDueRecurringTransactions.mockReset();
     serviceMock.setRecurringTransactionActive.mockReset();
     serviceMock.deleteRecurringTransaction.mockReset();
@@ -38,6 +40,7 @@ describe("recurring routes", () => {
       .set("X-User-Id", "user-1")
       .send({
         accountId: "account-1",
+        name: "  Monthly rent ",
         type: "WITHDRAWAL",
         amount: 1200,
         category: "  Rent \n",
@@ -50,6 +53,7 @@ describe("recurring routes", () => {
     expect(response.status).toBe(201);
     expect(serviceMock.createRecurringTransaction).toHaveBeenCalledWith("user-1", {
       accountId: "account-1",
+      name: "Monthly rent",
       type: "WITHDRAWAL",
       amount: 1200,
       category: "Rent",
@@ -66,6 +70,7 @@ describe("recurring routes", () => {
       .set("X-User-Id", "user-1")
       .send({
         accountId: "account-1",
+        name: "Invalid rule",
         type: "TRANSFER_OUT",
         amount: 1200,
         frequency: "MONTHLY",
@@ -86,6 +91,37 @@ describe("recurring routes", () => {
 
     expect(response.status).toBe(200);
     expect(serviceMock.applyDueRecurringTransactions).toHaveBeenCalledWith("user-1");
+  });
+
+  it("updates a recurring transaction after sanitizing inputs", async () => {
+    serviceMock.updateRecurringTransaction.mockResolvedValue({ id: "rule-1" });
+
+    const response = await request(app)
+      .put("/api/recurring/rule-1")
+      .set("X-User-Id", "user-1")
+      .send({
+        accountId: "account-1",
+        name: "  Main payroll ",
+        type: "DEPOSIT",
+        amount: 2500,
+        category: "  Salary ",
+        description: "  Main\tjob ",
+        frequency: "BIWEEKLY",
+        startDate: "2026-05-02T12:00:00.000Z",
+      });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.updateRecurringTransaction).toHaveBeenCalledWith("user-1", "rule-1", {
+      accountId: "account-1",
+      name: "Main payroll",
+      type: "DEPOSIT",
+      amount: 2500,
+      category: "Salary",
+      description: "Main job",
+      frequency: "BIWEEKLY",
+      startDate: new Date("2026-05-02T12:00:00.000Z"),
+      endDate: undefined,
+    });
   });
 
   it("passes active toggle through to the service", async () => {

@@ -47,6 +47,7 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = requireObject(req.body);
     const accountId = requireString(body.accountId, "accountId", { max: 100 });
+    const name = requireString(body.name, "name", { max: 80 });
     const type = body.type;
     if (type !== "DEPOSIT" && type !== "WITHDRAWAL") {
       throw new AppError(400, "type must be DEPOSIT or WITHDRAWAL");
@@ -58,6 +59,40 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
 
     res.status(201).json(await recurringTransactionService.createRecurringTransaction(uid(req), {
       accountId,
+      name,
+      type,
+      amount: requirePositiveNumber(body.amount, "amount"),
+      category: optionalString(body.category, "category", { max: 50 }),
+      description: optionalString(body.description, "description", { max: 240 }),
+      frequency,
+      startDate: parseRequiredIsoDate(body.startDate, "startDate"),
+      endDate: parseOptionalIsoDate(body.endDate, "endDate"),
+    }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Updates one recurring deposit or withdrawal rule.
+ */
+router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const accountId = requireString(body.accountId, "accountId", { max: 100 });
+    const name = requireString(body.name, "name", { max: 80 });
+    const type = body.type;
+    if (type !== "DEPOSIT" && type !== "WITHDRAWAL") {
+      throw new AppError(400, "type must be DEPOSIT or WITHDRAWAL");
+    }
+    const frequency = body.frequency;
+    if (frequency !== "WEEKLY" && frequency !== "BIWEEKLY" && frequency !== "MONTHLY") {
+      throw new AppError(400, "frequency must be WEEKLY, BIWEEKLY, or MONTHLY");
+    }
+
+    res.json(await recurringTransactionService.updateRecurringTransaction(uid(req), req.params["id"] as string, {
+      accountId,
+      name,
       type,
       amount: requirePositiveNumber(body.amount, "amount"),
       category: optionalString(body.category, "category", { max: 50 }),

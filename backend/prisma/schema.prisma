@@ -93,6 +93,7 @@ model RecurringTransaction {
   id          String                   @id @default(cuid())
   userId      String
   accountId   String
+  name        String
   type        RecurringTransactionType
   amount      Float
   category    String?
