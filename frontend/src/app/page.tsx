@@ -7,6 +7,16 @@ import { api, Account, AccountType, Budget, DateRangeQuery, MonthlySummary, Prof
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
@@ -64,6 +74,7 @@ function Home() {
   const [recurringError, setRecurringError] = useState<string | null>(null);
   const [togglingRecurringId, setTogglingRecurringId] = useState<string | null>(null);
   const [deletingRecurringId, setDeletingRecurringId] = useState<string | null>(null);
+  const [pendingDeleteRecurringRule, setPendingDeleteRecurringRule] = useState<RecurringTransaction | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
   const [timeZone, setTimeZone] = useState("UTC");
   const searchParams = useSearchParams();
@@ -333,10 +344,13 @@ function Home() {
     try {
       await api.deleteRecurringTransaction(id);
       await loadAccounts();
+      const deletedRuleName = pendingDeleteRecurringRule?.description ?? pendingDeleteRecurringRule?.category ?? "Recurring rule";
+      toast.success(`Recurring transaction "${deletedRuleName}" deleted`);
     } catch (err) {
       setRecurringError(err instanceof Error ? err.message : "Failed to delete recurring transaction");
     } finally {
       setDeletingRecurringId(null);
+      setPendingDeleteRecurringRule(null);
     }
   }
 
@@ -505,6 +519,41 @@ function Home() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 48px' }}>
+      <AlertDialog
+        open={pendingDeleteRecurringRule !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingRecurringId) {
+            setPendingDeleteRecurringRule(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <div style={{ padding: "12px 14px" }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete recurring rule?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This only removes the recurring schedule. Transactions already created from this rule will remain in the account history.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                onClick={() => setPendingDeleteRecurringRule(null)}
+                disabled={Boolean(deletingRecurringId)}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                type="button"
+                onClick={() => pendingDeleteRecurringRule && handleDeleteRecurringTransaction(pendingDeleteRecurringRule.id)}
+                disabled={Boolean(deletingRecurringId)}
+              >
+                {deletingRecurringId ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Welcome */}
       <div className="fade-up" style={{ marginBottom: '28px' }}>
@@ -1005,7 +1054,7 @@ function Home() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteRecurringTransaction(rule.id)}
+                          onClick={() => setPendingDeleteRecurringRule(rule)}
                           disabled={deletingRecurringId === rule.id}
                           style={{ padding: '8px 12px', border: '1px solid #f8717130', background: 'transparent', color: '#f87171', borderRadius: '8px', fontSize: '12px', cursor: deletingRecurringId === rule.id ? 'not-allowed' : 'pointer', opacity: deletingRecurringId === rule.id ? 0.45 : 1 }}
                         >
