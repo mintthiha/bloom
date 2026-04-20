@@ -284,7 +284,7 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
  * Throws 403 if the account is frozen.
  * Uses a Prisma transaction to ensure the balance update and transaction record are atomic.
  */
-export async function deposit(userId: string, id: string, amount: number, category?: string, description?: string) {
+export async function deposit(userId: string, id: string, amount: number, category?: string, description?: string, effectiveAt?: Date) {
   if (amount <= 0) throw new AppError(400, "Deposit amount must be positive");
   const account = await getAccount(userId, id);
   if (account.frozen) throw new AppError(403, "Account is frozen");
@@ -297,6 +297,7 @@ export async function deposit(userId: string, id: string, amount: number, catego
       balanceAfter: newBalance,
       category,
       description,
+      effectiveAt,
       toAccountId: id,
     });
   });
@@ -310,7 +311,7 @@ export async function deposit(userId: string, id: string, amount: number, catego
  * Throws 400 if the account has insufficient funds.
  * Uses a Prisma transaction to ensure the balance update and transaction record are atomic.
  */
-export async function withdraw(userId: string, id: string, amount: number, category?: string, description?: string) {
+export async function withdraw(userId: string, id: string, amount: number, category?: string, description?: string, effectiveAt?: Date) {
   if (amount <= 0) throw new AppError(400, "Withdrawal amount must be positive");
   const account = await getAccount(userId, id);
   if (account.frozen) throw new AppError(403, "Account is frozen");
@@ -324,6 +325,7 @@ export async function withdraw(userId: string, id: string, amount: number, categ
       balanceAfter: newBalance,
       category,
       description,
+      effectiveAt,
       fromAccountId: id,
     });
   });

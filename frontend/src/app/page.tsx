@@ -3,11 +3,11 @@ import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType, Budget, DateRangeQuery, MonthlySummary, Profile } from "@/lib/api";
+import { api, Account, AccountType, Budget, DateRangeQuery, MonthlySummary, Profile, RecurringFrequency, RecurringTransaction, RecurringTransactionType } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
-import { buildDateRangeQuery, DateRangeState, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
+import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
@@ -49,6 +49,21 @@ function Home() {
   const [budgetSaving, setBudgetSaving] = useState(false);
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
+  const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
+  const [recurringAccountId, setRecurringAccountId] = useState("");
+  const [recurringType, setRecurringType] = useState<RecurringTransactionType>("WITHDRAWAL");
+  const [recurringAmount, setRecurringAmount] = useState("");
+  const [recurringCategory, setRecurringCategory] = useState("Rent");
+  const [recurringCustomCategory, setRecurringCustomCategory] = useState("");
+  const [recurringDescription, setRecurringDescription] = useState("");
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>("MONTHLY");
+  const [recurringStartDate, setRecurringStartDate] = useState(() => formatLocalDate(new Date()));
+  const [recurringEndDate, setRecurringEndDate] = useState("");
+  const [recurringSaving, setRecurringSaving] = useState(false);
+  const [recurringApplying, setRecurringApplying] = useState(false);
+  const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [togglingRecurringId, setTogglingRecurringId] = useState<string | null>(null);
+  const [deletingRecurringId, setDeletingRecurringId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() => getPresetDateRange("this-month"));
   const [timeZone, setTimeZone] = useState("UTC");
   const searchParams = useSearchParams();
@@ -78,20 +93,29 @@ function Home() {
 
   const loadAccounts = useCallback(async () => {
     try {
-      const [nextAccounts, nextSummary, nextBudgets] = await Promise.all([
+      const [nextAccounts, nextSummary, nextBudgets, nextRecurringRules] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(rangeQuery),
         api.getBudgets(rangeQuery),
+        api.listRecurringTransactions(),
       ]);
       setAccounts(nextAccounts);
       setMonthlySummary(nextSummary);
       setBudgets(nextBudgets);
+      setRecurringRules(nextRecurringRules);
     } finally {
       setLoading(false);
     }
   }, [rangeQuery]);
 
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
+
+  useEffect(() => {
+    const nextRecurringAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
+    if (!recurringAccountId && nextRecurringAccounts.length > 0) {
+      setRecurringAccountId(nextRecurringAccounts[0].id);
+    }
+  }, [accounts, recurringAccountId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -226,8 +250,103 @@ function Home() {
     }
   }
 
+  async function handleSaveRecurringTransaction(e: React.FormEvent) {
+    e.preventDefault();
+    setRecurringError(null);
+    const amount = parseFloat(recurringAmount);
+    const category = recurringCategory === "Custom..." ? recurringCustomCategory.trim() : recurringCategory;
+
+    if (!recurringAccountId) {
+      setRecurringError("Choose an account");
+      return;
+    }
+    if (Number.isNaN(amount) || amount <= 0) {
+      setRecurringError("Enter a valid recurring amount");
+      return;
+    }
+    if (!recurringStartDate) {
+      setRecurringError("Choose a start date");
+      return;
+    }
+
+    setRecurringSaving(true);
+    try {
+      await api.createRecurringTransaction({
+        accountId: recurringAccountId,
+        type: recurringType,
+        amount,
+        category: category && category !== "Custom..." ? category : undefined,
+        description: recurringDescription.trim() || undefined,
+        frequency: recurringFrequency,
+        startDate: new Date(`${recurringStartDate}T12:00:00`).toISOString(),
+        endDate: recurringEndDate ? new Date(`${recurringEndDate}T12:00:00`).toISOString() : undefined,
+      });
+      setRecurringAmount("");
+      setRecurringDescription("");
+      setRecurringEndDate("");
+      setRecurringCategory(recurringType === "DEPOSIT" ? "Salary" : "Rent");
+      setRecurringCustomCategory("");
+      await loadAccounts();
+    } catch (err) {
+      setRecurringError(err instanceof Error ? err.message : "Failed to save recurring transaction");
+    } finally {
+      setRecurringSaving(false);
+    }
+  }
+
+  async function handleApplyDueRecurringTransactions() {
+    setRecurringApplying(true);
+    setRecurringError(null);
+    try {
+      const result = await api.applyDueRecurringTransactions();
+      await loadAccounts();
+      if (result.appliedCount > 0) {
+        toast.success(`Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`);
+      } else if (result.failedCount > 0) {
+        setRecurringError(result.failures[0]?.message ?? "Some recurring transactions could not be applied");
+      } else {
+        toast.success("No recurring transactions are due");
+      }
+    } catch (err) {
+      setRecurringError(err instanceof Error ? err.message : "Failed to apply recurring transactions");
+    } finally {
+      setRecurringApplying(false);
+    }
+  }
+
+  async function handleToggleRecurringTransaction(rule: RecurringTransaction) {
+    setTogglingRecurringId(rule.id);
+    setRecurringError(null);
+    try {
+      await api.setRecurringTransactionActive(rule.id, !rule.active);
+      await loadAccounts();
+    } catch (err) {
+      setRecurringError(err instanceof Error ? err.message : "Failed to update recurring transaction");
+    } finally {
+      setTogglingRecurringId(null);
+    }
+  }
+
+  async function handleDeleteRecurringTransaction(id: string) {
+    setDeletingRecurringId(id);
+    setRecurringError(null);
+    try {
+      await api.deleteRecurringTransaction(id);
+      await loadAccounts();
+    } catch (err) {
+      setRecurringError(err instanceof Error ? err.message : "Failed to delete recurring transaction");
+    } finally {
+      setDeletingRecurringId(null);
+    }
+  }
+
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
+  const recurringAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
+  const recurringCategories = recurringType === "DEPOSIT"
+    ? ["Salary", "Freelance", "Gift", "Investment", "Other Income", "Custom..."]
+    : ["Rent", "Utilities", "Transport", "Dining", "Healthcare", "Entertainment", "Other", "Custom..."];
+  const dueRecurringCount = recurringRules.filter((rule) => rule.active && new Date(rule.nextRunAt) <= new Date()).length;
 
   const cashAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
   const creditAccounts = accounts.filter((account) => account.accountType === "CREDIT");
@@ -677,6 +796,228 @@ function Home() {
             </div>
           )}
         </div>
+        </div>
+      )}
+
+      {accounts.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: dashboardColumns, gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
+          <div className="fade-up fade-up-2" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px', minHeight: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '18px' }}>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                  Recurring Transactions
+                </p>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px', marginBottom: '6px' }}>
+                  Plan repeating income and bills
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '460px' }}>
+                  Create recurring deposits or withdrawals, then apply due entries whenever you want to bring the ledger up to date.
+                </p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px', maxWidth: '520px' }}>
+                  Start date is the first scheduled occurrence. End date is optional and stops future runs after that date.
+                </p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>{recurringRules.length} saved</p>
+                <button
+                  type="button"
+                  onClick={handleApplyDueRecurringTransactions}
+                  disabled={recurringApplying}
+                  style={{
+                    padding: '10px 14px',
+                    background: dueRecurringCount > 0 ? '#f59e0b' : 'var(--surface-2)',
+                    color: dueRecurringCount > 0 ? '#000' : 'var(--text-secondary)',
+                    border: dueRecurringCount > 0 ? 'none' : '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: recurringApplying ? 'not-allowed' : 'pointer',
+                    opacity: recurringApplying ? 0.45 : 1,
+                    fontWeight: 700,
+                    fontSize: '13px',
+                  }}
+                >
+                  {recurringApplying ? "Applying..." : dueRecurringCount > 0 ? `Apply due (${dueRecurringCount})` : "Apply due"}
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveRecurringTransaction} style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                <select
+                  value={recurringAccountId}
+                  onChange={(e) => setRecurringAccountId(e.target.value)}
+                  aria-label="Recurring account"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                >
+                  <option value="">Choose account</option>
+                  {recurringAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.nickname ?? account.ownerName}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={recurringType}
+                  onChange={(e) => {
+                    const nextType = e.target.value as RecurringTransactionType;
+                    setRecurringType(nextType);
+                    setRecurringCategory(nextType === "DEPOSIT" ? "Salary" : "Rent");
+                    setRecurringCustomCategory("");
+                  }}
+                  aria-label="Recurring transaction type"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                >
+                  <option value="WITHDRAWAL">Withdrawal</option>
+                  <option value="DEPOSIT">Deposit</option>
+                </select>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={recurringAmount}
+                  onChange={(e) => setRecurringAmount(e.target.value)}
+                  placeholder="Amount"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                />
+                <select
+                  value={recurringFrequency}
+                  onChange={(e) => setRecurringFrequency(e.target.value as RecurringFrequency)}
+                  aria-label="Recurring frequency"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                >
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="BIWEEKLY">Biweekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                <select
+                  value={recurringCategory}
+                  onChange={(e) => setRecurringCategory(e.target.value)}
+                  aria-label="Recurring category"
+                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                >
+                  {recurringCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+                <label style={{ display: 'grid', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                    Start date
+                  </span>
+                  <input
+                    type="date"
+                    value={recurringStartDate}
+                    onChange={(e) => setRecurringStartDate(e.target.value)}
+                    aria-label="Recurring start date"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                    End date (optional)
+                  </span>
+                  <input
+                    type="date"
+                    value={recurringEndDate}
+                    onChange={(e) => setRecurringEndDate(e.target.value)}
+                    aria-label="Recurring end date"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={recurringSaving}
+                  style={{ padding: '10px 18px', background: '#f59e0b', color: '#000', fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '8px', cursor: recurringSaving ? 'not-allowed' : 'pointer', opacity: recurringSaving ? 0.45 : 1 }}
+                >
+                  {recurringSaving ? "Saving..." : "Save rule"}
+                </button>
+              </div>
+              {recurringCategory === "Custom..." && (
+                <input
+                  type="text"
+                  value={recurringCustomCategory}
+                  onChange={(e) => setRecurringCustomCategory(e.target.value)}
+                  placeholder="Custom category"
+                  style={{ width: '100%', marginBottom: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                />
+              )}
+              <input
+                type="text"
+                value={recurringDescription}
+                onChange={(e) => setRecurringDescription(e.target.value)}
+                placeholder="Description (optional)"
+                style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+              />
+              {recurringError && (
+                <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{recurringError}</p>
+              )}
+            </form>
+
+            {recurringRules.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                No recurring rules yet. Add salary, rent, or subscriptions above.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {recurringRules.map((rule) => (
+                  <div key={rule.id} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                      <div>
+                        <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>
+                          {rule.description || rule.category || (rule.type === "DEPOSIT" ? "Recurring deposit" : "Recurring withdrawal")}
+                        </p>
+                        <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {fmt(rule.amount)} · {rule.frequency.toLowerCase()} · {rule.accountNickname ?? rule.accountOwnerName}
+                        </p>
+                      </div>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        padding: '4px 8px',
+                        borderRadius: '999px',
+                        background: rule.active ? '#22c55e22' : '#6b728022',
+                        color: rule.active ? '#22c55e' : '#9ca3af',
+                      }}>
+                        {rule.active ? "Active" : "Paused"}
+                      </span>
+                    </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div>
+                          <p className="num" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                          Next run {new Date(rule.nextRunAt).toLocaleDateString("en-CA", { dateStyle: "medium" })}
+                          </p>
+                          {rule.lastRunAt && (
+                            <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            Last applied {new Date(rule.lastRunAt).toLocaleDateString("en-CA", { dateStyle: "medium" })}
+                            </p>
+                          )}
+                        </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRecurringTransaction(rule)}
+                          disabled={togglingRecurringId === rule.id}
+                          style={{ padding: '8px 12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', borderRadius: '8px', fontSize: '12px', cursor: togglingRecurringId === rule.id ? 'not-allowed' : 'pointer', opacity: togglingRecurringId === rule.id ? 0.45 : 1 }}
+                        >
+                          {togglingRecurringId === rule.id ? "Saving..." : rule.active ? "Pause" : "Resume"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRecurringTransaction(rule.id)}
+                          disabled={deletingRecurringId === rule.id}
+                          style={{ padding: '8px 12px', border: '1px solid #f8717130', background: 'transparent', color: '#f87171', borderRadius: '8px', fontSize: '12px', cursor: deletingRecurringId === rule.id ? 'not-allowed' : 'pointer', opacity: deletingRecurringId === rule.id ? 0.45 : 1 }}
+                        >
+                          {deletingRecurringId === rule.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

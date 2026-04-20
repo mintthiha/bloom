@@ -9,6 +9,7 @@ const { apiMock } = vi.hoisted(() => ({
     listAccounts: vi.fn(),
     getMonthlySummary: vi.fn(),
     getBudgets: vi.fn(),
+    listRecurringTransactions: vi.fn(),
   },
 }));
 
@@ -22,6 +23,7 @@ vi.mock("@/lib/api", async () => {
       listAccounts: apiMock.listAccounts,
       getMonthlySummary: apiMock.getMonthlySummary,
       getBudgets: apiMock.getBudgets,
+      listRecurringTransactions: apiMock.listRecurringTransactions,
     },
   };
 });
@@ -61,6 +63,7 @@ describe("home page", () => {
     apiMock.listAccounts.mockReset();
     apiMock.getMonthlySummary.mockReset();
     apiMock.getBudgets.mockReset();
+    apiMock.listRecurringTransactions.mockReset();
     apiMock.listAccounts.mockResolvedValue([]);
     apiMock.getMonthlySummary.mockResolvedValue({
       month: "2026-04",
@@ -71,6 +74,7 @@ describe("home page", () => {
       categories: [],
     });
     apiMock.getBudgets.mockResolvedValue([]);
+    apiMock.listRecurringTransactions.mockResolvedValue([]);
   });
 
   it("shows onboarding when the user has no saved profile", async () => {
@@ -230,5 +234,57 @@ describe("home page", () => {
     expect(await screen.findByText("Cash Accounts")).toBeInTheDocument();
     expect(screen.getByText("Registered Accounts")).toBeInTheDocument();
     expect(screen.getByText("Credit Accounts")).toBeInTheDocument();
+  });
+
+  it("shows recurring transaction rules on the dashboard", async () => {
+    apiMock.getProfile.mockResolvedValue({
+      userId: "user-1",
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      createdAt: "2026-04-04T00:00:00.000Z",
+      updatedAt: "2026-04-04T00:00:00.000Z",
+    });
+    apiMock.listAccounts.mockResolvedValue([
+      {
+        id: "account-1",
+        ownerName: "Jane Doe",
+        nickname: "Main",
+        accountType: "CHEQUING",
+        balance: 1200,
+        frozen: false,
+        createdAt: "2026-04-04T00:00:00.000Z",
+        updatedAt: "2026-04-04T00:00:00.000Z",
+      },
+    ]);
+    apiMock.listRecurringTransactions.mockResolvedValue([
+      {
+        id: "rule-1",
+        userId: "user-1",
+        accountId: "account-1",
+        type: "WITHDRAWAL",
+        amount: 1200,
+        category: "Rent",
+        description: "Monthly rent",
+        frequency: "MONTHLY",
+        startDate: "2026-04-01T12:00:00.000Z",
+        endDate: null,
+        nextRunAt: "2026-05-01T12:00:00.000Z",
+        lastRunAt: "2026-04-01T12:00:00.000Z",
+        active: true,
+        createdAt: "2026-03-01T12:00:00.000Z",
+        updatedAt: "2026-04-01T12:00:00.000Z",
+        accountOwnerName: "Jane Doe",
+        accountNickname: "Main",
+        accountType: "CHEQUING",
+      },
+    ]);
+
+    render(<Page />);
+
+    expect(await screen.findByText("Recurring Transactions")).toBeInTheDocument();
+    expect(screen.getByText("Monthly rent")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
   });
 });

@@ -5,6 +5,9 @@ export type DateRangeQuery = {
   end?: string;
 };
 
+export type RecurringTransactionType = "DEPOSIT" | "WITHDRAWAL";
+export type RecurringFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+
 function withQuery(path: string, query?: Record<string, string | undefined>) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -116,6 +119,45 @@ export type BudgetActivity = Budget & {
   }>;
 };
 
+export type RecurringTransaction = {
+  id: string;
+  userId: string;
+  accountId: string;
+  type: RecurringTransactionType;
+  amount: number;
+  category: string | null;
+  description: string | null;
+  frequency: RecurringFrequency;
+  startDate: string;
+  endDate: string | null;
+  nextRunAt: string;
+  lastRunAt: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  accountOwnerName: string;
+  accountNickname: string | null;
+  accountType: AccountType;
+};
+
+export type ApplyRecurringResult = {
+  appliedCount: number;
+  failedCount: number;
+  applied: Array<{
+    recurringTransactionId: string;
+    occurrenceAt: string;
+    type: RecurringTransactionType;
+    amount: number;
+    accountId: string;
+  }>;
+  failures: Array<{
+    recurringTransactionId: string;
+    accountId: string;
+    occurrenceAt: string;
+    message: string;
+  }>;
+};
+
 export type TransactionQuery = DateRangeQuery & {
   type?: Transaction["type"];
   category?: string;
@@ -131,6 +173,25 @@ export const api = {
     request<Budget[]>(withQuery("/budgets", query)),
   getBudgetActivity: (id: string, query?: DateRangeQuery) =>
     request<BudgetActivity>(withQuery(`/budgets/${id}/activity`, query)),
+  listRecurringTransactions: () =>
+    request<RecurringTransaction[]>("/recurring"),
+  createRecurringTransaction: (input: {
+    accountId: string;
+    type: RecurringTransactionType;
+    amount: number;
+    category?: string;
+    description?: string;
+    frequency: RecurringFrequency;
+    startDate: string;
+    endDate?: string;
+  }) =>
+    request<RecurringTransaction>("/recurring", { method: "POST", body: JSON.stringify(input) }),
+  applyDueRecurringTransactions: () =>
+    request<ApplyRecurringResult>("/recurring/apply-due", { method: "POST" }),
+  setRecurringTransactionActive: (id: string, active: boolean) =>
+    request<RecurringTransaction>(`/recurring/${id}`, { method: "PATCH", body: JSON.stringify({ active }) }),
+  deleteRecurringTransaction: (id: string) =>
+    request<void>(`/recurring/${id}`, { method: "DELETE" }),
   saveBudget: (category: string, monthlyLimit: number) =>
     request<Budget>("/budgets", { method: "PUT", body: JSON.stringify({ category, monthlyLimit }) }),
   deleteBudget: (id: string) =>

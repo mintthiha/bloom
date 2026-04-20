@@ -23,6 +23,17 @@ enum TransactionType {
   TRANSFER_IN
 }
 
+enum RecurringTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 model Account {
   id          String      @id @default(cuid())
   userId      String
@@ -36,6 +47,7 @@ model Account {
 
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
+  recurringTransactions RecurringTransaction[]
 }
 
 model Profile {
@@ -75,4 +87,26 @@ model Transaction {
 
   toAccountId String?
   toAccount   Account? @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
+}
+
+model RecurringTransaction {
+  id          String                   @id @default(cuid())
+  userId      String
+  accountId   String
+  type        RecurringTransactionType
+  amount      Float
+  category    String?
+  description String?
+  frequency   RecurringFrequency
+  startDate   DateTime                 @db.Timestamptz(3)
+  endDate     DateTime?                @db.Timestamptz(3)
+  nextRunAt   DateTime                 @db.Timestamptz(3)
+  lastRunAt   DateTime?                @db.Timestamptz(3)
+  active      Boolean                  @default(true)
+  createdAt   DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime                 @updatedAt @db.Timestamptz(3)
+
+  account     Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active, nextRunAt])
 }
