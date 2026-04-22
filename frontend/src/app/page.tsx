@@ -583,7 +583,11 @@ function Home() {
         <AlertDialogContent>
             <div style={{ padding: "12px 14px" }}>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete recurring rule?</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {pendingDeleteRecurringRule?.name
+                    ? `Delete recurring rule "${pendingDeleteRecurringRule.name}"?`
+                    : "Delete recurring rule?"}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
                   {pendingDeleteRecurringRule?.name
                     ? `This will remove "${pendingDeleteRecurringRule.name}" from the recurring schedule. Transactions already created from this rule will remain in the account history.`
@@ -948,7 +952,7 @@ function Home() {
               {editingRecurringRuleId && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '12px', padding: '12px 14px', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    Editing recurring rule
+                    Editing recurring rule: <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{recurringName || "Untitled rule"}</span>
                   </p>
                   <button
                     type="button"
@@ -957,17 +961,27 @@ function Home() {
                   >
                     Cancel edit
                   </button>
-                  </div>
-                )}
+                </div>
+              )}
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'grid', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                    Rule name
+                  </span>
+                  <input
+                    type="text"
+                    value={recurringName}
+                    onChange={(e) => setRecurringName(e.target.value)}
+                    placeholder='e.g. "Monthly rent" or "Main payroll"'
+                    aria-label="Recurring rule name"
+                    style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                  />
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Use a short, recognizable name so it is easy to identify this rule later.
+                  </span>
+                </label>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '10px' }}>
-                <input
-                  type="text"
-                  value={recurringName}
-                  onChange={(e) => setRecurringName(e.target.value)}
-                  placeholder="Rule name"
-                  aria-label="Recurring rule name"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
-                />
                 <select
                   value={recurringAccountId}
                   onChange={(e) => setRecurringAccountId(e.target.value)}
@@ -1074,6 +1088,9 @@ function Home() {
                 placeholder="Description (optional)"
                 style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
               />
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' }}>
+                Changes affect future recurring runs only. Transactions already created from this rule stay unchanged.
+              </p>
               {recurringError && (
                 <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{recurringError}</p>
               )}
