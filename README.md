@@ -1,6 +1,6 @@
 # Bloom
 
-Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, budgeting, and account-level analytics.
+Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, recurring transactions, budgeting, and account-level analytics.
 
 ## Tech Stack
 
@@ -87,6 +87,22 @@ Bloom is a full-stack personal finance demo app with Google sign-in, profile onb
 - Transaction deletion with confirmation dialog
 - Linked transfer edit/delete support for newly created transfer pairs
 
+### Recurring Transactions
+
+- Create named recurring deposit and withdrawal rules
+- Supported schedules:
+  - Weekly
+  - Biweekly
+  - Monthly
+- Required rule names make edit and delete flows easier to understand
+- Optional categories and descriptions
+- Optional end dates
+- Pause and resume recurring rules
+- Edit recurring rules without changing previously generated transactions
+- Delete recurring rules with confirmation dialog and success toast
+- Manual `Apply due` action creates due recurring entries as normal transactions
+- Generated recurring transactions update balances, budgets, analytics, and transaction history
+
 ### Budgeting And Analytics
 
 - Monthly category budgets
@@ -123,6 +139,7 @@ Bloom is a full-stack personal finance demo app with Google sign-in, profile onb
 
 - Service tests for account, profile, and budget logic
 - Route tests for account and budget endpoints
+- Service and route tests for recurring transaction rules
 - Validation coverage for profile and transaction updates
 
 ## Development Notes
@@ -135,9 +152,4 @@ npx prisma migrate dev
 ```
 
 - The app now depends on timezone-aware database timestamps for correct local-time display and filtering.
-
-## Current Focus Areas For Future Automation
-
-- End-to-end coverage for onboarding, profile editing, transactions, transfers, budgets, and timezone-sensitive flows
-- Additional API regression coverage for transfer linkage, `effectiveAt`, filtering, and timezone-aware persistence
-
+- The frontend proxy expects the backend API to be running on `http://localhost:3001` unless `NEXT_PUBLIC_API_URL` is set.
