@@ -158,15 +158,28 @@ describe("account routes", () => {
     const response = await request(app)
       .patch("/api/accounts/account-1/transactions/txn-1")
       .set("X-User-Id", "user-1")
-      .send({ amount: 20, category: "  Dining \n", description: "  Coffee\tshop ", effectiveAt: "2026-04-08T12:00:00.000Z" });
+      .send({ amount: 20, category: "  Dining \n", merchant: "  Tim\tHortons ", description: "  Coffee\tshop ", effectiveAt: "2026-04-08T12:00:00.000Z" });
 
     expect(response.status).toBe(200);
     expect(serviceMock.updateTransaction).toHaveBeenCalledWith("user-1", "account-1", "txn-1", {
       amount: 20,
       category: "Dining",
+      merchant: "Tim Hortons",
       description: "Coffee shop",
       effectiveAt: new Date("2026-04-08T12:00:00.000Z"),
     });
+  });
+
+  it("sanitizes merchant input on deposits before calling the service", async () => {
+    serviceMock.deposit.mockResolvedValue([{ id: "account-1" }]);
+
+    const response = await request(app)
+      .post("/api/accounts/account-1/deposit")
+      .set("X-User-Id", "user-1")
+      .send({ amount: 20, category: "  Dining ", merchant: "  Metro \n" });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.deposit).toHaveBeenCalledWith("user-1", "account-1", 20, "Dining", undefined, undefined, "Metro");
   });
 
   it("rejects invalid transaction edit payloads before hitting the service", async () => {

@@ -64,8 +64,9 @@ router.post("/:id/deposit", async (req: Request, res: Response, next: NextFuncti
     const body = requireObject(req.body);
     const amount = requirePositiveNumber(body.amount, "amount");
     const category = optionalString(body.category, "category", { max: 50 });
+    const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
-    const [account] = await accountService.deposit(uid(req), pid(req), amount, category, description);
+    const [account] = await accountService.deposit(uid(req), pid(req), amount, category, description, undefined, merchant);
     res.json(account);
   } catch (err) { next(err); }
 });
@@ -75,8 +76,9 @@ router.post("/:id/withdraw", async (req: Request, res: Response, next: NextFunct
     const body = requireObject(req.body);
     const amount = requirePositiveNumber(body.amount, "amount");
     const category = optionalString(body.category, "category", { max: 50 });
+    const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
-    const [account] = await accountService.withdraw(uid(req), pid(req), amount, category, description);
+    const [account] = await accountService.withdraw(uid(req), pid(req), amount, category, description, undefined, merchant);
     res.json(account);
   } catch (err) { next(err); }
 });
@@ -127,6 +129,7 @@ router.patch("/:id/transactions/:transactionId", async (req: Request, res: Respo
     const body = requireObject(req.body);
     const amount = requirePositiveNumber(body.amount, "amount");
     const category = optionalString(body.category, "category", { max: 50 });
+    const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
     const effectiveAtValue = body.effectiveAt;
     if (effectiveAtValue !== undefined && typeof effectiveAtValue !== "string") {
@@ -139,6 +142,7 @@ router.patch("/:id/transactions/:transactionId", async (req: Request, res: Respo
     const account = await accountService.updateTransaction(uid(req), pid(req), req.params["transactionId"] as string, {
       amount,
       category,
+      merchant,
       description,
       effectiveAt,
     });

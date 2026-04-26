@@ -66,6 +66,7 @@ function Home() {
   const [recurringAmount, setRecurringAmount] = useState("");
   const [recurringCategory, setRecurringCategory] = useState("Rent");
   const [recurringCustomCategory, setRecurringCustomCategory] = useState("");
+  const [recurringMerchant, setRecurringMerchant] = useState("");
   const [recurringDescription, setRecurringDescription] = useState("");
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>("MONTHLY");
   const [recurringStartDate, setRecurringStartDate] = useState(() => formatLocalDate(new Date()));
@@ -268,6 +269,7 @@ function Home() {
     setRecurringName("");
     setRecurringAmount("");
     setRecurringDescription("");
+    setRecurringMerchant("");
     setRecurringEndDate("");
     setRecurringType("WITHDRAWAL");
     setRecurringFrequency("MONTHLY");
@@ -284,6 +286,7 @@ function Home() {
     setRecurringType(rule.type);
     setRecurringAmount(rule.amount.toString());
     setRecurringFrequency(rule.frequency);
+    setRecurringMerchant(rule.merchant ?? "");
     setRecurringDescription(rule.description ?? "");
     setRecurringStartDate(rule.startDate.slice(0, 10));
     setRecurringEndDate(rule.endDate?.slice(0, 10) ?? "");
@@ -335,6 +338,7 @@ function Home() {
         type: recurringType,
         amount,
         category: category || undefined,
+        merchant: recurringMerchant.trim() || undefined,
         description: recurringDescription.trim() || undefined,
         frequency: recurringFrequency,
         startDate: new Date(`${recurringStartDate}T12:00:00`).toISOString(),
@@ -1064,6 +1068,19 @@ function Home() {
                     style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
                   />
                 </label>
+                <label style={{ display: 'grid', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                    Merchant
+                  </span>
+                  <input
+                    type="text"
+                    value={recurringMerchant}
+                    onChange={(e) => setRecurringMerchant(e.target.value)}
+                    placeholder='e.g. "Hydro Quebec" or "Acme Payroll"'
+                    aria-label="Recurring merchant"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text-primary)' }}
+                  />
+                </label>
                 <button
                   type="submit"
                   disabled={recurringSaving}
@@ -1109,10 +1126,15 @@ function Home() {
                           <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>
                           {rule.name}
                           </p>
+                          {rule.merchant && (
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                              Merchant: {rule.merchant}
+                            </p>
+                          )}
                           <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                             {fmt(rule.amount)} · {rule.frequency.toLowerCase()} · {rule.accountNickname ?? rule.accountOwnerName}
                           </p>
-                          {(rule.category || rule.description) && (
+                          {(rule.category || rule.merchant || rule.description) && (
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                               {[rule.category, rule.description].filter(Boolean).join(" · ")}
                             </p>

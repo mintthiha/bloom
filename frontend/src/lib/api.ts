@@ -49,6 +49,7 @@ export type Transaction = {
   balanceAfter: number;
   transferGroupId?: string | null;
   category: string | null;
+  merchant: string | null;
   description: string | null;
   effectiveAt: string;
   createdAt: string;
@@ -127,6 +128,7 @@ export type RecurringTransaction = {
   type: RecurringTransactionType;
   amount: number;
   category: string | null;
+  merchant: string | null;
   description: string | null;
   frequency: RecurringFrequency;
   startDate: string;
@@ -182,6 +184,7 @@ export const api = {
     type: RecurringTransactionType;
     amount: number;
     category?: string;
+    merchant?: string;
     description?: string;
     frequency: RecurringFrequency;
     startDate: string;
@@ -194,6 +197,7 @@ export const api = {
     type: RecurringTransactionType;
     amount: number;
     category?: string;
+    merchant?: string;
     description?: string;
     frequency: RecurringFrequency;
     startDate: string;
@@ -214,15 +218,15 @@ export const api = {
     request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType, nickname }) }),
   getAccount: (id: string) =>
     request<Account>(`/accounts/${id}`),
-  deposit: (id: string, amount: number, input?: { category?: string; description?: string }) =>
+  deposit: (id: string, amount: number, input?: { category?: string; merchant?: string; description?: string }) =>
     request<Account>(`/accounts/${id}/deposit`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
-  withdraw: (id: string, amount: number, input?: { category?: string; description?: string }) =>
+  withdraw: (id: string, amount: number, input?: { category?: string; merchant?: string; description?: string }) =>
     request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
   transfer: (id: string, toAccountId: string, amount: number, description?: string) =>
     request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
   getTransactions: (id: string, query?: TransactionQuery) =>
     request<Transaction[]>(withQuery(`/accounts/${id}/transactions`, query)),
-  updateTransaction: (id: string, transactionId: string, input: { amount: number; category?: string; description?: string; effectiveAt?: string }) =>
+  updateTransaction: (id: string, transactionId: string, input: { amount: number; category?: string; merchant?: string; description?: string; effectiveAt?: string }) =>
     request<Account>(`/accounts/${id}/transactions/${transactionId}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteTransaction: (id: string, transactionId: string) =>
     request<void>(`/accounts/${id}/transactions/${transactionId}`, { method: "DELETE" }),

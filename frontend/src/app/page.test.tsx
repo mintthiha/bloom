@@ -267,6 +267,7 @@ describe("home page", () => {
         type: "WITHDRAWAL",
         amount: 1200,
         category: "Rent",
+        merchant: "Landlord Inc.",
         description: "Monthly rent",
         frequency: "MONTHLY",
         startDate: "2026-04-01T12:00:00.000Z",

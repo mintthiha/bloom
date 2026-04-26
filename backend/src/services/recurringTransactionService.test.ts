@@ -60,6 +60,7 @@ describe("recurringTransactionService", () => {
         type: "WITHDRAWAL",
         amount: 1200,
         category: "Rent",
+        merchant: "Landlord Inc.",
         description: "Monthly payment",
         frequency: "MONTHLY",
         startDate: new Date("2026-05-01T12:00:00.000Z"),
@@ -81,6 +82,7 @@ describe("recurringTransactionService", () => {
       type: "WITHDRAWAL",
       amount: 1200,
       category: " Rent ",
+      merchant: " Landlord Inc. ",
       description: " Monthly payment ",
       frequency: "MONTHLY",
       startDate: new Date("2026-05-01T12:00:00.000Z"),
@@ -90,6 +92,7 @@ describe("recurringTransactionService", () => {
     expect(result).toMatchObject({
       id: "rule-1",
       category: "Rent",
+      merchant: "Landlord Inc.",
       description: "Monthly payment",
     });
   });
@@ -106,6 +109,7 @@ describe("recurringTransactionService", () => {
           type: "DEPOSIT",
           amount: 2500,
           category: "Salary",
+          merchant: "Acme Payroll",
           description: "Pay cheque",
           frequency: "MONTHLY",
           startDate: new Date("2026-04-01T12:00:00.000Z"),
@@ -131,7 +135,8 @@ describe("recurringTransactionService", () => {
       2500,
       "Salary",
       "Pay cheque",
-      new Date("2026-04-01T12:00:00.000Z")
+      new Date("2026-04-01T12:00:00.000Z"),
+      "Acme Payroll"
     );
     expect(result.appliedCount).toBe(1);
     expect(result.failedCount).toBe(0);
@@ -149,6 +154,7 @@ describe("recurringTransactionService", () => {
           type: "WITHDRAWAL",
           amount: 1200,
           category: "Rent",
+          merchant: "Landlord Inc.",
           description: "Monthly rent",
           frequency: "MONTHLY",
           startDate: new Date("2026-04-01T12:00:00.000Z"),
@@ -172,6 +178,7 @@ describe("recurringTransactionService", () => {
           type: "WITHDRAWAL",
           amount: 1250,
           category: "Housing",
+          merchant: "Landlord Inc.",
           description: "Updated rent",
           frequency: "BIWEEKLY",
           startDate: new Date("2026-04-10T12:00:00.000Z"),
@@ -199,6 +206,7 @@ describe("recurringTransactionService", () => {
       type: "WITHDRAWAL",
       amount: 1250,
       category: "Housing",
+      merchant: "Landlord Inc.",
       description: "Updated rent",
       frequency: "BIWEEKLY",
       startDate: new Date("2026-04-10T12:00:00.000Z"),
@@ -224,6 +232,7 @@ describe("recurringTransactionService", () => {
           type: "WITHDRAWAL",
           amount: 1500,
           category: "Rent",
+          merchant: "Landlord Inc.",
           description: "Monthly rent",
           frequency: "MONTHLY",
           startDate: new Date("2026-04-01T12:00:00.000Z"),

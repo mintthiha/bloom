@@ -78,6 +78,7 @@ model Transaction {
   balanceAfter Float
   transferGroupId String?
   category     String?
+  merchant     String?
   description  String?
   effectiveAt  DateTime        @default(now()) @db.Timestamptz(3)
   createdAt    DateTime        @default(now()) @db.Timestamptz(3)
@@ -97,6 +98,7 @@ model RecurringTransaction {
   type        RecurringTransactionType
   amount      Float
   category    String?
+  merchant    String?
   description String?
   frequency   RecurringFrequency
   startDate   DateTime                 @db.Timestamptz(3)

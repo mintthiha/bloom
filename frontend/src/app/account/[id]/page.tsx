@@ -57,6 +57,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [amount, setAmount] = useState("");
   const [toId, setToId] = useState("");
   const [description, setDescription] = useState("");
+  const [merchant, setMerchant] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [opError, setOpError] = useState<string | null>(null);
   const [opSuccess, setOpSuccess] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingTransactionAmount, setEditingTransactionAmount] = useState("");
   const [editingTransactionCategory, setEditingTransactionCategory] = useState("");
+  const [editingTransactionMerchant, setEditingTransactionMerchant] = useState("");
   const [editingTransactionDateTime, setEditingTransactionDateTime] = useState("");
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
@@ -128,14 +130,16 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     setSubmitting(true);
     let desc: string | undefined;
     let transactionCategory: string | undefined;
+    let transactionMerchant: string | undefined;
     if (op === "transfer") {
       desc = description.trim() || undefined;
     } else {
       transactionCategory = category === "Custom..." ? (customCategory.trim() || undefined) : (category || undefined);
+      transactionMerchant = merchant.trim() || undefined;
     }
     try {
-      if (op === "deposit")  await api.deposit(id, amt, { category: transactionCategory });
-      if (op === "withdraw") await api.withdraw(id, amt, { category: transactionCategory });
+      if (op === "deposit")  await api.deposit(id, amt, { category: transactionCategory, merchant: transactionMerchant });
+      if (op === "withdraw") await api.withdraw(id, amt, { category: transactionCategory, merchant: transactionMerchant });
       if (op === "transfer") {
         if (!toId.trim()) { setOpError("Choose a destination account"); setSubmitting(false); return; }
         await api.transfer(id, toId.trim(), amt, desc);
@@ -144,6 +148,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       setAmount("");
       setToId("");
       setDescription("");
+      setMerchant("");
       setCategory("");
       setCustomCategory("");
       await refresh();
@@ -205,6 +210,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     setEditingTransactionId(transaction.id);
     setEditingTransactionAmount(transaction.amount.toString());
     setEditingTransactionCategory(transaction.category ?? "");
+    setEditingTransactionMerchant(transaction.merchant ?? "");
     setEditingTransactionDateTime(formatDateTimeLocal(transaction.effectiveAt));
   }
 
@@ -212,6 +218,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     setEditingTransactionId(null);
     setEditingTransactionAmount("");
     setEditingTransactionCategory("");
+    setEditingTransactionMerchant("");
     setEditingTransactionDateTime("");
   }
 
@@ -229,6 +236,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       await api.updateTransaction(id, transactionId, {
         amount: amountValue,
         category: editingTransactionCategory.trim() || undefined,
+        merchant: editingTransactionMerchant.trim() || undefined,
         effectiveAt: editingTransactionDateTime ? new Date(editingTransactionDateTime).toISOString() : undefined,
       });
       cancelEditingTransaction();
@@ -729,6 +737,13 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                     autoFocus
                   />
                 )}
+                <input
+                  type="text"
+                  value={merchant}
+                  onChange={e => setMerchant(e.target.value)}
+                  placeholder="Merchant (optional)"
+                  style={inputStyle}
+                />
               </>
             ) : (
               <input
@@ -796,7 +811,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             aria-label="Transaction search"
             value={filterSearch}
             onChange={(e) => setFilterSearch(e.target.value)}
-            placeholder="Search description"
+            placeholder="Search description or merchant"
             style={inputStyle}
           />
         </div>
@@ -883,6 +898,19 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                               </select>
                             </label>
                           </div>
+                          <label style={{ display: 'grid', gap: '6px', maxWidth: isDoubleColumn ? '320px' : '100%' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                              Merchant
+                            </span>
+                            <input
+                              type="text"
+                              value={editingTransactionMerchant}
+                              onChange={(e) => setEditingTransactionMerchant(e.target.value)}
+                              aria-label="Transaction merchant"
+                              placeholder="Merchant"
+                              style={inputStyle}
+                            />
+                          </label>
                           <label style={{ display: 'grid', gap: '6px', maxWidth: isDoubleColumn ? '260px' : '100%' }}>
                             <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
                               Date and time
@@ -902,11 +930,13 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                       ) : (
                         <>
                           <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {t.description || label}
+                            {t.merchant || t.description || label}
                           </p>
                           <p className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
+                            {(t.merchant || t.description) && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{label}</span>}
                             {t.category && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '10px' }}>{t.category}</span>}
+                            {t.merchant && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', fontSize: '10px' }}>{t.merchant}</span>}
+                            {!t.merchant && t.description && <span style={{ color: 'var(--text-secondary)', marginRight: '8px', fontSize: '10px' }}>{t.description}</span>}
                             {new Date(t.effectiveAt).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}
                           </p>
                         </>
