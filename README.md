@@ -1,6 +1,6 @@
 # Bloom
 
-Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, recurring transactions, budgeting, and account-level analytics.
+ Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, merchant-aware transactions, recurring transactions, budgeting, and account-level analytics.
 
 ## Tech Stack
 
@@ -77,10 +77,11 @@ Bloom is a full-stack personal finance demo app with Google sign-in, profile onb
 - Withdrawals
 - Transfers between accounts
 - Transaction categories
+- Optional merchant names on deposits, withdrawals, and recurring-generated entries
 - Transaction history filtering by:
   - type
   - category
-  - description search
+  - description or merchant search
   - preset date range
   - custom date range
 - Transaction editing
@@ -95,7 +96,7 @@ Bloom is a full-stack personal finance demo app with Google sign-in, profile onb
   - Biweekly
   - Monthly
 - Required rule names make edit and delete flows easier to understand
-- Optional categories and descriptions
+- Optional categories, merchants, and descriptions
 - Optional end dates
 - Pause and resume recurring rules
 - Edit recurring rules without changing previously generated transactions
@@ -140,7 +141,7 @@ Bloom is a full-stack personal finance demo app with Google sign-in, profile onb
 - Service tests for account, profile, and budget logic
 - Route tests for account and budget endpoints
 - Service and route tests for recurring transaction rules
-- Validation coverage for profile and transaction updates
+- Validation coverage for profile updates plus transaction and merchant input sanitization
 
 ## Development Notes
 
