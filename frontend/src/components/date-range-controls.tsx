@@ -39,6 +39,7 @@ export function DateRangeControls({
         <option value="this-month">This month</option>
         <option value="previous-month">Previous month</option>
         <option value="last-90-days">Last 90 days</option>
+        <option value="all-time">All time</option>
         <option value="custom">Custom</option>
       </select>
 

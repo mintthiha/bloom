@@ -1,4 +1,4 @@
-export type DateRangePreset = "this-month" | "previous-month" | "last-90-days" | "custom";
+export type DateRangePreset = "this-month" | "previous-month" | "last-90-days" | "all-time" | "custom";
 
 export type DateRangeState = {
   preset: DateRangePreset;
@@ -44,6 +44,10 @@ export function getBrowserTimeZone() {
 }
 
 export function getPresetDateRange(preset: Exclude<DateRangePreset, "custom">, now = new Date()): DateRangeState {
+  if (preset === "all-time") {
+    return { preset, start: "", end: "" };
+  }
+
   const year = now.getFullYear();
   const month = now.getMonth();
 

@@ -182,21 +182,36 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
  * because they move money between accounts instead of changing total cash flow.
  */
 export async function getMonthlySummary(userId: string, input?: { start?: Date; end?: Date; now?: Date }) {
-  const { start, end } = resolveDateRange(input);
-  const rows = await prisma.$queryRaw<MonthlySummaryRow[]>`
-    SELECT
-      COALESCE(t."category", 'Uncategorized') AS "category",
-      SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" THEN t."amount" ELSE 0 END) AS "income",
-      SUM(CASE WHEN t."type" = 'WITHDRAWAL'::"TransactionType" THEN t."amount" ELSE 0 END) AS "spending"
-    FROM "Transaction" t
-    JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
-    WHERE a."userId" = ${userId}
-      AND t."effectiveAt" >= ${start}
-      AND t."effectiveAt" < ${end}
-      AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
-    GROUP BY COALESCE(t."category", 'Uncategorized')
-    ORDER BY "spending" DESC, "income" DESC
-  `;
+  const dateRange = input ? resolveDateRange(input) : null;
+
+  const rows = dateRange
+    ? await prisma.$queryRaw<MonthlySummaryRow[]>`
+        SELECT
+          COALESCE(t."category", 'Uncategorized') AS "category",
+          SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" THEN t."amount" ELSE 0 END) AS "income",
+          SUM(CASE WHEN t."type" = 'WITHDRAWAL'::"TransactionType" THEN t."amount" ELSE 0 END) AS "spending"
+        FROM "Transaction" t
+        JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
+        WHERE a."userId" = ${userId}
+          AND t."effectiveAt" >= ${dateRange.start}
+          AND t."effectiveAt" < ${dateRange.end}
+          AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
+        GROUP BY COALESCE(t."category", 'Uncategorized')
+        ORDER BY "spending" DESC, "income" DESC
+      `
+    : await prisma.$queryRaw<MonthlySummaryRow[]>`
+        SELECT
+          COALESCE(t."category", 'Uncategorized') AS "category",
+          SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" THEN t."amount" ELSE 0 END) AS "income",
+          SUM(CASE WHEN t."type" = 'WITHDRAWAL'::"TransactionType" THEN t."amount" ELSE 0 END) AS "spending"
+        FROM "Transaction" t
+        JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
+        WHERE a."userId" = ${userId}
+          AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
+        GROUP BY COALESCE(t."category", 'Uncategorized')
+        ORDER BY "spending" DESC, "income" DESC
+      `;
+
   const categories = rows.map((row) => ({
     category: row.category,
     income: Number(row.income ?? 0),
@@ -207,7 +222,7 @@ export async function getMonthlySummary(userId: string, input?: { start?: Date; 
   const topExpenseCategory = categories.find((category) => category.spending > 0)?.category ?? null;
 
   return {
-    month: start.toISOString().slice(0, 7),
+    month: dateRange ? dateRange.start.toISOString().slice(0, 7) : "all-time",
     income,
     spending,
     netCashFlow: income - spending,
