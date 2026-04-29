@@ -45,6 +45,7 @@ function Home() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
+  const [previousMonthlySummary, setPreviousMonthlySummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
   const [nickname, setNickname] = useState("");
@@ -107,14 +108,26 @@ function Home() {
 
   const loadAccounts = useCallback(async () => {
     try {
-      const [nextAccounts, nextSummary, nextBudgets, nextRecurringRules] = await Promise.all([
+      let previousRangeQuery: DateRangeQuery | undefined;
+      if (rangeQuery) {
+        const start = new Date(rangeQuery.start);
+        const end = new Date(rangeQuery.end);
+        const diffMs = end.getTime() - start.getTime();
+        previousRangeQuery = {
+          start: new Date(start.getTime() - diffMs).toISOString(),
+          end: start.toISOString(),
+        };
+      }
+      const [nextAccounts, nextSummary, nextPreviousSummary, nextBudgets, nextRecurringRules] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(rangeQuery),
+        previousRangeQuery ? api.getMonthlySummary(previousRangeQuery) : Promise.resolve(null),
         api.getBudgets(rangeQuery),
         api.listRecurringTransactions(),
       ]);
       setAccounts(nextAccounts);
       setMonthlySummary(nextSummary);
+      setPreviousMonthlySummary(nextPreviousSummary);
       setBudgets(nextBudgets);
       setRecurringRules(nextRecurringRules);
     } finally {
@@ -433,6 +446,9 @@ function Home() {
   const registeredCount = registeredAccounts.length;
   const creditCount = creditAccounts.length;
   const expenseCategories = monthlySummary?.categories.filter(category => category.spending > 0) ?? [];
+  const incomeDelta = monthlySummary && previousMonthlySummary ? monthlySummary.income - previousMonthlySummary.income : null;
+  const spendingDelta = monthlySummary && previousMonthlySummary ? monthlySummary.spending - previousMonthlySummary.spending : null;
+  const netDelta = monthlySummary && previousMonthlySummary ? monthlySummary.netCashFlow - previousMonthlySummary.netCashFlow : null;
   const knownBudgetCategories = Array.from(new Set([
     ...EXPENSE_BUDGET_CATEGORIES.filter((category) => category !== "Custom..."),
     ...expenseCategories.map((category) => category.category),
@@ -700,14 +716,29 @@ function Home() {
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
               <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Income</p>
               <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#22c55e' }}>{fmt(monthlySummary.income)}</p>
+              {incomeDelta !== null && incomeDelta !== 0 && (
+                <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: incomeDelta > 0 ? '#22c55e' : '#f97316' }}>
+                  {incomeDelta > 0 ? '+' : ''}{fmt(incomeDelta)} vs prior
+                </p>
+              )}
             </div>
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
               <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Spending</p>
               <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#f97316' }}>{fmt(monthlySummary.spending)}</p>
+              {spendingDelta !== null && spendingDelta !== 0 && (
+                <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: spendingDelta < 0 ? '#22c55e' : '#f97316' }}>
+                  {spendingDelta > 0 ? '+' : ''}{fmt(spendingDelta)} vs prior
+                </p>
+              )}
             </div>
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
               <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Net</p>
               <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: monthlySummary.netCashFlow >= 0 ? '#22c55e' : '#f97316' }}>{fmt(monthlySummary.netCashFlow)}</p>
+              {netDelta !== null && netDelta !== 0 && (
+                <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: netDelta > 0 ? '#22c55e' : '#f97316' }}>
+                  {netDelta > 0 ? '+' : ''}{fmt(netDelta)} vs prior
+                </p>
+              )}
             </div>
           </div>
 
