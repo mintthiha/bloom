@@ -90,8 +90,11 @@ export async function listBudgets(userId: string, input?: { start?: Date; end?: 
     FROM "CategoryBudget" b
     LEFT JOIN "Account" a ON a."userId" = b."userId"
     LEFT JOIN "Transaction" t
-      ON t."fromAccountId" = a."id"
-      AND t."type" = 'WITHDRAWAL'::"TransactionType"
+      ON (
+        (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
+        OR
+        (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
+      )
       AND COALESCE(t."category", 'Uncategorized') = b."category"
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}
@@ -140,9 +143,12 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
       a."nickname" AS "accountNickname",
       a."ownerName" AS "accountOwnerName"
     FROM "Transaction" t
-    JOIN "Account" a ON t."fromAccountId" = a."id"
+    JOIN "Account" a ON (
+      (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
+      OR
+      (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
+    )
     WHERE a."userId" = ${userId}
-      AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}
@@ -151,9 +157,12 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
   const dailySpending = await prisma.$queryRaw<DailySpendingRow[]>`
     SELECT DATE_TRUNC('day', t."effectiveAt") AS "day", COALESCE(SUM(t."amount"), 0) AS "total"
     FROM "Transaction" t
-    JOIN "Account" a ON t."fromAccountId" = a."id"
+    JOIN "Account" a ON (
+      (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
+      OR
+      (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
+    )
     WHERE a."userId" = ${userId}
-      AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}
@@ -167,9 +176,12 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
       a."ownerName" AS "accountOwnerName",
       COALESCE(SUM(t."amount"), 0) AS "total"
     FROM "Transaction" t
-    JOIN "Account" a ON t."fromAccountId" = a."id"
+    JOIN "Account" a ON (
+      (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
+      OR
+      (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
+    )
     WHERE a."userId" = ${userId}
-      AND t."type" = 'WITHDRAWAL'::"TransactionType"
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}

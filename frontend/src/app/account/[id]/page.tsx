@@ -144,7 +144,10 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         if (!toId.trim()) { setOpError("Choose a destination account"); setSubmitting(false); return; }
         await api.transfer(id, toId.trim(), amt, desc);
       }
-      setOpSuccess(`${op.charAt(0).toUpperCase() + op.slice(1)} successful`);
+      const opDisplayName = account!.accountType === "CREDIT" && op === "deposit" ? "Charge"
+        : account!.accountType === "CREDIT" && op === "withdraw" ? "Payment"
+        : op.charAt(0).toUpperCase() + op.slice(1);
+      setOpSuccess(`${opDisplayName} successful`);
       setAmount("");
       setToId("");
       setDescription("");
@@ -276,12 +279,18 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     transaction.type === "WITHDRAWAL" ||
     ((transaction.type === "TRANSFER_OUT" || transaction.type === "TRANSFER_IN") && Boolean(transaction.transferGroupId));
 
-  function txnMeta(t: Transaction): { label: string; color: string; sign: string; icon: string } {
+  function txnMeta(t: Transaction, isCredit = false): { label: string; color: string; sign: string; icon: string } {
     switch (t.type) {
-      case "DEPOSIT":      return { label: "Deposit",       color: "#22c55e",  sign: "+", icon: "↓" };
-      case "WITHDRAWAL":   return { label: "Withdrawal",    color: "#f87171",  sign: "−", icon: "↑" };
-      case "TRANSFER_OUT": return { label: "Transfer out",  color: "#fb923c",  sign: "−", icon: "→" };
-      case "TRANSFER_IN":  return { label: "Transfer in",   color: "#22c55e",  sign: "+", icon: "←" };
+      case "DEPOSIT":
+        return isCredit
+          ? { label: "Charge",      color: "#f87171", sign: "+", icon: "↑" }
+          : { label: "Deposit",     color: "#22c55e", sign: "+", icon: "↓" };
+      case "WITHDRAWAL":
+        return isCredit
+          ? { label: "Payment",     color: "#22c55e", sign: "−", icon: "↓" }
+          : { label: "Withdrawal",  color: "#f87171", sign: "−", icon: "↑" };
+      case "TRANSFER_OUT": return { label: "Transfer out", color: "#fb923c", sign: "−", icon: "→" };
+      case "TRANSFER_IN":  return { label: "Transfer in",  color: "#22c55e", sign: "+", icon: "←" };
     }
   }
 
@@ -556,7 +565,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         const typeCounts: Record<string, number> = {};
         for (const t of txns) typeCounts[t.type] = (typeCounts[t.type] ?? 0) + 1;
         const typeLabels: Record<string, string> = {
-          DEPOSIT: "Deposit", WITHDRAWAL: "Withdrawal",
+          DEPOSIT: account.accountType === "CREDIT" ? "Charge" : "Deposit",
+          WITHDRAWAL: account.accountType === "CREDIT" ? "Payment" : "Withdrawal",
           TRANSFER_OUT: "Transfer Out", TRANSFER_IN: "Transfer In",
         };
         const typeColors: Record<string, string> = {
@@ -653,7 +663,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   color: op === o ? '#000' : 'var(--text-secondary)',
                 }}
               >
-                {o.charAt(0).toUpperCase() + o.slice(1)}
+                {account.accountType === "CREDIT" && o === "deposit" ? "Charge"
+                  : account.accountType === "CREDIT" && o === "withdraw" ? "Payment"
+                  : o.charAt(0).toUpperCase() + o.slice(1)}
               </button>
             ))}
           </div>
@@ -709,7 +721,10 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   whiteSpace: 'nowrap',
                 }}
               >
-                {submitting ? "…" : op.charAt(0).toUpperCase() + op.slice(1)}
+                {submitting ? "…"
+                  : account.accountType === "CREDIT" && op === "deposit" ? "Charge"
+                  : account.accountType === "CREDIT" && op === "withdraw" ? "Payment"
+                  : op.charAt(0).toUpperCase() + op.slice(1)}
               </button>
             </div>
             {op !== "transfer" ? (
@@ -720,8 +735,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
                 >
                   <option value="">Category (optional)</option>
-                  <optgroup label={op === "deposit" ? "Income" : "Expenses"}>
-                    {(op === "deposit" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c => (
+                  <optgroup label={op === "deposit" && account.accountType !== "CREDIT" ? "Income" : "Expenses"}>
+                    {(op === "deposit" && account.accountType !== "CREDIT" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </optgroup>
@@ -790,8 +805,8 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             style={{ ...inputStyle, cursor: 'pointer', appearance: 'none' }}
           >
             <option value="ALL">All types</option>
-            <option value="DEPOSIT">Deposit</option>
-            <option value="WITHDRAWAL">Withdrawal</option>
+            <option value="DEPOSIT">{account.accountType === "CREDIT" ? "Charge" : "Deposit"}</option>
+            <option value="WITHDRAWAL">{account.accountType === "CREDIT" ? "Payment" : "Withdrawal"}</option>
             <option value="TRANSFER_OUT">Transfer out</option>
             <option value="TRANSFER_IN">Transfer in</option>
           </select>
@@ -827,7 +842,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {txns.map(t => {
-              const { label, color, sign, icon } = txnMeta(t);
+              const { label, color, sign, icon } = txnMeta(t, account.accountType === "CREDIT");
               const isEditing = editingTransactionId === t.id;
               const canEdit = isEditableTransaction(t);
               return (
@@ -878,9 +893,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                                 style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', width: '100%' }}
                               >
                                 <option value="">No category</option>
-                                {(t.type === "DEPOSIT"
+                                {(t.type === "DEPOSIT" && account.accountType !== "CREDIT"
                                   ? INCOME_CATEGORIES
-                                  : t.type === "WITHDRAWAL"
+                                  : t.type === "WITHDRAWAL" || (t.type === "DEPOSIT" && account.accountType === "CREDIT")
                                     ? EXPENSE_CATEGORIES
                                     : ["Transfer"]).map((categoryOption) => (
                                   <option key={categoryOption} value={categoryOption}>
@@ -888,9 +903,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                                   </option>
                                 ))}
                                 {editingTransactionCategory &&
-                                  !(t.type === "DEPOSIT"
+                                  !(t.type === "DEPOSIT" && account.accountType !== "CREDIT"
                                     ? INCOME_CATEGORIES
-                                    : t.type === "WITHDRAWAL"
+                                    : t.type === "WITHDRAWAL" || (t.type === "DEPOSIT" && account.accountType === "CREDIT")
                                       ? EXPENSE_CATEGORIES
                                       : ["Transfer"]).includes(editingTransactionCategory) && (
                                     <option value={editingTransactionCategory}>{editingTransactionCategory}</option>

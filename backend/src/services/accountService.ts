@@ -188,8 +188,12 @@ export async function getMonthlySummary(userId: string, input?: { start?: Date; 
     ? await prisma.$queryRaw<MonthlySummaryRow[]>`
         SELECT
           COALESCE(t."category", 'Uncategorized') AS "category",
-          SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" THEN t."amount" ELSE 0 END) AS "income",
-          SUM(CASE WHEN t."type" = 'WITHDRAWAL'::"TransactionType" THEN t."amount" ELSE 0 END) AS "spending"
+          SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount" ELSE 0 END) AS "income",
+          SUM(CASE
+            WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+            WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType" THEN t."amount"
+            ELSE 0
+          END) AS "spending"
         FROM "Transaction" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
@@ -202,8 +206,12 @@ export async function getMonthlySummary(userId: string, input?: { start?: Date; 
     : await prisma.$queryRaw<MonthlySummaryRow[]>`
         SELECT
           COALESCE(t."category", 'Uncategorized') AS "category",
-          SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" THEN t."amount" ELSE 0 END) AS "income",
-          SUM(CASE WHEN t."type" = 'WITHDRAWAL'::"TransactionType" THEN t."amount" ELSE 0 END) AS "spending"
+          SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount" ELSE 0 END) AS "income",
+          SUM(CASE
+            WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+            WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType" THEN t."amount"
+            ELSE 0
+          END) AS "spending"
         FROM "Transaction" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
