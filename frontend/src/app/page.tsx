@@ -441,6 +441,7 @@ function Home() {
   );
   const totalCash = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
   const totalCredit = creditAccounts.reduce((sum, a) => sum + a.balance, 0);
+  const netWorth = totalCash - totalCredit;
   const chequingCount = chequingAccounts.length;
   const savingsCount = savingsAccounts.length;
   const registeredCount = registeredAccounts.length;
@@ -655,6 +656,11 @@ function Home() {
       {/* Stats row */}
       {accounts.length > 0 && (
         <div className="fade-up fade-up-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '36px' }}>
+          {renderSummaryCard({
+            title: "Net Worth",
+            value: fmt(netWorth),
+            color: netWorth >= 0 ? "#22c55e" : "#ef4444",
+          })}
           {renderSummaryCard({
             title: "Total Cash",
             value: fmt(totalCash),
