@@ -53,6 +53,13 @@ router.get("/summary/monthly", async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
+router.get("/summary/trends", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const months = Math.min(Math.max(parseInt(String(req.query["months"] ?? "6"), 10) || 6, 1), 24);
+    res.json(await accountService.getMonthlyTrends(uid(req), months));
+  } catch (err) { next(err); }
+});
+
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.json(await accountService.getAccount(uid(req), pid(req)));

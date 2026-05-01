@@ -67,6 +67,13 @@ export type Profile = {
   updatedAt: string;
 };
 
+export type MonthlyTrend = {
+  month: string;
+  income: number;
+  spending: number;
+  net: number;
+};
+
 export type MonthlySummary = {
   month: string;
   income: number;
@@ -172,6 +179,8 @@ export const api = {
     request<Account[]>("/accounts"),
   getMonthlySummary: (query?: DateRangeQuery) =>
     request<MonthlySummary>(withQuery("/accounts/summary/monthly", query)),
+  getMonthlyTrends: (months = 6) =>
+    request<MonthlyTrend[]>(`/accounts/summary/trends?months=${months}`),
   getBudgets: (query?: DateRangeQuery) =>
     request<Budget[]>(withQuery("/budgets", query)),
   getBudgetActivity: (id: string, query?: DateRangeQuery) =>

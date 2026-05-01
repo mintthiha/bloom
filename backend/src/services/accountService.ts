@@ -239,6 +239,47 @@ export async function getMonthlySummary(userId: string, input?: { start?: Date; 
   };
 }
 
+type MonthlyTrendRow = {
+  month: Date;
+  income: number | string | null;
+  spending: number | string | null;
+};
+
+/**
+ * Returns month-by-month income and spending totals for the last N calendar months,
+ * using the same credit-aware logic as getMonthlySummary.
+ */
+export async function getMonthlyTrends(userId: string, months: number = 6) {
+  const rows = await prisma.$queryRaw<MonthlyTrendRow[]>`
+    SELECT
+      DATE_TRUNC('month', t."effectiveAt") AS "month",
+      SUM(CASE WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount" ELSE 0 END) AS "income",
+      SUM(CASE
+        WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+        WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType" THEN t."amount"
+        ELSE 0
+      END) AS "spending"
+    FROM "Transaction" t
+    JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
+    WHERE a."userId" = ${userId}
+      AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
+      AND t."effectiveAt" >= DATE_TRUNC('month', NOW()) - ${months - 1} * INTERVAL '1 month'
+    GROUP BY DATE_TRUNC('month', t."effectiveAt")
+    ORDER BY "month" ASC
+  `;
+
+  return rows.map((row) => {
+    const income = Number(row.income ?? 0);
+    const spending = Number(row.spending ?? 0);
+    return {
+      month: (row.month as Date).toISOString().slice(0, 7),
+      income,
+      spending,
+      net: income - spending,
+    };
+  });
+}
+
 /**
  * Retrieves all accounts for a given user, ordered by most recently created first.
  */

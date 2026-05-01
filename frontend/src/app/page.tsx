@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType, Budget, DateRangeQuery, MonthlySummary, Profile, RecurringFrequency, RecurringTransaction, RecurringTransactionType } from "@/lib/api";
+import { api, Account, AccountType, Budget, DateRangeQuery, MonthlyTrend, MonthlySummary, Profile, RecurringFrequency, RecurringTransaction, RecurringTransactionType } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
@@ -20,7 +20,7 @@ import {
 import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, Tooltip, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend,
 } from "recharts";
 
 const EXPENSE_BUDGET_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other", "Custom..."];
@@ -46,6 +46,8 @@ function Home() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [previousMonthlySummary, setPreviousMonthlySummary] = useState<MonthlySummary | null>(null);
+  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
+  const [snapshotView, setSnapshotView] = useState<"snapshot" | "trends">("snapshot");
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
   const [nickname, setNickname] = useState("");
@@ -118,18 +120,20 @@ function Home() {
           end: start.toISOString(),
         };
       }
-      const [nextAccounts, nextSummary, nextPreviousSummary, nextBudgets, nextRecurringRules] = await Promise.all([
+      const [nextAccounts, nextSummary, nextPreviousSummary, nextBudgets, nextRecurringRules, nextTrends] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(rangeQuery),
         previousRangeQuery ? api.getMonthlySummary(previousRangeQuery) : Promise.resolve(null),
         api.getBudgets(rangeQuery),
         api.listRecurringTransactions(),
+        api.getMonthlyTrends(6),
       ]);
       setAccounts(nextAccounts);
       setMonthlySummary(nextSummary);
       setPreviousMonthlySummary(nextPreviousSummary);
       setBudgets(nextBudgets);
       setRecurringRules(nextRecurringRules);
+      setMonthlyTrends(nextTrends);
     } finally {
       setLoading(false);
     }
@@ -708,65 +712,110 @@ function Home() {
               <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                 Monthly Snapshot
               </p>
-              <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px' }}>Cash flow by category</h2>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px' }}>
+                {snapshotView === "snapshot" ? "Cash flow by category" : "Last 6 months"}
+              </h2>
             </div>
-            {monthlySummary.topExpenseCategory && (
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '5px' }}>Top Spend</p>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b' }}>{monthlySummary.topExpenseCategory}</p>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {snapshotView === "snapshot" && monthlySummary.topExpenseCategory && (
+                <div style={{ textAlign: 'right', marginRight: '8px' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '5px' }}>Top Spend</p>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b' }}>{monthlySummary.topExpenseCategory}</p>
+                </div>
+              )}
+              {(["snapshot", "trends"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setSnapshotView(v)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    border: snapshotView === v ? '1px solid #f59e0b66' : '1px solid var(--border)',
+                    background: snapshotView === v ? '#f59e0b1a' : 'var(--surface-2)',
+                    color: snapshotView === v ? '#f59e0b' : 'var(--text-secondary)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {v === "snapshot" ? "Snapshot" : "Trends"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {snapshotView === "snapshot" ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: expenseCategories.length ? '22px' : '0' }}>
+                <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Income</p>
+                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#22c55e' }}>{fmt(monthlySummary.income)}</p>
+                  {incomeDelta !== null && incomeDelta !== 0 && (
+                    <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: incomeDelta > 0 ? '#22c55e' : '#f97316' }}>
+                      {incomeDelta > 0 ? '+' : ''}{fmt(incomeDelta)} vs prior
+                    </p>
+                  )}
+                </div>
+                <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Spending</p>
+                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#f97316' }}>{fmt(monthlySummary.spending)}</p>
+                  {spendingDelta !== null && spendingDelta !== 0 && (
+                    <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: spendingDelta < 0 ? '#22c55e' : '#f97316' }}>
+                      {spendingDelta > 0 ? '+' : ''}{fmt(spendingDelta)} vs prior
+                    </p>
+                  )}
+                </div>
+                <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Net</p>
+                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: monthlySummary.netCashFlow >= 0 ? '#22c55e' : '#f97316' }}>{fmt(monthlySummary.netCashFlow)}</p>
+                  {netDelta !== null && netDelta !== 0 && (
+                    <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: netDelta > 0 ? '#22c55e' : '#f97316' }}>
+                      {netDelta > 0 ? '+' : ''}{fmt(netDelta)} vs prior
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: expenseCategories.length ? '22px' : '0' }}>
-            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
-              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Income</p>
-              <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#22c55e' }}>{fmt(monthlySummary.income)}</p>
-              {incomeDelta !== null && incomeDelta !== 0 && (
-                <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: incomeDelta > 0 ? '#22c55e' : '#f97316' }}>
-                  {incomeDelta > 0 ? '+' : ''}{fmt(incomeDelta)} vs prior
+              {expenseCategories.length > 0 ? (
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={expenseCategories} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
+                    <Tooltip
+                      formatter={(value) => fmt(Number(value))}
+                      contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
+                      labelStyle={{ color: '#f59e0b' }}
+                      itemStyle={{ color: '#f3f4f6' }}
+                      cursor={{ fill: '#ffffff06' }}
+                    />
+                    <Bar dataKey="spending" fill="#f97316" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  No spending has been categorized this month yet.
                 </p>
               )}
-            </div>
-            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
-              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Spending</p>
-              <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#f97316' }}>{fmt(monthlySummary.spending)}</p>
-              {spendingDelta !== null && spendingDelta !== 0 && (
-                <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: spendingDelta < 0 ? '#22c55e' : '#f97316' }}>
-                  {spendingDelta > 0 ? '+' : ''}{fmt(spendingDelta)} vs prior
-                </p>
-              )}
-            </div>
-            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
-              <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Net</p>
-              <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: monthlySummary.netCashFlow >= 0 ? '#22c55e' : '#f97316' }}>{fmt(monthlySummary.netCashFlow)}</p>
-              {netDelta !== null && netDelta !== 0 && (
-                <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: netDelta > 0 ? '#22c55e' : '#f97316' }}>
-                  {netDelta > 0 ? '+' : ''}{fmt(netDelta)} vs prior
-                </p>
-              )}
-            </div>
-          </div>
-
-          {expenseCategories.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={expenseCategories} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
+            </>
+          ) : monthlyTrends.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={monthlyTrends} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={56} />
                 <Tooltip
-                  formatter={(value) => fmt(Number(value))}
+                  formatter={(value, name) => [fmt(Number(value)), name === "income" ? "Income" : name === "spending" ? "Spending" : "Net"]}
                   contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
-                  labelStyle={{ color: '#f59e0b' }}
-                  itemStyle={{ color: '#f3f4f6' }}
+                  labelStyle={{ color: '#9ca3af' }}
                   cursor={{ fill: '#ffffff06' }}
                 />
-                <Bar dataKey="spending" fill="#f97316" radius={[4, 4, 0, 0]} />
+                <Legend formatter={(value) => value === "income" ? "Income" : value === "spending" ? "Spending" : "Net"} wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+                <Bar dataKey="income" fill="#22c55e" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="spending" fill="#f97316" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-              No spending has been categorized this month yet.
-            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No transaction history yet.</p>
           )}
         </div>
 
