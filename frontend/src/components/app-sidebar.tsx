@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { BookOpen, Columns2, LogOut, Rows3 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import {
@@ -23,6 +24,8 @@ export function AppSidebar() {
   const { data: session } = useSession();
   const { state } = useSidebar();
   const { view, setView } = useDashboardView();
+  const pathname = usePathname();
+  const onLearn = pathname === "/learn";
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -80,20 +83,6 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className="group-data-[collapsible=icon]:!justify-center">
-                  <Link href="/learn" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <BookOpen size={16} style={{ flexShrink: 0 }} />
-                    <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}>Learn</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
         <SidebarGroup>
           {state !== "collapsed" && (
             <SidebarGroupLabel
@@ -160,6 +149,33 @@ export function AppSidebar() {
                 <Columns2 size={15} />
                 <span className="group-data-[collapsible=icon]:hidden">Double</span>
               </button>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div style={{ padding: state === "collapsed" ? "0 8px" : "0 8px 8px" }}>
+              <Link
+                href="/learn"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "36px",
+                  borderRadius: "10px",
+                  border: onLearn ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                  background: onLearn ? "#f59e0b1a" : "var(--surface-1)",
+                  color: onLearn ? "#f59e0b" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                <BookOpen size={15} style={{ flexShrink: 0 }} />
+                <span className="group-data-[collapsible=icon]:hidden">Learn</span>
+              </Link>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -24,7 +24,7 @@ const CARDS = [
     color: "#3b82f6",
     summary: "Reduce your taxable income today. Pay tax only when you withdraw in retirement (typically at a lower rate).",
     points: [
-      "Contribution limit: 18% of previous year's earned income, up to $31,560 (2024)",
+      "Contribution limit: 18% of previous year's earned income, up to $32,490 (2025)",
       "Contributions reduce your taxable income dollar-for-dollar",
       "Grows tax-deferred — no tax until withdrawal",
       "Must convert to RRIF by age 71",
@@ -94,7 +94,9 @@ export default function LearnPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   async function sendMessage() {
