@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Columns2, LogOut, Rows3 } from "lucide-react";
+import { BookOpen, Columns2, LogOut, Rows3 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -80,6 +80,20 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="group-data-[collapsible=icon]:!justify-center">
+                  <Link href="/learn" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <BookOpen size={16} style={{ flexShrink: 0 }} />
+                    <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}>Learn</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarGroup>
           {state !== "collapsed" && (
             <SidebarGroupLabel
