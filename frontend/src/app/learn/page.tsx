@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { Send, BookOpen, TrendingUp, CreditCard, PiggyBank, Target, Info } from "lucide-react";
+import { useDashboardView } from "@/components/dashboard-view-provider";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -86,6 +87,8 @@ const CARDS = [
 ];
 
 export default function LearnPage() {
+  const { view } = useDashboardView();
+  const isDouble = view === "double";
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -157,18 +160,8 @@ export default function LearnPage() {
     }
   }
 
-  return (
-    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 24px 80px" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "36px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "6px" }}>Learn</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-          Understand the financial concepts that shape your money.
-        </p>
-      </div>
-
-      {/* Static cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px", marginBottom: "56px" }}>
+  const cardsSection = (
+    <div style={{ display: "grid", gridTemplateColumns: isDouble ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px", marginBottom: isDouble ? 0 : "56px" }}>
         {CARDS.map((card, i) => {
           const Icon = card.icon;
           const expanded = expandedCard === i;
@@ -219,10 +212,11 @@ export default function LearnPage() {
             </button>
           );
         })}
-      </div>
+    </div>
+  );
 
-      {/* AI Chat */}
-      <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden" }}>
+  const chatSection = (
+    <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "20px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {/* Chat header */}
         <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b", flexShrink: 0 }} />
@@ -231,7 +225,7 @@ export default function LearnPage() {
         </div>
 
         {/* Messages */}
-        <div style={{ minHeight: "220px", maxHeight: "420px", overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ minHeight: "220px", maxHeight: isDouble ? "560px" : "420px", overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
           {messages.length === 0 && (
             <div style={{ color: "var(--text-muted)", fontSize: "13px", margin: "auto", textAlign: "center" }}>
               Ask me anything about TFSAs, RRSPs, credit cards, budgeting, or investing in Canada.
@@ -314,7 +308,34 @@ export default function LearnPage() {
             <Send size={15} />
           </button>
         </div>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: isDouble ? "1400px" : "900px", margin: "0 auto", padding: "32px 24px 80px" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "36px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "6px" }}>Learn</h1>
+        <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+          Understand the financial concepts that shape your money.
+        </p>
       </div>
+
+      {isDouble ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {cardsSection}
+          </div>
+          <div style={{ position: "sticky", top: "80px" }}>
+            {chatSection}
+          </div>
+        </div>
+      ) : (
+        <>
+          {cardsSection}
+          {chatSection}
+        </>
+      )}
 
       <p style={{ marginTop: "16px", fontSize: "11px", color: "var(--text-muted)", textAlign: "center" }}>
         Bloom AI provides general financial education only — not personalized financial advice. Consult a licensed advisor for your specific situation.
