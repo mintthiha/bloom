@@ -454,6 +454,17 @@ function Home() {
   const incomeDelta = monthlySummary && previousMonthlySummary ? monthlySummary.income - previousMonthlySummary.income : null;
   const spendingDelta = monthlySummary && previousMonthlySummary ? monthlySummary.spending - previousMonthlySummary.spending : null;
   const netDelta = monthlySummary && previousMonthlySummary ? monthlySummary.netCashFlow - previousMonthlySummary.netCashFlow : null;
+
+  const spendingForecast = (() => {
+    if (dateRange.preset !== "this-month" || !monthlySummary) return null;
+    const now = new Date();
+    const daysElapsed = now.getDate();
+    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    if (daysElapsed < 2) return null;
+    const projected = (monthlySummary.spending / daysElapsed) * totalDays;
+    const vsLastMonth = previousMonthlySummary ? projected - previousMonthlySummary.spending : null;
+    return { projected, totalDays, vsLastMonth };
+  })();
   const knownBudgetCategories = Array.from(new Set([
     ...EXPENSE_BUDGET_CATEGORIES.filter((category) => category !== "Custom..."),
     ...expenseCategories.map((category) => category.category),
@@ -777,6 +788,34 @@ function Home() {
                   )}
                 </div>
               </div>
+
+              {spendingForecast && (
+                <div style={{
+                  margin: '14px 0',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0 ? '#f9731608' : '#22c55e08',
+                  border: `1px solid ${spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0 ? '#f9731622' : '#22c55e22'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0 ? '#f97316' : '#22c55e', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      On track to spend <span className="num" style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{fmt(spendingForecast.projected)}</span> by end of month
+                    </span>
+                  </div>
+                  {spendingForecast.vsLastMonth !== null && (
+                    <span className="num" style={{ fontSize: '11px', fontWeight: 600, color: spendingForecast.vsLastMonth > 0 ? '#f97316' : '#22c55e', flexShrink: 0 }}>
+                      {spendingForecast.vsLastMonth > 0 ? '+' : ''}{fmt(spendingForecast.vsLastMonth)} vs last month
+                    </span>
+                  )}
+                </div>
+              )}
+
               {expenseCategories.length > 0 ? (
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={expenseCategories} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
