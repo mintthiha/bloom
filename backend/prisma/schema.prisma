@@ -90,6 +90,19 @@ model Transaction {
   toAccount   Account? @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
 }
 
+model NetWorthSnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  month       String
+  netWorth    Float
+  totalAssets Float
+  totalDebt   Float
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([userId, month])
+}
+
 model RecurringTransaction {
   id          String                   @id @default(cuid())
   userId      String

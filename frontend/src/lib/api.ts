@@ -67,6 +67,14 @@ export type Profile = {
   updatedAt: string;
 };
 
+export type NetWorthSnapshot = {
+  id: string;
+  month: string;
+  netWorth: number;
+  totalAssets: number;
+  totalDebt: number;
+};
+
 export type MonthlyTrend = {
   month: string;
   income: number;
@@ -181,6 +189,10 @@ export const api = {
     request<MonthlySummary>(withQuery("/accounts/summary/monthly", query)),
   getMonthlyTrends: (months = 6) =>
     request<MonthlyTrend[]>(`/accounts/summary/trends?months=${months}`),
+  recordNetWorthSnapshot: () =>
+    request<NetWorthSnapshot>("/accounts/networth/snapshot", { method: "POST" }),
+  getNetWorthHistory: (months = 12) =>
+    request<NetWorthSnapshot[]>(`/accounts/networth/history?months=${months}`),
   getBudgets: (query?: DateRangeQuery) =>
     request<Budget[]>(withQuery("/budgets", query)),
   getBudgetActivity: (id: string, query?: DateRangeQuery) =>

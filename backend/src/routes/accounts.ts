@@ -60,6 +60,19 @@ router.get("/summary/trends", async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 });
 
+router.post("/networth/snapshot", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await accountService.recordNetWorthSnapshot(uid(req)));
+  } catch (err) { next(err); }
+});
+
+router.get("/networth/history", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const months = Math.min(Math.max(parseInt(String(req.query["months"] ?? "12"), 10) || 12, 1), 36);
+    res.json(await accountService.getNetWorthHistory(uid(req), months));
+  } catch (err) { next(err); }
+});
+
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.json(await accountService.getAccount(uid(req), pid(req)));

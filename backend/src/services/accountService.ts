@@ -281,6 +281,58 @@ export async function getMonthlyTrends(userId: string, months: number = 6) {
 }
 
 /**
+ * Upserts a net worth snapshot for the current month based on live account balances.
+ */
+export async function recordNetWorthSnapshot(userId: string) {
+  const accounts = await prisma.account.findMany({ where: { userId } });
+  const totalAssets = accounts
+    .filter((a) => a.accountType !== "CREDIT")
+    .reduce((sum, a) => sum + a.balance, 0);
+  const totalDebt = accounts
+    .filter((a) => a.accountType === "CREDIT")
+    .reduce((sum, a) => sum + a.balance, 0);
+  const netWorth = totalAssets - totalDebt;
+  const month = new Date().toISOString().slice(0, 7);
+
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    INSERT INTO "NetWorthSnapshot" ("id", "userId", "month", "netWorth", "totalAssets", "totalDebt", "createdAt", "updatedAt")
+    VALUES (${randomUUID()}, ${userId}, ${month}, ${netWorth}, ${totalAssets}, ${totalDebt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT ("userId", "month")
+    DO UPDATE SET
+      "netWorth" = EXCLUDED."netWorth",
+      "totalAssets" = EXCLUDED."totalAssets",
+      "totalDebt" = EXCLUDED."totalDebt",
+      "updatedAt" = CURRENT_TIMESTAMP
+    RETURNING "id"
+  `;
+
+  return { month, netWorth, totalAssets, totalDebt, id: rows[0]!.id };
+}
+
+/**
+ * Returns the last N months of net worth snapshots for a user, oldest first.
+ */
+export async function getNetWorthHistory(userId: string, months: number = 12) {
+  const rows = await prisma.$queryRaw<{ id: string; month: string; netWorth: number | string; totalAssets: number | string; totalDebt: number | string }[]>`
+    SELECT "id", "month", "netWorth", "totalAssets", "totalDebt"
+    FROM "NetWorthSnapshot"
+    WHERE "userId" = ${userId}
+    ORDER BY "month" DESC
+    LIMIT ${months}
+  `;
+
+  return rows
+    .map((r) => ({
+      id: r.id,
+      month: r.month,
+      netWorth: Number(r.netWorth),
+      totalAssets: Number(r.totalAssets),
+      totalDebt: Number(r.totalDebt),
+    }))
+    .reverse();
+}
+
+/**
  * Retrieves all accounts for a given user, ordered by most recently created first.
  */
 export async function listAccounts(userId: string) {

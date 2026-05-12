@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { api, Account, AccountType, Budget, DateRangeQuery, MonthlyTrend, MonthlySummary, Profile, RecurringFrequency, RecurringTransaction, RecurringTransactionType } from "@/lib/api";
+import { api, Account, AccountType, Budget, DateRangeQuery, MonthlyTrend, MonthlySummary, NetWorthSnapshot, Profile, RecurringFrequency, RecurringTransaction, RecurringTransactionType } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
@@ -21,6 +21,7 @@ import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZon
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend,
+  LineChart, Line, CartesianGrid, ReferenceLine,
 } from "recharts";
 
 const EXPENSE_BUDGET_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other", "Custom..."];
@@ -47,6 +48,7 @@ function Home() {
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [previousMonthlySummary, setPreviousMonthlySummary] = useState<MonthlySummary | null>(null);
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
+  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([]);
   const [snapshotView, setSnapshotView] = useState<"snapshot" | "trends">("snapshot");
   const [loading, setLoading] = useState(true);
   const [ownerName, setOwnerName] = useState("");
@@ -134,6 +136,12 @@ function Home() {
       setBudgets(nextBudgets);
       setRecurringRules(nextRecurringRules);
       setMonthlyTrends(nextTrends);
+
+      const [, nextHistory] = await Promise.all([
+        api.recordNetWorthSnapshot(),
+        api.getNetWorthHistory(12),
+      ]);
+      setNetWorthHistory(nextHistory);
     } finally {
       setLoading(false);
     }
@@ -1321,6 +1329,61 @@ function Home() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {netWorthHistory.length > 0 && (
+        <div className="fade-up fade-up-2" style={{
+          background: 'var(--surface-1)', border: '1px solid var(--border)',
+          borderRadius: '14px', padding: '24px', marginBottom: '32px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                Net Worth History
+              </p>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.3px' }}>Assets vs debt over time</h2>
+            </div>
+            {netWorthHistory.length >= 2 && (() => {
+              const first = netWorthHistory[0]!;
+              const last = netWorthHistory[netWorthHistory.length - 1]!;
+              const delta = last.netWorth - first.netWorth;
+              return (
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '5px' }}>
+                    Since {first.month}
+                  </p>
+                  <p className="num" style={{ fontSize: '14px', fontWeight: 700, color: delta >= 0 ? '#22c55e' : '#ef4444' }}>
+                    {delta >= 0 ? '+' : ''}{fmt(delta)}
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={netWorthHistory} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={56} />
+              <Tooltip
+                formatter={(value, name) => [
+                  fmt(Number(value)),
+                  name === "netWorth" ? "Net Worth" : name === "totalAssets" ? "Assets" : "Debt",
+                ]}
+                contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
+                labelStyle={{ color: '#9ca3af' }}
+                cursor={{ stroke: '#ffffff18' }}
+              />
+              <ReferenceLine y={0} stroke="#ffffff18" strokeDasharray="4 4" />
+              <Line dataKey="totalAssets" stroke="#22c55e" strokeWidth={2} dot={false} />
+              <Line dataKey="totalDebt" stroke="#ef4444" strokeWidth={2} dot={false} />
+              <Line dataKey="netWorth" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }} />
+              <Legend
+                formatter={(value) => value === "netWorth" ? "Net Worth" : value === "totalAssets" ? "Assets" : "Debt"}
+                wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       )}
 
