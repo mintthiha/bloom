@@ -1,6 +1,6 @@
 # Bloom
 
- Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, merchant-aware transactions, recurring transactions, budgeting, and account-level analytics.
+ Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, merchant-aware transactions, recurring transactions, budgeting, net worth tracking, and an AI-powered financial learning assistant.
 
 ## Tech Stack
 
@@ -16,6 +16,7 @@
 - Sonner
 - Lucide React
 - NextAuth v5 beta
+- Anthropic SDK (`@anthropic-ai/sdk`)
 - Vitest
 - Testing Library
 - jsdom
@@ -113,12 +114,32 @@
   - account totals
   - transaction activity
 - Account analytics and balance history charts
-- Monthly cash-flow summary
+- Monthly cash-flow summary (income, spending, net cash flow, top expense category)
+- Snapshot/Trends toggle on the monthly summary card:
+  - Snapshot view: income, spending, and net cash flow for the selected period
+  - Trends view: grouped bar chart showing income and spending over the last 6 months
+- Spending forecast strip: projects end-of-month spending based on daily pace (shown for current month only)
+
+### Net Worth Tracking
+
+- Monthly net worth snapshots recorded automatically on each dashboard load
+- Tracks total assets (non-credit accounts), total debt (credit accounts), and net worth
+- Net worth history line chart with Assets, Debt, and Net Worth lines
+- Month-over-month delta badge showing net worth change from the prior month
+- Zero reference line for at-a-glance breakeven visibility
+
+### Learn
+
+- Static Canadian financial content cards covering TFSA, RRSP, FHSA, credit card basics, budgeting, and net worth
+- Expandable card layout — each card is collapsed by default and expands inline
+- AI chat assistant powered by Claude (claude-opus-4-6) with adaptive thinking and streaming responses
+- System prompt scoped to Canadian personal finance
+- Single/double layout toggle applies to the Learn page — double view shows cards and chat side by side
 
 ### Dashboard UX
 
 - Single-column and double-column dashboard layouts
-- Shared layout toggle across dashboard and account pages
+- Shared layout toggle across dashboard, account pages, and the Learn page
 - Click-through navigation from dashboard summary cards and account cards
 
 ### Date And Time Handling
@@ -154,3 +175,4 @@ npx prisma migrate dev
 
 - The app now depends on timezone-aware database timestamps for correct local-time display and filtering.
 - The frontend proxy expects the backend API to be running on `http://localhost:3001` unless `NEXT_PUBLIC_API_URL` is set.
+- The Learn page AI chat requires an `ANTHROPIC_API_KEY` set in `frontend/.env.local`.
