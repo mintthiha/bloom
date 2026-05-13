@@ -259,6 +259,8 @@ export const api = {
     request<Account>(`/accounts/${id}/nickname`, { method: "PATCH", body: JSON.stringify({ nickname }) }),
   deleteAccount: (id: string) =>
     request<void>(`/accounts/${id}`, { method: "DELETE" }),
+  importCsv: (id: string, rows: Array<{ type: "DEPOSIT" | "WITHDRAWAL"; amount: number; date: string; description?: string; merchant?: string; category?: string }>) =>
+    request<{ imported: number; account: Account }>(`/accounts/${id}/import`, { method: "POST", body: JSON.stringify({ rows }) }),
   getProfile: () =>
     request<Profile | null>("/profile"),
   saveProfile: (input: { firstName: string; lastName: string; username: string; email: string }) =>

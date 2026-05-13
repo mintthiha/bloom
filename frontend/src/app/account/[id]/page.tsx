@@ -22,7 +22,67 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 
-type Op = "deposit" | "withdraw" | "transfer";
+type Op = "deposit" | "withdraw" | "transfer" | "import";
+
+type CsvRow = {
+  date: string;
+  type: string;
+  amount: string;
+  description?: string;
+  merchant?: string;
+  category?: string;
+  error?: string;
+};
+
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += c;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+function parseCsvText(text: string): CsvRow[] {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]).map(h => h.toLowerCase().replace(/^"|"$/g, "").trim());
+  return lines.slice(1).filter(l => l.trim()).map((line) => {
+    const values = splitCsvLine(line);
+    const raw = Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? "").replace(/^"|"$/g, "").trim()]));
+    const row: CsvRow = {
+      date: raw["date"] ?? "",
+      type: raw["type"] ?? "",
+      amount: raw["amount"] ?? "",
+      description: raw["description"] || undefined,
+      merchant: raw["merchant"] || undefined,
+      category: raw["category"] || undefined,
+    };
+    const normalizedType = row.type.toLowerCase();
+    const resolvedType = normalizedType === "credit" ? "deposit" : normalizedType === "debit" ? "withdrawal" : normalizedType;
+    if (resolvedType !== "deposit" && resolvedType !== "withdrawal") {
+      row.error = `Unknown type "${row.type}"`;
+    } else if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
+      row.error = `Invalid date "${row.date}"`;
+    } else if (!row.amount || Number.isNaN(Number(row.amount)) || Number(row.amount) <= 0) {
+      row.error = `Invalid amount "${row.amount}"`;
+    }
+    return row;
+  });
+}
+
+const CSV_TEMPLATE = `date,type,amount,description,merchant,category\n2026-01-15,deposit,1500.00,January salary,,Salary\n2026-01-18,withdrawal,85.50,Weekly groceries,Loblaws,Groceries\n`;
 
 const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Investment", "Other Income"];
 const EXPENSE_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other"];
@@ -77,6 +137,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
+  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const [csvParseError, setCsvParseError] = useState<string | null>(null);
+  const [csvImporting, setCsvImporting] = useState(false);
   const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
@@ -268,6 +331,56 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     } finally {
       setDeletingTransactionId(null);
       setPendingDeleteTransactionId(null);
+    }
+  }
+
+  function handleCsvFile(file: File | null) {
+    setCsvRows([]);
+    setCsvParseError(null);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      try {
+        const rows = parseCsvText(text);
+        if (rows.length === 0) { setCsvParseError("No data rows found in file."); return; }
+        setCsvRows(rows);
+      } catch {
+        setCsvParseError("Failed to parse CSV.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleImportCsv() {
+    const valid = csvRows.filter(r => !r.error);
+    if (valid.length === 0) return;
+    setCsvImporting(true);
+    setOpError(null);
+    setOpSuccess(null);
+    try {
+      const rows = valid.map(r => {
+        const normalizedType = r.type.toLowerCase();
+        const resolvedType = normalizedType === "credit" ? "deposit" : normalizedType === "debit" ? "withdrawal" : normalizedType;
+        return {
+          type: (resolvedType === "deposit" ? "DEPOSIT" : "WITHDRAWAL") as "DEPOSIT" | "WITHDRAWAL",
+          amount: Number(r.amount),
+          date: r.date,
+          description: r.description,
+          merchant: r.merchant,
+          category: r.category,
+        };
+      });
+      const result = await api.importCsv(id, rows);
+      setOpSuccess(`Imported ${result.imported} transaction${result.imported !== 1 ? "s" : ""}`);
+      setCsvRows([]);
+      setOp("deposit");
+      setFilterDateRange(getPresetDateRange("all-time"));
+      await refresh();
+    } catch (err) {
+      setOpError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setCsvImporting(false);
     }
   }
 
@@ -651,10 +764,10 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
           {/* Op selector */}
           <div style={{ display: 'flex', gap: '4px', background: 'var(--surface-2)', padding: '4px', borderRadius: '10px', marginBottom: '18px', width: 'fit-content' }}>
-            {(["deposit", "withdraw", "transfer"] as Op[]).map(o => (
+            {(["deposit", "withdraw", "transfer", "import"] as Op[]).map(o => (
               <button
                 key={o}
-                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); setToId(""); setDescription(""); }}
+                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); setToId(""); setDescription(""); setCsvRows([]); setCsvParseError(null); }}
                 style={{
                   padding: '8px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                   fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em',
@@ -670,7 +783,92 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {op === "import" && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Upload a CSV with columns: <span className="num" style={{ color: 'var(--text-primary)' }}>date, type, amount, description, merchant, category</span>.
+                Type accepts <span className="num">deposit</span>, <span className="num">withdrawal</span>, <span className="num">credit</span>, or <span className="num">debit</span>.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <label style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '9px 16px', background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)',
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Choose file
+                  <input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={e => handleCsvFile(e.target.files?.[0] ?? null)} />
+                </label>
+                <a
+                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`}
+                  download="bloom-import-template.csv"
+                  style={{ fontSize: '12px', color: '#f59e0b', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  Download template
+                </a>
+              </div>
+
+              {csvParseError && <p style={{ fontSize: '12px', color: '#f87171' }}>{csvParseError}</p>}
+
+              {csvRows.length > 0 && (() => {
+                const validCount = csvRows.filter(r => !r.error).length;
+                const errorCount = csvRows.length - validCount;
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {csvRows.length} row{csvRows.length !== 1 ? "s" : ""} parsed
+                        {errorCount > 0 && <span style={{ color: '#f87171', marginLeft: '8px' }}>{errorCount} with errors</span>}
+                      </span>
+                      {validCount > 0 && (
+                        <button
+                          onClick={handleImportCsv}
+                          disabled={csvImporting}
+                          style={{
+                            padding: '8px 16px', background: '#f59e0b', color: '#000',
+                            border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                            cursor: csvImporting ? 'not-allowed' : 'pointer', opacity: csvImporting ? 0.5 : 1,
+                          }}
+                        >
+                          {csvImporting ? "Importing..." : `Import ${validCount} transaction${validCount !== 1 ? "s" : ""}`}
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr>
+                            {["Date", "Type", "Amount", "Category", "Merchant", "Description", ""].map(h => (
+                              <th key={h} style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '10px', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvRows.map((row, i) => (
+                            <tr key={i} style={{ background: row.error ? '#f8717108' : 'transparent' }}>
+                              <td className="num" style={{ padding: '7px 8px', color: row.error ? '#f87171' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>{row.date}</td>
+                              <td style={{ padding: '7px 8px', color: row.error ? '#f87171' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>{row.type}</td>
+                              <td className="num" style={{ padding: '7px 8px', color: row.error ? '#f87171' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>{row.amount}</td>
+                              <td style={{ padding: '7px 8px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{row.category ?? "—"}</td>
+                              <td style={{ padding: '7px 8px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{row.merchant ?? "—"}</td>
+                              <td style={{ padding: '7px 8px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description ?? "—"}</td>
+                              <td style={{ padding: '7px 8px', whiteSpace: 'nowrap' }}>
+                                {row.error
+                                  ? <span style={{ color: '#f87171', fontSize: '11px' }}>{row.error}</span>
+                                  : <span style={{ color: '#22c55e', fontSize: '11px' }}>✓</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {op !== "import" && <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {op === "transfer" && (
               <select
                 value={toId}
@@ -769,7 +967,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                 style={inputStyle}
               />
             )}
-          </form>
+          </form>}
 
           {opError   && <p className="num" style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{opError}</p>}
           {opSuccess && <p className="num" style={{ color: '#22c55e', fontSize: '12px', marginTop: '10px' }}>{opSuccess}</p>}

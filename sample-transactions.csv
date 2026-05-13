@@ -1,0 +1,34 @@
+date,type,amount,description,merchant,category
+2026-01-03,deposit,3200.00,Bi-weekly pay,,Salary
+2026-01-05,withdrawal,142.37,Weekly groceries,Loblaws,Groceries
+2026-01-07,withdrawal,14.99,Streaming subscription,Netflix,Entertainment
+2026-01-09,withdrawal,52.80,Dinner out,Montana's,Dining
+2026-01-12,withdrawal,63.45,Fuel,Petro-Canada,Transport
+2026-01-15,withdrawal,38.20,Lunch with coworkers,Subway,Dining
+2026-01-17,deposit,3200.00,Bi-weekly pay,,Salary
+2026-01-18,withdrawal,155.00,Electricity bill,Hydro One,Utilities
+2026-01-20,withdrawal,89.99,Winter jacket,Sport Chek,Shopping
+2026-01-22,withdrawal,28.50,Prescriptions,Shoppers Drug Mart,Healthcare
+2026-01-25,withdrawal,118.60,Groceries,No Frills,Groceries
+2026-01-28,withdrawal,19.99,Music subscription,Spotify,Entertainment
+2026-02-01,deposit,3200.00,Bi-weekly pay,,Salary
+2026-02-03,withdrawal,144.10,Groceries,Loblaws,Groceries
+2026-02-05,withdrawal,62.00,Fuel,Esso,Transport
+2026-02-08,withdrawal,45.00,Dinner,The Keg,Dining
+2026-02-10,withdrawal,14.99,Streaming subscription,Netflix,Entertainment
+2026-02-14,withdrawal,78.50,Valentine's dinner,Local Bistro,Dining
+2026-02-15,deposit,3200.00,Bi-weekly pay,,Salary
+2026-02-17,withdrawal,160.00,Internet bill,Rogers,Utilities
+2026-02-20,withdrawal,112.30,Groceries,Metro,Groceries
+2026-02-22,withdrawal,55.99,New shoes,DSW,Shopping
+2026-02-25,withdrawal,35.00,Doctor visit,Medical Centre,Healthcare
+2026-03-01,deposit,3200.00,Bi-weekly pay,,Salary
+2026-03-04,withdrawal,138.90,Groceries,Loblaws,Groceries
+2026-03-06,withdrawal,14.99,Streaming subscription,Netflix,Entertainment
+2026-03-09,withdrawal,67.40,Fuel,Petro-Canada,Transport
+2026-03-12,withdrawal,48.75,Lunch,Milestones,Dining
+2026-03-15,deposit,3200.00,Bi-weekly pay,,Salary
+2026-03-18,withdrawal,155.00,Electricity bill,Hydro One,Utilities
+2026-03-20,withdrawal,95.00,Gym membership,GoodLife Fitness,Healthcare
+2026-03-22,withdrawal,126.45,Groceries,No Frills,Groceries
+2026-03-26,withdrawal,28.99,Book order,Indigo,Entertainment

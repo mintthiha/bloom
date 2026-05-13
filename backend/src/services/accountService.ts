@@ -693,3 +693,53 @@ export async function deleteAccount(userId: string, id: string) {
     prisma.account.delete({ where: { id } }),
   ]);
 }
+
+type ImportRow = {
+  type: "DEPOSIT" | "WITHDRAWAL";
+  amount: number;
+  effectiveAt: Date;
+  description?: string;
+  merchant?: string;
+  category?: string;
+};
+
+/**
+ * Bulk-inserts deposit and withdrawal transactions from a parsed CSV import.
+ * All rows are inserted inside a single Prisma transaction, then account balances
+ * are replayed to ensure correctness regardless of the order rows were provided.
+ * Throws 403 if the account is frozen.
+ */
+export async function importTransactions(userId: string, accountId: string, rows: ImportRow[]) {
+  const account = await getAccount(userId, accountId);
+  if (account.frozen) throw new AppError(403, "Account is frozen");
+  if (rows.length === 0) return { imported: 0, account };
+
+  await prisma.$transaction(async (tx) => {
+    for (const row of rows) {
+      const id = randomUUID();
+      const isDeposit = row.type === "DEPOSIT";
+      const category = row.category?.trim() || null;
+      const merchant = row.merchant?.trim() || null;
+      const description = row.description?.trim() || null;
+      await tx.$queryRaw`
+        INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId")
+        VALUES (
+          ${id},
+          ${row.type}::"TransactionType",
+          ${row.amount},
+          0,
+          ${category},
+          ${merchant},
+          ${description},
+          ${row.effectiveAt},
+          CURRENT_TIMESTAMP,
+          ${isDeposit ? null : accountId},
+          ${isDeposit ? accountId : null}
+        )
+      `;
+    }
+    await replayAccountBalances(tx as PrismaClient, accountId);
+  });
+
+  return { imported: rows.length, account: await getAccount(userId, accountId) };
+}

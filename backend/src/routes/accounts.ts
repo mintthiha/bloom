@@ -115,6 +115,46 @@ router.post("/:id/transfer", async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 });
 
+router.post("/:id/import", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    if (!Array.isArray(body.rows)) throw new AppError(400, "rows must be an array");
+    if (body.rows.length === 0) throw new AppError(400, "rows must not be empty");
+    if (body.rows.length > 500) throw new AppError(400, "Cannot import more than 500 rows at once");
+
+    const rows = (body.rows as unknown[]).map((row, i) => {
+      if (typeof row !== "object" || row === null) throw new AppError(400, `Row ${i + 1}: must be an object`);
+      const r = row as Record<string, unknown>;
+
+      const rawType = String(r.type ?? "").toUpperCase();
+      if (rawType !== "DEPOSIT" && rawType !== "WITHDRAWAL") {
+        throw new AppError(400, `Row ${i + 1}: type must be "deposit" or "withdrawal"`);
+      }
+
+      const amount = Number(r.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new AppError(400, `Row ${i + 1}: amount must be a positive number`);
+      }
+
+      const effectiveAt = new Date(String(r.date ?? ""));
+      if (Number.isNaN(effectiveAt.getTime())) {
+        throw new AppError(400, `Row ${i + 1}: date must be a valid date`);
+      }
+
+      return {
+        type: rawType as "DEPOSIT" | "WITHDRAWAL",
+        amount: Math.round(amount * 100) / 100,
+        effectiveAt,
+        description: typeof r.description === "string" ? r.description : undefined,
+        merchant: typeof r.merchant === "string" ? r.merchant : undefined,
+        category: typeof r.category === "string" ? r.category : undefined,
+      };
+    });
+
+    res.json(await accountService.importTransactions(uid(req), pid(req), rows));
+  } catch (err) { next(err); }
+});
+
 router.get("/:id/transactions", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const type = req.query["type"];
