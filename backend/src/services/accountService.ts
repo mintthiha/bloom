@@ -704,9 +704,66 @@ type ImportRow = {
 };
 
 /**
+ * Backfills NetWorthSnapshot records for each calendar month that has transactions
+ * on the imported account. Uses the last balanceAfter in each month as the
+ * month-end balance, combined with the current balances of all other accounts.
+ */
+async function backfillNetWorthSnapshots(userId: string, accountId: string, accountType: AccountType) {
+  type MonthEndRow = { month: string; balanceAfter: number | string };
+  const rows = await prisma.$queryRaw<MonthEndRow[]>`
+    SELECT
+      TO_CHAR(DATE_TRUNC('month', "effectiveAt"), 'YYYY-MM') AS month,
+      "balanceAfter"
+    FROM "Transaction"
+    WHERE
+      ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+      OR
+      ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+    ORDER BY "effectiveAt" DESC, "createdAt" DESC, "id" DESC
+  `;
+
+  const monthBalances = new Map<string, number>();
+  for (const row of rows) {
+    if (!monthBalances.has(row.month)) {
+      monthBalances.set(row.month, Number(row.balanceAfter));
+    }
+  }
+  if (monthBalances.size === 0) return;
+
+  const otherAccounts = await prisma.$queryRaw<AccountRecord[]>`
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    FROM "Account"
+    WHERE "userId" = ${userId} AND "id" != ${accountId}
+  `;
+  const otherAssets = otherAccounts
+    .filter(a => a.accountType !== AccountType.CREDIT)
+    .reduce((sum, a) => sum + a.balance, 0);
+  const otherDebt = otherAccounts
+    .filter(a => a.accountType === AccountType.CREDIT)
+    .reduce((sum, a) => sum + a.balance, 0);
+
+  for (const [month, balance] of monthBalances) {
+    const totalAssets = accountType === AccountType.CREDIT ? otherAssets : otherAssets + balance;
+    const totalDebt = accountType === AccountType.CREDIT ? otherDebt + balance : otherDebt;
+    const netWorth = totalAssets - totalDebt;
+    const id = randomUUID();
+    await prisma.$queryRaw`
+      INSERT INTO "NetWorthSnapshot" ("id", "userId", "month", "netWorth", "totalAssets", "totalDebt", "createdAt", "updatedAt")
+      VALUES (${id}, ${userId}, ${month}, ${netWorth}, ${totalAssets}, ${totalDebt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT ("userId", "month") DO UPDATE
+      SET "netWorth" = EXCLUDED."netWorth",
+          "totalAssets" = EXCLUDED."totalAssets",
+          "totalDebt" = EXCLUDED."totalDebt",
+          "updatedAt" = CURRENT_TIMESTAMP
+    `;
+  }
+}
+
+/**
  * Bulk-inserts deposit and withdrawal transactions from a parsed CSV import.
  * All rows are inserted inside a single Prisma transaction, then account balances
  * are replayed to ensure correctness regardless of the order rows were provided.
+ * After inserting, backfills NetWorthSnapshot records for each affected month.
  * Throws 403 if the account is frozen.
  */
 export async function importTransactions(userId: string, accountId: string, rows: ImportRow[]) {
@@ -740,6 +797,8 @@ export async function importTransactions(userId: string, accountId: string, rows
     }
     await replayAccountBalances(tx as PrismaClient, accountId);
   });
+
+  await backfillNetWorthSnapshots(userId, accountId, account.accountType as AccountType);
 
   return { imported: rows.length, account: await getAccount(userId, accountId) };
 }
