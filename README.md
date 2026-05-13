@@ -88,6 +88,13 @@
 - Transaction editing
 - Transaction deletion with confirmation dialog
 - Linked transfer edit/delete support for newly created transfer pairs
+- CSV import on any account:
+  - Client-side parsing with row-level validation and preview table
+  - Supports `deposit`, `withdrawal`, `credit`, and `debit` type values
+  - Columns: `date`, `type`, `amount`, `description`, `merchant`, `category`
+  - Downloadable template from the import tab
+  - Automatically resets transaction history filter to all-time after import
+  - Backfills net worth snapshots for each imported month using month-end balances
 
 ### Recurring Transactions
 
