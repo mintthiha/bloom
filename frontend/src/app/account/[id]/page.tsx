@@ -1,21 +1,14 @@
 "use client";
 import { useState, useEffect, useCallback, use, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ImportTab } from "./_components/_import/ImportTab";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { FreezeButton } from "./_components/_accountActions/FreezeButton";
+import { DeleteAccount } from "./_components/_accountActions/DeleteAccount";
+import { NicknameEditor } from "./_components/_accountActions/NicknameEditor";
+import { DeleteTransaction } from "./_components/_accountTransactions/DeleteTransaction";
 import { buildDateRangeQuery, DateRangeState, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import {
   ResponsiveContainer,
@@ -48,7 +41,6 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const historyFilterColumns = isDoubleColumn
     ? "minmax(0, 160px) minmax(0, 180px) minmax(0, 1fr)"
     : "1fr";
-  const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [txns, setTxns] = useState<Transaction[]>([]);
@@ -64,20 +56,14 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [opSuccess, setOpSuccess] = useState<string | null>(null);
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
-  const [freezing, setFreezing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [nickname, setNickname] = useState("");
-  const [editingNickname, setEditingNickname] = useState(false);
-  const [savingNickname, setSavingNickname] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingTransactionAmount, setEditingTransactionAmount] = useState("");
   const [editingTransactionCategory, setEditingTransactionCategory] = useState("");
   const [editingTransactionMerchant, setEditingTransactionMerchant] = useState("");
   const [editingTransactionDateTime, setEditingTransactionDateTime] = useState("");
   const [savingTransaction, setSavingTransaction] = useState(false);
-  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
@@ -110,7 +96,6 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
     try {
       const [acc, transactions, allAccounts] = await Promise.all([api.getAccount(id), api.getTransactions(id, transactionQuery), api.listAccounts()]);
       setAccount(acc);
-      setNickname(acc.nickname ?? "");
       setTxns(transactions);
       setAccounts(allAccounts);
     } catch (err) {
@@ -160,43 +145,6 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       setOpError(err instanceof Error ? err.message : "Operation failed");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleFreeze() {
-    setFreezing(true);
-    try {
-      if (account!.frozen) await api.unfreeze(id);
-      else await api.freeze(id);
-      await refresh();
-    } finally {
-      setFreezing(false);
-    }
-  }
-
-  async function handleDelete() {
-    setDeleting(true);
-    try {
-      await api.deleteAccount(id);
-      router.push(`/?deleted=${encodeURIComponent(account!.nickname ?? account!.ownerName)}`);
-    } catch {
-      setDeleting(false);
-      setConfirmDelete(false);
-    }
-  }
-
-  async function handleSaveNickname() {
-    setSavingNickname(true);
-    setOpError(null);
-    try {
-      const updated = await api.updateNickname(id, nickname.trim() || undefined);
-      setAccount(updated);
-      setNickname(updated.nickname ?? "");
-      setEditingNickname(false);
-    } catch (err) {
-      setOpError(err instanceof Error ? err.message : "Failed to save nickname");
-    } finally {
-      setSavingNickname(false);
     }
   }
 
@@ -252,26 +200,6 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       setSavingTransaction(false);
     }
   }
-
-  async function handleDeleteTransaction(transactionId: string) {
-    setDeletingTransactionId(transactionId);
-    setOpError(null);
-    setOpSuccess(null);
-    try {
-      await api.deleteTransaction(id, transactionId);
-      if (editingTransactionId === transactionId) {
-        cancelEditingTransaction();
-      }
-      setOpSuccess("Transaction deleted");
-      await refresh();
-    } catch (err) {
-      setOpError(err instanceof Error ? err.message : "Failed to delete transaction");
-    } finally {
-      setDeletingTransactionId(null);
-      setPendingDeleteTransactionId(null);
-    }
-  }
-
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
@@ -330,41 +258,18 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const transferTargets = accounts.filter(a => a.id !== id);
   return (
     <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '48px 24px' }}>
-      <AlertDialog
-        open={pendingDeleteTransactionId !== null}
-        onOpenChange={(open) => {
-          if (!open && !deletingTransactionId) {
-            setPendingDeleteTransactionId(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <div style={{ padding: "12px 14px" }}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will remove the transaction and replay the account balance history.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                type="button"
-                onClick={() => setPendingDeleteTransactionId(null)}
-                disabled={Boolean(deletingTransactionId)}
-              >
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                type="button"
-                onClick={() => pendingDeleteTransactionId && handleDeleteTransaction(pendingDeleteTransactionId)}
-                disabled={Boolean(deletingTransactionId)}
-              >
-                {deletingTransactionId ? "Deleting..." : "Delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+      <DeleteTransaction
+        accountId={id}
+        pendingTransactionId={pendingDeleteTransactionId}
+        onPendingChange={setPendingDeleteTransactionId}
+        deletingTransactionId={deletingTransactionId}
+        onDeletingChange={setDeletingTransactionId}
+        editingTransactionId={editingTransactionId}
+        onCancelEditing={cancelEditingTransaction}
+        onDeleted={async () => { setOpSuccess("Transaction deleted"); await refresh(); }}
+        onError={(msg) => setOpError(msg)}
+      />
 
       {/* Back */}
       <Link href="/" className="fade-up" style={{
@@ -426,132 +331,18 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                 </p>
               <p className="num" style={{ fontSize: '30px', fontWeight: 500, color: accentColor }}>{fmt(account.balance)}</p>
             </div>
-            <button
-              onClick={handleFreeze}
-              disabled={freezing}
-              style={{
-                padding: '6px 14px', border: `1px solid ${account.frozen ? '#3b82f640' : '#f8717140'}`,
-                background: account.frozen ? '#3b82f610' : '#f8717110',
-                color: account.frozen ? '#60a5fa' : '#f87171',
-                borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '0.08em',
-                cursor: freezing ? 'not-allowed' : 'pointer',
-                opacity: freezing ? 0.5 : 1, transition: 'opacity 0.15s',
-              }}
-            >
-              {freezing ? '…' : account.frozen ? 'Unfreeze' : 'Freeze'}
-            </button>
-              {confirmDelete ? (
-                <div style={{ display: 'flex', gap: '6px', padding: '32px', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleting}
-                  style={{
-                    padding: '6px 12px', border: '1px solid var(--border)',
-                    background: 'transparent', color: 'var(--text-secondary)',
-                    borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.08em',
-                    cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  style={{
-                    padding: '6px 12px', border: '1px solid #f8717160',
-                    background: '#f87171', color: '#000',
-                    borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.08em',
-                    cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1,
-                  }}
-                >
-                  {deleting ? '…' : 'Confirm'}
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                style={{
-                  padding: '6px 14px', border: '1px solid #f8717130',
-                  background: 'transparent', color: '#f87171',
-                  borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
-                }}
-              >
-                Delete
-              </button>
-            )}
+            <FreezeButton accountId={id} frozen={account.frozen} onToggled={refresh} />
+            <DeleteAccount accountId={id} displayName={displayName} />
           </div>
         </div>
       </div>
 
-      <div className="fade-up fade-up-2" style={{
-        background: 'var(--surface-1)', border: '1px solid var(--border)',
-        borderRadius: '16px', padding: '20px', marginBottom: '16px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-          <div>
-            <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Account Nickname
-            </p>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-              Use a short custom label to identify this account quickly.
-            </p>
-          </div>
-          {!editingNickname && (
-            <button
-              onClick={() => setEditingNickname(true)}
-              style={{
-                padding: '8px 12px', border: '1px solid var(--border)',
-                background: 'transparent', color: 'var(--text-primary)',
-                borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              Edit
-            </button>
-          )}
-        </div>
-
-        {editingNickname ? (
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              value={nickname}
-              onChange={e => setNickname(e.target.value)}
-              placeholder="Optional nickname"
-              style={{ ...inputStyle, flex: '1 1 220px' }}
-            />
-            <button
-              onClick={handleSaveNickname}
-              disabled={savingNickname}
-              style={{
-                padding: '10px 16px', background: '#f59e0b', color: '#000',
-                fontWeight: 700, fontSize: '14px', border: 'none', borderRadius: '8px',
-                cursor: savingNickname ? 'not-allowed' : 'pointer', opacity: savingNickname ? 0.45 : 1,
-              }}
-            >
-              {savingNickname ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={() => { setNickname(account.nickname ?? ""); setEditingNickname(false); }}
-              disabled={savingNickname}
-              style={{
-                padding: '10px 16px', border: '1px solid var(--border)', background: 'transparent',
-                color: 'var(--text-secondary)', fontWeight: 600, fontSize: '14px', borderRadius: '8px',
-                cursor: savingNickname ? 'not-allowed' : 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <p style={{ fontSize: '15px', fontWeight: 600 }}>
-            {account.nickname ?? 'No nickname set'}
-          </p>
-        )}
-      </div>
+      <NicknameEditor
+        accountId={id}
+        nickname={account.nickname}
+        onUpdated={setAccount}
+        onError={setOpError}
+      />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: detailColumns, gap: '16px', alignItems: 'start' }}>
