@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
-import { ImportTab } from "./ImportTab";
+import { ImportTab } from "./_components/_import/ImportTab";
 import {
   AlertDialog,
   AlertDialogAction,
