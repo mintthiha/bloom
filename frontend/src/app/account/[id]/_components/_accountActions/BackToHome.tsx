@@ -2,10 +2,7 @@
 
 import Link from "next/dist/client/link";
 
-type Props = {
-};
-
-export function BackToHome({}: Props) {
+export function BackToHome() {
   return (
       <Link href="/" className="fade-up" style={{
         display: 'inline-flex', alignItems: 'center', gap: '6px',
