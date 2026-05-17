@@ -54,13 +54,46 @@ function splitCsvLine(line: string): string[] {
   return result;
 }
 
-function parseCsvText(text: string): CsvRow[] {
+function convertRbcDate(dateStr: string): string {
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return dateStr;
+  const [month, day, year] = parts;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function parseCsvText(text: string): { rows: CsvRow[]; detectedBank: "rbc" | null } {
   const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
+  if (lines.length < 2) return { rows: [], detectedBank: null };
   const headers = splitCsvLine(lines[0]).map(h => h.toLowerCase().replace(/^"|"$/g, "").trim());
-  return lines.slice(1).filter(l => l.trim()).map((line) => {
+
+  const isRbc = headers.includes("transaction date") && headers.includes("cad$");
+
+  const rows = lines.slice(1).filter(l => l.trim()).map((line) => {
     const values = splitCsvLine(line);
     const raw = Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? "").replace(/^"|"$/g, "").trim()]));
+
+    if (isRbc) {
+      const cadRaw = raw["cad$"] ?? "";
+      const cadNum = parseFloat(cadRaw);
+      const desc1 = raw["description 1"] ?? "";
+      const desc2 = raw["description 2"] ?? "";
+      const description = desc1 && desc2 ? `${desc1} - ${desc2}` : (desc1 || desc2 || undefined);
+      const row: CsvRow = {
+        date: convertRbcDate(raw["transaction date"] ?? ""),
+        type: cadNum >= 0 ? "deposit" : "withdrawal",
+        amount: Math.abs(cadNum).toFixed(2),
+        description: description || undefined,
+        merchant: undefined,
+        category: undefined,
+      };
+      if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
+        row.error = `Invalid date "${raw["transaction date"] ?? ""}"`;
+      } else if (cadRaw === "" || Number.isNaN(cadNum) || cadNum === 0) {
+        row.error = `Invalid amount "${cadRaw}"`;
+      }
+      return row;
+    }
+
     const row: CsvRow = {
       date: raw["date"] ?? "",
       type: raw["type"] ?? "",
@@ -80,6 +113,8 @@ function parseCsvText(text: string): CsvRow[] {
     }
     return row;
   });
+
+  return { rows, detectedBank: isRbc ? "rbc" : null };
 }
 
 const CSV_TEMPLATE = `date,type,amount,description,merchant,category\n2026-01-15,deposit,1500.00,January salary,,Salary\n2026-01-18,withdrawal,85.50,Weekly groceries,Loblaws,Groceries\n`;
@@ -140,6 +175,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [csvDetectedBank, setCsvDetectedBank] = useState<"rbc" | null>(null);
   const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
@@ -337,14 +373,16 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   function handleCsvFile(file: File | null) {
     setCsvRows([]);
     setCsvParseError(null);
+    setCsvDetectedBank(null);
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
       try {
-        const rows = parseCsvText(text);
+        const { rows, detectedBank } = parseCsvText(text);
         if (rows.length === 0) { setCsvParseError("No data rows found in file."); return; }
         setCsvRows(rows);
+        setCsvDetectedBank(detectedBank);
       } catch {
         setCsvParseError("Failed to parse CSV.");
       }
@@ -767,7 +805,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
             {(["deposit", "withdraw", "transfer", "import"] as Op[]).map(o => (
               <button
                 key={o}
-                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); setToId(""); setDescription(""); setCsvRows([]); setCsvParseError(null); }}
+                onClick={() => { setOp(o); setOpError(null); setOpSuccess(null); setCategory(""); setCustomCategory(""); setToId(""); setDescription(""); setCsvRows([]); setCsvParseError(null); setCsvDetectedBank(null); }}
                 style={{
                   padding: '8px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                   fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em',
@@ -807,6 +845,12 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
                   Download template
                 </a>
               </div>
+
+              {csvDetectedBank === "rbc" && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: '#1d6ae510', border: '1px solid #1d6ae530', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: '#60a5fa', width: 'fit-content' }}>
+                  Detected: RBC export
+                </div>
+              )}
 
               {csvParseError && <p style={{ fontSize: '12px', color: '#f87171' }}>{csvParseError}</p>}
 

@@ -131,13 +131,13 @@ function getTransactionDelta(transaction: TransactionRecord, accountId: string) 
   return 0;
 }
 
-async function replayAccountBalances(client: PrismaClient, accountId: string) {
+async function replayAccountBalances(client: PrismaClient, accountId: string, { allowNegative = false } = {}) {
   const transactions = await listTransactionsForBalanceReplay(client, accountId);
   let balance = 0;
 
   for (const transaction of transactions) {
     balance += getTransactionDelta(transaction, accountId);
-    if (balance < 0) {
+    if (!allowNegative && balance < 0) {
       throw new AppError(400, "This change would overdraw the account");
     }
     await client.transaction.update({
@@ -795,7 +795,7 @@ export async function importTransactions(userId: string, accountId: string, rows
         )
       `;
     }
-    await replayAccountBalances(tx as PrismaClient, accountId);
+    await replayAccountBalances(tx as PrismaClient, accountId, { allowNegative: true });
   });
 
   await backfillNetWorthSnapshots(userId, accountId, account.accountType as AccountType);
