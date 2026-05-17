@@ -4,12 +4,34 @@ import { Account } from "@/lib/api";
 import { DeleteAccount } from "../_accountActions/DeleteAccount";
 import { FreezeButton } from "../_accountActions/FreezeButton";
 
+const ACCOUNT_TYPE_META = {
+  CHEQUING: { label: "Chequing", color: "#f59e0b" },
+  SAVINGS: { label: "Savings", color: "#22c55e" },
+  TFSA: { label: "TFSA", color: "#38bdf8" },
+  RRSP: { label: "RRSP", color: "#a78bfa" },
+  FHSA: { label: "FHSA", color: "#fb7185" },
+  CREDIT: { label: "Credit", color: "#ef4444" },
+} as const;
+
+/** Formats a number as CAD currency. */
+const fmt = (n: number) =>
+  new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: "CAD",
+  }).format(n);
+
 type AccountCardProps = {
   account: Account | null;
+  onRefresh: () => void;
 };
 
-export function AccountCard({ account }: AccountCardProps) {
+/** Displays account summary info, balance, freeze toggle, and delete action. */
+export function AccountCard({ account, onRefresh }: AccountCardProps) {
   if (!account) return null;
+
+  const accentColor = ACCOUNT_TYPE_META[account.accountType].color;
+  const displayName = account.nickname ?? account.ownerName;
+
   return (
     <div
       className="fade-up fade-up-1"
@@ -153,9 +175,12 @@ export function AccountCard({ account }: AccountCardProps) {
           <FreezeButton
             accountId={account.id}
             frozen={account.frozen}
-            onToggled={refresh}
+            onToggled={onRefresh}
           />
-          <DeleteAccount accountId={account.id} displayName={account.nickname || account.ownerName} />
+          <DeleteAccount
+            accountId={account.id}
+            displayName={displayName}
+          />
         </div>
       </div>
     </div>

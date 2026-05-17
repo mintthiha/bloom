@@ -385,6 +385,7 @@ export default function AccountPage({
       >
         <AccountCard
           account={account}
+          onRefresh={refresh}
         />
 
         <NicknameEditor
