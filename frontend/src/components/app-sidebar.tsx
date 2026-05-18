@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BookOpen, Columns2, LogOut, Rows3, Target } from "lucide-react";
+import { BookOpen, Columns2, LogOut, Rows3, Search, Target } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
+import { openCommandPalette } from "@/components/CommandPalette";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import {
   Sidebar,
@@ -163,6 +164,44 @@ export function AppSidebar() {
                 padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
               }}
             >
+              <button
+                type="button"
+                onClick={openCommandPalette}
+                title="Search transactions (⌘K)"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "36px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-1)",
+                  color: "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+              >
+                <Search size={15} style={{ flexShrink: 0 }} />
+                <span className="group-data-[collapsible=icon]:hidden">Search</span>
+                <kbd
+                  className="group-data-[collapsible=icon]:hidden"
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: "10px",
+                    padding: "1px 5px",
+                    borderRadius: "4px",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-muted)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  ⌘K
+                </kbd>
+              </button>
               <Link
                 href="/goals"
                 style={{

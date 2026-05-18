@@ -4,6 +4,7 @@ import budgetsRouter from "./routes/budgets";
 import profileRouter from "./routes/profile";
 import recurringRouter from "./routes/recurring";
 import savingsGoalsRouter from "./routes/savingsGoals";
+import transactionsRouter from "./routes/transactions";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -18,6 +19,7 @@ app.use("/api/budgets", budgetsRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/recurring", recurringRouter);
 app.use("/api/savings-goals", savingsGoalsRouter);
+app.use("/api/transactions", transactionsRouter);
 app.use(errorHandler);
 
 export default app;

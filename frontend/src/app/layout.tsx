@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SessionProvider } from "next-auth/react";
 import { DashboardViewProvider } from "@/components/dashboard-view-provider";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   </div>
                 </div>
               </header>
+              <CommandPalette />
               <Toaster position="bottom-center" theme="dark" />
               <main style={{ flex: 1 }}>{children}</main>
               <footer style={{ borderTop: "1px solid var(--border)", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

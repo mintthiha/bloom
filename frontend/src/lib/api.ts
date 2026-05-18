@@ -135,6 +135,20 @@ export type BudgetActivity = Budget & {
   }>;
 };
 
+export type TransactionSearchResult = {
+  id: string;
+  type: string;
+  amount: number;
+  effectiveAt: string;
+  description: string | null;
+  merchant: string | null;
+  category: string | null;
+  accountId: string;
+  accountName: string;
+  accountNickname: string | null;
+  accountType: AccountType;
+};
+
 export type SavingsGoal = {
   id: string;
   userId: string;
@@ -285,6 +299,8 @@ export const api = {
     request<void>(`/accounts/${id}`, { method: "DELETE" }),
   importCsv: (id: string, rows: Array<{ type: "DEPOSIT" | "WITHDRAWAL"; amount: number; date: string; description?: string; merchant?: string; category?: string }>) =>
     request<{ imported: number; account: Account }>(`/accounts/${id}/import`, { method: "POST", body: JSON.stringify({ rows }) }),
+  searchTransactions: (q: string, limit = 20) =>
+    request<TransactionSearchResult[]>(withQuery("/transactions/search", { q, limit: String(limit) })),
   getProfile: () =>
     request<Profile | null>("/profile"),
   saveProfile: (input: { firstName: string; lastName: string; username: string; email: string }) =>
