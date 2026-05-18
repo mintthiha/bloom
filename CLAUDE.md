@@ -26,6 +26,8 @@ app/account/[id]/
 
 A component or utility belongs in its own file when it has its own state, makes API calls, or contains more than trivial JSX.
 
+**Co-location rule:** place a file in the most specific folder that covers all its consumers. If a component or utility is only ever used by files inside `_accountTransactions/`, it lives inside `_accountTransactions/` — not in a new sibling folder at the `_components/` level. Only promote to a higher folder (or `src/components/`) when a second, distinct feature needs to import it.
+
 ## UI Components — Use shadcn/ui and Sonner First
 
 Before building a custom UI component, check whether shadcn/ui or the existing shared component library already provides it.

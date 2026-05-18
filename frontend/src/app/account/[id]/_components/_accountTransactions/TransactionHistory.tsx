@@ -10,6 +10,7 @@ import {
 } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
 import { inputStyle } from "@/lib/styles/input";
+import { ExportCsvButton } from "./ExportCsvButton";
 
 const PAGE_SIZE = 4;
 
@@ -168,12 +169,15 @@ export function TransactionHistory({
             Times shown in {timeZone}.
           </p>
         </div>
-        <span
-          className="num"
-          style={{ fontSize: "11px", color: "var(--text-muted)" }}
-        >
-          {txns.length} records
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span
+            className="num"
+            style={{ fontSize: "11px", color: "var(--text-muted)" }}
+          >
+            {txns.length} records
+          </span>
+          <ExportCsvButton txns={txns} account={account} />
+        </div>
       </div>
 
       <div

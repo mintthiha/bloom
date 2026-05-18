@@ -13,12 +13,12 @@ import {
   YAxis,
 } from "recharts";
 
-type DailySpendingChartProps = { budget?: BudgetActivity };
+type DailySpendingChartProps = { budget: BudgetActivity };
 
 export function DailySpendingChart({ budget }: DailySpendingChartProps) {
   const dailyChartData = useMemo(
     () =>
-      budget?.dailySpending.map((entry) => ({
+      budget.dailySpending.map((entry) => ({
         label: new Intl.DateTimeFormat("en-CA", {
           month: "short",
           day: "numeric",
