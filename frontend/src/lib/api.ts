@@ -135,6 +135,22 @@ export type BudgetActivity = Budget & {
   }>;
 };
 
+export type SavingsGoal = {
+  id: string;
+  userId: string;
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  currentBalance: number;
+  accountName: string;
+  accountNickname: string | null;
+  accountOwnerName: string;
+  accountType: AccountType;
+  percentageReached: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type RecurringTransaction = {
   id: string;
   userId: string;
@@ -235,6 +251,14 @@ export const api = {
     request<Budget>("/budgets", { method: "PUT", body: JSON.stringify({ category, monthlyLimit }) }),
   deleteBudget: (id: string) =>
     request<void>(`/budgets/${id}`, { method: "DELETE" }),
+  listSavingsGoals: () =>
+    request<SavingsGoal[]>("/savings-goals"),
+  createSavingsGoal: (input: { accountId: string; name: string; targetAmount: number }) =>
+    request<SavingsGoal>("/savings-goals", { method: "POST", body: JSON.stringify(input) }),
+  updateSavingsGoal: (id: string, input: { accountId: string; name: string; targetAmount: number }) =>
+    request<SavingsGoal>(`/savings-goals/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  deleteSavingsGoal: (id: string) =>
+    request<void>(`/savings-goals/${id}`, { method: "DELETE" }),
   createAccount: (ownerName: string, accountType: AccountType, nickname?: string) =>
     request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType, nickname }) }),
   getAccount: (id: string) =>

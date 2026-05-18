@@ -16,6 +16,7 @@ import { HeaderSection } from "./_components/_headerSection/HeaderSection";
 import { DailySpendingChart } from "./_components/_content/_dailySpendingChart/DailySpendingChart";
 import { SpendingPerAccountChart } from "./_components/_content/_spendingPerAccountChart/SpendingPerAccountChart";
 import { TransactionsSummary } from "./_components/_content/_transactionsSummary/TransactionsSummary";
+import { SavingsGoals } from "./_components/_savingsGoals/SavingsGoals";
 
 export default function BudgetDetailPage({
   params,
@@ -167,6 +168,8 @@ export default function BudgetDetailPage({
       </div>
 
       <TransactionsSummary budget={budget} />
+
+      <SavingsGoals />
     </div>
   );
 }

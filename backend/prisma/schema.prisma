@@ -48,6 +48,7 @@ model Account {
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
   recurringTransactions RecurringTransaction[]
+  savingsGoals         SavingsGoal[]
 }
 
 model Profile {
@@ -101,6 +102,18 @@ model NetWorthSnapshot {
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
   @@unique([userId, month])
+}
+
+model SavingsGoal {
+  id           String   @id @default(cuid())
+  userId       String
+  accountId    String
+  name         String
+  targetAmount Float
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
 
 model RecurringTransaction {
