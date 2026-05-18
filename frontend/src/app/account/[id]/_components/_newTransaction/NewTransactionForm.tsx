@@ -9,20 +9,9 @@ import {
   EXPENSE_CATEGORIES,
   ACCOUNT_TYPE_META,
 } from "@/lib/constants/account";
+import { inputStyle } from "@/lib/styles/input";
 
 type Op = "deposit" | "withdraw" | "transfer" | "import";
-
-const inputStyle = {
-  width: "100%",
-  background: "var(--surface-2)",
-  border: "1px solid var(--border)",
-  borderRadius: "8px",
-  padding: "10px 14px",
-  fontSize: "14px",
-  color: "var(--text-primary)",
-  outline: "none",
-  fontFamily: "inherit",
-};
 
 interface NewTransactionFormProps {
   account: Account;

@@ -1,9 +1,10 @@
 "use client";
 
-import type { CSSProperties, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { api, Profile } from "@/lib/api";
+import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 
 type ProfileFormPanelProps = {
   title: string;
@@ -115,17 +116,7 @@ export function ProfileFormPanel({
     }
   }
 
-  const inputStyle: CSSProperties = {
-    width: "100%",
-    background: "var(--surface-2)",
-    border: "1px solid var(--border)",
-    borderRadius: "10px",
-    padding: "12px 14px",
-    fontSize: "14px",
-    color: "var(--text-primary)",
-    outline: "none",
-    fontFamily: "inherit",
-  };
+  const inputStyle = { ...baseInputStyle, borderRadius: "10px", padding: "12px 14px" };
 
   return (
     <div

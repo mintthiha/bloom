@@ -1,4 +1,5 @@
 import { Transaction, Account } from "@/lib/api";
+import { formatCurrency } from "@/lib/format";
 import {
   ResponsiveContainer,
   LineChart,
@@ -13,12 +14,6 @@ import {
   Legend,
 } from "recharts";
 
-/** Formats a number as CAD currency. */
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency: "CAD",
-  }).format(n);
 
 const TYPE_LABELS: Record<string, string> = {
   DEPOSIT: "Deposit",
@@ -149,7 +144,7 @@ export function AccountAnalytics({
                     timeStyle: "short",
                   })
                 }
-                formatter={(value) => [fmt(Number(value)), "Balance"]}
+                formatter={(value) => [formatCurrency(Number(value)), "Balance"]}
               />
               <Line
                 type="monotone"

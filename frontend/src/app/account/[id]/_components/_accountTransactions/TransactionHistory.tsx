@@ -8,6 +8,8 @@ import {
   EXPENSE_CATEGORIES,
   TRANSACTION_FILTER_CATEGORIES,
 } from "@/lib/constants/account";
+import { formatCurrency } from "@/lib/format";
+import { inputStyle } from "@/lib/styles/input";
 
 const PAGE_SIZE = 4;
 
@@ -79,12 +81,6 @@ function isEditableTransaction(transaction: Transaction): boolean {
   );
 }
 
-/** Formats a number as CAD currency. */
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency: "CAD",
-  }).format(n);
 
 /** Renders the full transaction history panel with filters, pagination, and inline editing. */
 export function TransactionHistory({
@@ -130,18 +126,6 @@ export function TransactionHistory({
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
-
-  const inputStyle = {
-    width: "100%",
-    background: "var(--surface-2)",
-    border: "1px solid var(--border)",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    fontSize: "14px",
-    color: "var(--text-primary)",
-    outline: "none",
-    fontFamily: "inherit",
-  };
 
   return (
     <div
@@ -670,7 +654,7 @@ export function TransactionHistory({
                             marginBottom: "3px",
                           }}
                         >
-                          {sign} {fmt(t.amount)}
+                          {sign} {formatCurrency(t.amount)}
                         </p>
                         <p
                           className="num"
@@ -680,7 +664,7 @@ export function TransactionHistory({
                             marginBottom: canEdit ? "10px" : "0",
                           }}
                         >
-                          {fmt(t.balanceAfter)}
+                          {formatCurrency(t.balanceAfter)}
                         </p>
                       </>
                     )}

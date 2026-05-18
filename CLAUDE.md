@@ -36,6 +36,16 @@ Before building a custom UI component, check whether shadcn/ui or the existing s
 
 Shared, non-route-specific components (e.g. `BackToHome`) belong in `src/components/`, not inside a route's `_components/` folder.
 
+## Naming
+
+Use full, descriptive names for all identifiers — functions, constants, variables, and types. Abbreviations are not acceptable unless they are universally understood domain terms (e.g. `id`, `url`).
+
+- **Functions**: name for what they do — `formatCurrency`, not `fmt`; `handleSubmit`, not `onSub`
+- **Constants**: name for what they represent — `inputStyle`, not `s`; `ACCOUNT_TYPE_META`, not `META`
+- **Variables**: spell out intent — `isSubmitting`, not `loading2`; `selectedAccountId`, not `selId`
+
+If a name needs a comment to explain what it refers to, the name is wrong — rename it instead.
+
 ## Comments
 
 Add a JSDoc comment above every function — including handlers, helpers, and hooks. The comment should explain the **why or what** in one line, not restate the function name.

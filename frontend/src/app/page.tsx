@@ -20,6 +20,7 @@ import {
 import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { formatCurrency } from "@/lib/format";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend,
@@ -424,8 +425,6 @@ function Home() {
     }
   }
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
   const recurringAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
   const recurringCategories = recurringType === "DEPOSIT"
     ? ["Salary", "Freelance", "Gift", "Investment", "Other Income", "Custom..."]
@@ -594,12 +593,12 @@ function Home() {
         <div className="fade-up fade-up-1" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '36px' }}>
           {renderSummaryCard({
             title: "Net Worth",
-            value: fmt(netWorth),
+            value: formatCurrency(netWorth),
             color: netWorth >= 0 ? "#22c55e" : "#ef4444",
           })}
           {renderSummaryCard({
             title: "Total Cash",
-            value: fmt(totalCash),
+            value: formatCurrency(totalCash),
             color: "#f59e0b",
             targetAccount: cashAccounts[0],
           })}
@@ -621,7 +620,7 @@ function Home() {
           {renderSummaryCard({
             title: "Credit",
             value: creditCount > 0
-              ? <>{fmt(totalCredit)} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>owed</span></>
+              ? <>{formatCurrency(totalCredit)} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>owed</span></>
               : <>{creditCount} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>acct{creditCount !== 1 ? 's' : ''}</span></>,
             color: creditCount > 0 ? '#ef4444' : undefined,
             targetAccount: creditAccounts[0],
@@ -683,28 +682,28 @@ function Home() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: expenseCategories.length ? '22px' : '0' }}>
                 <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
                   <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Income</p>
-                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#22c55e' }}>{fmt(monthlySummary.income)}</p>
+                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#22c55e' }}>{formatCurrency(monthlySummary.income)}</p>
                   {incomeDelta !== null && incomeDelta !== 0 && (
                     <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: incomeDelta > 0 ? '#22c55e' : '#f97316' }}>
-                      {incomeDelta > 0 ? '+' : ''}{fmt(incomeDelta)} vs prior
+                      {incomeDelta > 0 ? '+' : ''}{formatCurrency(incomeDelta)} vs prior
                     </p>
                   )}
                 </div>
                 <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
                   <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Spending</p>
-                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#f97316' }}>{fmt(monthlySummary.spending)}</p>
+                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: '#f97316' }}>{formatCurrency(monthlySummary.spending)}</p>
                   {spendingDelta !== null && spendingDelta !== 0 && (
                     <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: spendingDelta < 0 ? '#22c55e' : '#f97316' }}>
-                      {spendingDelta > 0 ? '+' : ''}{fmt(spendingDelta)} vs prior
+                      {spendingDelta > 0 ? '+' : ''}{formatCurrency(spendingDelta)} vs prior
                     </p>
                   )}
                 </div>
                 <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
                   <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Net</p>
-                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: monthlySummary.netCashFlow >= 0 ? '#22c55e' : '#f97316' }}>{fmt(monthlySummary.netCashFlow)}</p>
+                  <p className="num" style={{ fontSize: '18px', fontWeight: 600, color: monthlySummary.netCashFlow >= 0 ? '#22c55e' : '#f97316' }}>{formatCurrency(monthlySummary.netCashFlow)}</p>
                   {netDelta !== null && netDelta !== 0 && (
                     <p className="num" style={{ fontSize: '11px', marginTop: '5px', color: netDelta > 0 ? '#22c55e' : '#f97316' }}>
-                      {netDelta > 0 ? '+' : ''}{fmt(netDelta)} vs prior
+                      {netDelta > 0 ? '+' : ''}{formatCurrency(netDelta)} vs prior
                     </p>
                   )}
                 </div>
@@ -726,12 +725,12 @@ function Home() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0 ? '#f97316' : '#22c55e', flexShrink: 0 }} />
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      On track to spend <span className="num" style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{fmt(spendingForecast.projected)}</span> by end of month
+                      On track to spend <span className="num" style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCurrency(spendingForecast.projected)}</span> by end of month
                     </span>
                   </div>
                   {spendingForecast.vsLastMonth !== null && (
                     <span className="num" style={{ fontSize: '11px', fontWeight: 600, color: spendingForecast.vsLastMonth > 0 ? '#f97316' : '#22c55e', flexShrink: 0 }}>
-                      {spendingForecast.vsLastMonth > 0 ? '+' : ''}{fmt(spendingForecast.vsLastMonth)} vs last month
+                      {spendingForecast.vsLastMonth > 0 ? '+' : ''}{formatCurrency(spendingForecast.vsLastMonth)} vs last month
                     </span>
                   )}
                 </div>
@@ -743,7 +742,7 @@ function Home() {
                     <XAxis dataKey="category" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={48} />
                     <Tooltip
-                      formatter={(value) => fmt(Number(value))}
+                      formatter={(value) => formatCurrency(Number(value))}
                       contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
                       labelStyle={{ color: '#f59e0b' }}
                       itemStyle={{ color: '#f3f4f6' }}
@@ -764,7 +763,7 @@ function Home() {
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={56} />
                 <Tooltip
-                  formatter={(value, name) => [fmt(Number(value)), name === "income" ? "Income" : name === "spending" ? "Spending" : "Net"]}
+                  formatter={(value, name) => [formatCurrency(Number(value)), name === "income" ? "Income" : name === "spending" ? "Spending" : "Net"]}
                   contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}
                   labelStyle={{ color: '#9ca3af' }}
                   cursor={{ fill: '#ffffff06' }}
@@ -902,7 +901,7 @@ function Home() {
                       >
                         <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>{budget.category}</p>
                         <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {fmt(budget.currentSpending)} spent of {fmt(budget.monthlyLimit)}
+                          {formatCurrency(budget.currentSpending)} spent of {formatCurrency(budget.monthlyLimit)}
                         </p>
                       </Link>
                       <button
@@ -941,7 +940,7 @@ function Home() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '12px' }}>
                       <span className="num" style={{ color: budget.isOverBudget ? '#f87171' : 'var(--text-secondary)' }}>
-                        {budget.isOverBudget ? `${fmt(Math.abs(budget.remaining))} over budget` : `${fmt(budget.remaining)} remaining`}
+                        {budget.isOverBudget ? `${formatCurrency(Math.abs(budget.remaining))} over budget` : `${formatCurrency(budget.remaining)} remaining`}
                       </span>
                       <span className="num" style={{ color: 'var(--text-muted)' }}>
                         {budget.percentageUsed.toFixed(0)}% used
@@ -1178,7 +1177,7 @@ function Home() {
                             </p>
                           )}
                           <p className="num" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            {fmt(rule.amount)} · {rule.frequency.toLowerCase()} · {rule.accountNickname ?? rule.accountOwnerName}
+                            {formatCurrency(rule.amount)} · {rule.frequency.toLowerCase()} · {rule.accountNickname ?? rule.accountOwnerName}
                           </p>
                           {(rule.category || rule.merchant || rule.description) && (
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -1267,7 +1266,7 @@ function Home() {
                     Since {first.month}
                   </p>
                   <p className="num" style={{ fontSize: '14px', fontWeight: 700, color: delta >= 0 ? '#22c55e' : '#ef4444' }}>
-                    {delta >= 0 ? '+' : ''}{fmt(delta)}
+                    {delta >= 0 ? '+' : ''}{formatCurrency(delta)}
                   </p>
                 </div>
               );
@@ -1280,7 +1279,7 @@ function Home() {
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} width={56} />
               <Tooltip
                 formatter={(value, name) => [
-                  fmt(Number(value)),
+                  formatCurrency(Number(value)),
                   name === "netWorth" ? "Net Worth" : name === "totalAssets" ? "Assets" : "Debt",
                 ]}
                 contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', fontSize: '12px', color: '#f3f4f6' }}

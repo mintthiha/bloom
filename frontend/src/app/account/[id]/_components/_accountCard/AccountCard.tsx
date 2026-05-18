@@ -4,13 +4,7 @@ import { Account } from "@/lib/api";
 import { DeleteAccount } from "../_accountActions/DeleteAccount";
 import { FreezeButton } from "../_accountActions/FreezeButton";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
-
-/** Formats a number as CAD currency. */
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency: "CAD",
-  }).format(n);
+import { formatCurrency } from "@/lib/format";
 
 type AccountCardProps = {
   account: Account | null;
@@ -161,7 +155,7 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
                 color: accentColor,
               }}
             >
-              {fmt(account.balance)}
+              {formatCurrency(account.balance)}
             </p>
           </div>
           <FreezeButton

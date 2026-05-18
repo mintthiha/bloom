@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { Account, AccountType } from "@/lib/api";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { formatCurrency } from "@/lib/format";
 
 const ORDER_KEY = "bloom-account-order";
 
@@ -33,9 +34,6 @@ const ACCOUNT_GROUPS: {
   },
 ];
 
-/** Formats a number as CAD currency. */
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
 
 interface DraggableAccountListProps {
   accounts: Account[];
@@ -388,7 +386,7 @@ export function DraggableAccountList({
                         color: meta.color,
                       }}
                     >
-                      {fmt(acc.balance)}
+                      {formatCurrency(acc.balance)}
                     </span>
                     <svg
                       width="16"

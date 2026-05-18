@@ -1,18 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { api, Account } from "@/lib/api";
-
-const inputStyle = {
-  width: '100%',
-  background: 'var(--surface-2)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
-  padding: '10px 14px',
-  fontSize: '14px',
-  color: 'var(--text-primary)',
-  outline: 'none',
-  fontFamily: 'inherit',
-};
+import { inputStyle } from "@/lib/styles/input";
 
 type NicknameEditorProps = {
   accountId: string;

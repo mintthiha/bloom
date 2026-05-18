@@ -1,13 +1,13 @@
 "use client";
 
 import { BudgetActivity } from "@/lib/api";
+import { formatCurrency } from "@/lib/format";
 
 type NumCardsProps = {
   budget: BudgetActivity;
-  formatCurrency: (n: number) => string;
 };
 
-export function NumCards({ budget, formatCurrency }: NumCardsProps) {
+export function NumCards({ budget }: NumCardsProps) {
   return (
     <div
       style={{
