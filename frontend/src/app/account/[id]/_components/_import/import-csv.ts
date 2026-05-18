@@ -10,6 +10,116 @@ export type CsvRow = {
 
 export const CSV_TEMPLATE = `date,type,amount,description,merchant,category\n2026-01-15,deposit,1500.00,January salary,,Salary\n2026-01-18,withdrawal,85.50,Weekly groceries,Loblaws,Groceries\n`;
 
+/**
+ * Known merchant patterns keyed by a regex matched against the description.
+ * Checked in order; first match wins.
+ */
+const MERCHANT_DICTIONARY: [pattern: RegExp, name: string][] = [
+  [/\bAMZN\b|Amazon Mktp/i, "Amazon"],
+  [/\bSpotify\b/i, "Spotify"],
+  [/\bDOLLARAMA\b/i, "Dollarama"],
+  [/\bPHARMAPRIX\b/i, "Pharmaprix"],
+  [/\bMAXI\b/i, "Maxi"],
+  [/WAL[- ]?MART|WALMART/i, "Walmart"],
+  [/PETRO[- ]?CANADA/i, "Petro-Canada"],
+  [/\bECONOFITNESS\b/i, "Econofitness"],
+  [/\bIMPARK\b/i, "Impark"],
+  [/\bPOPEYE/i, "Popeyes"],
+  [/\bSUBWAY\b/i, "Subway"],
+  [/\bPIZZA HUT\b/i, "Pizza Hut"],
+  [/\bGOOGLE\b/i, "Google"],
+  [/\bNETFLIX\b/i, "Netflix"],
+  [/\bAPPLE\.COM\b|APPLE STORE/i, "Apple"],
+  [/\bMICROSOFT\b/i, "Microsoft"],
+  [/\bLOBLAW/i, "Loblaws"],
+  [/\bSUPER C\b/i, "Super C"],
+  [/\bCANADIAN TIRE\b/i, "Canadian Tire"],
+  [/\bTIM HORTONS\b/i, "Tim Hortons"],
+  [/\bSTARBUCKS\b/i, "Starbucks"],
+  [/\bMCDONALD/i, "McDonald's"],
+  [/\bBURGER KING\b/i, "Burger King"],
+  [/\bUBER\b/i, "Uber"],
+  [/DOORDASH|DOOR DASH/i, "DoorDash"],
+  [/SKIP.*DISHES|SKIPTHEDISHES/i, "SkipTheDishes"],
+  [/\bSAQ\b|SOCIETE DES ALCOOLS/i, "SAQ"],
+  [/\bCINEPLEX\b/i, "Cineplex"],
+  [/\bCINE STARZ\b/i, "Ciné Starz"],
+  [/\bAIRBNB\b/i, "Airbnb"],
+  [/\bBEST BUY\b/i, "Best Buy"],
+  [/\bCOSTCO\b/i, "Costco"],
+  [/\bURBAN PLANET\b/i, "Urban Planet"],
+  [/\bRTM\b/i, "RTM"],
+  [/\bIGA\b/i, "IGA"],
+  [/\bHYDRO[- ]?QUEBEC\b/i, "Hydro-Québec"],
+  [/\bBELL CANADA\b|\bBELL MOBILITY\b/i, "Bell"],
+  [/\bVIDEOTRON\b/i, "Vidéotron"],
+  [/\bROGERS\b/i, "Rogers"],
+  [/\bTELUS\b/i, "Telus"],
+];
+
+/** City/location words that signal the end of a merchant name in a description. */
+const CITY_WORDS = new Set([
+  "MONTREAL", "TORONTO", "VANCOUVER", "CALGARY", "OTTAWA", "EDMONTON",
+  "WINNIPEG", "LAVAL", "GATINEAU", "BLAINVILLE", "WESTMOUNT", "STOCKHOLM",
+  "CHATEAUGUAY", "KIRKLAND", "LONGUEUIL", "BROSSARD", "LASALLE", "POINTE",
+]);
+
+/** Returns true for descriptions that represent a credit card payment (no merchant). */
+function isPaymentDescription(description: string): boolean {
+  return /PAYMENT.*THANK|PAI\s*EMENT.*MERCI|REMBOURSEMENT/i.test(description);
+}
+
+/**
+ * Tries the merchant dictionary first, then falls back to a heuristic that takes
+ * the first meaningful words of the description before store numbers or city names.
+ */
+export function extractMerchant(description: string): string | undefined {
+  if (isPaymentDescription(description)) return undefined;
+
+  for (const [pattern, merchantName] of MERCHANT_DICTIONARY) {
+    if (pattern.test(description)) return merchantName;
+  }
+
+  // Heuristic fallback: walk words until a number, long code, or known city
+  const words = description.split(/\s+/);
+  const kept: string[] = [];
+  for (const word of words) {
+    const alphanumOnly = word.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    if (!alphanumOnly) continue;
+    if (/^\d+$/.test(alphanumOnly)) break;
+    if (CITY_WORDS.has(alphanumOnly)) break;
+    if (alphanumOnly.length >= 8 && /\d/.test(alphanumOnly)) break;
+    kept.push(word);
+    if (kept.length >= 3) break;
+  }
+
+  if (!kept.length) return undefined;
+
+  return kept
+    .join(" ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
+/**
+ * Maps a display type string (deposit, withdrawal, charge, payment, credit, debit)
+ * to the API's DEPOSIT | WITHDRAWAL enum value.
+ *
+ * For credit card accounts: charge → DEPOSIT (increases balance/debt),
+ * payment → WITHDRAWAL (decreases balance/debt).
+ */
+export function resolveApiType(type: string): "DEPOSIT" | "WITHDRAWAL" {
+  switch (type.toLowerCase()) {
+    case "deposit":
+    case "credit":
+    case "charge":
+      return "DEPOSIT";
+    default:
+      return "WITHDRAWAL";
+  }
+}
+
 export function splitCsvLine(line: string): string[] {
   const result: string[] = [];
   let current = "";
@@ -34,15 +144,25 @@ function convertRbcDate(dateStr: string): string {
   const parts = dateStr.split("/");
   if (parts.length !== 3) return dateStr;
   const [month, day, year] = parts;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  return `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
 }
 
 export function parseCsvText(text: string): CsvRow[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = splitCsvLine(lines[0]).map(h => h.toLowerCase().replace(/^"|"$/g, "").trim());
+  const headers = splitCsvLine(lines[0]!).map(h => h.toLowerCase().replace(/^"|"$/g, "").trim());
 
   const isRbc = headers.includes("transaction date") && headers.includes("cad$") && headers.includes("cheque number");
+
+  // Detect whether this is an RBC credit card export (Visa / Mastercard / Amex)
+  let isRbcCredit = false;
+  if (isRbc) {
+    const firstDataLine = lines.slice(1).find(l => l.trim());
+    if (firstDataLine) {
+      const csvAccountType = (splitCsvLine(firstDataLine)[0] ?? "").trim().toLowerCase();
+      isRbcCredit = csvAccountType === "visa" || csvAccountType === "mastercard" || csvAccountType === "amex";
+    }
+  }
 
   return lines.slice(1).filter(l => l.trim()).map((line) => {
     const values = splitCsvLine(line);
@@ -54,12 +174,19 @@ export function parseCsvText(text: string): CsvRow[] {
       const desc1 = raw["description 1"] ?? "";
       const desc2 = raw["description 2"] ?? "";
       const description = desc1 && desc2 ? `${desc1} - ${desc2}` : (desc1 || desc2 || undefined);
+
+      // Credit card: negative = charge, positive = payment
+      // Chequing/savings: positive = deposit, negative = withdrawal
+      const type = isRbcCredit
+        ? (cadNum >= 0 ? "payment" : "charge")
+        : (cadNum >= 0 ? "deposit" : "withdrawal");
+
       const row: CsvRow = {
         date: convertRbcDate(raw["transaction date"] ?? ""),
-        type: cadNum >= 0 ? "deposit" : "withdrawal",
+        type,
         amount: Math.abs(cadNum).toFixed(2),
         description: description || undefined,
-        merchant: undefined,
+        merchant: extractMerchant(desc1),
         category: undefined,
       };
       if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
@@ -79,7 +206,10 @@ export function parseCsvText(text: string): CsvRow[] {
       category: raw["category"] || undefined,
     };
     const normalizedType = row.type.toLowerCase();
-    const resolvedType = normalizedType === "credit" ? "deposit" : normalizedType === "debit" ? "withdrawal" : normalizedType;
+    const resolvedType =
+      normalizedType === "credit" || normalizedType === "charge" ? "deposit" :
+      normalizedType === "debit" || normalizedType === "payment" ? "withdrawal" :
+      normalizedType;
     if (resolvedType !== "deposit" && resolvedType !== "withdrawal") {
       row.error = `Unknown type "${row.type}"`;
     } else if (!row.date || Number.isNaN(new Date(row.date).getTime())) {

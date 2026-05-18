@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { CsvRow, CSV_TEMPLATE, parseCsvText } from "./import-csv";
+import { CsvRow, CSV_TEMPLATE, parseCsvText, resolveApiType } from "./import-csv";
 
 type ImportTabProps = {
   accountId: string;
@@ -37,18 +37,14 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
     if (valid.length === 0) return;
     setCsvImporting(true);
     try {
-      const rows = valid.map(r => {
-        const normalizedType = r.type.toLowerCase();
-        const resolvedType = normalizedType === "credit" ? "deposit" : normalizedType === "debit" ? "withdrawal" : normalizedType;
-        return {
-          type: (resolvedType === "deposit" ? "DEPOSIT" : "WITHDRAWAL") as "DEPOSIT" | "WITHDRAWAL",
-          amount: Number(r.amount),
-          date: r.date,
-          description: r.description,
-          merchant: r.merchant,
-          category: r.category,
-        };
-      });
+      const rows = valid.map(r => ({
+        type: resolveApiType(r.type),
+        amount: Number(r.amount),
+        date: r.date,
+        description: r.description,
+        merchant: r.merchant,
+        category: r.category,
+      }));
       const result = await api.importCsv(accountId, rows);
       onSuccess(result.imported);
     } catch (err) {
@@ -65,7 +61,7 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
         Upload a CSV with columns: <span className="num" style={{ color: 'var(--text-primary)' }}>date, type, amount, description, merchant, category</span>.
-        Type accepts <span className="num">deposit</span>, <span className="num">withdrawal</span>, <span className="num">credit</span>, or <span className="num">debit</span>.
+        Type accepts <span className="num">deposit</span>, <span className="num">withdrawal</span>, <span className="num">charge</span>, <span className="num">payment</span>, <span className="num">credit</span>, or <span className="num">debit</span>.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
         <label style={{
