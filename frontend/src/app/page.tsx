@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
+import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
+import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import {
   ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Cell, Legend,
@@ -26,20 +28,6 @@ import {
 
 const EXPENSE_BUDGET_CATEGORIES = ["Groceries", "Rent", "Utilities", "Transport", "Dining", "Shopping", "Healthcare", "Entertainment", "Other", "Custom..."];
 
-const ACCOUNT_TYPE_META: Record<AccountType, { label: string; color: string; soft: string; border: string }> = {
-  CHEQUING: { label: "Chequing", color: "#f59e0b", soft: "#f59e0b22", border: "#f59e0b44" },
-  SAVINGS: { label: "Savings", color: "#22c55e", soft: "#16a34a22", border: "#16a34a44" },
-  TFSA: { label: "TFSA", color: "#38bdf8", soft: "#0ea5e922", border: "#0ea5e944" },
-  RRSP: { label: "RRSP", color: "#a78bfa", soft: "#8b5cf622", border: "#8b5cf644" },
-  FHSA: { label: "FHSA", color: "#fb7185", soft: "#f43f5e22", border: "#f43f5e44" },
-  CREDIT: { label: "Credit", color: "#ef4444", soft: "#ef444422", border: "#ef444444" },
-};
-
-const ACCOUNT_GROUPS = [
-  { id: "cash", title: "Cash Accounts", description: "Daily banking and savings balances.", types: ["CHEQUING", "SAVINGS"] as AccountType[] },
-  { id: "registered", title: "Registered Accounts", description: "Tax-advantaged savings and investment accounts.", types: ["TFSA", "RRSP", "FHSA"] as AccountType[] },
-  { id: "credit", title: "Credit Accounts", description: "Debt balances tracked separately from cash.", types: ["CREDIT"] as AccountType[] },
-];
 
 function Home() {
   const { view } = useDashboardView();
@@ -479,87 +467,12 @@ function Home() {
     ...budgets.map((budget) => budget.category),
   ])).sort((left, right) => left.localeCompare(right));
   const dashboardColumns = view === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
-  const groupedAccounts = ACCOUNT_GROUPS.map((group) => ({
-    ...group,
-    accounts: accounts.filter((account) => group.types.includes(account.accountType)),
-  })).filter((group) => group.accounts.length > 0);
   const accountBalanceChartData = accounts.map((account) => ({
     id: account.id,
     name: (account.nickname ?? account.ownerName).split(" ")[0],
     balance: account.balance,
     type: account.accountType,
   }));
-
-  function renderAccountCard(acc: Account, index: number) {
-    return (
-      <Link
-        key={acc.id}
-        href={`/account/${acc.id}`}
-        className="fade-up"
-        style={{
-          animationDelay: `${0.04 * index}s`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 20px',
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          textDecoration: 'none',
-          color: 'inherit',
-          transition: 'border-color 0.15s, background 0.15s',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-hover)';
-          (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)';
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-          (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)';
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '10px',
-            background: ACCOUNT_TYPE_META[acc.accountType].soft,
-            border: `1px solid ${ACCOUNT_TYPE_META[acc.accountType].border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '15px', fontWeight: 700,
-            color: ACCOUNT_TYPE_META[acc.accountType].color,
-          }}>
-            {(acc.nickname ?? acc.ownerName)[0].toUpperCase()}
-          </div>
-          <div>
-            <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: acc.nickname ? '1px' : '3px' }}>{acc.nickname ?? acc.ownerName}</p>
-            {acc.nickname && (
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>{acc.ownerName}</p>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{
-                fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em',
-                padding: '2px 6px', borderRadius: '4px',
-                background: ACCOUNT_TYPE_META[acc.accountType].soft,
-                color: ACCOUNT_TYPE_META[acc.accountType].color,
-              }}>
-                {ACCOUNT_TYPE_META[acc.accountType].label}
-              </span>
-              {acc.frozen && (
-                <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 6px', borderRadius: '4px', background: '#3b82f622', color: '#60a5fa' }}>
-                  FROZEN
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span className="num" style={{ fontSize: '15px', fontWeight: 500, color: ACCOUNT_TYPE_META[acc.accountType].color }}>{fmt(acc.balance)}</span>
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text-muted)">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </Link>
-    );
-  }
 
   function renderSummaryCard({
     title,
@@ -1528,33 +1441,7 @@ function Home() {
           <p style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Accounts</p>
           <span className="num" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{accounts.length}</span>
         </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: '72px' }} />)}
-          </div>
-        ) : accounts.length === 0 ? (
-          <div style={{ border: '1px dashed var(--border)', borderRadius: '14px', padding: '48px 24px', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No accounts yet.</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Open one above to get started.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {groupedAccounts.map((group) => (
-              <div key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
-                <div style={{ padding: '6px 4px 2px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    {group.title}
-                  </p>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                    {group.description}
-                  </p>
-                </div>
-                {group.accounts.map((acc, index) => renderAccountCard(acc, index))}
-              </div>
-            ))}
-          </div>
-        )}
+        <DraggableAccountList accounts={accounts} loading={loading} />
       </div>
     </div>
   );
