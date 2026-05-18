@@ -1,3 +1,5 @@
+"use client";
+import { useState, useEffect } from "react";
 import { Transaction, Account } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { DateRangeState } from "@/lib/date-range";
@@ -6,6 +8,8 @@ import {
   EXPENSE_CATEGORIES,
   TRANSACTION_FILTER_CATEGORIES,
 } from "@/lib/constants/account";
+
+const PAGE_SIZE = 4;
 
 interface TransactionHistoryProps {
   txns: Transaction[];
@@ -82,7 +86,7 @@ const fmt = (n: number) =>
     currency: "CAD",
   }).format(n);
 
-/** Renders the full transaction history panel with filters and inline editing. */
+/** Renders the full transaction history panel with filters, pagination, and inline editing. */
 export function TransactionHistory({
   txns,
   account,
@@ -113,6 +117,20 @@ export function TransactionHistory({
   onSaveTransaction,
   onRequestDelete,
 }: TransactionHistoryProps) {
+  const [page, setPage] = useState(1);
+
+  /** Resets to page 1 when filters change or the result set size changes (add/delete). */
+  useEffect(() => {
+    setPage(1);
+  }, [filterType, filterCategory, filterSearch, filterDateRange, txns.length]);
+
+  const totalPages = Math.max(1, Math.ceil(txns.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTxns = txns.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   const inputStyle = {
     width: "100%",
     background: "var(--surface-2)",
@@ -237,81 +255,176 @@ export function TransactionHistory({
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          {txns.map((t) => {
-            const { label, color, sign, icon } = txnMeta(
-              t,
-              account.accountType === "CREDIT",
-            );
-            const isEditing = editingTransactionId === t.id;
-            const canEdit = isEditableTransaction(t);
-            return (
-              <div
-                key={t.id}
-                style={{
-                  display: "flex",
-                  alignItems: isEditing ? "stretch" : "center",
-                  justifyContent: "space-between",
-                  padding: "14px 16px",
-                  borderRadius: "10px",
-                  transition: "background 0.1s",
-                  gap: "16px",
-                  flexWrap: isEditing ? "wrap" : "nowrap",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "var(--surface-2)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
+        <>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            {pagedTxns.map((t) => {
+              const { label, color, sign, icon } = txnMeta(
+                t,
+                account.accountType === "CREDIT",
+              );
+              const isEditing = editingTransactionId === t.id;
+              const canEdit = isEditableTransaction(t);
+              return (
                 <div
+                  key={t.id}
                   style={{
                     display: "flex",
-                    alignItems: isEditing ? "flex-start" : "center",
-                    gap: "14px",
-                    flex: isEditing ? "1 1 100%" : 1,
-                    minWidth: 0,
+                    alignItems: isEditing ? "stretch" : "center",
+                    justifyContent: "space-between",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    transition: "background 0.1s",
+                    gap: "16px",
+                    flexWrap: isEditing ? "wrap" : "nowrap",
                   }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "var(--surface-2)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <div
                     style={{
-                      width: "34px",
-                      height: "34px",
-                      borderRadius: "8px",
-                      flexShrink: 0,
-                      background: `${color}18`,
-                      border: `1px solid ${color}30`,
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      color,
+                      alignItems: isEditing ? "flex-start" : "center",
+                      gap: "14px",
+                      flex: isEditing ? "1 1 100%" : 1,
+                      minWidth: 0,
                     }}
                   >
-                    {icon}
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    {isEditing ? (
-                      <div
-                        style={{
-                          display: "grid",
-                          gap: "12px",
-                          width: "100%",
-                        }}
-                      >
+                    <div
+                      style={{
+                        width: "34px",
+                        height: "34px",
+                        borderRadius: "8px",
+                        flexShrink: 0,
+                        background: `${color}18`,
+                        border: `1px solid ${color}30`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color,
+                      }}
+                    >
+                      {icon}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      {isEditing ? (
                         <div
                           style={{
                             display: "grid",
-                            gridTemplateColumns: isDoubleColumn
-                              ? "minmax(0, 180px) minmax(0, 1fr)"
-                              : "1fr",
                             gap: "12px",
-                            alignItems: "start",
+                            width: "100%",
                           }}
                         >
-                          <label style={{ display: "grid", gap: "6px" }}>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: isDoubleColumn
+                                ? "minmax(0, 180px) minmax(0, 1fr)"
+                                : "1fr",
+                              gap: "12px",
+                              alignItems: "start",
+                            }}
+                          >
+                            <label style={{ display: "grid", gap: "6px" }}>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.08em",
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                Amount
+                              </span>
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={editingTransactionAmount}
+                                onChange={(e) =>
+                                  onEditingTransactionAmountChange(
+                                    e.target.value,
+                                  )
+                                }
+                                aria-label="Transaction amount"
+                                style={inputStyle}
+                              />
+                            </label>
+                            <label style={{ display: "grid", gap: "6px" }}>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.08em",
+                                  color: "var(--text-secondary)",
+                                }}
+                              >
+                                Category
+                              </span>
+                              <select
+                                value={editingTransactionCategory}
+                                onChange={(e) =>
+                                  onEditingTransactionCategoryChange(
+                                    e.target.value,
+                                  )
+                                }
+                                aria-label="Transaction category"
+                                style={{
+                                  ...inputStyle,
+                                  cursor: "pointer",
+                                  appearance: "none",
+                                  width: "100%",
+                                }}
+                              >
+                                <option value="">No category</option>
+                                {(t.type === "DEPOSIT" &&
+                                account.accountType !== "CREDIT"
+                                  ? INCOME_CATEGORIES
+                                  : t.type === "WITHDRAWAL" ||
+                                      (t.type === "DEPOSIT" &&
+                                        account.accountType === "CREDIT")
+                                    ? EXPENSE_CATEGORIES
+                                    : ["Transfer"]
+                                ).map((categoryOption) => (
+                                  <option
+                                    key={categoryOption}
+                                    value={categoryOption}
+                                  >
+                                    {categoryOption}
+                                  </option>
+                                ))}
+                                {editingTransactionCategory &&
+                                  !(
+                                    t.type === "DEPOSIT" &&
+                                    account.accountType !== "CREDIT"
+                                      ? INCOME_CATEGORIES
+                                      : t.type === "WITHDRAWAL" ||
+                                          (t.type === "DEPOSIT" &&
+                                            account.accountType === "CREDIT")
+                                        ? EXPENSE_CATEGORIES
+                                        : ["Transfer"]
+                                  ).includes(editingTransactionCategory) && (
+                                    <option value={editingTransactionCategory}>
+                                      {editingTransactionCategory}
+                                    </option>
+                                  )}
+                              </select>
+                            </label>
+                          </div>
+                          <label
+                            style={{
+                              display: "grid",
+                              gap: "6px",
+                              maxWidth: isDoubleColumn ? "320px" : "100%",
+                            }}
+                          >
                             <span
                               style={{
                                 fontSize: "11px",
@@ -321,382 +434,205 @@ export function TransactionHistory({
                                 color: "var(--text-secondary)",
                               }}
                             >
-                              Amount
+                              Merchant
                             </span>
                             <input
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              value={editingTransactionAmount}
+                              type="text"
+                              value={editingTransactionMerchant}
                               onChange={(e) =>
-                                onEditingTransactionAmountChange(e.target.value)
-                              }
-                              aria-label="Transaction amount"
-                              style={inputStyle}
-                            />
-                          </label>
-                          <label style={{ display: "grid", gap: "6px" }}>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                fontWeight: 600,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.08em",
-                                color: "var(--text-secondary)",
-                              }}
-                            >
-                              Category
-                            </span>
-                            <select
-                              value={editingTransactionCategory}
-                              onChange={(e) =>
-                                onEditingTransactionCategoryChange(
+                                onEditingTransactionMerchantChange(
                                   e.target.value,
                                 )
                               }
-                              aria-label="Transaction category"
-                              style={{
-                                ...inputStyle,
-                                cursor: "pointer",
-                                appearance: "none",
-                                width: "100%",
-                              }}
-                            >
-                              <option value="">No category</option>
-                              {(t.type === "DEPOSIT" &&
-                              account.accountType !== "CREDIT"
-                                ? INCOME_CATEGORIES
-                                : t.type === "WITHDRAWAL" ||
-                                    (t.type === "DEPOSIT" &&
-                                      account.accountType === "CREDIT")
-                                  ? EXPENSE_CATEGORIES
-                                  : ["Transfer"]
-                              ).map((categoryOption) => (
-                                <option
-                                  key={categoryOption}
-                                  value={categoryOption}
-                                >
-                                  {categoryOption}
-                                </option>
-                              ))}
-                              {editingTransactionCategory &&
-                                !(
-                                  t.type === "DEPOSIT" &&
-                                  account.accountType !== "CREDIT"
-                                    ? INCOME_CATEGORIES
-                                    : t.type === "WITHDRAWAL" ||
-                                        (t.type === "DEPOSIT" &&
-                                          account.accountType === "CREDIT")
-                                      ? EXPENSE_CATEGORIES
-                                      : ["Transfer"]
-                                ).includes(editingTransactionCategory) && (
-                                  <option value={editingTransactionCategory}>
-                                    {editingTransactionCategory}
-                                  </option>
-                                )}
-                            </select>
+                              aria-label="Transaction merchant"
+                              placeholder="Merchant"
+                              style={inputStyle}
+                            />
                           </label>
+                          <label
+                            style={{
+                              display: "grid",
+                              gap: "6px",
+                              maxWidth: isDoubleColumn ? "260px" : "100%",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.08em",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
+                              Date and time
+                            </span>
+                            <input
+                              type="datetime-local"
+                              value={editingTransactionDateTime}
+                              onChange={(e) =>
+                                onEditingTransactionDateTimeChange(
+                                  e.target.value,
+                                )
+                              }
+                              aria-label="Transaction date and time"
+                              style={inputStyle}
+                            />
+                          </label>
+                          <p
+                            className="num"
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            Recorded{" "}
+                            {new Date(t.createdAt).toLocaleString("en-CA", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </p>
                         </div>
-                        <label
-                          style={{
-                            display: "grid",
-                            gap: "6px",
-                            maxWidth: isDoubleColumn ? "320px" : "100%",
-                          }}
-                        >
-                          <span
+                      ) : (
+                        <>
+                          <p
                             style={{
-                              fontSize: "11px",
                               fontWeight: 600,
-                              textTransform: "uppercase",
-                              letterSpacing: "0.08em",
-                              color: "var(--text-secondary)",
+                              fontSize: "14px",
+                              marginBottom: "3px",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                             }}
                           >
-                            Merchant
-                          </span>
-                          <input
-                            type="text"
-                            value={editingTransactionMerchant}
-                            onChange={(e) =>
-                              onEditingTransactionMerchantChange(e.target.value)
-                            }
-                            aria-label="Transaction merchant"
-                            placeholder="Merchant"
-                            style={inputStyle}
-                          />
-                        </label>
-                        <label
-                          style={{
-                            display: "grid",
-                            gap: "6px",
-                            maxWidth: isDoubleColumn ? "260px" : "100%",
-                          }}
-                        >
-                          <span
+                            {t.merchant || t.description || label}
+                          </p>
+                          <p
+                            className="num"
                             style={{
                               fontSize: "11px",
-                              fontWeight: 600,
-                              textTransform: "uppercase",
-                              letterSpacing: "0.08em",
-                              color: "var(--text-secondary)",
+                              color: "var(--text-muted)",
                             }}
                           >
-                            Date and time
-                          </span>
-                          <input
-                            type="datetime-local"
-                            value={editingTransactionDateTime}
-                            onChange={(e) =>
-                              onEditingTransactionDateTimeChange(e.target.value)
-                            }
-                            aria-label="Transaction date and time"
-                            style={inputStyle}
-                          />
-                        </label>
-                        <p
-                          className="num"
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          Recorded{" "}
-                          {new Date(t.createdAt).toLocaleString("en-CA", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <p
-                          style={{
-                            fontWeight: 600,
-                            fontSize: "14px",
-                            marginBottom: "3px",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {t.merchant || t.description || label}
-                        </p>
-                        <p
-                          className="num"
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--text-muted)",
-                          }}
-                        >
-                          {(t.merchant || t.description) && (
-                            <span
-                              style={{
-                                color: "var(--text-secondary)",
-                                marginRight: "8px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.04em",
-                                fontSize: "10px",
-                              }}
-                            >
-                              {label}
-                            </span>
-                          )}
-                          {t.category && (
-                            <span
-                              style={{
-                                color: "var(--text-secondary)",
-                                marginRight: "8px",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.04em",
-                                fontSize: "10px",
-                              }}
-                            >
-                              {t.category}
-                            </span>
-                          )}
-                          {t.merchant && (
-                            <span
-                              style={{
-                                color: "var(--text-secondary)",
-                                marginRight: "8px",
-                                fontSize: "10px",
-                              }}
-                            >
-                              {t.merchant}
-                            </span>
-                          )}
-                          {!t.merchant && t.description && (
-                            <span
-                              style={{
-                                color: "var(--text-secondary)",
-                                marginRight: "8px",
-                                fontSize: "10px",
-                              }}
-                            >
-                              {t.description}
-                            </span>
-                          )}
-                          {new Date(t.effectiveAt).toLocaleString("en-CA", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    textAlign: isEditing ? "left" : "right",
-                    flexShrink: 0,
-                    minWidth: isEditing ? "100%" : "160px",
-                    marginLeft: isEditing ? "48px" : "0",
-                  }}
-                >
-                  {isEditing ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-start",
-                        gap: "8px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onSaveTransaction(t.id)}
-                        disabled={savingTransaction}
-                        style={{
-                          padding: "8px 12px",
-                          background: "#f59e0b",
-                          color: "#000",
-                          border: "none",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: savingTransaction ? "not-allowed" : "pointer",
-                          opacity: savingTransaction ? 0.45 : 1,
-                        }}
-                      >
-                        {savingTransaction ? "Saving..." : "Save"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={onCancelEditing}
-                        disabled={savingTransaction}
-                        style={{
-                          padding: "8px 12px",
-                          border: "1px solid var(--border)",
-                          background: "transparent",
-                          color: "var(--text-secondary)",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          cursor: savingTransaction ? "not-allowed" : "pointer",
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRequestDelete(t.id)}
-                        disabled={
-                          savingTransaction || deletingTransactionId === t.id
-                        }
-                        style={{
-                          padding: "6px 10px",
-                          border: "1px solid #f8717130",
-                          background: "transparent",
-                          color: "#f87171",
-                          borderRadius: "8px",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          cursor:
-                            savingTransaction || deletingTransactionId === t.id
-                              ? "not-allowed"
-                              : "pointer",
-                          opacity:
-                            savingTransaction || deletingTransactionId === t.id
-                              ? 0.45
-                              : 1,
-                        }}
-                      >
-                        {deletingTransactionId === t.id
-                          ? "Deleting..."
-                          : "Delete"}
-                      </button>
+                            {(t.merchant || t.description) && (
+                              <span
+                                style={{
+                                  color: "var(--text-secondary)",
+                                  marginRight: "8px",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.04em",
+                                  fontSize: "10px",
+                                }}
+                              >
+                                {label}
+                              </span>
+                            )}
+                            {t.category && (
+                              <span
+                                style={{
+                                  color: "var(--text-secondary)",
+                                  marginRight: "8px",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.04em",
+                                  fontSize: "10px",
+                                }}
+                              >
+                                {t.category}
+                              </span>
+                            )}
+                            {t.merchant && (
+                              <span
+                                style={{
+                                  color: "var(--text-secondary)",
+                                  marginRight: "8px",
+                                  fontSize: "10px",
+                                }}
+                              >
+                                {t.merchant}
+                              </span>
+                            )}
+                            {!t.merchant && t.description && (
+                              <span
+                                style={{
+                                  color: "var(--text-secondary)",
+                                  marginRight: "8px",
+                                  fontSize: "10px",
+                                }}
+                              >
+                                {t.description}
+                              </span>
+                            )}
+                            {new Date(t.effectiveAt).toLocaleString("en-CA", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <p
-                        className="num"
+                  </div>
+                  <div
+                    style={{
+                      textAlign: isEditing ? "left" : "right",
+                      flexShrink: 0,
+                      minWidth: isEditing ? "100%" : "160px",
+                      marginLeft: isEditing ? "48px" : "0",
+                    }}
+                  >
+                    {isEditing ? (
+                      <div
                         style={{
-                          fontSize: "14px",
-                          fontWeight: 600,
-                          color,
-                          marginBottom: "3px",
+                          display: "flex",
+                          justifyContent: "flex-start",
+                          gap: "8px",
+                          flexWrap: "wrap",
                         }}
                       >
-                        {sign} {fmt(t.amount)}
-                      </p>
-                      <p
-                        className="num"
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--text-muted)",
-                          marginBottom: canEdit ? "10px" : "0",
-                        }}
-                      >
-                        {fmt(t.balanceAfter)}
-                      </p>
-                    </>
-                  )}
-
-                  {canEdit ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        gap: "8px",
-                      }}
-                    >
-                      {!isEditing && (
                         <button
                           type="button"
-                          onClick={() => onStartEditing(t)}
-                          disabled={
-                            savingTransaction || deletingTransactionId === t.id
-                          }
+                          onClick={() => onSaveTransaction(t.id)}
+                          disabled={savingTransaction}
                           style={{
-                            padding: "6px 10px",
+                            padding: "8px 12px",
+                            background: "#f59e0b",
+                            color: "#000",
+                            border: "none",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            cursor: savingTransaction
+                              ? "not-allowed"
+                              : "pointer",
+                            opacity: savingTransaction ? 0.45 : 1,
+                          }}
+                        >
+                          {savingTransaction ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={onCancelEditing}
+                          disabled={savingTransaction}
+                          style={{
+                            padding: "8px 12px",
                             border: "1px solid var(--border)",
                             background: "transparent",
                             color: "var(--text-secondary)",
                             borderRadius: "8px",
-                            fontSize: "11px",
+                            fontSize: "12px",
                             fontWeight: 600,
-                            cursor:
-                              savingTransaction ||
-                              deletingTransactionId === t.id
-                                ? "not-allowed"
-                                : "pointer",
-                            opacity:
-                              savingTransaction ||
-                              deletingTransactionId === t.id
-                                ? 0.45
-                                : 1,
+                            cursor: savingTransaction
+                              ? "not-allowed"
+                              : "pointer",
                           }}
                         >
-                          Edit
+                          Cancel
                         </button>
-                      )}
-                      {!isEditing && (
                         <button
                           type="button"
                           onClick={() => onRequestDelete(t.id)}
                           disabled={
-                            savingTransaction || deletingTransactionId === t.id
+                            savingTransaction ||
+                            deletingTransactionId === t.id
                           }
                           style={{
                             padding: "6px 10px",
@@ -722,14 +658,172 @@ export function TransactionHistory({
                             ? "Deleting..."
                             : "Delete"}
                         </button>
-                      )}
-                    </div>
-                  ) : null}
+                      </div>
+                    ) : (
+                      <>
+                        <p
+                          className="num"
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: 600,
+                            color,
+                            marginBottom: "3px",
+                          }}
+                        >
+                          {sign} {fmt(t.amount)}
+                        </p>
+                        <p
+                          className="num"
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--text-muted)",
+                            marginBottom: canEdit ? "10px" : "0",
+                          }}
+                        >
+                          {fmt(t.balanceAfter)}
+                        </p>
+                      </>
+                    )}
+
+                    {canEdit ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          gap: "8px",
+                        }}
+                      >
+                        {!isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => onStartEditing(t)}
+                            disabled={
+                              savingTransaction ||
+                              deletingTransactionId === t.id
+                            }
+                            style={{
+                              padding: "6px 10px",
+                              border: "1px solid var(--border)",
+                              background: "transparent",
+                              color: "var(--text-secondary)",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              cursor:
+                                savingTransaction ||
+                                deletingTransactionId === t.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity:
+                                savingTransaction ||
+                                deletingTransactionId === t.id
+                                  ? 0.45
+                                  : 1,
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {!isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => onRequestDelete(t.id)}
+                            disabled={
+                              savingTransaction ||
+                              deletingTransactionId === t.id
+                            }
+                            style={{
+                              padding: "6px 10px",
+                              border: "1px solid #f8717130",
+                              background: "transparent",
+                              color: "#f87171",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              cursor:
+                                savingTransaction ||
+                                deletingTransactionId === t.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity:
+                                savingTransaction ||
+                                deletingTransactionId === t.id
+                                  ? 0.45
+                                  : 1,
+                            }}
+                          >
+                            {deletingTransactionId === t.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingTop: "16px",
+                borderTop: "1px solid var(--border)",
+                marginTop: "8px",
+              }}
+            >
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: "6px 12px",
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color:
+                    currentPage === 1
+                      ? "var(--text-muted)"
+                      : "var(--text-secondary)",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                }}
+              >
+                ← Prev
+              </button>
+              <span
+                className="num"
+                style={{ fontSize: "12px", color: "var(--text-muted)" }}
+              >
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: "6px 12px",
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color:
+                    currentPage === totalPages
+                      ? "var(--text-muted)"
+                      : "var(--text-secondary)",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor:
+                    currentPage === totalPages ? "not-allowed" : "pointer",
+                }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

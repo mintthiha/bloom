@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, use, useMemo } from "react";
 import Link from "next/link";
 import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
-import { BackToHome } from "./_components/_accountActions/BackToHome";
+import { BackToHome } from "@/components/BackToHome";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { AccountCard } from "./_components/_accountCard/AccountCard";
 import { NicknameEditor } from "./_components/_accountActions/NicknameEditor";
