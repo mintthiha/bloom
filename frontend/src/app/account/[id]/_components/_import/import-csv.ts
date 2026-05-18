@@ -103,6 +103,65 @@ export function extractMerchant(description: string): string | undefined {
 }
 
 /**
+ * Maps a resolved merchant name to a best-guess expense category using the
+ * app's standard category list. Returns undefined for merchants with no clear match.
+ */
+const MERCHANT_CATEGORY_MAP: Record<string, string> = {
+  // Groceries
+  "Loblaws": "Groceries",
+  "Maxi": "Groceries",
+  "IGA": "Groceries",
+  "Super C": "Groceries",
+  "Costco": "Groceries",
+  "Walmart": "Groceries",
+  // Dining
+  "Tim Hortons": "Dining",
+  "Starbucks": "Dining",
+  "McDonald's": "Dining",
+  "Burger King": "Dining",
+  "Subway": "Dining",
+  "Pizza Hut": "Dining",
+  "Popeyes": "Dining",
+  "DoorDash": "Dining",
+  "SkipTheDishes": "Dining",
+  "Uber": "Dining",
+  // Entertainment
+  "Netflix": "Entertainment",
+  "Spotify": "Entertainment",
+  "Cineplex": "Entertainment",
+  "Ciné Starz": "Entertainment",
+  "Apple": "Entertainment",
+  "Google": "Entertainment",
+  // Shopping
+  "Amazon": "Shopping",
+  "Dollarama": "Shopping",
+  "Best Buy": "Shopping",
+  "Canadian Tire": "Shopping",
+  "Urban Planet": "Shopping",
+  "SAQ": "Shopping",
+  "Airbnb": "Shopping",
+  "Microsoft": "Shopping",
+  // Healthcare
+  "Pharmaprix": "Healthcare",
+  "Econofitness": "Healthcare",
+  // Transport
+  "Petro-Canada": "Transport",
+  "Impark": "Transport",
+  "RTM": "Transport",
+  // Utilities
+  "Hydro-Québec": "Utilities",
+  "Bell": "Utilities",
+  "Vidéotron": "Utilities",
+  "Rogers": "Utilities",
+  "Telus": "Utilities",
+};
+
+/** Returns the standard category for a known merchant name, or undefined if unrecognized. */
+export function lookupMerchantCategory(merchantName: string): string | undefined {
+  return MERCHANT_CATEGORY_MAP[merchantName];
+}
+
+/**
  * Maps a display type string (deposit, withdrawal, charge, payment, credit, debit)
  * to the API's DEPOSIT | WITHDRAWAL enum value.
  *
@@ -181,13 +240,14 @@ export function parseCsvText(text: string): CsvRow[] {
         ? (cadNum >= 0 ? "payment" : "charge")
         : (cadNum >= 0 ? "deposit" : "withdrawal");
 
+      const rbcMerchant = extractMerchant(desc1);
       const row: CsvRow = {
         date: convertRbcDate(raw["transaction date"] ?? ""),
         type,
         amount: Math.abs(cadNum).toFixed(2),
         description: description || undefined,
-        merchant: extractMerchant(desc1),
-        category: undefined,
+        merchant: rbcMerchant,
+        category: rbcMerchant ? lookupMerchantCategory(rbcMerchant) : undefined,
       };
       if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
         row.error = `Invalid date "${raw["transaction date"] ?? ""}"`;
@@ -197,13 +257,15 @@ export function parseCsvText(text: string): CsvRow[] {
       return row;
     }
 
+    const csvMerchant = raw["merchant"] || undefined;
+    const csvCategory = raw["category"] || undefined;
     const row: CsvRow = {
       date: raw["date"] ?? "",
       type: raw["type"] ?? "",
       amount: raw["amount"] ?? "",
       description: raw["description"] || undefined,
-      merchant: raw["merchant"] || undefined,
-      category: raw["category"] || undefined,
+      merchant: csvMerchant,
+      category: csvCategory ?? (csvMerchant ? lookupMerchantCategory(csvMerchant) : undefined),
     };
     const normalizedType = row.type.toLowerCase();
     const resolvedType =
