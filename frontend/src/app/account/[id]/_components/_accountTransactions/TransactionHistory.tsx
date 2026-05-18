@@ -1,30 +1,11 @@
 import { Transaction, Account } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { DateRangeState } from "@/lib/date-range";
-
-const INCOME_CATEGORIES = [
-  "Salary",
-  "Freelance",
-  "Gift",
-  "Investment",
-  "Other Income",
-];
-const EXPENSE_CATEGORIES = [
-  "Groceries",
-  "Rent",
-  "Utilities",
-  "Transport",
-  "Dining",
-  "Shopping",
-  "Healthcare",
-  "Entertainment",
-  "Other",
-];
-const TRANSACTION_FILTER_CATEGORIES = [
-  ...INCOME_CATEGORIES,
-  ...EXPENSE_CATEGORIES,
-  "Transfer",
-];
+import {
+  INCOME_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  TRANSACTION_FILTER_CATEGORIES,
+} from "@/lib/constants/account";
 
 interface TransactionHistoryProps {
   txns: Transaction[];

@@ -3,15 +3,7 @@
 import { Account } from "@/lib/api";
 import { DeleteAccount } from "../_accountActions/DeleteAccount";
 import { FreezeButton } from "../_accountActions/FreezeButton";
-
-const ACCOUNT_TYPE_META = {
-  CHEQUING: { label: "Chequing", color: "#f59e0b" },
-  SAVINGS: { label: "Savings", color: "#22c55e" },
-  TFSA: { label: "TFSA", color: "#38bdf8" },
-  RRSP: { label: "RRSP", color: "#a78bfa" },
-  FHSA: { label: "FHSA", color: "#fb7185" },
-  CREDIT: { label: "Credit", color: "#ef4444" },
-} as const;
+import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 
 /** Formats a number as CAD currency. */
 const fmt = (n: number) =>
