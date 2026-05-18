@@ -1,5 +1,6 @@
 "use client";
 
+import { BackToHome } from "@/components/BackToHome";
 import { GoalList } from "./_components/_goalList/GoalList";
 
 export default function GoalsPage() {
@@ -11,6 +12,7 @@ export default function GoalsPage() {
         padding: "40px 24px 48px",
       }}
     >
+      <BackToHome />
       <GoalList />
     </div>
   );

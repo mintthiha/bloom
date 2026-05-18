@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
+import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -627,6 +628,8 @@ function Home() {
           })}
         </div>
       )}
+
+      <GoalWidget />
 
       {accounts.length > 0 && monthlySummary && (
         <div style={{ display: 'grid', gridTemplateColumns: dashboardColumns, gap: '20px', alignItems: 'start', marginBottom: '32px' }}>
