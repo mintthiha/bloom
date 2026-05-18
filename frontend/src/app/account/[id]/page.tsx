@@ -17,6 +17,7 @@ import {
 import { AccountAnalytics } from "./_components/_accountAnalytics/AccountAnalytics";
 import { NewTransactionForm } from "./_components/_newTransaction/NewTransactionForm";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { toast } from "sonner";
 
 export default function AccountPage({
   params,
@@ -42,8 +43,6 @@ export default function AccountPage({
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [opError, setOpError] = useState<string | null>(null);
-  const [opSuccess, setOpSuccess] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null);
@@ -135,8 +134,6 @@ export default function AccountPage({
 
   /** Populates the inline edit form fields from a transaction's current values. */
   function startEditingTransaction(transaction: Transaction) {
-    setOpError(null);
-    setOpSuccess(null);
     setEditingTransactionId(transaction.id);
     setEditingTransactionAmount(transaction.amount.toString());
     setEditingTransactionCategory(transaction.category ?? "");
@@ -157,13 +154,11 @@ export default function AccountPage({
   async function handleSaveTransaction(transactionId: string) {
     const amountValue = parseFloat(editingTransactionAmount);
     if (Number.isNaN(amountValue) || amountValue <= 0) {
-      setOpError("Enter a valid positive amount");
+      toast.error("Enter a valid positive amount");
       return;
     }
 
     setSavingTransaction(true);
-    setOpError(null);
-    setOpSuccess(null);
     try {
       await api.updateTransaction(id, transactionId, {
         amount: amountValue,
@@ -174,10 +169,10 @@ export default function AccountPage({
           : undefined,
       });
       cancelEditingTransaction();
-      setOpSuccess("Transaction updated");
+      toast.success("Transaction updated");
       await refresh();
     } catch (err) {
-      setOpError(
+      toast.error(
         err instanceof Error ? err.message : "Failed to update transaction",
       );
     } finally {
@@ -237,10 +232,10 @@ export default function AccountPage({
         editingTransactionId={editingTransactionId}
         onCancelEditing={cancelEditingTransaction}
         onDeleted={async () => {
-          setOpSuccess("Transaction deleted");
+          toast.success("Transaction deleted");
           await refresh();
         }}
-        onError={(msg) => setOpError(msg)}
+        onError={(msg) => toast.error(msg)}
       />
 
       <BackToHome />
@@ -260,7 +255,7 @@ export default function AccountPage({
           accountId={id}
           nickname={account.nickname}
           onUpdated={setAccount}
-          onError={setOpError}
+          onError={(msg) => toast.error(msg)}
         />
       </div>
 
@@ -287,17 +282,11 @@ export default function AccountPage({
             transferTargets={transferTargets}
             onSuccess={refresh}
             onImportSuccess={(imported) => {
-              setOpSuccess(
+              toast.success(
                 `Imported ${imported} transaction${imported !== 1 ? "s" : ""}`,
               );
               setFilterDateRange(getPresetDateRange("all-time"));
               refresh();
-            }}
-            feedback={{
-              error: opError,
-              success: opSuccess,
-              setError: setOpError,
-              setSuccess: setOpSuccess,
             }}
           />
         </div>

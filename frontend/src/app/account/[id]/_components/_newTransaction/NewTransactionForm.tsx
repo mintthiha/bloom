@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { api, Account } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
 import {
@@ -8,7 +9,6 @@ import {
   EXPENSE_CATEGORIES,
   ACCOUNT_TYPE_META,
 } from "@/lib/constants/account";
-import { FeedbackState } from "@/lib/types";
 
 type Op = "deposit" | "withdraw" | "transfer" | "import";
 
@@ -29,7 +29,6 @@ interface NewTransactionFormProps {
   transferTargets: Account[];
   onSuccess: () => Promise<void>;
   onImportSuccess: (imported: number) => void;
-  feedback: FeedbackState;
 }
 
 /** New transaction panel — deposit/withdraw/transfer/import form, or frozen banner if account is frozen. */
@@ -38,7 +37,6 @@ export function NewTransactionForm({
   transferTargets,
   onSuccess,
   onImportSuccess,
-  feedback,
 }: NewTransactionFormProps) {
   const [op, setOp] = useState<Op>("deposit");
   const [amount, setAmount] = useState("");
@@ -52,11 +50,9 @@ export function NewTransactionForm({
   /** Submits a deposit, withdrawal, or transfer based on the selected op. */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    feedback.setError(null);
-    feedback.setSuccess(null);
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) {
-      feedback.setError("Enter a valid positive amount");
+      toast.error("Enter a valid positive amount");
       return;
     }
     setSubmitting(true);
@@ -85,7 +81,7 @@ export function NewTransactionForm({
         });
       if (op === "transfer") {
         if (!toId.trim()) {
-          feedback.setError("Choose a destination account");
+          toast.error("Choose a destination account");
           setSubmitting(false);
           return;
         }
@@ -97,7 +93,7 @@ export function NewTransactionForm({
           : account.accountType === "CREDIT" && op === "withdraw"
             ? "Payment"
             : op.charAt(0).toUpperCase() + op.slice(1);
-      feedback.setSuccess(`${opDisplayName} successful`);
+      toast.success(`${opDisplayName} successful`);
       setAmount("");
       setToId("");
       setDescription("");
@@ -106,7 +102,7 @@ export function NewTransactionForm({
       setCustomCategory("");
       await onSuccess();
     } catch (err) {
-      feedback.setError(err instanceof Error ? err.message : "Operation failed");
+      toast.error(err instanceof Error ? err.message : "Operation failed");
     } finally {
       setSubmitting(false);
     }
@@ -171,8 +167,6 @@ export function NewTransactionForm({
             key={o}
             onClick={() => {
               setOp(o);
-              feedback.setError(null);
-              feedback.setSuccess(null);
               setCategory("");
               setCustomCategory("");
               setToId("");
@@ -207,7 +201,7 @@ export function NewTransactionForm({
             onImportSuccess(imported);
             setOp("deposit");
           }}
-          onError={(msg) => feedback.setError(msg)}
+          onError={(msg) => toast.error(msg)}
         />
       )}
 
@@ -371,23 +365,6 @@ export function NewTransactionForm({
             />
           )}
         </form>
-      )}
-
-      {feedback.error && (
-        <p
-          className="num"
-          style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}
-        >
-          {feedback.error}
-        </p>
-      )}
-      {feedback.success && (
-        <p
-          className="num"
-          style={{ color: "#22c55e", fontSize: "12px", marginTop: "10px" }}
-        >
-          {feedback.success}
-        </p>
       )}
     </div>
   );

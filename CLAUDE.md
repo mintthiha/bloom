@@ -26,6 +26,16 @@ app/account/[id]/
 
 A component or utility belongs in its own file when it has its own state, makes API calls, or contains more than trivial JSX.
 
+## UI Components — Use shadcn/ui and Sonner First
+
+Before building a custom UI component, check whether shadcn/ui or the existing shared component library already provides it.
+
+- **Toasts / notifications** → always use `toast` from `sonner`. Never use inline `opError` / `opSuccess` state for user feedback. Import and call `toast.success(...)` or `toast.error(...)` directly in the component that performs the action.
+- **Dialogs / confirms** → use shadcn `AlertDialog` before writing a custom modal.
+- **Other UI primitives** (buttons, inputs, selects, etc.) → check `src/components/ui/` for an existing shadcn component before writing raw HTML with inline styles.
+
+Shared, non-route-specific components (e.g. `BackToHome`) belong in `src/components/`, not inside a route's `_components/` folder.
+
 ## Comments
 
 Add a JSDoc comment above every function — including handlers, helpers, and hooks. The comment should explain the **why or what** in one line, not restate the function name.
