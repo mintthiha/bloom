@@ -45,17 +45,17 @@ function GoalCard({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: "10px",
+          marginBottom: "14px",
           gap: "12px",
         }}
       >
         <div style={{ minWidth: 0 }}>
           <p
             style={{
-              fontSize: "14px",
+              fontSize: "15px",
               fontWeight: 700,
               letterSpacing: "-0.01em",
-              marginBottom: "4px",
+              marginBottom: "5px",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -120,13 +120,13 @@ function GoalCard({
         </div>
       </div>
 
-      <div style={{ marginBottom: "10px" }}>
+      <div>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "6px",
+            marginBottom: "8px",
           }}
         >
           <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
@@ -158,19 +158,19 @@ function GoalCard({
             }}
           />
         </div>
-      </div>
 
-      {isComplete && (
-        <p style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>
-          Goal reached!
-        </p>
-      )}
+        {isComplete && (
+          <p style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600, marginTop: "8px" }}>
+            Goal reached!
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-/** Section showing all user savings goals with add, edit, and delete actions. */
-export function SavingsGoals() {
+/** Full list of savings goals with add, edit, and delete actions. */
+export function GoalList() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -240,41 +240,46 @@ export function SavingsGoals() {
   }
 
   return (
-    <div style={{ marginTop: "28px" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "16px",
+          marginBottom: "20px",
         }}
       >
-        <p
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "var(--text-secondary)",
-          }}
-        >
-          Goals
-        </p>
+        <div>
+          <h1
+            style={{
+              fontSize: "28px",
+              fontWeight: 800,
+              letterSpacing: "-0.5px",
+              marginBottom: "4px",
+            }}
+          >
+            Goals
+          </h1>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+            Set a target balance on any account and track your progress.
+          </p>
+        </div>
         <button
           type="button"
           onClick={handleOpenCreate}
           style={{
-            padding: "6px 14px",
+            padding: "10px 18px",
             background: "#f59e0b",
             border: "none",
-            borderRadius: "8px",
+            borderRadius: "10px",
             color: "#000",
-            fontSize: "12px",
+            fontSize: "13px",
             fontWeight: 700,
             cursor: "pointer",
+            flexShrink: 0,
           }}
         >
-          + Add goal
+          + New goal
         </button>
       </div>
 
@@ -282,12 +287,13 @@ export function SavingsGoals() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
             gap: "16px",
           }}
         >
-          <div className="skeleton" style={{ height: "112px", borderRadius: "14px" }} />
-          <div className="skeleton" style={{ height: "112px", borderRadius: "14px" }} />
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton" style={{ height: "130px", borderRadius: "14px" }} />
+          ))}
         </div>
       ) : goals.length === 0 ? (
         <div
@@ -295,19 +301,35 @@ export function SavingsGoals() {
             background: "var(--surface-1)",
             border: "1px solid var(--border)",
             borderRadius: "14px",
-            padding: "32px 24px",
+            padding: "48px 24px",
             textAlign: "center",
           }}
         >
-          <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>
-            No savings goals yet. Add a goal to start tracking progress.
+          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginBottom: "16px" }}>
+            No savings goals yet.
           </p>
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            style={{
+              padding: "10px 20px",
+              background: "#f59e0b",
+              border: "none",
+              borderRadius: "10px",
+              color: "#000",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Add your first goal
+          </button>
         </div>
       ) : (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
             gap: "16px",
           }}
         >
@@ -366,6 +388,6 @@ export function SavingsGoals() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

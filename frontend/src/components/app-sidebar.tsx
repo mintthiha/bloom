@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BookOpen, Columns2, LogOut, Rows3 } from "lucide-react";
+import { BookOpen, Columns2, LogOut, Rows3, Target } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -26,6 +26,7 @@ export function AppSidebar() {
   const { view, setView } = useDashboardView();
   const pathname = usePathname();
   const onLearn = pathname === "/learn";
+  const onGoals = pathname === "/goals";
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -154,7 +155,35 @@ export function AppSidebar() {
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupContent>
-            <div style={{ padding: state === "collapsed" ? "0 8px" : "0 8px 8px" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+                padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
+              }}
+            >
+              <Link
+                href="/goals"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "36px",
+                  borderRadius: "10px",
+                  border: onGoals ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                  background: onGoals ? "#f59e0b1a" : "var(--surface-1)",
+                  color: onGoals ? "#f59e0b" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                <Target size={15} style={{ flexShrink: 0 }} />
+                <span className="group-data-[collapsible=icon]:hidden">Goals</span>
+              </Link>
               <Link
                 href="/learn"
                 style={{
