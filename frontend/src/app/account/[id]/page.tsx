@@ -15,19 +15,7 @@ import {
   getBrowserTimeZone,
   getPresetDateRange,
 } from "@/lib/date-range";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+import { AccountAnalytics } from "./_components/_accountAnalytics/AccountAnalytics";
 
 type Op = "deposit" | "withdraw" | "transfer" | "import";
 
@@ -296,12 +284,6 @@ export default function AccountPage({
     }
   }
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("en-CA", {
-      style: "currency",
-      currency: "CAD",
-    }).format(n);
-
   const inputStyle = {
     width: "100%",
     background: "var(--surface-2)",
@@ -405,191 +387,14 @@ export default function AccountPage({
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Charts */}
-          {txns.length > 0 &&
-            (() => {
-              const chronological = [...txns].reverse();
-              const balanceData = chronological.map((t) => ({
-                timestamp: t.effectiveAt,
-                balance: t.balanceAfter,
-              }));
-
-              const typeCounts: Record<string, number> = {};
-              for (const t of txns)
-                typeCounts[t.type] = (typeCounts[t.type] ?? 0) + 1;
-              const typeLabels: Record<string, string> = {
-                DEPOSIT:
-                  account.accountType === "CREDIT" ? "Charge" : "Deposit",
-                WITHDRAWAL:
-                  account.accountType === "CREDIT" ? "Payment" : "Withdrawal",
-                TRANSFER_OUT: "Transfer Out",
-                TRANSFER_IN: "Transfer In",
-              };
-              const typeColors: Record<string, string> = {
-                DEPOSIT: "#22c55e",
-                WITHDRAWAL: "#f87171",
-                TRANSFER_OUT: "#fb923c",
-                TRANSFER_IN: "#60a5fa",
-              };
-              const donutData = Object.entries(typeCounts).map(
-                ([type, value]) => ({
-                  name: typeLabels[type] ?? type,
-                  value,
-                  color: typeColors[type] ?? "#888",
-                }),
-              );
-
-              return (
-                <div
-                  className="fade-up fade-up-2"
-                  style={{
-                    background: "var(--surface-1)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "16px",
-                    padding: "24px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      color: "var(--text-secondary)",
-                      marginBottom: "20px",
-                    }}
-                  >
-                    Analytics
-                  </p>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: analyticsColumns,
-                      gap: "24px",
-                    }}
-                  >
-                    {/* Balance history */}
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--text-muted)",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        Balance History
-                      </p>
-                      <ResponsiveContainer width="100%" height={160}>
-                        <LineChart
-                          data={balanceData}
-                          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-                        >
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="#ffffff08"
-                          />
-                          <XAxis
-                            dataKey="timestamp"
-                            tick={{ fontSize: 10, fill: "#6b7280" }}
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(value) =>
-                              new Date(value).toLocaleDateString("en-CA", {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            }
-                            minTickGap={24}
-                          />
-                          <YAxis
-                            tick={{ fontSize: 10, fill: "#6b7280" }}
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(v) => `$${v}`}
-                            width={48}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              background: "#1a1a1a",
-                              border: "1px solid #2a2a2a",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                            }}
-                            labelStyle={{ color: "#9ca3af" }}
-                            labelFormatter={(value) =>
-                              new Date(value).toLocaleString("en-CA", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })
-                            }
-                            formatter={(value) => [
-                              fmt(Number(value)),
-                              "Balance",
-                            ]}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="balance"
-                            stroke={accentColor}
-                            strokeWidth={2}
-                            dot={false}
-                            activeDot={{ r: 4, fill: accentColor }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    {/* Transaction type breakdown */}
-                    <div>
-                      <p
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--text-muted)",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        Transaction Types
-                      </p>
-                      <ResponsiveContainer width="100%" height={160}>
-                        <PieChart>
-                          <Pie
-                            data={donutData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={42}
-                            outerRadius={64}
-                            dataKey="value"
-                            paddingAngle={3}
-                          >
-                            {donutData.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              background: "#1a1a1a",
-                              border: "1px solid #2a2a2a",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                            }}
-                          />
-                          <Legend
-                            iconType="circle"
-                            iconSize={8}
-                            wrapperStyle={{
-                              fontSize: "11px",
-                              color: "#6b7280",
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+          {txns.length > 0 && (
+            <AccountAnalytics
+              txns={txns}
+              accountType={account.accountType}
+              analyticsColumns={analyticsColumns}
+              accentColor={accentColor}
+            />
+          )}
 
           {/* Operations */}
           {!account.frozen && (
