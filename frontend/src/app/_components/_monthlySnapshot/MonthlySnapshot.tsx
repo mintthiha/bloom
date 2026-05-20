@@ -138,7 +138,6 @@ export function MonthlySnapshot({
       className="fade-up fade-up-1"
       style={{
         background: "linear-gradient(135deg, #17120a 0%, var(--surface-1) 58%)",
-        minHeight: "100%",
       }}
     >
       {snapshotView === "snapshot" ? (

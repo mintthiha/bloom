@@ -52,7 +52,7 @@ export function OpenAccountCard({ onCreated }: Props) {
     <CollapsibleCard
       eyebrow="Open New Account"
       className="fade-up fade-up-2"
-      style={{ minHeight: "100%" }}
+      style={{}}
     >
       <form onSubmit={handleCreate}>
         <div

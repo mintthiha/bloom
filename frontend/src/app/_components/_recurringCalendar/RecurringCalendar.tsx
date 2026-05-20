@@ -56,7 +56,7 @@ export function RecurringCalendar({ rules }: Props) {
       title="Next 90 days"
       description="Upcoming occurrences from your active recurring rules."
       className="fade-up fade-up-2"
-      style={{ minHeight: "100%" }}
+      style={{}}
     >
       {activeRules.length === 0 ? (
         <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>

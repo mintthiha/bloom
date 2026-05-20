@@ -358,7 +358,7 @@ export function RecurringTransactionsCard({
         description="Create recurring deposits or withdrawals, then apply due entries whenever you want to bring the ledger up to date."
         headerRight={headerRight}
         className="fade-up fade-up-2"
-        style={{ minHeight: "100%" }}
+        style={{}}
       >
         <p
           style={{

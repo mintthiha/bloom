@@ -119,7 +119,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
       description="Budgets compare this month's withdrawal totals against your category limits."
       headerRight={headerRight}
       className="fade-up fade-up-2"
-      style={{ minHeight: "100%" }}
+      style={{}}
     >
       <form onSubmit={handleSaveBudget} style={{ marginBottom: "20px" }}>
         <div

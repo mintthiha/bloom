@@ -32,7 +32,7 @@ export function AccountBalancesCard({ accounts }: Props) {
     <CollapsibleCard
       eyebrow="Account Balances"
       className="fade-up fade-up-1"
-      style={{ minHeight: "100%" }}
+      style={{}}
     >
       <ResponsiveContainer width="100%" height={180}>
         <BarChart
