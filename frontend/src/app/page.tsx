@@ -20,6 +20,7 @@ import {
 import { buildDateRangeQuery, DateRangeState, formatLocalDate, getBrowserTimeZone, getPresetDateRange } from "@/lib/date-range";
 import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
 import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
+import { RecurringCalendar } from "./_components/_recurringCalendar/RecurringCalendar";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -1244,6 +1245,7 @@ function Home() {
               </div>
             )}
           </div>
+          <RecurringCalendar rules={recurringRules} />
         </div>
       )}
 
