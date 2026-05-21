@@ -1,6 +1,6 @@
 # Bloom
 
- Bloom is a full-stack personal finance demo app with Google sign-in, profile onboarding, account tracking, merchant-aware transactions, recurring transactions, budgeting, net worth tracking, and an AI-powered financial learning assistant.
+Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, multi-account tracking, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, and an AI-powered Canadian financial education assistant.
 
 ## Tech Stack
 
@@ -37,8 +37,8 @@
 
 ## Project Structure
 
-- `frontend/` - Next.js app, auth integration, dashboard UI, profile onboarding, and account pages
-- `backend/` - Express API, Prisma schema, account/profile/budget services, and backend tests
+- `frontend/` — Next.js app, auth integration, dashboard UI, profile onboarding, and account pages
+- `backend/` — Express API, Prisma schema, account/profile/budget/recurring services, and backend tests
 
 ## Core Features
 
@@ -112,6 +112,21 @@
 - Manual `Apply due` action creates due recurring entries as normal transactions
 - Generated recurring transactions update balances, budgets, analytics, and transaction history
 
+### Upcoming Payment Calendar
+
+- Timeline view of upcoming recurring transaction occurrences for the next 90 days
+- Occurrences generated from active recurring rules using each rule's next scheduled date
+- Supports weekly, biweekly, and monthly frequencies
+- Groups occurrences by calendar month
+- Visually distinguishes three urgency states:
+  - **Overdue** — past due, not yet applied (red)
+  - **Due soon** — within 7 days (amber)
+  - **Upcoming** — more than 7 days away (muted)
+- Shows merchant or rule name, signed amount (deposits in green), relative date label ("Tomorrow", "In 3 days"), and frequency
+- Overdue and due-soon entries show status badges
+- Empty state when no active recurring rules exist
+- Respects optional end dates on recurring rules
+
 ### Budgeting And Analytics
 
 - Monthly category budgets
@@ -135,6 +150,16 @@
 - Month-over-month delta badge showing net worth change from the prior month
 - Zero reference line for at-a-glance breakeven visibility
 
+### Savings Goals
+
+- Create savings goals linked to any non-credit account
+- Track progress as a live percentage of account balance vs target
+- Progress bar with completion colour (amber in progress, green when complete)
+- Compact GoalWidget on the home dashboard showing one goal at a time
+- Persistent goal selection across page reloads via localStorage
+- Full goals management page: create, edit, and delete goals
+- "Goal reached!" indicator when balance meets or exceeds target
+
 ### Learn
 
 - Static Canadian financial content cards covering TFSA, RRSP, FHSA, credit card basics, budgeting, and net worth
@@ -148,6 +173,19 @@
 - Single-column and double-column dashboard layouts
 - Shared layout toggle across dashboard, account pages, and the Learn page
 - Click-through navigation from dashboard summary cards and account cards
+- Every major dashboard section is independently collapsible:
+  - Monthly Snapshot
+  - Budgets
+  - Recurring Transactions
+  - Upcoming Schedule
+  - Net Worth History
+  - Account Balances
+  - Open New Account
+  - Savings Goals widget
+- Collapse state is local to each card — collapsing one card never affects siblings
+- Smooth height animation using the CSS `grid-template-rows: 0fr / 1fr` technique
+- Card headers and action buttons (e.g. "Apply due") remain visible when collapsed
+- Chevron indicator rotates to reflect expanded/collapsed state
 
 ### Date And Time Handling
 
@@ -155,6 +193,25 @@
 - Frontend date-range queries use local calendar boundaries
 - UI shows the detected browser timezone
 - Backend timestamps now use timezone-aware storage
+
+## Frontend Architecture
+
+The homepage is structured around a component-per-section pattern, keeping `page.tsx` as a thin data-orchestration layer:
+
+| Component | Location |
+|-----------|----------|
+| `MonthlySnapshot` | `app/_components/_monthlySnapshot/` |
+| `BudgetsCard` | `app/_components/_budgets/` |
+| `RecurringTransactionsCard` | `app/_components/_recurringTransactions/` |
+| `RecurringCalendar` | `app/_components/_recurringCalendar/` |
+| `NetWorthHistory` | `app/_components/_netWorthHistory/` |
+| `AccountBalancesCard` | `app/_components/_accountBalances/` |
+| `OpenAccountCard` | `app/_components/_openAccount/` |
+| `GoalWidget` | `app/_components/_goalWidget/` |
+| `DraggableAccountList` | `app/_components/_accountList/` |
+| `CollapsibleCard` | `src/components/collapsible-card.tsx` |
+
+`CollapsibleCard` is a shared UI primitive used by all dashboard sections. It accepts `eyebrow`, `title`, `description`, and `headerRight` slots and handles the collapse toggle and animation internally.
 
 ## Testing
 
