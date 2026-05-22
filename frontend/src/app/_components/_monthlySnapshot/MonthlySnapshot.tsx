@@ -73,6 +73,23 @@ export function MonthlySnapshot({
   const expenseCategories =
     monthlySummary.categories.filter((category) => category.spending > 0);
 
+  const savingsRate =
+    monthlySummary.income > 0
+      ? monthlySummary.netCashFlow / monthlySummary.income
+      : null;
+  const savingsRateColor =
+    savingsRate === null
+      ? "var(--text-muted)"
+      : savingsRate >= 0.2
+      ? "#22c55e"
+      : savingsRate >= 0.1
+      ? "#f59e0b"
+      : "#f87171";
+  const savingsRateTooltip =
+    savingsRate !== null
+      ? `Saving ${Math.round(savingsRate * 100)}% of your income. Most financial plans suggest 20% as a starting target.`
+      : "No income recorded this month.";
+
   const spendingForecast = computeSpendingForecast(
     monthlySummary,
     previousMonthlySummary,
@@ -145,7 +162,7 @@ export function MonthlySnapshot({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(4, 1fr)",
               gap: "10px",
               marginBottom: expenseCategories.length ? "22px" : "0",
             }}
@@ -276,6 +293,42 @@ export function MonthlySnapshot({
                   {formatCurrency(netDelta)} vs prior
                 </p>
               )}
+            </div>
+
+            <div
+              title={savingsRateTooltip}
+              style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderRadius: "10px",
+                padding: "14px",
+                cursor: "default",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--text-muted)",
+                  marginBottom: "8px",
+                }}
+              >
+                Savings Rate
+              </p>
+              <p
+                className="num"
+                style={{
+                  fontSize: "18px",
+                  fontWeight: 600,
+                  color: savingsRateColor,
+                }}
+              >
+                {savingsRate !== null
+                  ? `${Math.round(savingsRate * 100)}%`
+                  : "N/A"}
+              </p>
             </div>
           </div>
 
