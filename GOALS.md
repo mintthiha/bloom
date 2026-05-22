@@ -68,7 +68,7 @@ Each feature includes: problem, why it helps beginners, size, complexity, files/
 
 **Why it helps beginners:** Decision paralysis is the #1 enemy of beginners. A prioritized list of 2–3 actionable nudges cuts through the noise.
 
-**Size:** Medium | **Complexity:** Medium | **Priority: 9/10**
+**Size:** Medium | **Complexity:** Medium | **Priority: 9/10** | **Status: ✅ Done**
 
 **Files/systems:**
 - New utility `frontend/src/lib/insights.ts` — rule-based engine consuming dashboard data
@@ -94,7 +94,7 @@ Each feature includes: problem, why it helps beginners, size, complexity, files/
 
 **Why it helps beginners:** Financial educators universally say savings rate is the most important variable in building wealth. Beginners need to see it clearly.
 
-**Size:** Small | **Complexity:** Low | **Priority: 9/10**
+**Size:** Small | **Complexity:** Low | **Priority: 9/10** | **Status: ✅ Done**
 
 **Files/systems:**
 - `app/_components/_monthlySnapshot/MonthlySnapshot.tsx` — add a fourth stat tile

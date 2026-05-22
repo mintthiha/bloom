@@ -32,6 +32,7 @@ import { RecurringCalendar } from "./_components/_recurringCalendar/RecurringCal
 import { NetWorthHistory } from "./_components/_netWorthHistory/NetWorthHistory";
 import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalancesCard";
 import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
+import { InsightsCard } from "./_components/_insights/InsightsCard";
 
 function Home() {
   const { view } = useDashboardView();
@@ -477,6 +478,19 @@ function Home() {
 
       {/* Goals */}
       <GoalWidget />
+
+      {/* Insights */}
+      {accounts.length > 0 && monthlySummary && (
+        <div style={{ marginBottom: "32px" }}>
+          <InsightsCard
+            accounts={accounts}
+            budgets={budgets}
+            monthlySummary={monthlySummary}
+            previousMonthlySummary={previousMonthlySummary}
+            recurringRules={recurringRules}
+          />
+        </div>
+      )}
 
       {/* Monthly Snapshot + Budgets */}
       {accounts.length > 0 && monthlySummary && (
