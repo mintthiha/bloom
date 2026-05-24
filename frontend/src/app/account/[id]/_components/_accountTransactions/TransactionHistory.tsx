@@ -213,6 +213,7 @@ export function TransactionHistory({
           style={{ ...inputStyle, cursor: "pointer", appearance: "none" }}
         >
           <option value="ALL">All categories</option>
+          <option value="Uncategorized">Uncategorized</option>
           {TRANSACTION_FILTER_CATEGORIES.map((categoryOption) => (
             <option key={categoryOption} value={categoryOption}>
               {categoryOption}

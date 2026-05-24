@@ -239,6 +239,80 @@ export async function getMonthlySummary(userId: string, input?: { start?: Date; 
   };
 }
 
+type CategoryBreakdownRow = {
+  category: string;
+  accountId: string;
+  accountOwnerName: string;
+  accountNickname: string | null;
+  spending: number | string | null;
+};
+
+/**
+ * Returns spending grouped by (category, account) for use in the 50/30/20 breakdown drilldown.
+ * Only rows with spending > 0 are returned.
+ */
+export async function getCategoryBreakdown(userId: string, input?: { start?: Date; end?: Date }) {
+  const dateRange = input ? resolveDateRange(input) : null;
+
+  const rows = dateRange
+    ? await prisma.$queryRaw<CategoryBreakdownRow[]>`
+        SELECT
+          COALESCE(t."category", 'Uncategorized') AS "category",
+          a."id"        AS "accountId",
+          a."ownerName" AS "accountOwnerName",
+          a."nickname"  AS "accountNickname",
+          SUM(CASE
+            WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+            WHEN t."type" = 'DEPOSIT'::"TransactionType"    AND a."accountType" = 'CREDIT'::"AccountType"  THEN t."amount"
+            ELSE 0
+          END) AS "spending"
+        FROM "Transaction" t
+        JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
+        WHERE a."userId" = ${userId}
+          AND t."effectiveAt" >= ${dateRange.start}
+          AND t."effectiveAt" <  ${dateRange.end}
+          AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
+        GROUP BY COALESCE(t."category", 'Uncategorized'), a."id", a."ownerName", a."nickname"
+        HAVING SUM(CASE
+          WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+          WHEN t."type" = 'DEPOSIT'::"TransactionType"    AND a."accountType" = 'CREDIT'::"AccountType"  THEN t."amount"
+          ELSE 0
+        END) > 0
+        ORDER BY "category", "spending" DESC
+      `
+    : await prisma.$queryRaw<CategoryBreakdownRow[]>`
+        SELECT
+          COALESCE(t."category", 'Uncategorized') AS "category",
+          a."id"        AS "accountId",
+          a."ownerName" AS "accountOwnerName",
+          a."nickname"  AS "accountNickname",
+          SUM(CASE
+            WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+            WHEN t."type" = 'DEPOSIT'::"TransactionType"    AND a."accountType" = 'CREDIT'::"AccountType"  THEN t."amount"
+            ELSE 0
+          END) AS "spending"
+        FROM "Transaction" t
+        JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
+        WHERE a."userId" = ${userId}
+          AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
+        GROUP BY COALESCE(t."category", 'Uncategorized'), a."id", a."ownerName", a."nickname"
+        HAVING SUM(CASE
+          WHEN t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType" THEN t."amount"
+          WHEN t."type" = 'DEPOSIT'::"TransactionType"    AND a."accountType" = 'CREDIT'::"AccountType"  THEN t."amount"
+          ELSE 0
+        END) > 0
+        ORDER BY "category", "spending" DESC
+      `;
+
+  return rows.map((row) => ({
+    category: row.category,
+    accountId: row.accountId,
+    accountOwnerName: row.accountOwnerName,
+    accountNickname: row.accountNickname ?? null,
+    spending: Number(row.spending ?? 0),
+  }));
+}
+
 type MonthlyTrendRow = {
   month: Date;
   income: number | string | null;
@@ -527,8 +601,12 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
     if (filters?.type && transaction.type !== filters.type) {
       return false;
     }
-    if (categoryFilter && (transaction.category ?? "") !== categoryFilter) {
-      return false;
+    if (categoryFilter) {
+      if (categoryFilter === "Uncategorized") {
+        if (transaction.category != null && transaction.category.trim() !== "") return false;
+      } else if ((transaction.category ?? "") !== categoryFilter) {
+        return false;
+      }
     }
     if (searchFilter) {
       const haystack = [transaction.description ?? "", transaction.merchant ?? ""].join(" ").toLowerCase();

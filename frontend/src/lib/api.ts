@@ -95,6 +95,14 @@ export type MonthlySummary = {
   }>;
 };
 
+export type CategoryBreakdownItem = {
+  category: string;
+  accountId: string;
+  accountOwnerName: string;
+  accountNickname: string | null;
+  spending: number;
+};
+
 export type Budget = {
   id: string;
   userId: string;
@@ -223,6 +231,8 @@ export const api = {
     request<NetWorthSnapshot>("/accounts/networth/snapshot", { method: "POST" }),
   getNetWorthHistory: (months = 12) =>
     request<NetWorthSnapshot[]>(`/accounts/networth/history?months=${months}`),
+  getCategoryBreakdown: (query?: DateRangeQuery) =>
+    request<CategoryBreakdownItem[]>(withQuery("/accounts/summary/category-breakdown", query)),
   getBudgets: (query?: DateRangeQuery) =>
     request<Budget[]>(withQuery("/budgets", query)),
   getBudgetActivity: (id: string, query?: DateRangeQuery) =>

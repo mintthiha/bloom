@@ -1,6 +1,6 @@
 "use client";
-import { useMemo } from "react";
-import { MonthlySummary } from "@/lib/api";
+import { useState, useEffect, useMemo } from "react";
+import { api, CategoryBreakdownItem, DateRangeQuery, MonthlySummary } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
 
@@ -16,14 +16,22 @@ const NEEDS_TARGET_PCT = 50;
 const WANTS_TARGET_PCT = 30;
 const SAVINGS_TARGET_PCT = 20;
 
-type BucketRowProps = {
-  label: string;
-  sublabel: string;
-  amount: number;
-  pct: number;
-  targetPct: number;
-  color: string;
-  insightText: string;
+type Props = {
+  monthlySummary: MonthlySummary;
+  rangeQuery?: DateRangeQuery;
+};
+
+type AccountRow = {
+  accountId: string;
+  accountOwnerName: string;
+  accountNickname: string | null;
+  spending: number;
+};
+
+type CategoryRow = {
+  category: string;
+  spending: number;
+  accounts: AccountRow[];
 };
 
 /** Returns a color for a bucket bar based on distance from target. */
@@ -42,7 +50,19 @@ function getBucketColor(
   return "#f87171";
 }
 
-/** A single 50/30/20 bucket row with a labeled progress bar and target marker. */
+type BucketRowProps = {
+  label: string;
+  sublabel: string;
+  amount: number;
+  pct: number;
+  targetPct: number;
+  color: string;
+  insightText: string;
+  categories: CategoryRow[];
+  loading: boolean;
+};
+
+/** A single 50/30/20 bucket with a progress bar, target marker, and expandable category+account drilldown. */
 function BucketRow({
   label,
   sublabel,
@@ -51,7 +71,10 @@ function BucketRow({
   targetPct,
   color,
   insightText,
+  categories,
+  loading,
 }: BucketRowProps) {
+  const [expanded, setExpanded] = useState(false);
   const barWidth = Math.min(Math.max(pct, 0), 100);
 
   return (
@@ -136,32 +159,185 @@ function BucketRow({
           justifyContent: "space-between",
           alignItems: "center",
           gap: "8px",
+          marginBottom: categories.length > 0 ? "8px" : "0",
         }}
       >
         <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
           {insightText}
         </span>
-        <span
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+            target {targetPct}%
+          </span>
+          {categories.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => !prev)}
+              style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "0",
+                display: "flex",
+                alignItems: "center",
+                gap: "3px",
+              }}
+            >
+              {expanded ? "Hide" : "Details"}
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s ease",
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div
           style={{
-            fontSize: "11px",
-            color: "var(--text-muted)",
-            flexShrink: 0,
+            borderLeft: "2px solid var(--border)",
+            marginLeft: "4px",
+            paddingLeft: "12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            marginTop: "4px",
           }}
         >
-          target {targetPct}%
-        </span>
-      </div>
+          {loading ? (
+            <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+              Loading...
+            </p>
+          ) : (
+            categories.map((categoryRow) => (
+              <div key={categoryRow.category}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {categoryRow.category}
+                  </span>
+                  <span
+                    className="num"
+                    style={{ fontSize: "12px", color: "var(--text-secondary)" }}
+                  >
+                    {formatCurrency(categoryRow.spending)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "2px",
+                  }}
+                >
+                  {categoryRow.accounts.map((accountRow) => (
+                    <div
+                      key={accountRow.accountId}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "baseline",
+                        paddingLeft: "10px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {accountRow.accountNickname ?? accountRow.accountOwnerName}
+                      </span>
+                      <span
+                        className="num"
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {formatCurrency(accountRow.spending)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 /** Collapsible card visualizing how the user's spending maps to the 50/30/20 budgeting rule. */
-export function BudgetRuleCard({
-  monthlySummary,
-}: {
-  monthlySummary: MonthlySummary;
-}) {
+export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
   const { income, spending, netCashFlow, categories } = monthlySummary;
+  const [breakdown, setBreakdown] = useState<CategoryBreakdownItem[]>([]);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+
+  /** Fetches per-category per-account spending breakdown for the current date range. */
+  useEffect(() => {
+    let cancelled = false;
+    setBreakdownLoading(true);
+
+    api.getCategoryBreakdown(rangeQuery).then((data) => {
+      if (!cancelled) {
+        setBreakdown(data);
+        setBreakdownLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setBreakdownLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [rangeQuery]);
+
+  /** Groups breakdown rows into CategoryRow objects with nested account rows. */
+  const categoryRowsByCategory = useMemo(() => {
+    const map = new Map<string, CategoryRow>();
+    for (const item of breakdown) {
+      if (!map.has(item.category)) {
+        map.set(item.category, { category: item.category, spending: 0, accounts: [] });
+      }
+      const entry = map.get(item.category)!;
+      entry.spending += item.spending;
+      entry.accounts.push({
+        accountId: item.accountId,
+        accountOwnerName: item.accountOwnerName,
+        accountNickname: item.accountNickname,
+        spending: item.spending,
+      });
+    }
+    return map;
+  }, [breakdown]);
 
   const needsAmount = useMemo(
     () =>
@@ -178,21 +354,24 @@ export function BudgetRuleCard({
   const wantsPct = income > 0 ? (wantsAmount / income) * 100 : 0;
   const savingsPct = income > 0 ? (savingsAmount / income) * 100 : 0;
 
-  const largestNeed = useMemo(
+  const needsCategoryRows = useMemo(
     () =>
-      categories
-        .filter((c) => NEEDS_CATEGORIES.has(c.category) && c.spending > 0)
-        .sort((a, b) => b.spending - a.spending)[0] ?? null,
-    [categories]
+      Array.from(categoryRowsByCategory.values())
+        .filter((r) => NEEDS_CATEGORIES.has(r.category))
+        .sort((a, b) => b.spending - a.spending),
+    [categoryRowsByCategory]
   );
 
-  const largestWant = useMemo(
+  const wantsCategoryRows = useMemo(
     () =>
-      categories
-        .filter((c) => !NEEDS_CATEGORIES.has(c.category) && c.spending > 0)
-        .sort((a, b) => b.spending - a.spending)[0] ?? null,
-    [categories]
+      Array.from(categoryRowsByCategory.values())
+        .filter((r) => !NEEDS_CATEGORIES.has(r.category))
+        .sort((a, b) => b.spending - a.spending),
+    [categoryRowsByCategory]
   );
+
+  const largestNeed = needsCategoryRows[0] ?? null;
+  const largestWant = wantsCategoryRows[0] ?? null;
 
   const needsColor = getBucketColor(needsPct, NEEDS_TARGET_PCT, false);
   const wantsColor = getBucketColor(wantsPct, WANTS_TARGET_PCT, false);
@@ -224,6 +403,8 @@ export function BudgetRuleCard({
                 ? `Largest: ${largestNeed.category} (${formatCurrency(largestNeed.spending)})`
                 : "No needs spending recorded this month."
             }
+            categories={needsCategoryRows}
+            loading={breakdownLoading}
           />
           <BucketRow
             label="Wants"
@@ -237,6 +418,8 @@ export function BudgetRuleCard({
                 ? `Largest: ${largestWant.category} (${formatCurrency(largestWant.spending)})`
                 : "No wants spending recorded this month."
             }
+            categories={wantsCategoryRows}
+            loading={breakdownLoading}
           />
           <BucketRow
             label="Savings"
@@ -252,6 +435,8 @@ export function BudgetRuleCard({
                 ? `${(SAVINGS_TARGET_PCT - savingsPct).toFixed(0)}% short of the 20% target.`
                 : "Spending exceeds income this month."
             }
+            categories={[]}
+            loading={false}
           />
         </div>
       )}

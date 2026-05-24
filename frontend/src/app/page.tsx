@@ -521,7 +521,7 @@ function Home() {
       {/* 50/30/20 Budget Rule */}
       {accounts.length > 0 && monthlySummary && (
         <div style={{ marginBottom: "32px" }}>
-          <BudgetRuleCard monthlySummary={monthlySummary} />
+          <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />
         </div>
       )}
 

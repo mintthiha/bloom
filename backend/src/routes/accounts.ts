@@ -53,6 +53,18 @@ router.get("/summary/monthly", async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
+/**
+ * Returns spending grouped by (category, account) for the 50/30/20 drilldown view.
+ */
+router.get("/summary/category-breakdown", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await accountService.getCategoryBreakdown(uid(req), parseDateRangeQuery({
+      start: req.query["start"],
+      end: req.query["end"],
+    })));
+  } catch (err) { next(err); }
+});
+
 router.get("/summary/trends", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const months = Math.min(Math.max(parseInt(String(req.query["months"] ?? "6"), 10) || 6, 1), 24);
