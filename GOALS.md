@@ -143,7 +143,7 @@ Each feature includes: problem, why it helps beginners, size, complexity, files/
 
 **Why it helps beginners:** The 50/30/20 rule is the most beginner-friendly budgeting framework. Seeing real data plotted against it makes the abstract concrete.
 
-**Size:** Small–Medium | **Complexity:** Low | **Priority: 8/10**
+**Size:** Small–Medium | **Complexity:** Low | **Priority: 8/10** | **Status: ✅ Done**
 
 **Files/systems:**
 - New component `app/_components/_budgetRule/BudgetRuleCard.tsx`

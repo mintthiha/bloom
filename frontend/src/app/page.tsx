@@ -33,6 +33,7 @@ import { NetWorthHistory } from "./_components/_netWorthHistory/NetWorthHistory"
 import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalancesCard";
 import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
 import { InsightsCard } from "./_components/_insights/InsightsCard";
+import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
 
 function Home() {
   const { view } = useDashboardView();
@@ -514,6 +515,13 @@ function Home() {
             monthlySummary={monthlySummary}
             onChanged={loadAccounts}
           />
+        </div>
+      )}
+
+      {/* 50/30/20 Budget Rule */}
+      {accounts.length > 0 && monthlySummary && (
+        <div style={{ marginBottom: "32px" }}>
+          <BudgetRuleCard monthlySummary={monthlySummary} />
         </div>
       )}
 
