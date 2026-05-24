@@ -576,18 +576,18 @@ function Home() {
         >
           <p
             style={{
-              fontSize: "11px",
-              fontWeight: 600,
+              fontSize: "16px",
+              fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "var(--text-secondary)",
+              color: "var(--text-primary)",
             }}
           >
             Accounts
           </p>
           <span
             className="num"
-            style={{ fontSize: "11px", color: "var(--text-muted)" }}
+            style={{ fontSize: "16px", color: "var(--text-primary)" }}
           >
             {accounts.length}
           </span>

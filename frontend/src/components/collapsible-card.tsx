@@ -74,11 +74,11 @@ export function CollapsibleCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <p
             style={{
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "var(--text-secondary)",
+              color: "#f59e0b",
               marginBottom: title ? "8px" : "0",
             }}
           >

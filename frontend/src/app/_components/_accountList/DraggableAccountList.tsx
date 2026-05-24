@@ -155,11 +155,11 @@ export function DraggableAccountList({
           <div style={{ padding: "6px 4px 2px" }}>
             <p
               style={{
-                fontSize: "11px",
+                fontSize: "13px",
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
-                color: "var(--text-secondary)",
+                color: "#f59e0b",
                 marginBottom: "4px",
               }}
             >
