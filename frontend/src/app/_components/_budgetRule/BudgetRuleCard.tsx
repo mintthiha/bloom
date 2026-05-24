@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { api, CategoryBreakdownItem, DateRangeQuery, MonthlySummary } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
@@ -75,7 +75,16 @@ function BucketRow({
   loading,
 }: BucketRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const [scrollbarVisible, setScrollbarVisible] = useState(false);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const barWidth = Math.min(Math.max(pct, 0), 100);
+
+  /** Shows the scrollbar briefly on scroll, then hides it after 1 second of inactivity. */
+  function handleScroll() {
+    setScrollbarVisible(true);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => setScrollbarVisible(false), 1000);
+  }
 
   return (
     <div>
@@ -210,6 +219,8 @@ function BucketRow({
 
       {expanded && (
         <div
+          onScroll={handleScroll}
+          className={`scrollbar-fade${scrollbarVisible ? " scrollbar-visible" : ""}`}
           style={{
             borderLeft: "2px solid var(--border)",
             marginLeft: "4px",
@@ -218,6 +229,8 @@ function BucketRow({
             flexDirection: "column",
             gap: "10px",
             marginTop: "4px",
+            maxHeight: "260px",
+            overflowY: "auto",
           }}
         >
           {loading ? (

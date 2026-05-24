@@ -150,3 +150,25 @@ body::before {
   z-index: 9999;
   opacity: 0.4;
 }
+
+.scrollbar-fade::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-fade::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-fade::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+.scrollbar-fade.scrollbar-visible::-webkit-scrollbar-thumb {
+  background: #444;
+}
+.scrollbar-fade {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scrollbar-fade.scrollbar-visible {
+  scrollbar-color: #444 transparent;
+}
