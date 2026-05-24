@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, AccountType, SavingsGoal } from "@/lib/api";
+import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 
@@ -32,35 +32,20 @@ function CollapseChevron({ isCollapsed }: { isCollapsed: boolean }) {
 }
 
 /** Compact dashboard card showing one selected savings goal with a progress bar. Clicking navigates to /goals. */
-export function GoalWidget() {
+export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const router = useRouter();
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const seededRef = useRef(false);
 
-  /** Loads goals and restores the previously selected goal from localStorage. */
+  /** Seeds the selected goal from localStorage the first time a non-empty goals list arrives. */
   useEffect(() => {
-    let cancelled = false;
-
-    api
-      .listSavingsGoals()
-      .then((data) => {
-        if (cancelled) return;
-        setGoals(data);
-        const stored = localStorage.getItem(STORAGE_KEY);
-        const storedExists = stored && data.some((goal) => goal.id === stored);
-        setSelectedGoalId(storedExists ? stored : (data[0]?.id ?? null));
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (goals.length === 0 || seededRef.current) return;
+    seededRef.current = true;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const storedExists = stored && goals.some((goal) => goal.id === stored);
+    setSelectedGoalId(storedExists ? stored : (goals[0]?.id ?? null));
+  }, [goals]);
 
   /** Persists the newly selected goal id so it survives page reloads. */
   function handleSelectGoal(id: string) {
@@ -68,7 +53,7 @@ export function GoalWidget() {
     localStorage.setItem(STORAGE_KEY, id);
   }
 
-  if (loading || goals.length === 0) return null;
+  if (goals.length === 0) return null;
 
   const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? goals[0]!;
   const typeMeta = ACCOUNT_TYPE_META[selectedGoal.accountType as AccountType];

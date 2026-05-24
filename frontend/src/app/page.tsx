@@ -12,6 +12,7 @@ import {
   NetWorthSnapshot,
   Profile,
   RecurringTransaction,
+  SavingsGoal,
 } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
@@ -23,6 +24,7 @@ import {
   getPresetDateRange,
 } from "@/lib/date-range";
 import { formatCurrency } from "@/lib/format";
+import { getCachedFirstName, setCachedFirstName, getGreeting } from "@/lib/profile-cache";
 import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
 import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
 import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot";
@@ -34,6 +36,7 @@ import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalan
 import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
 import { InsightsCard } from "./_components/_insights/InsightsCard";
 import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
+import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
 
 function Home() {
   const { view } = useDashboardView();
@@ -51,9 +54,11 @@ function Home() {
   const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>(
     [],
   );
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() =>
     getPresetDateRange("this-month"),
   );
@@ -111,6 +116,7 @@ function Home() {
         nextBudgets,
         nextRecurringRules,
         nextTrends,
+        nextGoals,
       ] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(rangeQuery),
@@ -120,6 +126,7 @@ function Home() {
         api.getBudgets(rangeQuery),
         api.listRecurringTransactions(),
         api.getMonthlyTrends(6),
+        api.listSavingsGoals(),
       ]);
 
       setAccounts(nextAccounts);
@@ -128,6 +135,7 @@ function Home() {
       setBudgets(nextBudgets);
       setRecurringRules(nextRecurringRules);
       setMonthlyTrends(nextTrends);
+      setGoals(nextGoals);
 
       const [, nextHistory] = await Promise.all([
         api.recordNetWorthSnapshot(),
@@ -143,6 +151,12 @@ function Home() {
     loadAccounts();
   }, [loadAccounts]);
 
+  /** Seeds the greeting name instantly from localStorage to avoid a flash on load. */
+  useEffect(() => {
+    const cached = getCachedFirstName();
+    if (cached) setCachedFirstNameState(cached);
+  }, []);
+
   /** Loads the user profile for the welcome greeting and onboarding gate. */
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +164,13 @@ function Home() {
     async function loadProfile() {
       try {
         const nextProfile = await api.getProfile();
-        if (!cancelled) setProfile(nextProfile);
+        if (!cancelled) {
+          setProfile(nextProfile);
+          if (nextProfile?.firstName) {
+            setCachedFirstName(nextProfile.firstName);
+            setCachedFirstNameState(nextProfile.firstName);
+          }
+        }
       } catch {
         if (!cancelled) setProfile(null);
       } finally {
@@ -370,9 +390,9 @@ function Home() {
                 marginBottom: "6px",
               }}
             >
-              {profile?.firstName
-                ? `Good morning, ${profile.firstName}.`
-                : "Good morning."}
+              {cachedFirstName
+                ? `${getGreeting()}, ${cachedFirstName}.`
+                : `${getGreeting()}.`}
             </h1>
             <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>
               Here&apos;s your financial overview.
@@ -391,178 +411,184 @@ function Home() {
         </div>
       </div>
 
-      {/* Stats row */}
-      {accounts.length > 0 && (
-        <div
-          className="fade-up fade-up-1"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "12px",
-            marginBottom: "36px",
-          }}
-        >
-          {renderSummaryCard({
-            title: "Net Worth",
-            value: formatCurrency(netWorth),
-            color: netWorth >= 0 ? "#22c55e" : "#ef4444",
-          })}
-          {renderSummaryCard({
-            title: "Total Cash",
-            value: formatCurrency(totalCash),
-            color: "#f59e0b",
-            targetAccount: cashAccounts[0],
-          })}
-          {renderSummaryCard({
-            title: "Chequing",
-            value: (
-              <>
-                {chequingAccounts.length}{" "}
-                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                  acct{chequingAccounts.length !== 1 ? "s" : ""}
-                </span>
-              </>
-            ),
-            targetAccount: chequingAccounts[0],
-          })}
-          {renderSummaryCard({
-            title: "Savings",
-            value: (
-              <>
-                {savingsAccounts.length}{" "}
-                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                  acct{savingsAccounts.length !== 1 ? "s" : ""}
-                </span>
-              </>
-            ),
-            targetAccount: savingsAccounts[0],
-          })}
-          {renderSummaryCard({
-            title: "Registered",
-            value: (
-              <>
-                {registeredAccounts.length}{" "}
-                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                  acct{registeredAccounts.length !== 1 ? "s" : ""}
-                </span>
-              </>
-            ),
-            targetAccount: registeredAccounts[0],
-          })}
-          {renderSummaryCard({
-            title: "Credit",
-            value:
-              creditAccounts.length > 0 ? (
-                <>
-                  {formatCurrency(totalCredit)}{" "}
-                  <span
-                    style={{ fontSize: "13px", color: "var(--text-muted)" }}
-                  >
-                    owed
-                  </span>
-                </>
-              ) : (
-                <>
-                  {creditAccounts.length}{" "}
-                  <span
-                    style={{ fontSize: "13px", color: "var(--text-muted)" }}
-                  >
-                    acct{creditAccounts.length !== 1 ? "s" : ""}
-                  </span>
-                </>
-              ),
-            color: creditAccounts.length > 0 ? "#ef4444" : undefined,
-            targetAccount: creditAccounts[0],
-          })}
-        </div>
+      {loading ? (
+        <DashboardSkeleton dashboardColumns={dashboardColumns} />
+      ) : (
+        <>
+          {/* Stats row */}
+          {accounts.length > 0 && (
+            <div
+              className="fade-up fade-up-1"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "12px",
+                marginBottom: "36px",
+              }}
+            >
+              {renderSummaryCard({
+                title: "Net Worth",
+                value: formatCurrency(netWorth),
+                color: netWorth >= 0 ? "#22c55e" : "#ef4444",
+              })}
+              {renderSummaryCard({
+                title: "Total Cash",
+                value: formatCurrency(totalCash),
+                color: "#f59e0b",
+                targetAccount: cashAccounts[0],
+              })}
+              {renderSummaryCard({
+                title: "Chequing",
+                value: (
+                  <>
+                    {chequingAccounts.length}{" "}
+                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                      acct{chequingAccounts.length !== 1 ? "s" : ""}
+                    </span>
+                  </>
+                ),
+                targetAccount: chequingAccounts[0],
+              })}
+              {renderSummaryCard({
+                title: "Savings",
+                value: (
+                  <>
+                    {savingsAccounts.length}{" "}
+                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                      acct{savingsAccounts.length !== 1 ? "s" : ""}
+                    </span>
+                  </>
+                ),
+                targetAccount: savingsAccounts[0],
+              })}
+              {renderSummaryCard({
+                title: "Registered",
+                value: (
+                  <>
+                    {registeredAccounts.length}{" "}
+                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                      acct{registeredAccounts.length !== 1 ? "s" : ""}
+                    </span>
+                  </>
+                ),
+                targetAccount: registeredAccounts[0],
+              })}
+              {renderSummaryCard({
+                title: "Credit",
+                value:
+                  creditAccounts.length > 0 ? (
+                    <>
+                      {formatCurrency(totalCredit)}{" "}
+                      <span
+                        style={{ fontSize: "13px", color: "var(--text-muted)" }}
+                      >
+                        owed
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {creditAccounts.length}{" "}
+                      <span
+                        style={{ fontSize: "13px", color: "var(--text-muted)" }}
+                      >
+                        acct{creditAccounts.length !== 1 ? "s" : ""}
+                      </span>
+                    </>
+                  ),
+                color: creditAccounts.length > 0 ? "#ef4444" : undefined,
+                targetAccount: creditAccounts[0],
+              })}
+            </div>
+          )}
+
+          {/* Goals */}
+          <GoalWidget goals={goals} />
+
+          {/* Insights */}
+          {accounts.length > 0 && monthlySummary && (
+            <div style={{ marginBottom: "32px" }}>
+              <InsightsCard
+                accounts={accounts}
+                budgets={budgets}
+                monthlySummary={monthlySummary}
+                previousMonthlySummary={previousMonthlySummary}
+                recurringRules={recurringRules}
+              />
+            </div>
+          )}
+
+          {/* Monthly Snapshot + Budgets */}
+          {accounts.length > 0 && monthlySummary && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: dashboardColumns,
+                gap: "20px",
+                alignItems: "start",
+                marginBottom: "32px",
+              }}
+            >
+              <MonthlySnapshot
+                monthlySummary={monthlySummary}
+                previousMonthlySummary={previousMonthlySummary}
+                monthlyTrends={monthlyTrends}
+                isCurrentMonth={dateRange.preset === "this-month"}
+              />
+              <BudgetsCard
+                budgets={budgets}
+                monthlySummary={monthlySummary}
+                onChanged={loadAccounts}
+              />
+            </div>
+          )}
+
+          {/* 50/30/20 Budget Rule */}
+          {accounts.length > 0 && monthlySummary && (
+            <div style={{ marginBottom: "32px" }}>
+              <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />
+            </div>
+          )}
+
+          {/* Recurring Transactions + Upcoming Schedule */}
+          {accounts.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: dashboardColumns,
+                gap: "20px",
+                alignItems: "start",
+                marginBottom: "32px",
+              }}
+            >
+              <RecurringTransactionsCard
+                rules={recurringRules}
+                accounts={accounts}
+                onChanged={loadAccounts}
+              />
+              <RecurringCalendar rules={recurringRules} />
+            </div>
+          )}
+
+          {/* Net Worth History */}
+          {netWorthHistory.length > 0 && (
+            <NetWorthHistory history={netWorthHistory} />
+          )}
+
+          {/* Account Balances + Open New Account */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: dashboardColumns,
+              gap: "20px",
+              alignItems: "start",
+              marginBottom: "32px",
+            }}
+          >
+            {accounts.length > 1 && <AccountBalancesCard accounts={accounts} />}
+            <OpenAccountCard onCreated={loadAccounts} />
+          </div>
+        </>
       )}
-
-      {/* Goals */}
-      <GoalWidget />
-
-      {/* Insights */}
-      {accounts.length > 0 && monthlySummary && (
-        <div style={{ marginBottom: "32px" }}>
-          <InsightsCard
-            accounts={accounts}
-            budgets={budgets}
-            monthlySummary={monthlySummary}
-            previousMonthlySummary={previousMonthlySummary}
-            recurringRules={recurringRules}
-          />
-        </div>
-      )}
-
-      {/* Monthly Snapshot + Budgets */}
-      {accounts.length > 0 && monthlySummary && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: dashboardColumns,
-            gap: "20px",
-            alignItems: "start",
-            marginBottom: "32px",
-          }}
-        >
-          <MonthlySnapshot
-            monthlySummary={monthlySummary}
-            previousMonthlySummary={previousMonthlySummary}
-            monthlyTrends={monthlyTrends}
-            isCurrentMonth={dateRange.preset === "this-month"}
-          />
-          <BudgetsCard
-            budgets={budgets}
-            monthlySummary={monthlySummary}
-            onChanged={loadAccounts}
-          />
-        </div>
-      )}
-
-      {/* 50/30/20 Budget Rule */}
-      {accounts.length > 0 && monthlySummary && (
-        <div style={{ marginBottom: "32px" }}>
-          <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />
-        </div>
-      )}
-
-      {/* Recurring Transactions + Upcoming Schedule */}
-      {accounts.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: dashboardColumns,
-            gap: "20px",
-            alignItems: "start",
-            marginBottom: "32px",
-          }}
-        >
-          <RecurringTransactionsCard
-            rules={recurringRules}
-            accounts={accounts}
-            onChanged={loadAccounts}
-          />
-          <RecurringCalendar rules={recurringRules} />
-        </div>
-      )}
-
-      {/* Net Worth History */}
-      {netWorthHistory.length > 0 && (
-        <NetWorthHistory history={netWorthHistory} />
-      )}
-
-      {/* Account Balances + Open New Account */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: dashboardColumns,
-          gap: "20px",
-          alignItems: "start",
-          marginBottom: "32px",
-        }}
-      >
-        {accounts.length > 1 && <AccountBalancesCard accounts={accounts} />}
-        <OpenAccountCard onCreated={loadAccounts} />
-      </div>
 
       {/* Account list */}
       <div className="fade-up fade-up-3">
