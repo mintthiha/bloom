@@ -1,6 +1,6 @@
 # Bloom
 
-Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, multi-account tracking, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, and an AI-powered Canadian financial education assistant.
+Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, multi-account tracking, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, actionable financial insights, savings rate tracking, and an AI-powered Canadian financial education assistant.
 
 ## Tech Stack
 
@@ -81,7 +81,7 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Optional merchant names on deposits, withdrawals, and recurring-generated entries
 - Transaction history filtering by:
   - type
-  - category
+  - category (including an explicit "Uncategorized" option for transactions with no category)
   - description or merchant search
   - preset date range
   - custom date range
@@ -137,10 +137,37 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
   - transaction activity
 - Account analytics and balance history charts
 - Monthly cash-flow summary (income, spending, net cash flow, top expense category)
+- Savings rate tile — fourth stat in the monthly snapshot showing `net cash flow / income` as a percentage:
+  - Green ≥ 20%, amber 10–19%, red < 10%, "N/A" when income is zero
 - Snapshot/Trends toggle on the monthly summary card:
-  - Snapshot view: income, spending, and net cash flow for the selected period
+  - Snapshot view: income, spending, net cash flow, and savings rate for the selected period
   - Trends view: grouped bar chart showing income and spending over the last 6 months
 - Spending forecast strip: projects end-of-month spending based on daily pace (shown for current month only)
+
+### 50/30/20 Budget Rule Visualizer
+
+- Maps actual spending to the 50/30/20 rule:
+  - **Needs** — Groceries, Rent, Utilities, Transport, Healthcare
+  - **Wants** — all other spending categories
+  - **Savings** — net cash flow for the period
+- Each bucket shows actual vs target percentage with a progress bar and a target marker
+- Per-account category drilldown: expand any bucket to see spending broken down by category and account
+- Drilldown capped at a max height with a fade-scrollbar (hides after 1 second of inactivity)
+- Date range follows the dashboard's active range selector
+
+### Financial Insights
+
+- "Your Next Moves" card — rule-based engine that evaluates up to 7 rules in priority order and surfaces the top 2–3 actionable items:
+  1. Over-budget categories — calls out the most overspent budget by dollar amount
+  2. Overdue recurring transactions — flags rules with pending apply actions
+  3. Emergency fund coverage — warns when chequing + savings covers fewer than 3 months of spending
+  4. Idle chequing balance — suggests moving excess cash to a TFSA when balance is high relative to spending
+  5. Low savings rate — flags when the savings rate falls below 10%
+  6. No budgets set — prompts first-time budget creation
+  7. Strong savings rate — positive reinforcement when savings rate exceeds 20%
+- Each insight has a severity (warning / info / success), a one-line message, and a supporting detail
+- Warning count badge in the card header
+- Empty state when no action items exist
 
 ### Net Worth Tracking
 
@@ -173,9 +200,13 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Single-column and double-column dashboard layouts
 - Shared layout toggle across dashboard, account pages, and the Learn page
 - Click-through navigation from dashboard summary cards and account cards
+- Time-based greeting — "Good morning / afternoon / evening, [name]" — with first name cached in localStorage to eliminate the flash between page load and profile fetch
+- Full-page skeleton loading screens: all dashboard sections render animated placeholder shapes while data is fetching, preventing layout shift
 - Every major dashboard section is independently collapsible:
   - Monthly Snapshot
   - Budgets
+  - 50/30/20 Budget Rule
+  - Financial Insights
   - Recurring Transactions
   - Upcoming Schedule
   - Net Worth History
@@ -186,6 +217,7 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Smooth height animation using the CSS `grid-template-rows: 0fr / 1fr` technique
 - Card headers and action buttons (e.g. "Apply due") remain visible when collapsed
 - Chevron indicator rotates to reflect expanded/collapsed state
+- Account list drag-to-reorder within each account type group, persisted to localStorage
 
 ### Date And Time Handling
 
@@ -209,9 +241,16 @@ The homepage is structured around a component-per-section pattern, keeping `page
 | `OpenAccountCard` | `app/_components/_openAccount/` |
 | `GoalWidget` | `app/_components/_goalWidget/` |
 | `DraggableAccountList` | `app/_components/_accountList/` |
+| `InsightsCard` | `app/_components/_insights/` |
+| `BudgetRuleCard` | `app/_components/_budgetRule/` |
+| `DashboardSkeleton` | `app/_components/_dashboardSkeleton/` |
 | `CollapsibleCard` | `src/components/collapsible-card.tsx` |
 
 `CollapsibleCard` is a shared UI primitive used by all dashboard sections. It accepts `eyebrow`, `title`, `description`, and `headerRight` slots and handles the collapse toggle and animation internally.
+
+`InsightsCard` consumes a rule engine (`_insights/insights.ts`) that evaluates all dashboard data synchronously — no extra API calls.
+
+`BudgetRuleCard` fetches a category-breakdown endpoint (`GET /api/accounts/summary/category-breakdown`) that groups spending by `(category, account)` for the selected date range.
 
 ## Testing
 
