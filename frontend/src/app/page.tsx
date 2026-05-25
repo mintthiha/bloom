@@ -36,6 +36,7 @@ import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalan
 import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
 import { InsightsCard } from "./_components/_insights/InsightsCard";
 import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
+import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHealthScore";
 import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
 
 function Home() {
@@ -503,6 +504,18 @@ function Home() {
 
           {/* Goals */}
           <GoalWidget goals={goals} />
+
+          {/* Financial Health Score */}
+          {accounts.length > 0 && monthlySummary && (
+            <div style={{ marginBottom: "32px" }}>
+              <FinancialHealthScore
+                accounts={accounts}
+                budgets={budgets}
+                monthlySummary={monthlySummary}
+                netWorthHistory={netWorthHistory}
+              />
+            </div>
+          )}
 
           {/* Insights */}
           {accounts.length > 0 && monthlySummary && (

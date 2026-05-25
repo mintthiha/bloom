@@ -80,6 +80,63 @@ function GoalWidgetSkeleton() {
   );
 }
 
+/** Skeleton for the FinancialHealthScore card (big score display + five sub-score rows). */
+function FinancialHealthSkeleton() {
+  return (
+    <div style={{ ...cardBase, marginBottom: "32px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <Skeleton style={{ height: "11px", width: "120px" }} />
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <Skeleton style={{ height: "18px", width: "28px" }} />
+          <Skeleton style={{ height: "20px", width: "34px", borderRadius: "5px" }} />
+          <Skeleton style={{ height: "20px", width: "20px", borderRadius: "6px" }} />
+        </div>
+      </div>
+      <div
+        style={{
+          textAlign: "center",
+          paddingBottom: "20px",
+          marginBottom: "20px",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <Skeleton
+          style={{ height: "64px", width: "80px", margin: "0 auto 8px", borderRadius: "8px" }}
+        />
+        <Skeleton style={{ height: "16px", width: "110px", margin: "0 auto 4px" }} />
+        <Skeleton style={{ height: "11px", width: "80px", margin: "0 auto 14px" }} />
+        <Skeleton
+          style={{ height: "8px", width: "240px", margin: "0 auto", borderRadius: "999px" }}
+        />
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} style={{ marginBottom: "18px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "6px",
+            }}
+          >
+            <Skeleton style={{ height: "13px", width: "38%" }} />
+            <Skeleton style={{ height: "13px", width: "40px" }} />
+          </div>
+          <Skeleton style={{ height: "6px", borderRadius: "999px", marginBottom: "5px" }} />
+          <Skeleton style={{ height: "12px", width: "70%" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Skeleton for the InsightsCard (eyebrow + three insight rows). */
 function InsightsCardSkeleton() {
   return (
@@ -337,6 +394,7 @@ export function DashboardSkeleton({ dashboardColumns }: DashboardSkeletonProps) 
     <>
       <StatsRowSkeleton />
       <GoalWidgetSkeleton />
+      <FinancialHealthSkeleton />
       <InsightsCardSkeleton />
       <SnapshotAndBudgetsSkeleton dashboardColumns={dashboardColumns} />
       <BudgetRuleCardSkeleton />
