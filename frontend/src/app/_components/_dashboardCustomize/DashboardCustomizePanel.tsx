@@ -149,15 +149,20 @@ export function DashboardCustomizePanel() {
         )}
       </SheetTrigger>
 
-      <SheetContent side="right" style={{ overflowY: "auto" }}>
-        <SheetHeader>
-          <SheetTitle>Customize Dashboard</SheetTitle>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+      <SheetContent
+        side="right"
+        style={{ overflowY: "auto", background: "var(--sidebar)", borderLeft: "1px solid var(--border)" }}
+      >
+        <SheetHeader style={{ padding: "28px 24px 16px" }}>
+          <SheetTitle style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.4px" }}>
+            Customize Dashboard
+          </SheetTitle>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             Choose which cards appear on your dashboard.
           </p>
         </SheetHeader>
 
-        <div style={{ padding: "0 16px" }}>
+        <div style={{ padding: "0 24px" }}>
           {ALL_CARD_IDS.map((cardId) => (
             <CardToggleRow key={cardId} cardId={cardId} />
           ))}
@@ -167,7 +172,7 @@ export function DashboardCustomizePanel() {
               type="button"
               onClick={resetToDefaults}
               style={{
-                marginTop: "20px",
+                marginTop: "24px",
                 width: "100%",
                 background: "none",
                 border: "1px solid var(--border)",
