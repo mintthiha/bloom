@@ -40,6 +40,7 @@ import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHe
 import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
 import { DashboardCustomizePanel } from "./_components/_dashboardCustomize/DashboardCustomizePanel";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
+import { OnboardingChecklist } from "./_components/_onboardingChecklist/OnboardingChecklist";
 
 function Home() {
   const { view } = useDashboardView();
@@ -423,6 +424,14 @@ function Home() {
         <DashboardSkeleton dashboardColumns={dashboardColumns} twoColumnGrid={twoColumnGrid} />
       ) : (
         <>
+          {/* Onboarding checklist — only visible to new users until all steps complete or dismissed */}
+          <OnboardingChecklist
+            accounts={accounts}
+            budgets={budgets}
+            goals={goals}
+            monthlySummary={monthlySummary}
+          />
+
           {/* Stats row */}
           {accounts.length > 0 && (
             <div
@@ -554,6 +563,7 @@ function Home() {
             visibleCards.has("monthly-snapshot") || visibleCards.has("budgets")
           ) && (
             <div
+              id="budgets-card-section"
               style={{
                 display: "grid",
                 gridTemplateColumns: dashboardColumns,
@@ -613,6 +623,7 @@ function Home() {
 
           {/* Account Balances + Open New Account */}
           <div
+            id="open-account-section"
             style={{
               display: "grid",
               gridTemplateColumns: dashboardColumns,

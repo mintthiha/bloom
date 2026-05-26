@@ -4,6 +4,7 @@ import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ChatSection } from "./_components/_aiChat/ChatSection";
 import { LearningCards } from "./_components/_cardsSection/LearningCards";
 import { useLearnChat } from "@/hooks/useLearnChat";
+import { setLearnPageExplored } from "@/app/_components/_onboardingChecklist/onboarding-storage";
 
 export default function LearnPage() {
   const { view } = useDashboardView();
@@ -20,6 +21,11 @@ export default function LearnPage() {
     sendMessage,
     handleKeyDown,
   } = useLearnChat();
+
+  /** Records that the user has visited the Learn page so the onboarding checklist can mark that step done. */
+  useEffect(() => {
+    setLearnPageExplored();
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0) {

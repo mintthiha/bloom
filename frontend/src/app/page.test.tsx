@@ -10,6 +10,10 @@ const { apiMock } = vi.hoisted(() => ({
     getMonthlySummary: vi.fn(),
     getBudgets: vi.fn(),
     listRecurringTransactions: vi.fn(),
+    listSavingsGoals: vi.fn(),
+    getMonthlyTrends: vi.fn(),
+    recordNetWorthSnapshot: vi.fn(),
+    getNetWorthHistory: vi.fn(),
   },
 }));
 
@@ -24,6 +28,10 @@ vi.mock("@/lib/api", async () => {
       getMonthlySummary: apiMock.getMonthlySummary,
       getBudgets: apiMock.getBudgets,
       listRecurringTransactions: apiMock.listRecurringTransactions,
+      listSavingsGoals: apiMock.listSavingsGoals,
+      getMonthlyTrends: apiMock.getMonthlyTrends,
+      recordNetWorthSnapshot: apiMock.recordNetWorthSnapshot,
+      getNetWorthHistory: apiMock.getNetWorthHistory,
     },
   };
 });
@@ -59,11 +67,16 @@ vi.mock("recharts", () => ({
 
 describe("home page", () => {
   beforeEach(() => {
+    localStorage.clear();
     apiMock.getProfile.mockReset();
     apiMock.listAccounts.mockReset();
     apiMock.getMonthlySummary.mockReset();
     apiMock.getBudgets.mockReset();
     apiMock.listRecurringTransactions.mockReset();
+    apiMock.listSavingsGoals.mockReset();
+    apiMock.getMonthlyTrends.mockReset();
+    apiMock.recordNetWorthSnapshot.mockReset();
+    apiMock.getNetWorthHistory.mockReset();
     apiMock.listAccounts.mockResolvedValue([]);
     apiMock.getMonthlySummary.mockResolvedValue({
       month: "2026-04",
@@ -75,6 +88,10 @@ describe("home page", () => {
     });
     apiMock.getBudgets.mockResolvedValue([]);
     apiMock.listRecurringTransactions.mockResolvedValue([]);
+    apiMock.listSavingsGoals.mockResolvedValue([]);
+    apiMock.getMonthlyTrends.mockResolvedValue([]);
+    apiMock.recordNetWorthSnapshot.mockResolvedValue(undefined);
+    apiMock.getNetWorthHistory.mockResolvedValue([]);
   });
 
   it("shows onboarding when the user has no saved profile", async () => {
@@ -100,7 +117,7 @@ describe("home page", () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText("Good morning, Jane.")).toBeInTheDocument();
+      expect(screen.getByText(/good (morning|afternoon|evening), jane\./i)).toBeInTheDocument();
     });
   });
 
@@ -139,7 +156,7 @@ describe("home page", () => {
 
     expect(await screen.findByText("Monthly Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Top Spend")).toBeInTheDocument();
-    expect(screen.getByText("$400.00")).toBeInTheDocument();
+    expect(screen.getAllByText("$400.00").length).toBeGreaterThan(0);
   });
 
   it("shows saved budgets with current progress", async () => {

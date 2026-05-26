@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -13,6 +14,10 @@ import {
   CardId,
   useDashboardVisibility,
 } from "@/components/dashboard-visibility-provider";
+import {
+  getOnboardingDismissed,
+  clearOnboardingDismissed,
+} from "@/app/_components/_onboardingChecklist/onboarding-storage";
 
 /** Animated pill switch indicating whether a card is visible. */
 function CardToggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -84,6 +89,19 @@ function CardToggleRow({ cardId }: { cardId: CardId }) {
 export function DashboardCustomizePanel() {
   const { resetToDefaults, visibleCards } = useDashboardVisibility();
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
+  const [isChecklistDismissed, setIsChecklistDismissed] = useState(false);
+
+  /** Reads the dismissal flag from localStorage once on mount. */
+  useEffect(() => {
+    setIsChecklistDismissed(getOnboardingDismissed());
+  }, []);
+
+  /** Clears the dismissal flag and fires an event so the checklist re-appears immediately. */
+  function handleRestoreChecklist() {
+    clearOnboardingDismissed();
+    setIsChecklistDismissed(false);
+    window.dispatchEvent(new Event("bloom:onboarding-restored"));
+  }
 
   return (
     <Sheet>
@@ -192,6 +210,34 @@ export function DashboardCustomizePanel() {
               }
             >
               Reset to defaults
+            </button>
+          )}
+
+          {isChecklistDismissed && (
+            <button
+              type="button"
+              onClick={handleRestoreChecklist}
+              style={{
+                marginTop: hiddenCount > 0 ? "10px" : "24px",
+                width: "100%",
+                background: "none",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                padding: "8px",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+                transition: "border-color 0.15s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.borderColor = "var(--border-hover)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.borderColor = "var(--border)")
+              }
+            >
+              Restore getting started checklist
             </button>
           )}
         </div>
