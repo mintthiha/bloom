@@ -2,6 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { CSSProperties } from "react";
+import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
 interface DashboardSkeletonProps {
   dashboardColumns: string;
@@ -179,6 +180,15 @@ function InsightsCardSkeleton() {
 
 /** Skeleton for the 2×2 grid of Goal, Financial Health, Insights, and Budget Rule cards. */
 function FourCardGridSkeleton({ twoColumnGrid }: { twoColumnGrid: string }) {
+  const { visibleCards } = useDashboardVisibility();
+
+  const showGoals = visibleCards.has("goals");
+  const showHealth = visibleCards.has("financial-health");
+  const showInsights = visibleCards.has("insights");
+  const showBudgetRule = visibleCards.has("budget-rule");
+
+  if (!showGoals && !showHealth && !showInsights && !showBudgetRule) return null;
+
   return (
     <div
       style={{
@@ -189,16 +199,20 @@ function FourCardGridSkeleton({ twoColumnGrid }: { twoColumnGrid: string }) {
         marginBottom: "32px",
       }}
     >
-      <GoalWidgetSkeleton />
-      <FinancialHealthSkeleton />
-      <InsightsCardSkeleton />
-      <BudgetRuleCardSkeleton />
+      {showGoals && <GoalWidgetSkeleton />}
+      {showHealth && <FinancialHealthSkeleton />}
+      {showInsights && <InsightsCardSkeleton />}
+      {showBudgetRule && <BudgetRuleCardSkeleton />}
     </div>
   );
 }
 
 /** Skeleton for the Monthly Snapshot and Budgets side-by-side cards. */
 function SnapshotAndBudgetsSkeleton({ dashboardColumns }: { dashboardColumns: string }) {
+  const { visibleCards } = useDashboardVisibility();
+  const showSnapshot = visibleCards.has("monthly-snapshot");
+  const showBudgets = visibleCards.has("budgets");
+  if (!showSnapshot && !showBudgets) return null;
   return (
     <div
       style={{
@@ -209,53 +223,50 @@ function SnapshotAndBudgetsSkeleton({ dashboardColumns }: { dashboardColumns: st
         marginBottom: "32px",
       }}
     >
-      <div style={cardBase}>
-        <Skeleton style={{ height: "11px", width: "130px", marginBottom: "10px" }} />
-        <Skeleton style={{ height: "26px", width: "50%", marginBottom: "6px" }} />
-        <Skeleton style={{ height: "12px", width: "40%", marginBottom: "20px" }} />
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}
-        >
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              style={{
-                background: "var(--surface-2)",
-                borderRadius: "10px",
-                padding: "12px",
-              }}
-            >
-              <Skeleton style={{ height: "10px", width: "65%", marginBottom: "8px" }} />
-              <Skeleton style={{ height: "16px", width: "80%" }} />
+      {showSnapshot && (
+        <div style={cardBase}>
+          <Skeleton style={{ height: "11px", width: "130px", marginBottom: "10px" }} />
+          <Skeleton style={{ height: "26px", width: "50%", marginBottom: "6px" }} />
+          <Skeleton style={{ height: "12px", width: "40%", marginBottom: "20px" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                style={{ background: "var(--surface-2)", borderRadius: "10px", padding: "12px" }}
+              >
+                <Skeleton style={{ height: "10px", width: "65%", marginBottom: "8px" }} />
+                <Skeleton style={{ height: "16px", width: "80%" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {showBudgets && (
+        <div style={cardBase}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "20px",
+            }}
+          >
+            <Skeleton style={{ height: "11px", width: "70px" }} />
+            <Skeleton style={{ height: "22px", width: "22px", borderRadius: "6px" }} />
+          </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ marginBottom: i < 3 ? "16px" : "0" }}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}
+              >
+                <Skeleton style={{ height: "12px", width: "45%" }} />
+                <Skeleton style={{ height: "12px", width: "25%" }} />
+              </div>
+              <Skeleton style={{ height: "6px", borderRadius: "999px" }} />
             </div>
           ))}
         </div>
-      </div>
-
-      <div style={cardBase}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <Skeleton style={{ height: "11px", width: "70px" }} />
-          <Skeleton style={{ height: "22px", width: "22px", borderRadius: "6px" }} />
-        </div>
-        {[1, 2, 3].map((i) => (
-          <div key={i} style={{ marginBottom: i < 3 ? "16px" : "0" }}>
-            <div
-              style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}
-            >
-              <Skeleton style={{ height: "12px", width: "45%" }} />
-              <Skeleton style={{ height: "12px", width: "25%" }} />
-            </div>
-            <Skeleton style={{ height: "6px", borderRadius: "999px" }} />
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 }
@@ -300,6 +311,10 @@ function BudgetRuleCardSkeleton() {
 
 /** Skeleton for the Recurring Transactions and Calendar side-by-side cards. */
 function RecurringAndCalendarSkeleton({ dashboardColumns }: { dashboardColumns: string }) {
+  const { visibleCards } = useDashboardVisibility();
+  const showRecurring = visibleCards.has("recurring");
+  const showCalendar = visibleCards.has("calendar");
+  if (!showRecurring && !showCalendar) return null;
   return (
     <div
       style={{
@@ -310,69 +325,72 @@ function RecurringAndCalendarSkeleton({ dashboardColumns }: { dashboardColumns: 
         marginBottom: "32px",
       }}
     >
-      <div style={cardBase}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <Skeleton style={{ height: "11px", width: "90px" }} />
-          <Skeleton style={{ height: "22px", width: "22px", borderRadius: "6px" }} />
-        </div>
-        {[1, 2, 3, 4].map((i) => (
+      {showRecurring && (
+        <div style={cardBase}>
           <div
-            key={i}
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: "14px",
-              padding: "10px 0",
-              borderBottom: i < 4 ? "1px solid var(--border)" : "none",
+              marginBottom: "20px",
             }}
           >
-            <Skeleton
-              style={{ width: "36px", height: "36px", borderRadius: "10px", flexShrink: 0 }}
-            />
-            <div style={{ flex: 1 }}>
-              <Skeleton style={{ height: "13px", width: "60%", marginBottom: "5px" }} />
-              <Skeleton style={{ height: "11px", width: "40%" }} />
-            </div>
-            <Skeleton style={{ height: "13px", width: "48px" }} />
+            <Skeleton style={{ height: "11px", width: "90px" }} />
+            <Skeleton style={{ height: "22px", width: "22px", borderRadius: "6px" }} />
           </div>
-        ))}
-      </div>
-
-      <div style={cardBase}>
-        <Skeleton style={{ height: "11px", width: "130px", marginBottom: "20px" }} />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            gap: "4px",
-            marginBottom: "6px",
-          }}
-        >
-          {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} style={{ height: "22px", borderRadius: "4px" }} />
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                padding: "10px 0",
+                borderBottom: i < 4 ? "1px solid var(--border)" : "none",
+              }}
+            >
+              <Skeleton
+                style={{ width: "36px", height: "36px", borderRadius: "10px", flexShrink: 0 }}
+              />
+              <div style={{ flex: 1 }}>
+                <Skeleton style={{ height: "13px", width: "60%", marginBottom: "5px" }} />
+                <Skeleton style={{ height: "11px", width: "40%" }} />
+              </div>
+              <Skeleton style={{ height: "13px", width: "48px" }} />
+            </div>
           ))}
         </div>
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}
-        >
-          {Array.from({ length: 35 }).map((_, i) => (
-            <Skeleton key={i} style={{ height: "30px", borderRadius: "6px" }} />
-          ))}
+      )}
+      {showCalendar && (
+        <div style={cardBase}>
+          <Skeleton style={{ height: "11px", width: "130px", marginBottom: "20px" }} />
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gap: "4px",
+              marginBottom: "6px",
+            }}
+          >
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} style={{ height: "22px", borderRadius: "4px" }} />
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+            {Array.from({ length: 35 }).map((_, i) => (
+              <Skeleton key={i} style={{ height: "30px", borderRadius: "6px" }} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 /** Skeleton for the Net Worth History chart card. */
 function NetWorthHistorySkeleton() {
+  const { visibleCards } = useDashboardVisibility();
+  if (!visibleCards.has("net-worth")) return null;
   return (
     <div style={{ ...cardBase, marginBottom: "32px" }}>
       <Skeleton style={{ height: "11px", width: "130px", marginBottom: "8px" }} />
@@ -384,6 +402,7 @@ function NetWorthHistorySkeleton() {
 
 /** Skeleton for the Account Balances chart and Open New Account form cards. */
 function AccountPanelsSkeleton({ dashboardColumns }: { dashboardColumns: string }) {
+  const { visibleCards } = useDashboardVisibility();
   return (
     <div
       style={{
@@ -394,10 +413,12 @@ function AccountPanelsSkeleton({ dashboardColumns }: { dashboardColumns: string 
         marginBottom: "32px",
       }}
     >
-      <div style={cardBase}>
-        <Skeleton style={{ height: "11px", width: "130px", marginBottom: "20px" }} />
-        <Skeleton style={{ height: "180px", borderRadius: "8px" }} />
-      </div>
+      {visibleCards.has("account-balances") && (
+        <div style={cardBase}>
+          <Skeleton style={{ height: "11px", width: "130px", marginBottom: "20px" }} />
+          <Skeleton style={{ height: "180px", borderRadius: "8px" }} />
+        </div>
+      )}
       <div style={cardBase}>
         <Skeleton style={{ height: "11px", width: "120px", marginBottom: "8px" }} />
         <Skeleton style={{ height: "22px", width: "60%", marginBottom: "20px" }} />

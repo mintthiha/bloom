@@ -38,9 +38,12 @@ import { InsightsCard } from "./_components/_insights/InsightsCard";
 import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
 import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHealthScore";
 import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
+import { DashboardCustomizePanel } from "./_components/_dashboardCustomize/DashboardCustomizePanel";
+import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
 function Home() {
   const { view } = useDashboardView();
+  const { visibleCards } = useDashboardVisibility();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(
@@ -74,7 +77,7 @@ function Home() {
 
   const dashboardColumns =
     view === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
-  const twoColumnGrid = view === "single" ? "1fr" : "repeat(2, 1fr)";
+  const twoColumnGrid = view === "single" ? "1fr" : "repeat(auto-fit, minmax(480px, 1fr))";
 
   /** Keeps the date range fresh whenever the preset changes (e.g., "this-month" recalculates daily). */
   useEffect(() => {
@@ -409,7 +412,10 @@ function Home() {
               Times shown in {timeZone}.
             </p>
           </div>
-          <DateRangeControls value={dateRange} onChange={setDateRange} />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <DashboardCustomizePanel />
+              <DateRangeControls value={dateRange} onChange={setDateRange} />
+            </div>
         </div>
       </div>
 
@@ -505,35 +511,48 @@ function Home() {
 
           {/* Goals + Financial Health + Insights + 50/30/20 Rule (2×2 grid) */}
           {accounts.length > 0 && monthlySummary && (
+            visibleCards.has("goals") ||
+            visibleCards.has("financial-health") ||
+            visibleCards.has("insights") ||
+            visibleCards.has("budget-rule")
+          ) && (
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: view === "single" ? "1fr" : "repeat(2, 1fr)",
+                gridTemplateColumns: twoColumnGrid,
                 gap: "20px",
                 alignItems: "start",
                 marginBottom: "32px",
               }}
             >
-              <GoalWidget goals={goals} />
-              <FinancialHealthScore
-                accounts={accounts}
-                budgets={budgets}
-                monthlySummary={monthlySummary}
-                netWorthHistory={netWorthHistory}
-              />
-              <InsightsCard
-                accounts={accounts}
-                budgets={budgets}
-                monthlySummary={monthlySummary}
-                previousMonthlySummary={previousMonthlySummary}
-                recurringRules={recurringRules}
-              />
-              <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />
+              {visibleCards.has("goals") && <GoalWidget goals={goals} />}
+              {visibleCards.has("financial-health") && (
+                <FinancialHealthScore
+                  accounts={accounts}
+                  budgets={budgets}
+                  monthlySummary={monthlySummary!}
+                  netWorthHistory={netWorthHistory}
+                />
+              )}
+              {visibleCards.has("insights") && (
+                <InsightsCard
+                  accounts={accounts}
+                  budgets={budgets}
+                  monthlySummary={monthlySummary!}
+                  previousMonthlySummary={previousMonthlySummary}
+                  recurringRules={recurringRules}
+                />
+              )}
+              {visibleCards.has("budget-rule") && (
+                <BudgetRuleCard monthlySummary={monthlySummary!} rangeQuery={rangeQuery} />
+              )}
             </div>
           )}
 
           {/* Monthly Snapshot + Budgets */}
           {accounts.length > 0 && monthlySummary && (
+            visibleCards.has("monthly-snapshot") || visibleCards.has("budgets")
+          ) && (
             <div
               style={{
                 display: "grid",
@@ -543,22 +562,28 @@ function Home() {
                 marginBottom: "32px",
               }}
             >
-              <MonthlySnapshot
-                monthlySummary={monthlySummary}
-                previousMonthlySummary={previousMonthlySummary}
-                monthlyTrends={monthlyTrends}
-                isCurrentMonth={dateRange.preset === "this-month"}
-              />
-              <BudgetsCard
-                budgets={budgets}
-                monthlySummary={monthlySummary}
-                onChanged={loadAccounts}
-              />
+              {visibleCards.has("monthly-snapshot") && (
+                <MonthlySnapshot
+                  monthlySummary={monthlySummary!}
+                  previousMonthlySummary={previousMonthlySummary}
+                  monthlyTrends={monthlyTrends}
+                  isCurrentMonth={dateRange.preset === "this-month"}
+                />
+              )}
+              {visibleCards.has("budgets") && (
+                <BudgetsCard
+                  budgets={budgets}
+                  monthlySummary={monthlySummary!}
+                  onChanged={loadAccounts}
+                />
+              )}
             </div>
           )}
 
           {/* Recurring Transactions + Upcoming Schedule */}
           {accounts.length > 0 && (
+            visibleCards.has("recurring") || visibleCards.has("calendar")
+          ) && (
             <div
               style={{
                 display: "grid",
@@ -568,17 +593,21 @@ function Home() {
                 marginBottom: "32px",
               }}
             >
-              <RecurringTransactionsCard
-                rules={recurringRules}
-                accounts={accounts}
-                onChanged={loadAccounts}
-              />
-              <RecurringCalendar rules={recurringRules} />
+              {visibleCards.has("recurring") && (
+                <RecurringTransactionsCard
+                  rules={recurringRules}
+                  accounts={accounts}
+                  onChanged={loadAccounts}
+                />
+              )}
+              {visibleCards.has("calendar") && (
+                <RecurringCalendar rules={recurringRules} />
+              )}
             </div>
           )}
 
           {/* Net Worth History */}
-          {netWorthHistory.length > 0 && (
+          {netWorthHistory.length > 0 && visibleCards.has("net-worth") && (
             <NetWorthHistory history={netWorthHistory} />
           )}
 
@@ -592,7 +621,9 @@ function Home() {
               marginBottom: "32px",
             }}
           >
-            {accounts.length > 1 && <AccountBalancesCard accounts={accounts} />}
+            {accounts.length > 1 && visibleCards.has("account-balances") && (
+              <AccountBalancesCard accounts={accounts} />
+            )}
             <OpenAccountCard onCreated={loadAccounts} />
           </div>
         </>
