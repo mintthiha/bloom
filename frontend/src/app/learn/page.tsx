@@ -3,12 +3,31 @@ import { useState, useRef, useEffect } from "react";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ChatSection } from "./_components/_aiChat/ChatSection";
 import { LearningCards } from "./_components/_cardsSection/LearningCards";
+import { LearnPageSkeleton } from "./_components/_learnSkeleton/LearnPageSkeleton";
 import { useLearnChat } from "@/hooks/useLearnChat";
 import { setLearnPageExplored } from "@/app/_components/_onboardingChecklist/onboarding-storage";
 
 export default function LearnPage() {
   const { view } = useDashboardView();
   const isDouble = view === "double";
+
+  /**
+   * Read the stored layout synchronously so the skeleton uses the correct column count
+   * immediately — the context provider reads localStorage in a useEffect, which is too
+   * late and would always render the wrong skeleton layout on first paint.
+   */
+  const [skeletonIsDouble] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.localStorage.getItem("bloom_dashboard_view") !== "single";
+    } catch {
+      return true;
+    }
+  });
+
+  /** Drive skeleton visibility with a short timer so it is guaranteed to be painted. */
+  const [isLoading, setIsLoading] = useState(true);
+
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
 
   const {
@@ -21,6 +40,11 @@ export default function LearnPage() {
     sendMessage,
     handleKeyDown,
   } = useLearnChat();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   /** Records that the user has visited the Learn page so the onboarding checklist can mark that step done. */
   useEffect(() => {
@@ -51,7 +75,9 @@ export default function LearnPage() {
         </p>
       </div>
 
-      {isDouble ? (
+      {isLoading ? (
+        <LearnPageSkeleton isDouble={skeletonIsDouble} />
+      ) : isDouble ? (
         <div
           style={{
             display: "grid",
