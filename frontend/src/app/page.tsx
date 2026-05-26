@@ -74,6 +74,7 @@ function Home() {
 
   const dashboardColumns =
     view === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
+  const twoColumnGrid = view === "single" ? "1fr" : "repeat(2, 1fr)";
 
   /** Keeps the date range fresh whenever the preset changes (e.g., "this-month" recalculates daily). */
   useEffect(() => {
@@ -413,7 +414,7 @@ function Home() {
       </div>
 
       {loading ? (
-        <DashboardSkeleton dashboardColumns={dashboardColumns} />
+        <DashboardSkeleton dashboardColumns={dashboardColumns} twoColumnGrid={twoColumnGrid} />
       ) : (
         <>
           {/* Stats row */}

@@ -5,6 +5,7 @@ import { CSSProperties } from "react";
 
 interface DashboardSkeletonProps {
   dashboardColumns: string;
+  twoColumnGrid: string;
 }
 
 const cardBase: CSSProperties = {
@@ -46,7 +47,7 @@ function StatsRowSkeleton() {
 /** Skeleton for the GoalWidget card (header + progress bar). */
 function GoalWidgetSkeleton() {
   return (
-    <div style={{ ...cardBase, padding: "20px 24px", marginBottom: "20px" }}>
+    <div style={{ ...cardBase, padding: "20px 24px" }}>
       <div
         style={{
           display: "flex",
@@ -83,7 +84,7 @@ function GoalWidgetSkeleton() {
 /** Skeleton for the FinancialHealthScore card (big score display + five sub-score rows). */
 function FinancialHealthSkeleton() {
   return (
-    <div style={{ ...cardBase, marginBottom: "32px" }}>
+    <div style={cardBase}>
       <div
         style={{
           display: "flex",
@@ -140,7 +141,7 @@ function FinancialHealthSkeleton() {
 /** Skeleton for the InsightsCard (eyebrow + three insight rows). */
 function InsightsCardSkeleton() {
   return (
-    <div style={{ ...cardBase, marginBottom: "32px" }}>
+    <div style={cardBase}>
       <div
         style={{
           display: "flex",
@@ -172,6 +173,26 @@ function InsightsCardSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Skeleton for the 2×2 grid of Goal, Financial Health, Insights, and Budget Rule cards. */
+function FourCardGridSkeleton({ twoColumnGrid }: { twoColumnGrid: string }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: twoColumnGrid,
+        gap: "20px",
+        alignItems: "start",
+        marginBottom: "32px",
+      }}
+    >
+      <GoalWidgetSkeleton />
+      <FinancialHealthSkeleton />
+      <InsightsCardSkeleton />
+      <BudgetRuleCardSkeleton />
     </div>
   );
 }
@@ -242,7 +263,7 @@ function SnapshotAndBudgetsSkeleton({ dashboardColumns }: { dashboardColumns: st
 /** Skeleton for the 50/30/20 BudgetRuleCard (three bucket bars). */
 function BudgetRuleCardSkeleton() {
   return (
-    <div style={{ ...cardBase, marginBottom: "32px" }}>
+    <div style={cardBase}>
       <div
         style={{
           display: "flex",
@@ -389,15 +410,12 @@ function AccountPanelsSkeleton({ dashboardColumns }: { dashboardColumns: string 
 }
 
 /** Full-page loading skeleton shown while the initial dashboard data fetch is in flight. */
-export function DashboardSkeleton({ dashboardColumns }: DashboardSkeletonProps) {
+export function DashboardSkeleton({ dashboardColumns, twoColumnGrid }: DashboardSkeletonProps) {
   return (
     <>
       <StatsRowSkeleton />
-      <GoalWidgetSkeleton />
-      <FinancialHealthSkeleton />
-      <InsightsCardSkeleton />
+      <FourCardGridSkeleton twoColumnGrid={twoColumnGrid} />
       <SnapshotAndBudgetsSkeleton dashboardColumns={dashboardColumns} />
-      <BudgetRuleCardSkeleton />
       <RecurringAndCalendarSkeleton dashboardColumns={dashboardColumns} />
       <NetWorthHistorySkeleton />
       <AccountPanelsSkeleton dashboardColumns={dashboardColumns} />
