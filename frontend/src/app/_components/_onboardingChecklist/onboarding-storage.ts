@@ -28,6 +28,35 @@ export function clearOnboardingDismissed(): void {
   }
 }
 
+const ALL_STEPS_COMPLETE_KEY = "bloom_onboarding_all_steps_complete";
+
+/** Reads whether the checklist auto-hid because all steps were finished. */
+export function getOnboardingAllStepsComplete(): boolean {
+  try {
+    return localStorage.getItem(ALL_STEPS_COMPLETE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Records that the checklist auto-hid due to all steps being complete. */
+export function setOnboardingAllStepsComplete(): void {
+  try {
+    localStorage.setItem(ALL_STEPS_COMPLETE_KEY, "true");
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/** Clears the all-steps-complete flag so the checklist can be restored. */
+export function clearOnboardingAllStepsComplete(): void {
+  try {
+    localStorage.removeItem(ALL_STEPS_COMPLETE_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 /** Reads whether the user has visited the Learn page at least once. Returns false if unreadable. */
 export function getLearnPageExplored(): boolean {
   try {

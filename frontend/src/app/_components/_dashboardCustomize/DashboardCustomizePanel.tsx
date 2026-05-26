@@ -17,6 +17,8 @@ import {
 import {
   getOnboardingDismissed,
   clearOnboardingDismissed,
+  getOnboardingAllStepsComplete,
+  clearOnboardingAllStepsComplete,
 } from "@/app/_components/_onboardingChecklist/onboarding-storage";
 
 /** Animated pill switch indicating whether a card is visible. */
@@ -89,17 +91,31 @@ function CardToggleRow({ cardId }: { cardId: CardId }) {
 export function DashboardCustomizePanel() {
   const { resetToDefaults, visibleCards } = useDashboardVisibility();
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
-  const [isChecklistDismissed, setIsChecklistDismissed] = useState(false);
+  const [isChecklistHidden, setIsChecklistHidden] = useState(false);
 
-  /** Reads the dismissal flag from localStorage once on mount. */
+  /** Reads both hide-flags from localStorage on mount to decide whether to show the restore button. */
   useEffect(() => {
-    setIsChecklistDismissed(getOnboardingDismissed());
+    setIsChecklistHidden(getOnboardingDismissed() || getOnboardingAllStepsComplete());
   }, []);
 
-  /** Clears the dismissal flag and fires an event so the checklist re-appears immediately. */
+  /** Keeps the restore button visible when the checklist auto-hides after all steps finish or is dismissed. */
+  useEffect(() => {
+    function handleHidden() {
+      setIsChecklistHidden(true);
+    }
+    window.addEventListener("bloom:onboarding-all-complete", handleHidden);
+    window.addEventListener("bloom:onboarding-dismissed", handleHidden);
+    return () => {
+      window.removeEventListener("bloom:onboarding-all-complete", handleHidden);
+      window.removeEventListener("bloom:onboarding-dismissed", handleHidden);
+    };
+  }, []);
+
+  /** Clears all hide-flags and fires an event so the checklist re-appears immediately. */
   function handleRestoreChecklist() {
     clearOnboardingDismissed();
-    setIsChecklistDismissed(false);
+    clearOnboardingAllStepsComplete();
+    setIsChecklistHidden(false);
     window.dispatchEvent(new Event("bloom:onboarding-restored"));
   }
 
@@ -213,7 +229,7 @@ export function DashboardCustomizePanel() {
             </button>
           )}
 
-          {isChecklistDismissed && (
+          {isChecklistHidden && (
             <button
               type="button"
               onClick={handleRestoreChecklist}

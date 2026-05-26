@@ -7,6 +7,8 @@ import {
   setOnboardingDismissed,
   getLearnPageExplored,
   setLearnPageExplored,
+  setOnboardingAllStepsComplete,
+  clearOnboardingAllStepsComplete,
 } from "./onboarding-storage";
 import { deriveOnboardingSteps, OnboardingStep } from "./onboarding-steps";
 
@@ -108,6 +110,7 @@ export function OnboardingChecklist({
 }: Props) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [hasExploredLearnPage, setHasExploredLearnPage] = useState(false);
+  const [wasRestoredByUser, setWasRestoredByUser] = useState(false);
 
   /** Seeds dismissal and learn-explored state from localStorage on first render. */
   useEffect(() => {
@@ -119,6 +122,8 @@ export function OnboardingChecklist({
   useEffect(() => {
     function handleRestored() {
       setIsDismissed(false);
+      setWasRestoredByUser(true);
+      clearOnboardingAllStepsComplete();
     }
     window.addEventListener("bloom:onboarding-restored", handleRestored);
     return () => window.removeEventListener("bloom:onboarding-restored", handleRestored);
@@ -139,10 +144,19 @@ export function OnboardingChecklist({
   const completedCount = steps.filter((s) => s.isComplete).length;
   const allStepsComplete = completedCount === steps.length;
 
-  /** Permanently hides the checklist by writing the dismissal flag to localStorage. */
+  /** Writes the all-complete flag and notifies the panel so the restore button can appear. */
+  useEffect(() => {
+    if (allStepsComplete && !wasRestoredByUser) {
+      setOnboardingAllStepsComplete();
+      window.dispatchEvent(new Event("bloom:onboarding-all-complete"));
+    }
+  }, [allStepsComplete, wasRestoredByUser]);
+
+  /** Permanently hides the checklist and notifies the customize panel to show the restore button. */
   function handleDismiss() {
     setOnboardingDismissed();
     setIsDismissed(true);
+    window.dispatchEvent(new Event("bloom:onboarding-dismissed"));
   }
 
   /** Records Learn page visit in localStorage and reflects it in local state immediately. */
@@ -151,7 +165,7 @@ export function OnboardingChecklist({
     setHasExploredLearnPage(true);
   }
 
-  if (isDismissed || allStepsComplete) return null;
+  if (isDismissed || (allStepsComplete && !wasRestoredByUser)) return null;
 
   return (
     <div
