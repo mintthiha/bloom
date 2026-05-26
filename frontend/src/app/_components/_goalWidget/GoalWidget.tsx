@@ -68,7 +68,6 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "20px 24px",
-        marginBottom: "20px",
         transition: "border-color 0.15s, transform 0.15s",
       }}
       onMouseEnter={(e) => {

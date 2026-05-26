@@ -502,24 +502,24 @@ function Home() {
             </div>
           )}
 
-          {/* Goals */}
-          <GoalWidget goals={goals} />
-
-          {/* Financial Health Score */}
+          {/* Goals + Financial Health + Insights + 50/30/20 Rule (2×2 grid) */}
           {accounts.length > 0 && monthlySummary && (
-            <div style={{ marginBottom: "32px" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: view === "single" ? "1fr" : "repeat(2, 1fr)",
+                gap: "20px",
+                alignItems: "start",
+                marginBottom: "32px",
+              }}
+            >
+              <GoalWidget goals={goals} />
               <FinancialHealthScore
                 accounts={accounts}
                 budgets={budgets}
                 monthlySummary={monthlySummary}
                 netWorthHistory={netWorthHistory}
               />
-            </div>
-          )}
-
-          {/* Insights */}
-          {accounts.length > 0 && monthlySummary && (
-            <div style={{ marginBottom: "32px" }}>
               <InsightsCard
                 accounts={accounts}
                 budgets={budgets}
@@ -527,6 +527,7 @@ function Home() {
                 previousMonthlySummary={previousMonthlySummary}
                 recurringRules={recurringRules}
               />
+              <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />
             </div>
           )}
 
@@ -552,13 +553,6 @@ function Home() {
                 monthlySummary={monthlySummary}
                 onChanged={loadAccounts}
               />
-            </div>
-          )}
-
-          {/* 50/30/20 Budget Rule */}
-          {accounts.length > 0 && monthlySummary && (
-            <div style={{ marginBottom: "32px" }}>
-              <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />
             </div>
           )}
 

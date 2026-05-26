@@ -43,7 +43,7 @@ Each feature includes: problem, why it helps beginners, size, complexity, files/
 
 **Why it helps beginners:** A single score removes paralysis. It tells them: "you're at 62/100 — here's what's dragging it down." Beginners need a north star metric before they can optimize anything.
 
-**Size:** Medium | **Complexity:** Medium | **Priority: 9/10**
+**Size:** Medium | **Complexity:** Medium | **Priority: 9/10** | **Status: ✅ Done**
 
 **Files/systems:**
 - New utility `frontend/src/lib/financial-health-score.ts`
@@ -544,7 +544,7 @@ Each feature includes: problem, why it helps beginners, size, complexity, files/
 | Rank | Feature | Why It's High Impact |
 |------|---------|---------------------|
 | 1 | First-Time User Guided Tour (#18) | Highest-impact moment in any app: the first 5 minutes. Prevents immediate churn. |
-| 2 | Financial Health Score (#1) | Creates a north-star metric that gives users a reason to return and improve. |
+| 2 | Financial Health Score (#1) ✅ | Creates a north-star metric that gives users a reason to return and improve. |
 | 3 | "What Should I Do Next?" Card (#2) | Turns a data tracker into a financial coach. The single biggest UX upgrade. |
 | 4 | Savings Rate Indicator (#3) | The most important financial metric, one computation away. Massive perceived value. |
 | 5 | TFSA/RRSP Contribution Room Tracker (#4) | Canada-specific, high-stakes, zero competitors in the beginner space. |
