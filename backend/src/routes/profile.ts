@@ -16,6 +16,41 @@ function uid(req: Request): string {
 }
 
 /**
+ * Parses an optional nullable integer from a request body field with optional range bounds.
+ * Returns null when the field is absent or explicitly null.
+ */
+function parseOptionalInt(value: unknown, field: string, min?: number, max?: number): number | null {
+  if (value === undefined || value === null) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+    throw new AppError(400, `${field} must be an integer`);
+  }
+  if (min !== undefined && parsed < min) {
+    throw new AppError(400, `${field} must be at least ${min}`);
+  }
+  if (max !== undefined && parsed > max) {
+    throw new AppError(400, `${field} must be at most ${max}`);
+  }
+  return parsed;
+}
+
+/**
+ * Parses an optional nullable non-negative float from a request body field.
+ * Returns null when the field is absent or explicitly null.
+ */
+function parseOptionalNonNegativeFloat(value: unknown, field: string): number | null {
+  if (value === undefined || value === null) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new AppError(400, `${field} must be a number`);
+  }
+  if (parsed < 0) {
+    throw new AppError(400, `${field} must be at least 0`);
+  }
+  return parsed;
+}
+
+/**
  * Returns the current user's saved profile, or `null` when none exists yet.
  */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
@@ -42,7 +77,19 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
       patternMessage: "username must contain only letters, numbers, or underscores",
     });
     const email = requireString(body.email, "email", { max: 254 });
-    res.json(await profileService.upsertProfile(uid(req), { firstName, lastName, username, email }));
+    const currentYear = new Date().getFullYear();
+    const tfsaBirthYear = parseOptionalInt(body.tfsaBirthYear, "tfsaBirthYear", 1900, currentYear);
+    const tfsaRoomUsedElsewhere = parseOptionalNonNegativeFloat(body.tfsaRoomUsedElsewhere, "tfsaRoomUsedElsewhere");
+    const rrspContributionRoom = parseOptionalNonNegativeFloat(body.rrspContributionRoom, "rrspContributionRoom");
+    res.json(await profileService.upsertProfile(uid(req), {
+      firstName,
+      lastName,
+      username,
+      email,
+      tfsaBirthYear,
+      tfsaRoomUsedElsewhere,
+      rrspContributionRoom,
+    }));
   } catch (err) {
     next(err);
   }

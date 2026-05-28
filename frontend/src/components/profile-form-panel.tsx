@@ -38,6 +38,9 @@ export function ProfileFormPanel({
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [tfsaBirthYear, setTfsaBirthYear] = useState("");
+  const [tfsaRoomUsedElsewhere, setTfsaRoomUsedElsewhere] = useState("");
+  const [rrspContributionRoom, setRrspContributionRoom] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +72,9 @@ export function ProfileFormPanel({
         setLastName(profile?.lastName ?? sessionName.lastName);
         setUsername(profile?.username ?? "");
         setEmail(profile?.email ?? session?.user?.email ?? "");
+        setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
+        setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");
+        setRrspContributionRoom(profile?.rrspContributionRoom?.toString() ?? "");
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -97,16 +103,30 @@ export function ProfileFormPanel({
     setSuccess(null);
 
     try {
+      const parsedBirthYear = tfsaBirthYear.trim() ? parseInt(tfsaBirthYear.trim(), 10) : null;
+      const parsedRoomUsedElsewhere = tfsaRoomUsedElsewhere.trim()
+        ? parseFloat(tfsaRoomUsedElsewhere.trim())
+        : null;
+      const parsedRrspRoom = rrspContributionRoom.trim()
+        ? parseFloat(rrspContributionRoom.trim())
+        : null;
+
       const profile = await api.saveProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: username.trim(),
         email: email.trim(),
+        tfsaBirthYear: parsedBirthYear,
+        tfsaRoomUsedElsewhere: parsedRoomUsedElsewhere,
+        rrspContributionRoom: parsedRrspRoom,
       });
       setFirstName(profile.firstName);
       setLastName(profile.lastName);
       setUsername(profile.username);
       setEmail(profile.email);
+      setTfsaBirthYear(profile.tfsaBirthYear?.toString() ?? "");
+      setTfsaRoomUsedElsewhere(profile.tfsaRoomUsedElsewhere?.toString() ?? "");
+      setRrspContributionRoom(profile.rrspContributionRoom?.toString() ?? "");
       setSuccess(successMessage);
       onSaved?.(profile);
     } catch (err) {
@@ -117,6 +137,22 @@ export function ProfileFormPanel({
   }
 
   const inputStyle = { ...baseInputStyle, borderRadius: "10px", padding: "12px 14px" };
+
+  const sectionLabelStyle = {
+    display: "block" as const,
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "var(--text-secondary)",
+    marginBottom: "8px",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.08em",
+  };
+
+  const hintStyle = {
+    fontSize: "12px",
+    color: "var(--text-muted)",
+    marginTop: "8px",
+  };
 
   return (
     <div
@@ -148,9 +184,7 @@ export function ProfileFormPanel({
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                First Name
-              </label>
+              <label style={sectionLabelStyle}>First Name</label>
               <input
                 type="text"
                 value={firstName}
@@ -161,9 +195,7 @@ export function ProfileFormPanel({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Last Name
-              </label>
+              <label style={sectionLabelStyle}>Last Name</label>
               <input
                 type="text"
                 value={lastName}
@@ -175,9 +207,7 @@ export function ProfileFormPanel({
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Username
-            </label>
+            <label style={sectionLabelStyle}>Username</label>
             <input
               type="text"
               value={username}
@@ -188,15 +218,11 @@ export function ProfileFormPanel({
               spellCheck={false}
               style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
             />
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "8px" }}>
-              Lowercase letters, numbers, and underscores only.
-            </p>
+            <p style={hintStyle}>Lowercase letters, numbers, and underscores only.</p>
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Email
-            </label>
+            <label style={sectionLabelStyle}>Email</label>
             <input
               type="email"
               value={email}
@@ -204,6 +230,73 @@ export function ProfileFormPanel({
               placeholder="you@example.com"
               style={inputStyle}
             />
+          </div>
+
+          {/* Contribution Room section */}
+          <div
+            style={{
+              borderTop: "1px solid var(--border)",
+              paddingTop: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--text-muted)",
+              }}
+            >
+              Contribution Room
+            </p>
+
+            <div>
+              <label style={sectionLabelStyle}>Year of Birth</label>
+              <input
+                type="number"
+                value={tfsaBirthYear}
+                onChange={(e) => setTfsaBirthYear(e.target.value)}
+                placeholder="e.g. 1995"
+                min={1900}
+                max={new Date().getFullYear()}
+                style={inputStyle}
+              />
+              <p style={hintStyle}>Used to estimate your TFSA contribution room.</p>
+            </div>
+
+            <div>
+              <label style={sectionLabelStyle}>TFSA Room Used Elsewhere</label>
+              <input
+                type="number"
+                value={tfsaRoomUsedElsewhere}
+                onChange={(e) => setTfsaRoomUsedElsewhere(e.target.value)}
+                placeholder="e.g. 5000"
+                min={0}
+                step="0.01"
+                style={inputStyle}
+              />
+              <p style={hintStyle}>Any contributions to TFSAs outside Bloom.</p>
+            </div>
+
+            <div>
+              <label style={sectionLabelStyle}>RRSP Deduction Limit (from CRA Notice of Assessment)</label>
+              <input
+                type="number"
+                value={rrspContributionRoom}
+                onChange={(e) => setRrspContributionRoom(e.target.value)}
+                placeholder="e.g. 14000"
+                min={0}
+                step="0.01"
+                style={inputStyle}
+              />
+              <p style={hintStyle}>
+                Find this on the CRA&apos;s My Account portal or your latest NOA.
+              </p>
+            </div>
           </div>
 
           {error && (

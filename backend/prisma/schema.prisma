@@ -52,13 +52,16 @@ model Account {
 }
 
 model Profile {
-  userId     String   @id
-  firstName  String
-  lastName   String
-  username   String   @unique
-  email      String
-  createdAt  DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+  userId                  String   @id
+  firstName               String
+  lastName                String
+  username                String   @unique
+  email                   String
+  tfsaBirthYear           Int?
+  tfsaRoomUsedElsewhere   Float?
+  rrspContributionRoom    Float?
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model CategoryBudget {

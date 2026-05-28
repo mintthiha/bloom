@@ -8,6 +8,9 @@ type ProfileInput = {
   lastName?: string;
   username?: string;
   email?: string;
+  tfsaBirthYear?: number | null;
+  tfsaRoomUsedElsewhere?: number | null;
+  rrspContributionRoom?: number | null;
 };
 
 type ProfileRecord = {
@@ -16,6 +19,9 @@ type ProfileRecord = {
   lastName: string;
   username: string;
   email: string;
+  tfsaBirthYear: number | null;
+  tfsaRoomUsedElsewhere: number | null;
+  rrspContributionRoom: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -26,7 +32,9 @@ type ProfileRecord = {
  */
 export async function getProfile(userId: string) {
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
-    SELECT "userId", "firstName", "lastName", "username", "email", "createdAt", "updatedAt"
+    SELECT "userId", "firstName", "lastName", "username", "email",
+           "tfsaBirthYear", "tfsaRoomUsedElsewhere", "rrspContributionRoom",
+           "createdAt", "updatedAt"
     FROM "Profile"
     WHERE "userId" = ${userId}
     LIMIT 1
@@ -77,6 +85,23 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     throw new AppError(400, "Email is invalid");
   }
 
+  if (input.tfsaBirthYear !== undefined && input.tfsaBirthYear !== null) {
+    const currentYear = new Date().getFullYear();
+    if (!Number.isInteger(input.tfsaBirthYear) || input.tfsaBirthYear < 1900 || input.tfsaBirthYear > currentYear) {
+      throw new AppError(400, `tfsaBirthYear must be between 1900 and ${currentYear}`);
+    }
+  }
+  if (input.tfsaRoomUsedElsewhere !== undefined && input.tfsaRoomUsedElsewhere !== null) {
+    if (input.tfsaRoomUsedElsewhere < 0) {
+      throw new AppError(400, "tfsaRoomUsedElsewhere must be at least 0");
+    }
+  }
+  if (input.rrspContributionRoom !== undefined && input.rrspContributionRoom !== null) {
+    if (input.rrspContributionRoom < 0) {
+      throw new AppError(400, "rrspContributionRoom must be at least 0");
+    }
+  }
+
   const existingUsername = await prisma.$queryRaw<Pick<ProfileRecord, "userId">[]>`
     SELECT "userId"
     FROM "Profile"
@@ -87,17 +112,30 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     throw new AppError(409, "Username is already taken");
   }
 
+  const tfsaBirthYear = input.tfsaBirthYear ?? null;
+  const tfsaRoomUsedElsewhere = input.tfsaRoomUsedElsewhere ?? null;
+  const rrspContributionRoom = input.rrspContributionRoom ?? null;
+
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
-    INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email", "createdAt", "updatedAt")
-    VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email",
+                           "tfsaBirthYear", "tfsaRoomUsedElsewhere", "rrspContributionRoom",
+                           "createdAt", "updatedAt")
+    VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email},
+            ${tfsaBirthYear}, ${tfsaRoomUsedElsewhere}, ${rrspContributionRoom},
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId")
     DO UPDATE SET
       "firstName" = EXCLUDED."firstName",
       "lastName" = EXCLUDED."lastName",
       "username" = EXCLUDED."username",
       "email" = EXCLUDED."email",
+      "tfsaBirthYear" = EXCLUDED."tfsaBirthYear",
+      "tfsaRoomUsedElsewhere" = EXCLUDED."tfsaRoomUsedElsewhere",
+      "rrspContributionRoom" = EXCLUDED."rrspContributionRoom",
       "updatedAt" = CURRENT_TIMESTAMP
-    RETURNING "userId", "firstName", "lastName", "username", "email", "createdAt", "updatedAt"
+    RETURNING "userId", "firstName", "lastName", "username", "email",
+              "tfsaBirthYear", "tfsaRoomUsedElsewhere", "rrspContributionRoom",
+              "createdAt", "updatedAt"
   `;
 
   return rows[0];

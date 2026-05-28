@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, use, useMemo } from "react";
 import Link from "next/link";
-import { api, Account, DateRangeQuery, Transaction } from "@/lib/api";
+import { api, Account, DateRangeQuery, Profile, Transaction } from "@/lib/api";
 import { BackToHome } from "@/components/BackToHome";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { AccountCard } from "./_components/_accountCard/AccountCard";
@@ -16,8 +16,11 @@ import {
 } from "@/lib/date-range";
 import { AccountAnalytics } from "./_components/_accountAnalytics/AccountAnalytics";
 import { NewTransactionForm } from "./_components/_newTransaction/NewTransactionForm";
+import { ContributionRoomPanel } from "./_components/_contributionRoom/ContributionRoomPanel";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { toast } from "sonner";
+
+const REGISTERED_ACCOUNT_TYPES = new Set(["TFSA", "RRSP", "FHSA"]);
 
 export default function AccountPage({
   params,
@@ -41,6 +44,8 @@ export default function AccountPage({
   const [account, setAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [txns, setTxns] = useState<Transaction[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [sameTypeTransactions, setSameTypeTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -102,14 +107,26 @@ export default function AccountPage({
 
   const refresh = useCallback(async () => {
     try {
-      const [acc, transactions, allAccounts] = await Promise.all([
+      const [acc, transactions, allAccounts, userProfile] = await Promise.all([
         api.getAccount(id),
         api.getTransactions(id, transactionQuery),
         api.listAccounts(),
+        api.getProfile(),
       ]);
       setAccount(acc);
       setTxns(transactions);
       setAccounts(allAccounts);
+      setProfile(userProfile);
+
+      if (REGISTERED_ACCOUNT_TYPES.has(acc.accountType)) {
+        const sameTypeAccounts = allAccounts.filter(
+          (a) => a.accountType === acc.accountType,
+        );
+        const transactionLists = await Promise.all(
+          sameTypeAccounts.map((a) => api.getTransactions(a.id)),
+        );
+        setSameTypeTransactions(transactionLists.flat());
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load account");
     } finally {
@@ -219,6 +236,10 @@ export default function AccountPage({
 
   const accentColor = ACCOUNT_TYPE_META[account.accountType].color;
   const transferTargets = accounts.filter((a) => a.id !== id);
+  const sameTypeAccountIds = accounts
+    .filter((a) => a.accountType === account.accountType)
+    .map((a) => a.id);
+
   return (
     <div
       style={{ maxWidth: pageWidth, margin: "0 auto", padding: "48px 24px" }}
@@ -258,6 +279,17 @@ export default function AccountPage({
           onError={(msg) => toast.error(msg)}
         />
       </div>
+
+      {REGISTERED_ACCOUNT_TYPES.has(account.accountType) && (
+        <div style={{ marginBottom: "16px" }}>
+          <ContributionRoomPanel
+            account={account}
+            sameTypeTransactions={sameTypeTransactions}
+            sameTypeAccountIds={sameTypeAccountIds}
+            profile={profile}
+          />
+        </div>
+      )}
 
       <div
         style={{

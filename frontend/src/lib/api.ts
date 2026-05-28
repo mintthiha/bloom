@@ -63,6 +63,9 @@ export type Profile = {
   lastName: string;
   username: string;
   email: string;
+  tfsaBirthYear: number | null;
+  tfsaRoomUsedElsewhere: number | null;
+  rrspContributionRoom: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -313,6 +316,14 @@ export const api = {
     request<TransactionSearchResult[]>(withQuery("/transactions/search", { q, limit: String(limit) })),
   getProfile: () =>
     request<Profile | null>("/profile"),
-  saveProfile: (input: { firstName: string; lastName: string; username: string; email: string }) =>
+  saveProfile: (input: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    tfsaBirthYear?: number | null;
+    tfsaRoomUsedElsewhere?: number | null;
+    rrspContributionRoom?: number | null;
+  }) =>
     request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
 };
