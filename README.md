@@ -1,6 +1,6 @@
 # Bloom
 
-Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, multi-account tracking, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, actionable financial insights, savings rate tracking, and an AI-powered Canadian financial education assistant.
+Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, multi-account tracking, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, actionable financial insights, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, and an AI-powered Canadian financial education assistant.
 
 ## Tech Stack
 
@@ -95,6 +95,30 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
   - Downloadable template from the import tab
   - Automatically resets transaction history filter to all-time after import
   - Backfills net worth snapshots for each imported month using month-end balances
+
+### Registered Account Contribution Room
+
+Each TFSA, RRSP, and FHSA account detail page shows a contribution room panel below the account card:
+
+- **TFSA panel** — estimates lifetime room from birth year (set on profile) using CRA annual limits from 2009 to present. Tracks net Bloom deposits and lets users record contributions made outside the app (`tfsaRoomUsedElsewhere`). Shows remaining room, a progress bar, and a breakdown of tracked vs external contributions.
+- **RRSP panel** — reads the user's CRA deduction limit from their profile (`rrspContributionRoom`). Tracks net Bloom deposits and displays used vs available room as a percentage. Links to the profile to update the deduction limit.
+- **FHSA panel** — tracks both the $8,000 annual limit and the $40,000 lifetime limit. Shows two labeled progress bars, one per limit, for the current calendar year and all time.
+- All three panels link to the `/learn` page for background on what contribution room means.
+- All calculation logic lives in `frontend/src/lib/contribution-room.ts` and is fully unit-tested.
+
+### Over-Contribution Warnings
+
+Proactive, non-blocking warnings that surface before and after a potentially problematic deposit on TFSA, RRSP, and FHSA accounts:
+
+- **Inline warning under the deposit amount input** — updates live as the user types. Evaluates whether the typed amount would breach the account's estimated room:
+  - Amber warning when less than 10% of total room would remain
+  - Red warning when the deposit would exceed the estimated limit
+  - FHSA checks both the $8,000 annual and $40,000 lifetime limits; the message names whichever would be breached first
+  - RRSP warning only appears when the user has set their deduction limit on the profile; TFSA warning only appears when birth year is set
+  - Copy uses "may" and "estimated" throughout — Bloom is an estimate, not a CRA-authoritative source
+- **Post-submission persistent toast** — fires after a successful deposit if the new total puts the user at or over their estimated room. Uses a 10-second duration so it outlasts the success toast. Prompts the user to verify on the CRA's My Account portal.
+- **Panel over-contribution banners** — all three contribution room panels show a red banner when the current tracked total already exceeds the estimated limit. All banners use the same palette (`#ef4444` border, `#ef444408` background).
+- Warning logic lives in `frontend/src/lib/over-contribution.ts` — pure functions with no side effects, fully unit-tested.
 
 ### Recurring Transactions
 
@@ -259,6 +283,8 @@ The homepage is structured around a component-per-section pattern, keeping `page
 - Vitest + Testing Library + jsdom
 - Dashboard and onboarding rendering coverage
 - Account grouping coverage
+- Contribution room calculation coverage (`contribution-room.test.ts`) — TFSA lifetime room, net contribution netting, same-type transfer exclusion, year filtering, FHSA constants
+- Over-contribution warning logic coverage (`over-contribution.test.ts`) — red/amber/none severity for TFSA, RRSP, and FHSA; boundary cases; FHSA dual-limit tie-breaking; overage amounts in messages
 
 ### Backend Coverage
 
