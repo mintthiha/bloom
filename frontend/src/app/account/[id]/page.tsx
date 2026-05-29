@@ -320,6 +320,9 @@ export default function AccountPage({
               setFilterDateRange(getPresetDateRange("all-time"));
               refresh();
             }}
+            profile={profile}
+            transactionsForType={sameTypeTransactions}
+            sameTypeAccountIds={sameTypeAccountIds}
           />
         </div>
 

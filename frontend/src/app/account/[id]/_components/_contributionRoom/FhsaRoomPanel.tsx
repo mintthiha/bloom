@@ -59,6 +59,8 @@ export function FhsaRoomPanel({ transactions, accountIds }: FhsaRoomPanelProps) 
 
   const annualUsed = calculateNetContributionsForYear(transactions, accountIds, currentYear);
   const lifetimeUsed = calculateNetContributions(transactions, accountIds);
+  const isAnnualOver = annualUsed > FHSA_ANNUAL_LIMIT;
+  const isLifetimeOver = lifetimeUsed > FHSA_LIFETIME_LIMIT;
 
   return (
     <CollapsibleCard
@@ -68,6 +70,25 @@ export function FhsaRoomPanel({ transactions, accountIds }: FhsaRoomPanelProps) 
       style={{ borderTop: `3px solid ${accentColor}` }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {(isAnnualOver || isLifetimeOver) && (
+          <div
+            style={{
+              background: "#ef444408",
+              border: "1px solid #ef4444",
+              borderRadius: "12px",
+              padding: "16px 20px",
+              fontSize: "13px",
+              color: "#f87171",
+            }}
+          >
+            {isAnnualOver && !isLifetimeOver &&
+              `You may be over your $8,000 FHSA annual limit for ${currentYear}. CRA penalizes FHSA over-contributions at 1% per month.`}
+            {isLifetimeOver && !isAnnualOver &&
+              "You may be over your $40,000 FHSA lifetime limit. CRA penalizes FHSA over-contributions at 1% per month."}
+            {isAnnualOver && isLifetimeOver &&
+              `You may be over both your $8,000 FHSA annual limit for ${currentYear} and your $40,000 lifetime limit. CRA penalizes FHSA over-contributions at 1% per month.`}
+          </div>
+        )}
         <LabeledProgressBar
           label={`This year (${currentYear})`}
           used={annualUsed}

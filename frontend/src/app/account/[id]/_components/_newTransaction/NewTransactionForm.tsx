@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { api, Account } from "@/lib/api";
+import { api, Account, Profile, Transaction } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
 import {
   INCOME_CATEGORIES,
@@ -10,14 +10,26 @@ import {
   ACCOUNT_TYPE_META,
 } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
+import { calculateNetContributions, calculateNetContributionsForYear } from "@/lib/contribution-room";
+import {
+  evaluateTfsaContribution,
+  evaluateRrspContribution,
+  evaluateFhsaContribution,
+  type OverContributionWarning,
+} from "@/lib/over-contribution";
 
 type Op = "deposit" | "withdraw" | "transfer" | "import";
+
+const REGISTERED_ACCOUNT_TYPES = new Set(["TFSA", "RRSP", "FHSA"]);
 
 interface NewTransactionFormProps {
   account: Account;
   transferTargets: Account[];
   onSuccess: () => Promise<void>;
   onImportSuccess: (imported: number) => void;
+  profile: Profile | null;
+  transactionsForType: Transaction[];
+  sameTypeAccountIds: string[];
 }
 
 /** New transaction panel — deposit/withdraw/transfer/import form, or frozen banner if account is frozen. */
@@ -26,6 +38,9 @@ export function NewTransactionForm({
   transferTargets,
   onSuccess,
   onImportSuccess,
+  profile,
+  transactionsForType,
+  sameTypeAccountIds,
 }: NewTransactionFormProps) {
   const [op, setOp] = useState<Op>("deposit");
   const [amount, setAmount] = useState("");
@@ -35,6 +50,51 @@ export function NewTransactionForm({
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+
+  const currentYear = new Date().getFullYear();
+  const isRegisteredType = REGISTERED_ACCOUNT_TYPES.has(account.accountType);
+
+  // Net contributions across all same-type accounts, used for warning calculations
+  const netContributionsForType = isRegisteredType
+    ? calculateNetContributions(transactionsForType, sameTypeAccountIds)
+    : 0;
+  const netFhsaContributionsThisYear =
+    account.accountType === "FHSA"
+      ? calculateNetContributionsForYear(transactionsForType, sameTypeAccountIds, currentYear)
+      : 0;
+
+  /** Computes the inline over-contribution warning for the current deposit amount. Returns null when not applicable. */
+  function computeOverContributionWarning(): OverContributionWarning | null {
+    if (op !== "deposit" || !isRegisteredType) return null;
+    const amtValue = parseFloat(amount) || 0;
+    if (account.accountType === "TFSA") {
+      return evaluateTfsaContribution({
+        contributionAmount: amtValue,
+        birthYear: profile?.tfsaBirthYear ?? null,
+        currentYear,
+        roomUsedElsewhere: profile?.tfsaRoomUsedElsewhere ?? null,
+        netTfsaContributionsInBloom: netContributionsForType,
+      });
+    }
+    if (account.accountType === "RRSP") {
+      return evaluateRrspContribution({
+        contributionAmount: amtValue,
+        rrspContributionRoom: profile?.rrspContributionRoom ?? null,
+        netRrspContributionsInBloom: netContributionsForType,
+      });
+    }
+    if (account.accountType === "FHSA") {
+      return evaluateFhsaContribution({
+        contributionAmount: amtValue,
+        currentYear,
+        netFhsaContributionsThisYear: netFhsaContributionsThisYear,
+        netFhsaContributionsLifetime: netContributionsForType,
+      });
+    }
+    return null;
+  }
+
+  const overContributionWarning = computeOverContributionWarning();
 
   /** Submits a deposit, withdrawal, or transfer based on the selected op. */
   async function handleSubmit(e: React.FormEvent) {
@@ -83,6 +143,21 @@ export function NewTransactionForm({
             ? "Payment"
             : op.charAt(0).toUpperCase() + op.slice(1);
       toast.success(`${opDisplayName} successful`);
+
+      // Fire a persistent warning toast when the deposit pushed the user over their estimated room
+      if (op === "deposit" && overContributionWarning?.severity === "red") {
+        const limitName =
+          account.accountType === "FHSA"
+            ? "FHSA contribution limit"
+            : account.accountType === "RRSP"
+              ? "RRSP deduction limit"
+              : "TFSA room";
+        toast.warning(
+          `Heads up: you may now be over your estimated ${limitName}. Review your contributions on the CRA's My Account portal to confirm.`,
+          { duration: 10000 }
+        );
+      }
+
       setAmount("");
       setToId("");
       setDescription("");
@@ -296,6 +371,38 @@ export function NewTransactionForm({
                     : op.charAt(0).toUpperCase() + op.slice(1)}
             </button>
           </div>
+
+          {overContributionWarning && overContributionWarning.severity !== "none" && (
+            <div
+              style={{
+                border: `1px solid ${overContributionWarning.severity === "red" ? "#ef4444" : "#f59e0b"}`,
+                background: overContributionWarning.severity === "red" ? "#ef444408" : "#f59e0b08",
+                borderRadius: "12px",
+                padding: "16px 20px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: overContributionWarning.severity === "red" ? "#f87171" : "#d97706",
+                  margin: 0,
+                }}
+              >
+                {overContributionWarning.message}
+              </p>
+              <p
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 400,
+                  color: overContributionWarning.severity === "red" ? "#f87171" : "#d97706",
+                  margin: "4px 0 0",
+                }}
+              >
+                {overContributionWarning.detail}
+              </p>
+            </div>
+          )}
 
           {op !== "transfer" ? (
             <>

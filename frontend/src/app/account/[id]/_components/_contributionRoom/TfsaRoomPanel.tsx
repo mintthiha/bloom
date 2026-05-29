@@ -96,15 +96,15 @@ export function TfsaRoomPanel({ transactions, accountIds, profile }: TfsaRoomPan
           {isOverContributed && (
             <div
               style={{
-                background: "#ef444422",
+                background: "#ef444408",
                 border: "1px solid #ef4444",
-                borderRadius: "10px",
-                padding: "12px 16px",
+                borderRadius: "12px",
+                padding: "16px 20px",
                 fontSize: "13px",
                 color: "#f87171",
               }}
             >
-              You may be at or over your TFSA limit. CRA penalizes over-contributions at 1%/month.
+              You may be over your estimated TFSA room. CRA penalizes TFSA over-contributions at 1% per month.
             </div>
           )}
 

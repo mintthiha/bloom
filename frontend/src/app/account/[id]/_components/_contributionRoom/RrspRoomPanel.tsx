@@ -42,6 +42,7 @@ export function RrspRoomPanel({ transactions, accountIds, profile }: RrspRoomPan
     deductionLimit != null && deductionLimit > 0
       ? Math.round((netContributions / deductionLimit) * 100)
       : null;
+  const isOverContributed = deductionLimit != null && netContributions > deductionLimit;
 
   return (
     <CollapsibleCard
@@ -58,6 +59,20 @@ export function RrspRoomPanel({ transactions, accountIds, profile }: RrspRoomPan
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {isOverContributed && (
+            <div
+              style={{
+                background: "#ef444408",
+                border: "1px solid #ef4444",
+                borderRadius: "12px",
+                padding: "16px 20px",
+                fontSize: "13px",
+                color: "#f87171",
+              }}
+            >
+              You may be over your estimated RRSP deduction limit. RRSP over-contributions above $2,000 are penalized at 1% per month.
+            </div>
+          )}
           <div>
             <p style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.4px" }}>
               {formatCurrency(netContributions)}{" "}
