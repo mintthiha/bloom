@@ -17,6 +17,7 @@ import {
 import { AccountAnalytics } from "./_components/_accountAnalytics/AccountAnalytics";
 import { NewTransactionForm } from "./_components/_newTransaction/NewTransactionForm";
 import { ContributionRoomPanel } from "./_components/_contributionRoom/ContributionRoomPanel";
+import { DebtPayoffPanel } from "./_components/_debtPayoff/DebtPayoffPanel";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { toast } from "sonner";
 
@@ -288,6 +289,12 @@ export default function AccountPage({
             sameTypeAccountIds={sameTypeAccountIds}
             profile={profile}
           />
+        </div>
+      )}
+
+      {account.accountType === "CREDIT" && (
+        <div style={{ marginBottom: "16px" }}>
+          <DebtPayoffPanel account={account} />
         </div>
       )}
 
