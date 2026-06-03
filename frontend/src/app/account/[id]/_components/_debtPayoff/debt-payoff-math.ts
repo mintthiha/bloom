@@ -51,6 +51,43 @@ export function computePayoffSchedule(
   };
 }
 
+/** A single data point in a payoff balance series, used to build the payoff chart. */
+export type PayoffChartPoint = {
+  month: number;
+  minimum: number;
+  userPayment?: number;
+  boosted?: number;
+};
+
+/**
+ * Generates the month-by-month remaining balance series for a payoff scenario.
+ * Returns an array of length maxMonths + 1, starting with the initial balance at index 0.
+ */
+export function buildPayoffBalanceSeries(
+  balance: number,
+  annualRatePercent: number,
+  monthlyPayment: number,
+  maxMonths: number,
+): number[] {
+  const monthlyRate = annualRatePercent / 100 / 12;
+  const series: number[] = [balance];
+  let remaining = balance;
+
+  for (let month = 1; month <= maxMonths; month++) {
+    if (remaining <= 0.005) {
+      series.push(0);
+      continue;
+    }
+    const interest = remaining * monthlyRate;
+    const balanceAfterInterest = remaining + interest;
+    const payment = Math.min(monthlyPayment, balanceAfterInterest);
+    remaining = Math.max(0, balanceAfterInterest - payment);
+    series.push(Math.round(remaining * 100) / 100);
+  }
+
+  return series;
+}
+
 /** Formats a number of months as a concise human-readable duration string. */
 export function formatPayoffDuration(months: number): string {
   if (months >= 600) return "50+ years";

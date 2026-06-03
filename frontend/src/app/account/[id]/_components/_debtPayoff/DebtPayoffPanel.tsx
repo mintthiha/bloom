@@ -6,11 +6,14 @@ import { formatCurrency } from "@/lib/format";
 import { inputStyle } from "@/lib/styles/input";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import {
+  buildPayoffBalanceSeries,
   computeMinimumPayment,
   computePayoffSchedule,
   formatPayoffDuration,
+  type PayoffChartPoint,
   type PayoffResult,
 } from "./debt-payoff-math";
+import { DebtPayoffChart } from "./DebtPayoffChart";
 
 type DebtPayoffPanelProps = {
   account: Account;
@@ -117,6 +120,44 @@ export function DebtPayoffPanel({ account }: DebtPayoffPanelProps) {
           extraPerMonth: parsedPayment - minimumPayment,
         }
       : null;
+
+  const chartMaxMonths = minimumResult.feasible
+    ? Math.min(minimumResult.monthsToPayoff, 600)
+    : 120;
+  const chartStep = Math.max(1, Math.ceil(chartMaxMonths / 80));
+  const minimumBalanceSeries = buildPayoffBalanceSeries(
+    balance,
+    effectiveApr,
+    minimumPayment,
+    chartMaxMonths,
+  );
+  const userBalanceSeries =
+    isValidPayment && userResult?.feasible
+      ? buildPayoffBalanceSeries(balance, effectiveApr, parsedPayment, chartMaxMonths)
+      : null;
+  const boostedBalanceSeries =
+    isValidPayment && boostedResult?.feasible
+      ? buildPayoffBalanceSeries(balance, effectiveApr, parsedPayment + 50, chartMaxMonths)
+      : null;
+
+  const chartData: PayoffChartPoint[] = [];
+  for (let i = 0; i * chartStep <= chartMaxMonths; i++) {
+    const month = i * chartStep;
+    chartData.push({
+      month,
+      minimum: minimumBalanceSeries[month] ?? 0,
+      ...(userBalanceSeries ? { userPayment: userBalanceSeries[month] ?? 0 } : {}),
+      ...(boostedBalanceSeries ? { boosted: boostedBalanceSeries[month] ?? 0 } : {}),
+    });
+  }
+  if (chartData[chartData.length - 1]?.month !== chartMaxMonths) {
+    chartData.push({
+      month: chartMaxMonths,
+      minimum: minimumBalanceSeries[chartMaxMonths] ?? 0,
+      ...(userBalanceSeries ? { userPayment: userBalanceSeries[chartMaxMonths] ?? 0 } : {}),
+      ...(boostedBalanceSeries ? { boosted: boostedBalanceSeries[chartMaxMonths] ?? 0 } : {}),
+    });
+  }
 
   return (
     <CollapsibleCard
@@ -280,6 +321,12 @@ export function DebtPayoffPanel({ account }: DebtPayoffPanelProps) {
               </p>
             )}
           </div>
+
+          <DebtPayoffChart
+            data={chartData}
+            showUserPayment={isValidPayment && !!userResult?.feasible}
+            showBoosted={isValidPayment && !!boostedResult?.feasible}
+          />
 
           {savingsVsMinimum &&
             savingsVsMinimum.monthsSaved > 0 &&
