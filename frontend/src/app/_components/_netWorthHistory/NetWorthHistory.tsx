@@ -13,6 +13,7 @@ import {
 import { NetWorthSnapshot } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { NetWorthEmpathyNote } from "./NetWorthEmpathyNote";
 
 type Props = {
   history: NetWorthSnapshot[];
@@ -137,6 +138,7 @@ export function NetWorthHistory({ history }: Props) {
           />
         </LineChart>
       </ResponsiveContainer>
+      <NetWorthEmpathyNote history={history} />
     </CollapsibleCard>
   );
 }
