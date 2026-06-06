@@ -93,8 +93,11 @@ export function AppSidebar() {
       setDueRecurringCount(0);
     }
 
+    window.addEventListener("recurring-changed", loadDueRecurringCount);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("recurring-changed", loadDueRecurringCount);
     };
   }, [session?.user?.id]);
 

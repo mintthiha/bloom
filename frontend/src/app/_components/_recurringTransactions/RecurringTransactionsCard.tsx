@@ -189,6 +189,7 @@ export function RecurringTransactionsCard({
 
       resetForm();
       await onChanged();
+      window.dispatchEvent(new CustomEvent("recurring-changed"));
     } catch (err) {
       setError(
         err instanceof Error
@@ -207,6 +208,7 @@ export function RecurringTransactionsCard({
     try {
       const result = await api.applyDueRecurringTransactions();
       await onChanged();
+      window.dispatchEvent(new CustomEvent("recurring-changed"));
       if (result.appliedCount > 0) {
         toast.success(
           `Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`
@@ -237,6 +239,7 @@ export function RecurringTransactionsCard({
     try {
       await api.setRecurringTransactionActive(rule.id, !rule.active);
       await onChanged();
+      window.dispatchEvent(new CustomEvent("recurring-changed"));
     } catch (err) {
       setError(
         err instanceof Error
@@ -255,6 +258,7 @@ export function RecurringTransactionsCard({
     try {
       await api.deleteRecurringTransaction(id);
       await onChanged();
+      window.dispatchEvent(new CustomEvent("recurring-changed"));
       toast.success(
         `Recurring rule "${pendingDeleteRule?.name ?? "rule"}" deleted`
       );
