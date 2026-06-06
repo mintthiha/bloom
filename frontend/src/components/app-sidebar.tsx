@@ -31,6 +31,7 @@ export function AppSidebar() {
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [dueRecurringCount, setDueRecurringCount] = useState(0);
 
   /**
    * Loads the current user's saved profile so the sidebar reflects Prisma data
@@ -67,6 +68,36 @@ export function AppSidebar() {
     };
   }, [session?.user?.id]);
 
+  /** Counts active recurring rules whose next run date is today or in the past. */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDueRecurringCount() {
+      try {
+        const rules = await api.listRecurringTransactions();
+        if (!cancelled) {
+          const now = new Date();
+          const count = rules.filter(
+            (rule) => rule.active && new Date(rule.nextRunAt) <= now
+          ).length;
+          setDueRecurringCount(count);
+        }
+      } catch {
+        // Non-critical — badge simply won't show on error
+      }
+    }
+
+    if (session?.user?.id) {
+      loadDueRecurringCount();
+    } else {
+      setDueRecurringCount(0);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
   const displayName = [firstName, lastName].filter(Boolean).join(" ") || "Your profile";
   const displayHandle = username ? `@${username}` : session?.user?.email ?? "";
   const avatarFallback = (displayName[0] ?? "B").toUpperCase();
@@ -75,11 +106,27 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" style={{ borderRight: "none" }}>
       <SidebarHeader style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 12px" }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none", color: "inherit" }}>
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ flexShrink: 0 }}>
-            <rect width="28" height="28" rx="6" fill="#f59e0b" />
-            <path d="M8 20V8h5.5a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M8 16h7a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <rect width="28" height="28" rx="6" fill="#f59e0b" />
+              <path d="M8 20V8h5.5a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M8 16h7a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {dueRecurringCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "-3px",
+                  right: "-3px",
+                  width: "9px",
+                  height: "9px",
+                  borderRadius: "50%",
+                  background: "#ef4444",
+                  border: "2px solid var(--sidebar-background, #0a0a0a)",
+                }}
+              />
+            )}
+          </div>
           <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 700, fontSize: "16px", letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>Bloom</span>
         </Link>
       </SidebarHeader>
