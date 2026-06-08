@@ -6,6 +6,9 @@ import { LearningCards } from "./_components/_cardsSection/LearningCards";
 import { LearnPageSkeleton } from "./_components/_learnSkeleton/LearnPageSkeleton";
 import { useLearnChat } from "@/hooks/useLearnChat";
 import { setLearnPageExplored } from "@/app/_components/_onboardingChecklist/onboarding-storage";
+import { getExploredCardIndices, markCardExplored } from "./_components/_cardsSection/learn-progress";
+import { LearnProgressBar } from "./_components/_cardsSection/LearnProgressBar";
+import { CARDS } from "./_components/_cardsSection/LearningCards";
 
 export default function LearnPage() {
   const { view } = useDashboardView();
@@ -29,6 +32,18 @@ export default function LearnPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const [exploredCardIndices, setExploredCardIndices] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    return getExploredCardIndices();
+  });
+
+  /** Marks a card as explored in localStorage and updates local state. */
+  function handleCardExplored(index: number) {
+    markCardExplored(index);
+    setExploredCardIndices((previous) => new Set([...previous, index]));
+  }
+
+  const nextUnexploredCard = CARDS.find((_, i) => !exploredCardIndices.has(i)) ?? null;
 
   const {
     messages,
@@ -89,10 +104,17 @@ export default function LearnPage() {
           <div
             style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
+            <LearnProgressBar
+              exploredCount={exploredCardIndices.size}
+              totalCount={CARDS.length}
+              nextCardTitle={nextUnexploredCard?.title ?? null}
+            />
             <LearningCards
               isDouble={isDouble}
               expandedCard={expandedCard}
               setExpandedCard={setExpandedCard}
+              exploredCardIndices={exploredCardIndices}
+              onCardExplored={handleCardExplored}
             />
           </div>
           <div style={{ position: "sticky", top: "80px" }}>
@@ -111,10 +133,17 @@ export default function LearnPage() {
         </div>
       ) : (
         <>
+          <LearnProgressBar
+            exploredCount={exploredCardIndices.size}
+            totalCount={CARDS.length}
+            nextCardTitle={nextUnexploredCard?.title ?? null}
+          />
           <LearningCards
             isDouble={isDouble}
             expandedCard={expandedCard}
             setExpandedCard={setExpandedCard}
+            exploredCardIndices={exploredCardIndices}
+            onCardExplored={handleCardExplored}
           />
           <ChatSection
             messages={messages}

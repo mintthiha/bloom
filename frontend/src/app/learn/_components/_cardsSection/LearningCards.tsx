@@ -13,9 +13,11 @@ type LearningCardsProps = {
   isDouble: boolean;
   expandedCard: number | null;
   setExpandedCard: React.Dispatch<React.SetStateAction<number | null>>;
+  exploredCardIndices: Set<number>;
+  onCardExplored: (index: number) => void;
 };
 
-const CARDS = [
+export const CARDS = [
   {
     icon: PiggyBank,
     title: "TFSA — Tax-Free Savings Account",
@@ -103,7 +105,7 @@ const CARDS = [
 ];
 
 
-export function LearningCards({ isDouble, expandedCard, setExpandedCard }: LearningCardsProps) {
+export function LearningCards({ isDouble, expandedCard, setExpandedCard, exploredCardIndices, onCardExplored }: LearningCardsProps) {
   return (
     <div
       style={{
@@ -118,11 +120,16 @@ export function LearningCards({ isDouble, expandedCard, setExpandedCard }: Learn
       {CARDS.map((card, i) => {
         const Icon = card.icon;
         const expanded = expandedCard === i;
+        const explored = exploredCardIndices.has(i);
         return (
           <button
             key={card.title}
             type="button"
-            onClick={() => setExpandedCard(expanded ? null : i)}
+            onClick={() => {
+              const nextExpanded = expanded ? null : i;
+              setExpandedCard(nextExpanded);
+              if (nextExpanded !== null) onCardExplored(nextExpanded);
+            }}
             style={{
               textAlign: "left",
               background: "var(--surface-1)",
@@ -160,6 +167,24 @@ export function LearningCards({ isDouble, expandedCard, setExpandedCard }: Learn
               >
                 {card.title}
               </span>
+              {explored && (
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "#22c55e",
+                    background: "#22c55e18",
+                    padding: "3px 7px",
+                    borderRadius: "999px",
+                    flexShrink: 0,
+                  }}
+                >
+                  ✓ Explored
+                </span>
+              )}
             </div>
 
             <p
