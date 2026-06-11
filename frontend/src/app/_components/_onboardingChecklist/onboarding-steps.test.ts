@@ -4,7 +4,7 @@ import type { Account, Budget, MonthlySummary, SavingsGoal } from "@/lib/api";
 
 /** Creates a minimal Account fixture. */
 function makeAccount(id = "a-1"): Account {
-  return { id, ownerName: "Test", nickname: null, accountType: "CHEQUING", balance: 0, frozen: false, createdAt: "", updatedAt: "" };
+  return { id, ownerName: "Test", nickname: null, accountType: "CHEQUING", balance: 0, frozen: false, isLinked: false, plaidAccountId: null, plaidItemId: null, institutionName: null, createdAt: "", updatedAt: "" };
 }
 
 /** Creates a minimal Budget fixture. */

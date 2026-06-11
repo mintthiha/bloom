@@ -15,7 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.0.0",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "plaid": "^42.2.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -35,15 +35,19 @@ enum RecurringFrequency {
 }
 
 model Account {
-  id          String      @id @default(cuid())
-  userId      String
-  ownerName   String
-  nickname    String?
-  accountType AccountType @default(CHEQUING)
-  balance     Float       @default(0)
-  frozen      Boolean     @default(false)
-  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
+  id              String      @id @default(cuid())
+  userId          String
+  ownerName       String
+  nickname        String?
+  accountType     AccountType @default(CHEQUING)
+  balance         Float       @default(0)
+  frozen          Boolean     @default(false)
+  isLinked        Boolean     @default(false)
+  plaidAccountId  String?     @unique
+  plaidItemId     String?
+  institutionName String?
+  createdAt       DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @db.Timestamptz(3)
 
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
@@ -76,22 +80,34 @@ model CategoryBudget {
 }
 
 model Transaction {
-  id           String          @id @default(cuid())
-  type         TransactionType
-  amount       Float
-  balanceAfter Float
-  transferGroupId String?
-  category     String?
-  merchant     String?
-  description  String?
-  effectiveAt  DateTime        @default(now()) @db.Timestamptz(3)
-  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  id                 String          @id @default(cuid())
+  type               TransactionType
+  amount             Float
+  balanceAfter       Float
+  transferGroupId    String?
+  category           String?
+  merchant           String?
+  description        String?
+  effectiveAt        DateTime        @default(now()) @db.Timestamptz(3)
+  createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  plaidTransactionId String?         @unique
 
   fromAccountId String?
   fromAccount   Account? @relation("SentTransactions", fields: [fromAccountId], references: [id])
 
   toAccountId String?
   toAccount   Account? @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
+}
+
+// NOTE: accessToken is stored in plain text — encrypt before production.
+model PlaidItem {
+  id              String   @id @default(cuid())
+  userId          String
+  accessToken     String
+  itemId          String   @unique
+  institutionName String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model NetWorthSnapshot {

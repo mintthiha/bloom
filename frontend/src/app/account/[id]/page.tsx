@@ -16,6 +16,7 @@ import {
 } from "@/lib/date-range";
 import { AccountAnalytics } from "./_components/_accountAnalytics/AccountAnalytics";
 import { NewTransactionForm } from "./_components/_newTransaction/NewTransactionForm";
+import { LinkedAccountNotice } from "./_components/_newTransaction/LinkedAccountNotice";
 import { ContributionRoomPanel } from "./_components/_contributionRoom/ContributionRoomPanel";
 import { DebtPayoffPanel } from "./_components/_debtPayoff/DebtPayoffPanel";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
@@ -316,21 +317,25 @@ export default function AccountPage({
             />
           )}
 
-          <NewTransactionForm
-            account={account}
-            transferTargets={transferTargets}
-            onSuccess={refresh}
-            onImportSuccess={(imported) => {
-              toast.success(
-                `Imported ${imported} transaction${imported !== 1 ? "s" : ""}`,
-              );
-              setFilterDateRange(getPresetDateRange("all-time"));
-              refresh();
-            }}
-            profile={profile}
-            transactionsForType={sameTypeTransactions}
-            sameTypeAccountIds={sameTypeAccountIds}
-          />
+          {account.isLinked ? (
+            <LinkedAccountNotice account={account} onResynced={refresh} />
+          ) : (
+            <NewTransactionForm
+              account={account}
+              transferTargets={transferTargets}
+              onSuccess={refresh}
+              onImportSuccess={(imported) => {
+                toast.success(
+                  `Imported ${imported} transaction${imported !== 1 ? "s" : ""}`,
+                );
+                setFilterDateRange(getPresetDateRange("all-time"));
+                refresh();
+              }}
+              profile={profile}
+              transactionsForType={sameTypeTransactions}
+              sameTypeAccountIds={sameTypeAccountIds}
+            />
+          )}
         </div>
 
         <TransactionHistory

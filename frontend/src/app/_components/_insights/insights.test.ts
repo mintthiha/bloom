@@ -8,7 +8,7 @@ const FIXED_NOW = new Date("2026-05-15T12:00:00.000Z");
 
 /** Creates an Account fixture. */
 function makeAccount(accountType: Account["accountType"], balance: number, id = "a-1"): Account {
-  return { id, ownerName: "Test", nickname: null, accountType, balance, frozen: false, createdAt: "", updatedAt: "" };
+  return { id, ownerName: "Test", nickname: null, accountType, balance, frozen: false, isLinked: false, plaidAccountId: null, plaidItemId: null, institutionName: null, createdAt: "", updatedAt: "" };
 }
 
 /** Creates a Budget fixture with isOverBudget derived from the amounts. */

@@ -38,6 +38,10 @@ export type Account = {
   accountType: AccountType;
   balance: number;
   frozen: boolean;
+  isLinked: boolean;
+  plaidAccountId: string | null;
+  plaidItemId: string | null;
+  institutionName: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -314,6 +318,15 @@ export const api = {
     request<{ imported: number; account: Account }>(`/accounts/${id}/import`, { method: "POST", body: JSON.stringify({ rows }) }),
   searchTransactions: (q: string, limit = 20) =>
     request<TransactionSearchResult[]>(withQuery("/transactions/search", { q, limit: String(limit) })),
+  createLinkToken: () =>
+    request<{ linkToken: string }>("/plaid/link-token", { method: "POST" }),
+  exchangePublicToken: (publicToken: string, institutionName: string) =>
+    request<{ itemId: string; accountsLinked: number }>("/plaid/exchange-token", {
+      method: "POST",
+      body: JSON.stringify({ publicToken, institutionName }),
+    }),
+  resyncPlaidItem: (itemId: string) =>
+    request<{ accountsLinked: number }>(`/plaid/sync/${itemId}`, { method: "POST" }),
   getProfile: () =>
     request<Profile | null>("/profile"),
   saveProfile: (input: {

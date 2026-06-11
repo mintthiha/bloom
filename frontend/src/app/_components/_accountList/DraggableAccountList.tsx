@@ -367,6 +367,21 @@ export function DraggableAccountList({
                             FROZEN
                           </span>
                         )}
+                        {acc.isLinked && acc.institutionName && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 600,
+                              letterSpacing: "0.04em",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              background: "#f59e0b18",
+                              color: "#f59e0b",
+                            }}
+                          >
+                            Linked · {acc.institutionName}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

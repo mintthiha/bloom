@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\user\\\\Documents\\\\Coding\\\\bloom\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(grep \"\\\\.ts$\")",
+      "Bash(npm install *)",
+      "PowerShell(cd \"C:\\\\Users\\\\user\\\\Documents\\\\Coding\\\\bloom\\\\backend\"; $env:DATABASE_URL = \\(Get-Content .env | Where-Object { $_ -match '^DATABASE_URL' } | ForEach-Object { \\($_ -split '=', 2\\)[1].Trim\\('\"'\\) }\\); npx prisma migrate dev --name add_plaid_fields 2>&1)"
+    ]
+  }
+}

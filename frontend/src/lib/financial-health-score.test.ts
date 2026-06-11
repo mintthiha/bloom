@@ -33,6 +33,10 @@ function makeAccount(
     accountType,
     balance,
     frozen: false,
+    isLinked: false,
+    plaidAccountId: null,
+    plaidItemId: null,
+    institutionName: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   };

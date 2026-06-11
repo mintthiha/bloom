@@ -41,6 +41,7 @@ import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSke
 import { DashboardCustomizePanel } from "./_components/_dashboardCustomize/DashboardCustomizePanel";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 import { OnboardingChecklist } from "./_components/_onboardingChecklist/OnboardingChecklist";
+import { LinkBankAccountCard } from "./_components/_linkAccount/LinkBankAccountCard";
 
 function Home() {
   const { view } = useDashboardView();
@@ -621,7 +622,7 @@ function Home() {
             <NetWorthHistory history={netWorthHistory} />
           )}
 
-          {/* Account Balances + Open New Account */}
+          {/* Account Balances + Open New Account + Link Bank Account */}
           <div
             id="open-account-section"
             style={{
@@ -636,6 +637,7 @@ function Home() {
               <AccountBalancesCard accounts={accounts} />
             )}
             <OpenAccountCard onCreated={loadAccounts} />
+            <LinkBankAccountCard onLinked={loadAccounts} />
           </div>
         </>
       )}
