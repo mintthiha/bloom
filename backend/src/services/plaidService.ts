@@ -152,14 +152,32 @@ export async function syncAccountsAndTransactions(
     ]),
   );
 
-  // --- Sync transactions (full re-sync — no cursor) ---
-  const txnResponse = await client.transactionsSync({
-    access_token: plaidItem.accessToken,
-  });
-  const added = txnResponse.data.added;
+  // Use transactionsGet (date-range based) instead of transactionsSync.
+  // transactionsGet works immediately in sandbox without requiring a webhook handshake,
+  // whereas transactionsSync needs INITIAL_UPDATE to fire first.
+  const startDate = "2020-01-01";
+  const endDate = new Date().toISOString().split("T")[0];
+  const pageSize = 500;
+
+  const allPlaidTransactions = [];
+  let offset = 0;
+  let totalTransactions = Infinity;
+
+  while (allPlaidTransactions.length < totalTransactions) {
+    const txnResponse = await client.transactionsGet({
+      access_token: plaidItem.accessToken,
+      start_date: startDate,
+      end_date: endDate,
+      options: { count: pageSize, offset },
+    });
+    allPlaidTransactions.push(...txnResponse.data.transactions);
+    totalTransactions = txnResponse.data.total_transactions;
+    offset += txnResponse.data.transactions.length;
+    if (txnResponse.data.transactions.length === 0) break;
+  }
 
   await Promise.all(
-    added.map((txn) => {
+    allPlaidTransactions.map((txn) => {
       const bloomAccountId = accountIdMap.get(txn.account_id);
       if (!bloomAccountId) return;
 
