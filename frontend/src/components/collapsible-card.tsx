@@ -1,5 +1,6 @@
 "use client";
 import { CSSProperties, ReactNode, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type CollapsibleCardProps = {
   eyebrow: string;
@@ -51,6 +52,7 @@ export function CollapsibleCard({
   className,
 }: CollapsibleCardProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const isMobile = useIsMobile();
 
   return (
     <div
@@ -66,9 +68,10 @@ export function CollapsibleCard({
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          gap: "16px",
-          alignItems: "flex-start",
+          flexDirection: isMobile ? "column" : "row",
+          justifyContent: isMobile ? "flex-start" : "space-between",
+          gap: isMobile ? "8px" : "16px",
+          alignItems: isMobile ? "stretch" : "flex-start",
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -109,7 +112,8 @@ export function CollapsibleCard({
             alignItems: "center",
             gap: "8px",
             flexShrink: 0,
-            paddingTop: "2px",
+            paddingTop: isMobile ? "0" : "2px",
+            justifyContent: isMobile ? "flex-end" : undefined,
           }}
         >
           {headerRight}

@@ -12,6 +12,7 @@ import {
 import { MonthlySummary, MonthlyTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Props = {
   monthlySummary: MonthlySummary;
@@ -56,6 +57,7 @@ export function MonthlySnapshot({
   isCurrentMonth,
 }: Props) {
   const [snapshotView, setSnapshotView] = useState<SnapshotView>("snapshot");
+  const isMobile = useIsMobile();
 
   const incomeDelta =
     previousMonthlySummary != null
@@ -98,7 +100,7 @@ export function MonthlySnapshot({
 
   const headerRight = (
     <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-      {snapshotView === "snapshot" && monthlySummary.topExpenseCategory && (
+      {!isMobile && snapshotView === "snapshot" && monthlySummary.topExpenseCategory && (
         <div style={{ textAlign: "right", marginRight: "8px" }}>
           <p
             style={{
