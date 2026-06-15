@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api, Budget, MonthlySummary } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const EXPENSE_BUDGET_CATEGORIES = [
   "Groceries",
@@ -45,6 +46,7 @@ function buildKnownCategories(
 
 /** Monthly budget card: add/delete budgets with live progress bars. */
 export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
+  const isMobile = useIsMobile();
   const [budgetCategory, setBudgetCategory] = useState("Groceries");
   const [customBudgetCategory, setCustomBudgetCategory] = useState("");
   const [budgetAmount, setBudgetAmount] = useState("");
@@ -125,7 +127,9 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 150px) auto",
+            gridTemplateColumns: isMobile
+            ? "1fr"
+            : "minmax(0, 1fr) minmax(0, 150px) auto",
             gap: "10px",
             alignItems: "stretch",
           }}

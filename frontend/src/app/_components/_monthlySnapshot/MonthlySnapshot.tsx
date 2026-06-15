@@ -97,7 +97,7 @@ export function MonthlySnapshot({
   );
 
   const headerRight = (
-    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+    <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
       {snapshotView === "snapshot" && monthlySummary.topExpenseCategory && (
         <div style={{ textAlign: "right", marginRight: "8px" }}>
           <p
