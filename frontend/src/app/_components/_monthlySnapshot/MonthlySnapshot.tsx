@@ -162,7 +162,7 @@ export function MonthlySnapshot({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
               gap: "10px",
               marginBottom: expenseCategories.length ? "22px" : "0",
             }}

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type DashboardView = "single" | "double";
 
@@ -40,6 +41,10 @@ export function DashboardViewProvider({ children }: { children: React.ReactNode 
   );
 }
 
+/** Returns the stored view preference plus an effectiveView that collapses to single on mobile. */
 export function useDashboardView() {
-  return useContext(DashboardViewContext);
+  const context = useContext(DashboardViewContext);
+  const isMobile = useIsMobile();
+  const effectiveView: DashboardView = isMobile ? "single" : context.view;
+  return { view: context.view, effectiveView, setView: context.setView };
 }

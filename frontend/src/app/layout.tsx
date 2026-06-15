@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </header>
               <CommandPalette />
               <Toaster position="bottom-center" theme="dark" />
-              <main style={{ flex: 1 }}>{children}</main>
+              <main style={{ flex: 1, overflowX: "hidden" }}>{children}</main>
               <footer style={{ borderTop: "1px solid var(--border)", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>© 2026 Bloom Financial Inc.</span>
                 <span className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>v2.0.0</span>

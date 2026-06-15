@@ -44,7 +44,7 @@ import { OnboardingChecklist } from "./_components/_onboardingChecklist/Onboardi
 import { LinkBankAccountCard } from "./_components/_linkAccount/LinkBankAccountCard";
 
 function Home() {
-  const { view } = useDashboardView();
+  const { effectiveView } = useDashboardView();
   const { visibleCards } = useDashboardVisibility();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -78,8 +78,8 @@ function Home() {
   );
 
   const dashboardColumns =
-    view === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
-  const twoColumnGrid = view === "single" ? "1fr" : "repeat(auto-fit, minmax(480px, 1fr))";
+    effectiveView === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
+  const twoColumnGrid = effectiveView === "single" ? "1fr" : "repeat(auto-fit, minmax(480px, 1fr))";
 
   /** Keeps the date range fresh whenever the preset changes (e.g., "this-month" recalculates daily). */
   useEffect(() => {

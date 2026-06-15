@@ -228,7 +228,7 @@ function SnapshotAndBudgetsSkeleton({ dashboardColumns }: { dashboardColumns: st
           <Skeleton style={{ height: "11px", width: "130px", marginBottom: "10px" }} />
           <Skeleton style={{ height: "26px", width: "50%", marginBottom: "6px" }} />
           <Skeleton style={{ height: "12px", width: "40%", marginBottom: "20px" }} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px" }}>
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}

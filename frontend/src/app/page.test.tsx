@@ -55,6 +55,10 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn() },
 }));
 
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: vi.fn().mockReturnValue(false),
+}));
+
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   BarChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

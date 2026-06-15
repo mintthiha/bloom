@@ -11,17 +11,19 @@ import { LearnProgressBar } from "./_components/_cardsSection/LearnProgressBar";
 import { CARDS } from "./_components/_cardsSection/LearningCards";
 
 export default function LearnPage() {
-  const { view } = useDashboardView();
-  const isDouble = view === "double";
+  const { effectiveView } = useDashboardView();
+  const isDouble = effectiveView === "double";
 
   /**
    * Read the stored layout synchronously so the skeleton uses the correct column count
    * immediately — the context provider reads localStorage in a useEffect, which is too
    * late and would always render the wrong skeleton layout on first paint.
+   * Also checks viewport width so mobile never shows a two-column skeleton.
    */
   const [skeletonIsDouble] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
+      if (window.innerWidth < 768) return false;
       return window.localStorage.getItem("bloom_dashboard_view") !== "single";
     } catch {
       return true;

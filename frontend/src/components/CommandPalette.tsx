@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, TransactionSearchResult, AccountType } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /** Dispatches the custom event that opens the command palette from anywhere in the app. */
 export function openCommandPalette() {
@@ -28,6 +29,7 @@ function resolveAccountLabel(result: TransactionSearchResult): string {
 /** Global command-palette modal for searching transactions across all accounts. */
 export function CommandPalette() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TransactionSearchResult[]>([]);
@@ -133,7 +135,7 @@ export function CommandPalette() {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        paddingTop: "18vh",
+        paddingTop: isMobile ? "10vh" : "18vh",
         background: "rgba(0,0,0,0.6)",
         backdropFilter: "blur(4px)",
       }}
@@ -141,14 +143,16 @@ export function CommandPalette() {
     >
       <div
         style={{
-          width: "100%",
+          width: "calc(100% - 32px)",
           maxWidth: "560px",
-          margin: "0 16px",
           background: "var(--surface-1)",
           border: "1px solid var(--border)",
           borderRadius: "16px",
           overflow: "hidden",
           boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+          maxHeight: isMobile ? "80vh" : undefined,
+          display: "flex",
+          flexDirection: "column",
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -191,7 +195,7 @@ export function CommandPalette() {
 
         {/* Results */}
         {query.trim() && (
-          <div style={{ maxHeight: "380px", overflowY: "auto" }}>
+          <div style={{ maxHeight: isMobile ? "min(280px, 50vh)" : "380px", overflowY: "auto" }}>
             {results.length === 0 && !loading ? (
               <div style={{ padding: "28px 18px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
                 No transactions found for "{query}"

@@ -30,8 +30,8 @@ export default function AccountPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { view } = useDashboardView();
-  const isDoubleColumn = view === "double";
+  const { effectiveView } = useDashboardView();
+  const isDoubleColumn = effectiveView === "double";
   const pageWidth = isDoubleColumn ? "1200px" : "720px";
   const summaryColumns = isDoubleColumn
     ? "minmax(0, 1.15fr) minmax(320px, 0.85fr)"

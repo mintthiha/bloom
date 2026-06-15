@@ -23,7 +23,7 @@ import {
 
 export function AppSidebar() {
   const { data: session } = useSession();
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
   const { view, setView } = useDashboardView();
   const pathname = usePathname();
   const onLearn = pathname === "/learn";
@@ -135,75 +135,77 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          {state !== "collapsed" && (
-            <SidebarGroupLabel
-              style={{
-                justifyContent: "center",
-                fontWeight: 900,
-                textAlign: "center",
-                paddingBottom: "12px",
-              }}
-            >
-              Dashboard View
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: state === "collapsed" ? "1fr" : "1fr 1fr",
-                gap: "8px",
-                padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setView("single")}
-                title="Single column"
+        {!isMobile && (
+          <SidebarGroup>
+            {state !== "collapsed" && (
+              <SidebarGroupLabel
                 style={{
-                  display: "flex",
-                  alignItems: "center",
                   justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "36px",
-                  borderRadius: "10px",
-                  border: view === "single" ? "1px solid #f59e0b66" : "1px solid var(--border)",
-                  background: view === "single" ? "#f59e0b1a" : "var(--surface-1)",
-                  color: view === "single" ? "#f59e0b" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
+                  fontWeight: 900,
+                  textAlign: "center",
+                  paddingBottom: "12px",
                 }}
               >
-                <Rows3 size={15} />
-                <span className="group-data-[collapsible=icon]:hidden">Single</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setView("double")}
-                title="Two columns"
+                Dashboard View
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  display: "grid",
+                  gridTemplateColumns: state === "collapsed" ? "1fr" : "1fr 1fr",
                   gap: "8px",
-                  minHeight: "36px",
-                  borderRadius: "10px",
-                  border: view === "double" ? "1px solid #f59e0b66" : "1px solid var(--border)",
-                  background: view === "double" ? "#f59e0b1a" : "var(--surface-1)",
-                  color: view === "double" ? "#f59e0b" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
+                  padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
                 }}
               >
-                <Columns2 size={15} />
-                <span className="group-data-[collapsible=icon]:hidden">Double</span>
-              </button>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                <button
+                  type="button"
+                  onClick={() => setView("single")}
+                  title="Single column"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    minHeight: "44px",
+                    borderRadius: "10px",
+                    border: view === "single" ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                    background: view === "single" ? "#f59e0b1a" : "var(--surface-1)",
+                    color: view === "single" ? "#f59e0b" : "var(--text-secondary)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Rows3 size={15} />
+                  <span className="group-data-[collapsible=icon]:hidden">Single</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("double")}
+                  title="Two columns"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    minHeight: "44px",
+                    borderRadius: "10px",
+                    border: view === "double" ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                    background: view === "double" ? "#f59e0b1a" : "var(--surface-1)",
+                    color: view === "double" ? "#f59e0b" : "var(--text-secondary)",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Columns2 size={15} />
+                  <span className="group-data-[collapsible=icon]:hidden">Double</span>
+                </button>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         <SidebarGroup>
           <SidebarGroupContent>
             <div
@@ -223,7 +225,7 @@ export function AppSidebar() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "8px",
-                  minHeight: "36px",
+                  minHeight: "44px",
                   borderRadius: "10px",
                   border: "1px solid var(--border)",
                   background: "var(--surface-1)",
@@ -259,7 +261,7 @@ export function AppSidebar() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "8px",
-                  minHeight: "36px",
+                  minHeight: "44px",
                   borderRadius: "10px",
                   border: onGoals ? "1px solid #f59e0b66" : "1px solid var(--border)",
                   background: onGoals ? "#f59e0b1a" : "var(--surface-1)",
@@ -280,7 +282,7 @@ export function AppSidebar() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "8px",
-                  minHeight: "36px",
+                  minHeight: "44px",
                   borderRadius: "10px",
                   border: onLearn ? "1px solid #f59e0b66" : "1px solid var(--border)",
                   background: onLearn ? "#f59e0b1a" : "var(--surface-1)",
