@@ -154,7 +154,6 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question…"
           rows={1}
           disabled={streaming || true}
           placeholder="AI unavailable in demo…"
