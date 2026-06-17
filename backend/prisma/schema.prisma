@@ -40,7 +40,7 @@ model Account {
   ownerName       String
   nickname        String?
   accountType     AccountType @default(CHEQUING)
-  balance         Float       @default(0)
+  balance         Decimal     @default(0) @db.Decimal(19, 4)
   frozen          Boolean     @default(false)
   isLinked        Boolean     @default(false)
   plaidAccountId  String?     @unique
@@ -62,8 +62,8 @@ model Profile {
   username                String   @unique
   email                   String
   tfsaBirthYear           Int?
-  tfsaRoomUsedElsewhere   Float?
-  rrspContributionRoom    Float?
+  tfsaRoomUsedElsewhere   Decimal? @db.Decimal(19, 4)
+  rrspContributionRoom    Decimal? @db.Decimal(19, 4)
   createdAt               DateTime @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @db.Timestamptz(3)
 }
@@ -72,7 +72,7 @@ model CategoryBudget {
   id           String   @id
   userId       String
   category     String
-  monthlyLimit Float
+  monthlyLimit Decimal @db.Decimal(19, 4)
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
@@ -82,8 +82,8 @@ model CategoryBudget {
 model Transaction {
   id                 String          @id @default(cuid())
   type               TransactionType
-  amount             Float
-  balanceAfter       Float
+  amount             Decimal @db.Decimal(19, 4)
+  balanceAfter       Decimal @db.Decimal(19, 4)
   transferGroupId    String?
   category           String?
   merchant           String?
@@ -114,9 +114,9 @@ model NetWorthSnapshot {
   id          String   @id @default(cuid())
   userId      String
   month       String
-  netWorth    Float
-  totalAssets Float
-  totalDebt   Float
+  netWorth    Decimal @db.Decimal(19, 4)
+  totalAssets Decimal @db.Decimal(19, 4)
+  totalDebt   Decimal @db.Decimal(19, 4)
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
@@ -128,7 +128,7 @@ model SavingsGoal {
   userId       String
   accountId    String
   name         String
-  targetAmount Float
+  targetAmount Decimal @db.Decimal(19, 4)
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
@@ -141,7 +141,7 @@ model RecurringTransaction {
   accountId   String
   name        String
   type        RecurringTransactionType
-  amount      Float
+  amount      Decimal @db.Decimal(19, 4)
   category    String?
   merchant    String?
   description String?

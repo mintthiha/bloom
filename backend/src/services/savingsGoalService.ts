@@ -9,10 +9,10 @@ type SavingsGoalRow = {
   userId: string;
   accountId: string;
   name: string;
-  targetAmount: number | string;
+  targetAmount: number;
   createdAt: Date;
   updatedAt: Date;
-  accountBalance: number | string;
+  accountBalance: number;
   accountNickname: string | null;
   accountOwnerName: string;
   accountType: string;
@@ -46,11 +46,11 @@ function normalizeSavingsGoalRow(row: SavingsGoalRow) {
 async function fetchSavingsGoalWithAccount(goalId: string) {
   const rows = await prisma.$queryRaw<SavingsGoalRow[]>`
     SELECT
-      g."id", g."userId", g."accountId", g."name", g."targetAmount",
+      g."id", g."userId", g."accountId", g."name", g."targetAmount"::float8 AS "targetAmount",
       g."createdAt", g."updatedAt",
-      a."balance"      AS "accountBalance",
-      a."nickname"     AS "accountNickname",
-      a."ownerName"    AS "accountOwnerName",
+      a."balance"::float8 AS "accountBalance",
+      a."nickname"        AS "accountNickname",
+      a."ownerName"       AS "accountOwnerName",
       a."accountType"::text AS "accountType"
     FROM "SavingsGoal" g
     JOIN "Account" a ON a."id" = g."accountId"
@@ -75,11 +75,11 @@ async function getSavingsGoalOrThrow(userId: string, goalId: string) {
 export async function listSavingsGoals(userId: string) {
   const rows = await prisma.$queryRaw<SavingsGoalRow[]>`
     SELECT
-      g."id", g."userId", g."accountId", g."name", g."targetAmount",
+      g."id", g."userId", g."accountId", g."name", g."targetAmount"::float8 AS "targetAmount",
       g."createdAt", g."updatedAt",
-      a."balance"      AS "accountBalance",
-      a."nickname"     AS "accountNickname",
-      a."ownerName"    AS "accountOwnerName",
+      a."balance"::float8 AS "accountBalance",
+      a."nickname"        AS "accountNickname",
+      a."ownerName"       AS "accountOwnerName",
       a."accountType"::text AS "accountType"
     FROM "SavingsGoal" g
     JOIN "Account" a ON a."id" = g."accountId"

@@ -33,7 +33,9 @@ type ProfileRecord = {
 export async function getProfile(userId: string) {
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     SELECT "userId", "firstName", "lastName", "username", "email",
-           "tfsaBirthYear", "tfsaRoomUsedElsewhere", "rrspContributionRoom",
+           "tfsaBirthYear",
+           "tfsaRoomUsedElsewhere"::float8 AS "tfsaRoomUsedElsewhere",
+           "rrspContributionRoom"::float8 AS "rrspContributionRoom",
            "createdAt", "updatedAt"
     FROM "Profile"
     WHERE "userId" = ${userId}
@@ -134,7 +136,9 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
       "rrspContributionRoom" = EXCLUDED."rrspContributionRoom",
       "updatedAt" = CURRENT_TIMESTAMP
     RETURNING "userId", "firstName", "lastName", "username", "email",
-              "tfsaBirthYear", "tfsaRoomUsedElsewhere", "rrspContributionRoom",
+              "tfsaBirthYear",
+              "tfsaRoomUsedElsewhere"::float8 AS "tfsaRoomUsedElsewhere",
+              "rrspContributionRoom"::float8 AS "rrspContributionRoom",
               "createdAt", "updatedAt"
   `;
 

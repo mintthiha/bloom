@@ -56,7 +56,7 @@ type TransactionUpdateInput = {
 
 async function selectAccountById(id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "id" = ${id}
     LIMIT 1
@@ -66,7 +66,7 @@ async function selectAccountById(id: string) {
 
 async function selectAccountByUserId(userId: string, id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "id" = ${id} AND "userId" = ${userId}
     LIMIT 1
@@ -76,7 +76,7 @@ async function selectAccountByUserId(userId: string, id: string) {
 
 async function selectTransactionByAccount(userId: string, accountId: string, transactionId: string) {
   const rows = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount"::float8 AS "amount", t."balanceAfter"::float8 AS "balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -93,7 +93,7 @@ async function selectTransactionByAccount(userId: string, accountId: string, tra
 
 async function selectTransactionsByTransferGroup(userId: string, transferGroupId: string) {
   return prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount"::float8 AS "amount", t."balanceAfter"::float8 AS "balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     LEFT JOIN "Account" fa ON fa."id" = t."fromAccountId"
     LEFT JOIN "Account" ta ON ta."id" = t."toAccountId"
@@ -105,7 +105,7 @@ async function selectTransactionsByTransferGroup(userId: string, transferGroupId
 
 async function listTransactionsForBalanceReplay(client: Pick<PrismaClient, "$queryRaw">, accountId: string) {
   return client.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount"::float8 AS "amount", "balanceAfter"::float8 AS "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -171,7 +171,7 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
   const rows = await client.$queryRaw<TransactionRecord[]>`
     INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId")
     VALUES (${id}, ${input.type}::"TransactionType", ${input.amount}, ${input.balanceAfter}, ${input.transferGroupId ?? null}, ${category}, ${merchant}, ${description}, ${input.effectiveAt ?? new Date()}, CURRENT_TIMESTAMP, ${input.fromAccountId ?? null}, ${input.toAccountId ?? null})
-    RETURNING "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
+    RETURNING "id", "type", "amount"::float8 AS "amount", "balanceAfter"::float8 AS "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
   `;
   return rows[0];
 }
@@ -361,10 +361,10 @@ export async function recordNetWorthSnapshot(userId: string) {
   const accounts = await prisma.account.findMany({ where: { userId } });
   const totalAssets = accounts
     .filter((a) => a.accountType !== "CREDIT")
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + a.balance.toNumber(), 0);
   const totalDebt = accounts
     .filter((a) => a.accountType === "CREDIT")
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + a.balance.toNumber(), 0);
   const netWorth = totalAssets - totalDebt;
   const month = new Date().toISOString().slice(0, 7);
 
@@ -411,7 +411,7 @@ export async function getNetWorthHistory(userId: string, months: number = 12) {
  */
 export async function listAccounts(userId: string) {
   return prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "userId" = ${userId}
     ORDER BY "createdAt" DESC
@@ -440,7 +440,7 @@ export async function createAccount(
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     INSERT INTO "Account" ("id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt")
     VALUES (${id}, ${userId}, ${ownerName.trim()}, ${nickname?.trim() ? nickname.trim() : null}, ${accountType}::"AccountType", 0, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
   `;
   return rows[0];
 }
@@ -467,7 +467,7 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
     SET "nickname" = ${nickname?.trim() ? nickname.trim() : null},
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "id" = ${id} AND "userId" = ${userId}
-    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
   `;
   return rows[0];
 }
@@ -588,7 +588,7 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
   const range = filters?.start && filters?.end ? resolveDateRange({ start: filters.start, end: filters.end }) : null;
 
   const transactions = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount"::float8 AS "amount", "balanceAfter"::float8 AS "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${id} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -787,11 +787,11 @@ type ImportRow = {
  * month-end balance, combined with the current balances of all other accounts.
  */
 async function backfillNetWorthSnapshots(userId: string, accountId: string, accountType: AccountType) {
-  type MonthEndRow = { month: string; balanceAfter: number | string };
+  type MonthEndRow = { month: string; balanceAfter: number };
   const rows = await prisma.$queryRaw<MonthEndRow[]>`
     SELECT
       TO_CHAR(DATE_TRUNC('month', "effectiveAt"), 'YYYY-MM') AS month,
-      "balanceAfter"
+      "balanceAfter"::float8 AS "balanceAfter"
     FROM "Transaction"
     WHERE
       ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
@@ -809,7 +809,7 @@ async function backfillNetWorthSnapshots(userId: string, accountId: string, acco
   if (monthBalances.size === 0) return;
 
   const otherAccounts = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "userId" = ${userId} AND "id" != ${accountId}
   `;
