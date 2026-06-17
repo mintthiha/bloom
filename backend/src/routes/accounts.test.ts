@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
+import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
@@ -28,7 +29,9 @@ describe("account routes", () => {
   });
 
   it("returns 401 for monthly summary when x-user-id is missing", async () => {
-    const response = await request(app).get("/api/accounts/summary/monthly");
+    const response = await request(app)
+      .get("/api/accounts/summary/monthly")
+      .set("X-Internal-Secret", INTERNAL_SECRET);
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: "Unauthorized" });
@@ -46,6 +49,7 @@ describe("account routes", () => {
 
     const response = await request(app)
       .get("/api/accounts/summary/monthly")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
@@ -69,6 +73,7 @@ describe("account routes", () => {
 
     const response = await request(app)
       .get("/api/accounts/account-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
@@ -78,6 +83,7 @@ describe("account routes", () => {
   it("rejects invalid account creation payloads before hitting the service", async () => {
     const response = await request(app)
       .post("/api/accounts")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ ownerName: "", accountType: "CHEQUING" });
 
@@ -89,6 +95,7 @@ describe("account routes", () => {
   it("rejects invalid deposit payloads before hitting the service", async () => {
     const response = await request(app)
       .post("/api/accounts/account-1/deposit")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ amount: "20" });
 
@@ -110,6 +117,7 @@ describe("account routes", () => {
 
     const response = await request(app)
       .post("/api/accounts")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ ownerName: "  Jane\t\nDoe  ", nickname: "  Main\u0000 \n Account ", accountType: "CHEQUING" });
 
@@ -122,6 +130,7 @@ describe("account routes", () => {
 
     const response = await request(app)
       .get("/api/accounts/account-1/transactions?type=WITHDRAWAL&category=Dining&search=coffee&start=2026-04-01T00:00:00.000Z&end=2026-05-01T00:00:00.000Z")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
@@ -137,6 +146,7 @@ describe("account routes", () => {
   it("rejects invalid transaction type filters", async () => {
     const response = await request(app)
       .get("/api/accounts/account-1/transactions?type=BAD_TYPE")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(400);
@@ -157,6 +167,7 @@ describe("account routes", () => {
 
     const response = await request(app)
       .patch("/api/accounts/account-1/transactions/txn-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ amount: 20, category: "  Dining \n", merchant: "  Tim\tHortons ", description: "  Coffee\tshop ", effectiveAt: "2026-04-08T12:00:00.000Z" });
 
@@ -175,6 +186,7 @@ describe("account routes", () => {
 
     const response = await request(app)
       .post("/api/accounts/account-1/deposit")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ amount: 20, category: "  Dining ", merchant: "  Metro \n" });
 
@@ -185,6 +197,7 @@ describe("account routes", () => {
   it("rejects invalid transaction edit payloads before hitting the service", async () => {
     const response = await request(app)
       .patch("/api/accounts/account-1/transactions/txn-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ amount: 0 });
 
@@ -196,6 +209,7 @@ describe("account routes", () => {
   it("passes transaction deletes through to the service", async () => {
     const response = await request(app)
       .delete("/api/accounts/account-1/transactions/txn-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(204);

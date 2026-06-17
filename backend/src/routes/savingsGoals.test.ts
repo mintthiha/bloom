@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
+import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
@@ -46,7 +47,9 @@ describe("savings goal routes", () => {
 
   describe("GET /api/savings-goals", () => {
     it("returns 401 when x-user-id header is missing", async () => {
-      const response = await request(app).get("/api/savings-goals");
+      const response = await request(app)
+        .get("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET);
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({ error: "Unauthorized" });
@@ -55,7 +58,7 @@ describe("savings goal routes", () => {
     it("returns 200 with the user's savings goals", async () => {
       serviceMock.listSavingsGoals.mockResolvedValue([GOAL_FIXTURE]);
 
-      const response = await request(app).get("/api/savings-goals").set("X-User-Id", "u-1");
+      const response = await request(app).get("/api/savings-goals").set("X-Internal-Secret", INTERNAL_SECRET).set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
       expect(serviceMock.listSavingsGoals).toHaveBeenCalledWith("u-1");
@@ -65,7 +68,7 @@ describe("savings goal routes", () => {
     it("returns an empty array when the user has no savings goals", async () => {
       serviceMock.listSavingsGoals.mockResolvedValue([]);
 
-      const response = await request(app).get("/api/savings-goals").set("X-User-Id", "u-1");
+      const response = await request(app).get("/api/savings-goals").set("X-Internal-Secret", INTERNAL_SECRET).set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);
@@ -78,7 +81,10 @@ describe("savings goal routes", () => {
 
   describe("POST /api/savings-goals", () => {
     it("returns 401 when x-user-id header is missing", async () => {
-      const response = await request(app).post("/api/savings-goals").send(VALID_BODY);
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .send(VALID_BODY);
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({ error: "Unauthorized" });
@@ -87,6 +93,7 @@ describe("savings goal routes", () => {
     it("returns 400 when accountId is missing", async () => {
       const response = await request(app)
         .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send({ name: "Emergency Fund", targetAmount: 5000 });
 
@@ -97,6 +104,7 @@ describe("savings goal routes", () => {
     it("returns 400 when name is missing", async () => {
       const response = await request(app)
         .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send({ accountId: "a-1", targetAmount: 5000 });
 
@@ -107,6 +115,7 @@ describe("savings goal routes", () => {
     it("returns 400 when targetAmount is not a positive number", async () => {
       const response = await request(app)
         .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send({ accountId: "a-1", name: "Emergency Fund", targetAmount: -100 });
 
@@ -117,6 +126,7 @@ describe("savings goal routes", () => {
     it("returns 400 when targetAmount is zero", async () => {
       const response = await request(app)
         .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send({ accountId: "a-1", name: "Emergency Fund", targetAmount: 0 });
 
@@ -129,6 +139,7 @@ describe("savings goal routes", () => {
 
       const response = await request(app)
         .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send(VALID_BODY);
 
@@ -144,7 +155,10 @@ describe("savings goal routes", () => {
 
   describe("PUT /api/savings-goals/:id", () => {
     it("returns 401 when x-user-id header is missing", async () => {
-      const response = await request(app).put("/api/savings-goals/g-1").send(VALID_BODY);
+      const response = await request(app)
+        .put("/api/savings-goals/g-1")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .send(VALID_BODY);
 
       expect(response.status).toBe(401);
     });
@@ -152,6 +166,7 @@ describe("savings goal routes", () => {
     it("returns 400 when the request body is invalid", async () => {
       const response = await request(app)
         .put("/api/savings-goals/g-1")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send({ name: "Updated", targetAmount: "not-a-number" });
 
@@ -165,6 +180,7 @@ describe("savings goal routes", () => {
 
       const response = await request(app)
         .put("/api/savings-goals/g-1")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1")
         .send({ accountId: "a-1", name: "Updated Fund", targetAmount: 8000 });
 
@@ -184,7 +200,9 @@ describe("savings goal routes", () => {
 
   describe("DELETE /api/savings-goals/:id", () => {
     it("returns 401 when x-user-id header is missing", async () => {
-      const response = await request(app).delete("/api/savings-goals/g-1");
+      const response = await request(app)
+        .delete("/api/savings-goals/g-1")
+        .set("X-Internal-Secret", INTERNAL_SECRET);
 
       expect(response.status).toBe(401);
     });
@@ -194,6 +212,7 @@ describe("savings goal routes", () => {
 
       const response = await request(app)
         .delete("/api/savings-goals/g-1")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(204);

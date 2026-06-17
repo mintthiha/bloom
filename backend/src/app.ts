@@ -7,6 +7,7 @@ import savingsGoalsRouter from "./routes/savingsGoals";
 import transactionsRouter from "./routes/transactions";
 import plaidRouter from "./routes/plaid";
 import { errorHandler } from "./middleware/errorHandler";
+import { requireInternalSecret } from "./middleware/internalAuth";
 
 const app = express();
 app.use(express.json());
@@ -14,6 +15,8 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "bloom-api" });
 });
+
+app.use("/api", requireInternalSecret);
 
 app.use("/api/accounts", accountsRouter);
 app.use("/api/budgets", budgetsRouter);

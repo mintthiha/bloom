@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
+import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
@@ -33,7 +34,9 @@ describe("transaction routes", () => {
 
   describe("GET /api/transactions/search", () => {
     it("returns 401 when x-user-id header is missing", async () => {
-      const response = await request(app).get("/api/transactions/search?q=coffee");
+      const response = await request(app)
+        .get("/api/transactions/search?q=coffee")
+        .set("X-Internal-Secret", INTERNAL_SECRET);
 
       expect(response.status).toBe(401);
       expect(response.body).toEqual({ error: "Unauthorized" });
@@ -42,6 +45,7 @@ describe("transaction routes", () => {
     it("returns an empty array without calling the service when q is absent", async () => {
       const response = await request(app)
         .get("/api/transactions/search")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
@@ -52,6 +56,7 @@ describe("transaction routes", () => {
     it("returns an empty array without calling the service when q is an empty string", async () => {
       const response = await request(app)
         .get("/api/transactions/search?q=")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
@@ -62,6 +67,7 @@ describe("transaction routes", () => {
     it("returns an empty array without calling the service when q is only whitespace", async () => {
       const response = await request(app)
         .get("/api/transactions/search?q=   ")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
@@ -74,6 +80,7 @@ describe("transaction routes", () => {
 
       const response = await request(app)
         .get("/api/transactions/search?q=coffee")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
@@ -86,6 +93,7 @@ describe("transaction routes", () => {
 
       await request(app)
         .get("/api/transactions/search?q=coffee&limit=5")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(serviceMock.searchTransactions).toHaveBeenCalledWith("u-1", "coffee", 5);
@@ -96,6 +104,7 @@ describe("transaction routes", () => {
 
       await request(app)
         .get("/api/transactions/search?q=rent")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(serviceMock.searchTransactions).toHaveBeenCalledWith("u-1", "rent", 20);
@@ -106,6 +115,7 @@ describe("transaction routes", () => {
 
       const response = await request(app)
         .get("/api/transactions/search?q=zzznomatch")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
         .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);

@@ -12,7 +12,11 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const { path } = await params;
   const url = `${BACKEND}/api/${path.join("/")}${req.nextUrl.search}`;
 
-  const headers = new Headers({ "Content-Type": "application/json", "X-User-Id": session.user.id });
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    "X-User-Id": session.user.id,
+    "X-Internal-Secret": process.env.INTERNAL_API_SECRET ?? "",
+  });
 
   const body = req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined;
 

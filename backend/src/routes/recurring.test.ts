@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
+import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
@@ -26,7 +27,9 @@ describe("recurring routes", () => {
   });
 
   it("returns 401 when x-user-id is missing", async () => {
-    const response = await request(app).get("/api/recurring");
+    const response = await request(app)
+      .get("/api/recurring")
+      .set("X-Internal-Secret", INTERNAL_SECRET);
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: "Unauthorized" });
@@ -37,6 +40,7 @@ describe("recurring routes", () => {
 
     const response = await request(app)
       .post("/api/recurring")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({
         accountId: "account-1",
@@ -69,6 +73,7 @@ describe("recurring routes", () => {
   it("rejects invalid recurring payloads before hitting the service", async () => {
     const response = await request(app)
       .post("/api/recurring")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({
         accountId: "account-1",
@@ -89,6 +94,7 @@ describe("recurring routes", () => {
 
     const response = await request(app)
       .post("/api/recurring/apply-due")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
@@ -100,6 +106,7 @@ describe("recurring routes", () => {
 
     const response = await request(app)
       .put("/api/recurring/rule-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({
         accountId: "account-1",
@@ -133,6 +140,7 @@ describe("recurring routes", () => {
 
     const response = await request(app)
       .patch("/api/recurring/rule-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ active: false });
 
@@ -143,6 +151,7 @@ describe("recurring routes", () => {
   it("passes deletes through to the service", async () => {
     const response = await request(app)
       .delete("/api/recurring/rule-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(204);

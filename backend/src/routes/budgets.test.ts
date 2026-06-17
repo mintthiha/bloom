@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
+import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
@@ -22,7 +23,9 @@ describe("budget routes", () => {
   });
 
   it("returns 401 when x-user-id is missing", async () => {
-    const response = await request(app).get("/api/budgets");
+    const response = await request(app)
+      .get("/api/budgets")
+      .set("X-Internal-Secret", INTERNAL_SECRET);
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ error: "Unauthorized" });
@@ -44,6 +47,7 @@ describe("budget routes", () => {
 
     const response = await request(app)
       .get("/api/budgets")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
@@ -61,6 +65,7 @@ describe("budget routes", () => {
 
     const response = await request(app)
       .put("/api/budgets")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ category: "Dining", monthlyLimit: 250 });
 
@@ -72,6 +77,7 @@ describe("budget routes", () => {
   it("rejects invalid budget payloads before hitting the service", async () => {
     const response = await request(app)
       .put("/api/budgets")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ category: "", monthlyLimit: "250" });
 
@@ -90,6 +96,7 @@ describe("budget routes", () => {
 
     const response = await request(app)
       .put("/api/budgets")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
       .send({ category: "  Entertainment\u0000 \n Budget ", monthlyLimit: 250 });
 
@@ -117,6 +124,7 @@ describe("budget routes", () => {
 
     const response = await request(app)
       .get("/api/budgets/budget-1/activity")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(200);
@@ -127,6 +135,7 @@ describe("budget routes", () => {
   it("deletes a budget by id", async () => {
     const response = await request(app)
       .delete("/api/budgets/budget-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(204);
