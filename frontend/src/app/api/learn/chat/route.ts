@@ -8,7 +8,46 @@ Keep answers focused and practical. When discussing account types, mention key l
 
 Respond in plain text (no markdown formatting). Keep responses under 300 words unless the user asks for a detailed explanation.`;
 
+/** Maximum number of requests allowed per IP within the rate limit window. */
+const RATE_LIMIT_MAX = 10;
+
+/** Rate limit window duration in milliseconds (1 hour). */
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+/** In-memory store mapping IP addresses to their recent request timestamps. */
+const rateLimitStore = new Map<string, number[]>();
+
+/**
+ * Checks whether the given IP has exceeded the rate limit.
+ * Returns true if the request should be blocked, false if it is allowed.
+ */
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const recentTimestamps = (rateLimitStore.get(ip) ?? []).filter(
+    (timestamp) => timestamp > windowStart
+  );
+
+  if (recentTimestamps.length >= RATE_LIMIT_MAX) {
+    return true;
+  }
+
+  recentTimestamps.push(now);
+  rateLimitStore.set(ip, recentTimestamps);
+  return false;
+}
+
 export async function POST(req: Request) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
+
+  if (isRateLimited(clientIp)) {
+    return new Response("Too many requests. Please try again later.", {
+      status: 429,
+      headers: { "Retry-After": "3600" },
+    });
+  }
+
   let messages: Anthropic.MessageParam[];
 
   try {

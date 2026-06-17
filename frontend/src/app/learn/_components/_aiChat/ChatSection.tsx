@@ -59,6 +59,20 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
         </span>
       </div>
 
+      {/* Demo notice */}
+      <div
+        style={{
+          padding: "8px 24px",
+          background: "var(--surface-2)",
+          borderBottom: "1px solid var(--border)",
+          fontSize: "12px",
+          color: "var(--text-muted)",
+          textAlign: "center",
+        }}
+      >
+        AI model currently unavailable — this feature is disabled in the demo.
+      </div>
+
       {/* Messages */}
       <div
         style={{
@@ -142,7 +156,8 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
           onKeyDown={handleKeyDown}
           placeholder="Ask a question…"
           rows={1}
-          disabled={streaming}
+          disabled={streaming || true}
+          placeholder="AI unavailable in demo…"
           style={{
             flex: 1,
             resize: "none",
@@ -155,21 +170,21 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
             outline: "none",
             lineHeight: 1.5,
             fontFamily: "inherit",
+            opacity: 0.5,
           }}
         />
         <button
           type="button"
           onClick={sendMessage}
-          disabled={streaming || !input.trim()}
+          disabled={true}
           style={{
             width: "38px",
             height: "38px",
             borderRadius: "10px",
             border: "none",
-            background:
-              input.trim() && !streaming ? "#f59e0b" : "var(--surface-3)",
-            color: input.trim() && !streaming ? "#000" : "var(--text-muted)",
-            cursor: input.trim() && !streaming ? "pointer" : "not-allowed",
+            background: "var(--surface-3)",
+            color: "var(--text-muted)",
+            cursor: "not-allowed",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
