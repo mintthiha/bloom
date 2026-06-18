@@ -97,6 +97,9 @@ model Transaction {
 
   toAccountId String?
   toAccount   Account? @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
+
+  @@index([fromAccountId, effectiveAt])
+  @@index([toAccountId, effectiveAt])
 }
 
 // NOTE: accessToken is stored in plain text — encrypt before production.
