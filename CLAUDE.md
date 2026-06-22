@@ -78,6 +78,23 @@ const [pendingId, setPendingId] = useState<string | null>(null);
 
 Do not define state inside a child if a sibling or parent also needs to read or set it.
 
+## Post-Implementation Checklist
+
+After every implementation, run all three of the following and fix any failures before reporting the task complete:
+
+```bash
+# 1. Frontend formatting
+cd frontend && npm run format:check
+
+# 2. Frontend tests
+cd frontend && npm test -- --watchAll=false
+
+# 3. Backend tests
+cd backend && npm test -- --watchAll=false
+```
+
+If `format:check` fails, run `npx prettier --write src` from the `frontend/` directory to auto-fix, then re-verify.
+
 ## Implementation Summary
 
 At the end of every feature implementation, provide a short summary in this format:

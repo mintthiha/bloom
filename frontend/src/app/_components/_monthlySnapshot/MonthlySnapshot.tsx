@@ -177,7 +177,9 @@ export function MonthlySnapshot({
                 Income
               </p>
               <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}>
-                <FlashOnChange watchKey={monthlySummary.income}>{formatCurrency(monthlySummary.income)}</FlashOnChange>
+                <FlashOnChange watchKey={monthlySummary.income}>
+                  {formatCurrency(monthlySummary.income)}
+                </FlashOnChange>
               </p>
               {incomeDelta !== null && incomeDelta !== 0 && (
                 <p
@@ -215,7 +217,9 @@ export function MonthlySnapshot({
                 Spending
               </p>
               <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}>
-                <FlashOnChange watchKey={monthlySummary.spending}>{formatCurrency(monthlySummary.spending)}</FlashOnChange>
+                <FlashOnChange watchKey={monthlySummary.spending}>
+                  {formatCurrency(monthlySummary.spending)}
+                </FlashOnChange>
               </p>
               {spendingDelta !== null && spendingDelta !== 0 && (
                 <p
@@ -260,7 +264,9 @@ export function MonthlySnapshot({
                   color: monthlySummary.netCashFlow >= 0 ? "#22c55e" : "#f97316",
                 }}
               >
-                <FlashOnChange watchKey={monthlySummary.netCashFlow}>{formatCurrency(monthlySummary.netCashFlow)}</FlashOnChange>
+                <FlashOnChange watchKey={monthlySummary.netCashFlow}>
+                  {formatCurrency(monthlySummary.netCashFlow)}
+                </FlashOnChange>
               </p>
               {netDelta !== null && netDelta !== 0 && (
                 <p
