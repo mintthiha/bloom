@@ -12,7 +12,7 @@ type RecurringTransactionRecord = {
   accountId: string;
   name: string;
   type: RecurringTransactionType;
-  amount: number;
+  amount: string;
   category: string | null;
   merchant: string | null;
   description: string | null;
@@ -62,6 +62,11 @@ type ApplyDueResult = {
   }>;
 };
 
+/** Converts a raw DB RecurringTransactionRecord (Decimal amount string) to API-safe format with numeric amount. */
+function normalizeRecurringTransaction(row: RecurringTransactionRecord) {
+  return { ...row, amount: Number(row.amount) };
+}
+
 function normalizeOptionalString(value?: string) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
@@ -104,7 +109,7 @@ async function selectRecurringTransactionById(userId: string, id: string) {
       r."accountId",
       r."name",
       r."type",
-      r."amount"::float8 AS "amount",
+      r."amount",
       r."category",
       r."merchant",
       r."description",
@@ -132,14 +137,14 @@ async function selectRecurringTransactionById(userId: string, id: string) {
  * Lists recurring transaction rules for the current user.
  */
 export async function listRecurringTransactions(userId: string) {
-  return prisma.$queryRaw<RecurringTransactionRecord[]>`
+  const rows = await prisma.$queryRaw<RecurringTransactionRecord[]>`
     SELECT
       r."id",
       r."userId",
       r."accountId",
       r."name",
       r."type",
-      r."amount"::float8 AS "amount",
+      r."amount",
       r."category",
       r."merchant",
       r."description",
@@ -159,6 +164,7 @@ export async function listRecurringTransactions(userId: string) {
     WHERE r."userId" = ${userId}
     ORDER BY r."active" DESC, r."nextRunAt" ASC, r."createdAt" DESC
   `;
+  return rows.map(normalizeRecurringTransaction);
 }
 
 /**
@@ -230,7 +236,7 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
       "accountId",
       "name",
       "type",
-      "amount"::float8 AS "amount",
+      "amount",
       "category",
       "merchant",
       "description",
@@ -247,7 +253,7 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
       ${account.accountType} AS "accountType"
   `;
 
-  return rows[0];
+  return normalizeRecurringTransaction(rows[0]);
 }
 
 /**
@@ -305,7 +311,7 @@ export async function updateRecurringTransaction(userId: string, id: string, inp
       "accountId",
       "name",
       "type",
-      "amount"::float8 AS "amount",
+      "amount",
       "category",
       "merchant",
       "description",
@@ -322,7 +328,7 @@ export async function updateRecurringTransaction(userId: string, id: string, inp
       ${account.accountType} AS "accountType"
   `;
 
-  return rows[0];
+  return normalizeRecurringTransaction(rows[0]);
 }
 
 /**
@@ -345,7 +351,7 @@ export async function setRecurringTransactionActive(userId: string, id: string, 
       "accountId",
       "name",
       "type",
-      "amount"::float8 AS "amount",
+      "amount",
       "category",
       "merchant",
       "description",
@@ -362,7 +368,7 @@ export async function setRecurringTransactionActive(userId: string, id: string, 
       ${existing.accountType} AS "accountType"
   `;
 
-  return rows[0];
+  return normalizeRecurringTransaction(rows[0]);
 }
 
 /**
@@ -392,7 +398,7 @@ export async function applyDueRecurringTransactions(userId: string, now = new Da
       r."accountId",
       r."name",
       r."type",
-      r."amount"::float8 AS "amount",
+      r."amount",
       r."category",
       r."merchant",
       r."description",
@@ -434,10 +440,11 @@ export async function applyDueRecurringTransactions(userId: string, now = new Da
       }
 
       try {
+        const ruleAmount = Number(rule.amount);
         if (rule.type === "DEPOSIT") {
-          await deposit(userId, rule.accountId, rule.amount, rule.category ?? undefined, rule.description ?? undefined, nextRunAt, rule.merchant ?? undefined);
+          await deposit(userId, rule.accountId, ruleAmount, rule.category ?? undefined, rule.description ?? undefined, nextRunAt, rule.merchant ?? undefined);
         } else {
-          await withdraw(userId, rule.accountId, rule.amount, rule.category ?? undefined, rule.description ?? undefined, nextRunAt, rule.merchant ?? undefined);
+          await withdraw(userId, rule.accountId, ruleAmount, rule.category ?? undefined, rule.description ?? undefined, nextRunAt, rule.merchant ?? undefined);
         }
 
         result.appliedCount += 1;
@@ -445,7 +452,7 @@ export async function applyDueRecurringTransactions(userId: string, now = new Da
           recurringTransactionId: rule.id,
           occurrenceAt: new Date(nextRunAt),
           type: rule.type,
-          amount: rule.amount,
+          amount: ruleAmount,
           accountId: rule.accountId,
         });
 

@@ -7,13 +7,13 @@ type BudgetRecord = {
   id: string;
   userId: string;
   category: string;
-  monthlyLimit: number;
+  monthlyLimit: string;
   createdAt: Date;
   updatedAt: Date;
 };
 
 type BudgetProgressRow = BudgetRecord & {
-  currentSpending: number;
+  currentSpending: string;
 };
 
 type BudgetInput = {
@@ -57,7 +57,7 @@ function normalizeCategory(value?: string) {
 
 async function getBudgetRecord(userId: string, budgetId: string) {
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
-    SELECT "id", "userId", "category", "monthlyLimit"::float8 AS "monthlyLimit", "createdAt", "updatedAt"
+    SELECT "id", "userId", "category", "monthlyLimit", "createdAt", "updatedAt"
     FROM "CategoryBudget"
     WHERE "id" = ${budgetId} AND "userId" = ${userId}
     LIMIT 1
@@ -81,10 +81,10 @@ export async function listBudgets(userId: string, input?: { start?: Date; end?: 
       b."id",
       b."userId",
       b."category",
-      b."monthlyLimit"::float8 AS "monthlyLimit",
+      b."monthlyLimit",
       b."createdAt",
       b."updatedAt",
-      COALESCE(SUM(t."amount"), 0)::float8 AS "currentSpending"
+      COALESCE(SUM(t."amount"), 0) AS "currentSpending"
     FROM "CategoryBudget" b
     LEFT JOIN "Account" a ON a."userId" = b."userId"
     LEFT JOIN "Transaction" t
@@ -256,10 +256,11 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
     DO UPDATE SET
       "monthlyLimit" = EXCLUDED."monthlyLimit",
       "updatedAt" = CURRENT_TIMESTAMP
-    RETURNING "id", "userId", "category", "monthlyLimit"::float8 AS "monthlyLimit", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "category", "monthlyLimit", "createdAt", "updatedAt"
   `;
 
-  return rows[0];
+  const row = rows[0];
+  return { ...row, monthlyLimit: Number(row.monthlyLimit) };
 }
 
 /**

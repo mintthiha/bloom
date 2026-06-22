@@ -18,8 +18,8 @@ type ProfileRecord = {
   username: string;
   email: string;
   tfsaBirthYear: number | null;
-  tfsaRoomUsedElsewhere: number | null;
-  rrspContributionRoom: number | null;
+  tfsaRoomUsedElsewhere: string | null;
+  rrspContributionRoom: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -32,14 +32,20 @@ export async function getProfile(userId: string) {
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     SELECT "userId", "firstName", "lastName", "username", "email",
            "tfsaBirthYear",
-           "tfsaRoomUsedElsewhere"::float8 AS "tfsaRoomUsedElsewhere",
-           "rrspContributionRoom"::float8 AS "rrspContributionRoom",
+           "tfsaRoomUsedElsewhere",
+           "rrspContributionRoom",
            "createdAt", "updatedAt"
     FROM "Profile"
     WHERE "userId" = ${userId}
     LIMIT 1
   `;
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    ...row,
+    tfsaRoomUsedElsewhere: row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
+    rrspContributionRoom: row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
+  };
 }
 
 /**
@@ -135,10 +141,15 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
       "updatedAt" = CURRENT_TIMESTAMP
     RETURNING "userId", "firstName", "lastName", "username", "email",
               "tfsaBirthYear",
-              "tfsaRoomUsedElsewhere"::float8 AS "tfsaRoomUsedElsewhere",
-              "rrspContributionRoom"::float8 AS "rrspContributionRoom",
+              "tfsaRoomUsedElsewhere",
+              "rrspContributionRoom",
               "createdAt", "updatedAt"
   `;
 
-  return rows[0];
+  const row = rows[0];
+  return {
+    ...row,
+    tfsaRoomUsedElsewhere: row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
+    rrspContributionRoom: row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
+  };
 }

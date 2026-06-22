@@ -1,4 +1,4 @@
-import { TransactionType, AccountType } from "@prisma/client";
+import { TransactionType, AccountType, Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
@@ -10,7 +10,7 @@ type AccountRecord = {
   ownerName: string;
   nickname: string | null;
   accountType: AccountType;
-  balance: number;
+  balance: string;
   frozen: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -19,8 +19,8 @@ type AccountRecord = {
 type TransactionRecord = {
   id: string;
   type: TransactionType;
-  amount: number;
-  balanceAfter: number;
+  amount: string;
+  balanceAfter: string;
   transferGroupId: string | null;
   category: string | null;
   merchant: string | null;
@@ -53,9 +53,19 @@ type TransactionUpdateInput = {
   effectiveAt?: Date;
 };
 
+/** Converts a raw DB AccountRecord (Decimal balance string) to API-safe format with numeric balance. */
+function normalizeAccount(row: AccountRecord) {
+  return { ...row, balance: Number(row.balance) };
+}
+
+/** Converts a raw DB TransactionRecord (Decimal strings) to API-safe format with numeric money fields. */
+function normalizeTransaction(row: TransactionRecord) {
+  return { ...row, amount: Number(row.amount), balanceAfter: Number(row.balanceAfter) };
+}
+
 async function selectAccountById(id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "id" = ${id}
     LIMIT 1
@@ -65,7 +75,7 @@ async function selectAccountById(id: string) {
 
 async function selectAccountByUserId(userId: string, id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "id" = ${id} AND "userId" = ${userId}
     LIMIT 1
@@ -75,7 +85,7 @@ async function selectAccountByUserId(userId: string, id: string) {
 
 async function selectTransactionByAccount(userId: string, accountId: string, transactionId: string) {
   const rows = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount"::float8 AS "amount", t."balanceAfter"::float8 AS "balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -92,7 +102,7 @@ async function selectTransactionByAccount(userId: string, accountId: string, tra
 
 async function selectTransactionsByTransferGroup(userId: string, transferGroupId: string) {
   return prisma.$queryRaw<TransactionRecord[]>`
-    SELECT t."id", t."type", t."amount"::float8 AS "amount", t."balanceAfter"::float8 AS "balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
     LEFT JOIN "Account" fa ON fa."id" = t."fromAccountId"
     LEFT JOIN "Account" ta ON ta."id" = t."toAccountId"
@@ -102,9 +112,9 @@ async function selectTransactionsByTransferGroup(userId: string, transferGroupId
   `;
 }
 
-async function listTransactionsForBalanceReplay(client: Pick<PrismaClient, "$queryRaw">, accountId: string) {
+async function listTransactionsForBalanceReplay(client: Pick<Prisma.TransactionClient, "$queryRaw">, accountId: string) {
   return client.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount"::float8 AS "amount", "balanceAfter"::float8 AS "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
+    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -114,29 +124,30 @@ async function listTransactionsForBalanceReplay(client: Pick<PrismaClient, "$que
   `;
 }
 
-function getTransactionDelta(transaction: TransactionRecord, accountId: string) {
+function getTransactionDelta(transaction: TransactionRecord, accountId: string): Prisma.Decimal {
+  const amount = new Prisma.Decimal(transaction.amount);
   if (transaction.type === TransactionType.DEPOSIT && transaction.toAccountId === accountId) {
-    return transaction.amount;
+    return amount;
   }
   if (transaction.type === TransactionType.TRANSFER_IN && transaction.toAccountId === accountId) {
-    return transaction.amount;
+    return amount;
   }
   if (transaction.type === TransactionType.WITHDRAWAL && transaction.fromAccountId === accountId) {
-    return -transaction.amount;
+    return amount.negated();
   }
   if (transaction.type === TransactionType.TRANSFER_OUT && transaction.fromAccountId === accountId) {
-    return -transaction.amount;
+    return amount.negated();
   }
-  return 0;
+  return new Prisma.Decimal(0);
 }
 
-async function replayAccountBalances(client: PrismaClient, accountId: string, { allowNegative = false } = {}) {
+async function replayAccountBalances(client: Prisma.TransactionClient, accountId: string, { allowNegative = false } = {}) {
   const transactions = await listTransactionsForBalanceReplay(client, accountId);
-  let balance = 0;
+  let balance = new Prisma.Decimal(0);
 
   for (const transaction of transactions) {
-    balance += getTransactionDelta(transaction, accountId);
-    if (!allowNegative && balance < 0) {
+    balance = balance.plus(getTransactionDelta(transaction, accountId));
+    if (!allowNegative && balance.lessThan(0)) {
       throw new AppError(400, "This change would overdraw the account");
     }
     await client.transaction.update({
@@ -151,10 +162,10 @@ async function replayAccountBalances(client: PrismaClient, accountId: string, { 
   });
 }
 
-async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input: {
+async function createTransaction(client: Pick<Prisma.TransactionClient, "$queryRaw">, input: {
   type: TransactionType;
   amount: number;
-  balanceAfter: number;
+  balanceAfter: Prisma.Decimal | number;
   transferGroupId?: string;
   category?: string;
   merchant?: string;
@@ -170,9 +181,9 @@ async function createTransaction(client: Pick<PrismaClient, "$queryRaw">, input:
   const rows = await client.$queryRaw<TransactionRecord[]>`
     INSERT INTO "Transaction" ("id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId")
     VALUES (${id}, ${input.type}::"TransactionType", ${input.amount}, ${input.balanceAfter}, ${input.transferGroupId ?? null}, ${category}, ${merchant}, ${description}, ${input.effectiveAt ?? new Date()}, CURRENT_TIMESTAMP, ${input.fromAccountId ?? null}, ${input.toAccountId ?? null})
-    RETURNING "id", "type", "amount"::float8 AS "amount", "balanceAfter"::float8 AS "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
+    RETURNING "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
   `;
-  return rows[0];
+  return normalizeTransaction(rows[0]);
 }
 
 /**
@@ -409,12 +420,13 @@ export async function getNetWorthHistory(userId: string, months: number = 12) {
  * Retrieves all accounts for a given user, ordered by most recently created first.
  */
 export async function listAccounts(userId: string) {
-  return prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
+  const rows = await prisma.$queryRaw<AccountRecord[]>`
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "userId" = ${userId}
     ORDER BY "createdAt" DESC
   `;
+  return rows.map(normalizeAccount);
 }
 
 /**
@@ -439,9 +451,9 @@ export async function createAccount(
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     INSERT INTO "Account" ("id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt")
     VALUES (${id}, ${userId}, ${ownerName.trim()}, ${nickname?.trim() ? nickname.trim() : null}, ${accountType}::"AccountType", 0, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
-  return rows[0];
+  return normalizeAccount(rows[0]);
 }
 
 /**
@@ -451,7 +463,7 @@ export async function createAccount(
 export async function getAccount(userId: string, id: string) {
   const account = await selectAccountByUserId(userId, id);
   if (!account) throw new AppError(404, `Account ${id} not found`);
-  return account;
+  return normalizeAccount(account);
 }
 
 /**
@@ -466,9 +478,9 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
     SET "nickname" = ${nickname?.trim() ? nickname.trim() : null},
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "id" = ${id} AND "userId" = ${userId}
-    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
-  return rows[0];
+  return normalizeAccount(rows[0]);
 }
 
 /**
@@ -479,9 +491,10 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
  */
 export async function deposit(userId: string, id: string, amount: number, category?: string, description?: string, effectiveAt?: Date, merchant?: string) {
   if (amount <= 0) throw new AppError(400, "Deposit amount must be positive");
-  const account = await getAccount(userId, id);
-  if (account.frozen) throw new AppError(403, "Account is frozen");
-  const newBalance = account.balance + amount;
+  const rawAccount = await selectAccountByUserId(userId, id);
+  if (!rawAccount) throw new AppError(404, `Account ${id} not found`);
+  if (rawAccount.frozen) throw new AppError(403, "Account is frozen");
+  const newBalance = new Prisma.Decimal(rawAccount.balance).plus(amount);
   const transaction = await prisma.$transaction(async (tx) => {
     await tx.account.update({ where: { id }, data: { balance: newBalance } });
     return createTransaction(tx, {
@@ -507,10 +520,11 @@ export async function deposit(userId: string, id: string, amount: number, catego
  */
 export async function withdraw(userId: string, id: string, amount: number, category?: string, description?: string, effectiveAt?: Date, merchant?: string) {
   if (amount <= 0) throw new AppError(400, "Withdrawal amount must be positive");
-  const account = await getAccount(userId, id);
-  if (account.frozen) throw new AppError(403, "Account is frozen");
-  if (account.balance < amount) throw new AppError(400, "Insufficient funds");
-  const newBalance = account.balance - amount;
+  const rawAccount = await selectAccountByUserId(userId, id);
+  if (!rawAccount) throw new AppError(404, `Account ${id} not found`);
+  if (rawAccount.frozen) throw new AppError(403, "Account is frozen");
+  if (new Prisma.Decimal(rawAccount.balance).lessThan(amount)) throw new AppError(400, "Insufficient funds");
+  const newBalance = new Prisma.Decimal(rawAccount.balance).minus(amount);
   const transaction = await prisma.$transaction(async (tx) => {
     await tx.account.update({ where: { id }, data: { balance: newBalance } });
     return createTransaction(tx, {
@@ -539,13 +553,15 @@ export async function withdraw(userId: string, id: string, amount: number, categ
 export async function transfer(userId: string, fromId: string, toId: string, amount: number, description?: string, category: string = "Transfer") {
   if (amount <= 0) throw new AppError(400, "Transfer amount must be positive");
   if (fromId === toId) throw new AppError(400, "Cannot transfer to the same account");
-  const from = await getAccount(userId, fromId);
-  if (from.frozen) throw new AppError(403, "Source account is frozen");
-  if (from.balance < amount) throw new AppError(400, "Insufficient funds");
-  const to = await getAccount(userId, toId);
-  if (to.frozen) throw new AppError(403, "Destination account is frozen");
-  const fromNewBalance = from.balance - amount;
-  const toNewBalance = to.balance + amount;
+  const rawFrom = await selectAccountByUserId(userId, fromId);
+  if (!rawFrom) throw new AppError(404, `Account ${fromId} not found`);
+  if (rawFrom.frozen) throw new AppError(403, "Source account is frozen");
+  if (new Prisma.Decimal(rawFrom.balance).lessThan(amount)) throw new AppError(400, "Insufficient funds");
+  const rawTo = await selectAccountByUserId(userId, toId);
+  if (!rawTo) throw new AppError(404, `Account ${toId} not found`);
+  if (rawTo.frozen) throw new AppError(403, "Destination account is frozen");
+  const fromNewBalance = new Prisma.Decimal(rawFrom.balance).minus(amount);
+  const toNewBalance = new Prisma.Decimal(rawTo.balance).plus(amount);
   const transferGroupId = randomUUID();
   const [outgoingTransaction, incomingTransaction] = await prisma.$transaction(async (tx) => {
     await tx.account.update({ where: { id: fromId }, data: { balance: fromNewBalance } });
@@ -586,8 +602,8 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
   const searchFilter = filters?.search?.trim().toLowerCase() ?? null;
   const range = filters?.start && filters?.end ? resolveDateRange({ start: filters.start, end: filters.end }) : null;
 
-  const transactions = await prisma.$queryRaw<TransactionRecord[]>`
-    SELECT "id", "type", "amount"::float8 AS "amount", "balanceAfter"::float8 AS "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
+  const rawTransactions = await prisma.$queryRaw<TransactionRecord[]>`
+    SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
     WHERE
       ("fromAccountId" = ${id} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
@@ -596,28 +612,30 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
     ORDER BY "effectiveAt" DESC, "createdAt" DESC
   `;
 
-  return transactions.filter((transaction) => {
-    if (filters?.type && transaction.type !== filters.type) {
-      return false;
-    }
-    if (categoryFilter) {
-      if (categoryFilter === "Uncategorized") {
-        if (transaction.category != null && transaction.category.trim() !== "") return false;
-      } else if ((transaction.category ?? "") !== categoryFilter) {
+  return rawTransactions
+    .filter((transaction) => {
+      if (filters?.type && transaction.type !== filters.type) {
         return false;
       }
-    }
-    if (searchFilter) {
-      const haystack = [transaction.description ?? "", transaction.merchant ?? ""].join(" ").toLowerCase();
-      if (!haystack.includes(searchFilter)) {
+      if (categoryFilter) {
+        if (categoryFilter === "Uncategorized") {
+          if (transaction.category != null && transaction.category.trim() !== "") return false;
+        } else if ((transaction.category ?? "") !== categoryFilter) {
+          return false;
+        }
+      }
+      if (searchFilter) {
+        const haystack = [transaction.description ?? "", transaction.merchant ?? ""].join(" ").toLowerCase();
+        if (!haystack.includes(searchFilter)) {
+          return false;
+        }
+      }
+      if (range && !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)) {
         return false;
       }
-    }
-    if (range && !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)) {
-      return false;
-    }
-    return true;
-  });
+      return true;
+    })
+    .map(normalizeTransaction);
 }
 
 /**
@@ -660,7 +678,7 @@ export async function updateTransaction(userId: string, accountId: string, trans
         `;
       }
       for (const affectedAccountId of affectedAccountIds) {
-        await replayAccountBalances(tx as PrismaClient, affectedAccountId);
+        await replayAccountBalances(tx as Prisma.TransactionClient, affectedAccountId);
       }
     });
 
@@ -680,7 +698,7 @@ export async function updateTransaction(userId: string, accountId: string, trans
           "effectiveAt" = ${effectiveAt}
       WHERE "id" = ${transactionId}
     `;
-    await replayAccountBalances(tx as PrismaClient, accountId);
+    await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
   });
 
   return getAccount(userId, accountId);
@@ -715,7 +733,7 @@ export async function deleteTransaction(userId: string, accountId: string, trans
         where: { transferGroupId: transaction.transferGroupId },
       });
       for (const affectedAccountId of affectedAccountIds) {
-        await replayAccountBalances(tx as PrismaClient, affectedAccountId);
+        await replayAccountBalances(tx as Prisma.TransactionClient, affectedAccountId);
       }
     });
 
@@ -724,7 +742,7 @@ export async function deleteTransaction(userId: string, accountId: string, trans
 
   await prisma.$transaction(async (tx) => {
     await tx.transaction.delete({ where: { id: transactionId } });
-    await replayAccountBalances(tx as PrismaClient, accountId);
+    await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
   });
 
   return getAccount(userId, accountId);
@@ -786,11 +804,11 @@ type ImportRow = {
  * month-end balance, combined with the current balances of all other accounts.
  */
 async function backfillNetWorthSnapshots(userId: string, accountId: string, accountType: AccountType) {
-  type MonthEndRow = { month: string; balanceAfter: number };
+  type MonthEndRow = { month: string; balanceAfter: string };
   const rows = await prisma.$queryRaw<MonthEndRow[]>`
     SELECT
       TO_CHAR(DATE_TRUNC('month', "effectiveAt"), 'YYYY-MM') AS month,
-      "balanceAfter"::float8 AS "balanceAfter"
+      "balanceAfter"
     FROM "Transaction"
     WHERE
       ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
@@ -808,16 +826,16 @@ async function backfillNetWorthSnapshots(userId: string, accountId: string, acco
   if (monthBalances.size === 0) return;
 
   const otherAccounts = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance"::float8 AS "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "userId" = ${userId} AND "id" != ${accountId}
   `;
   const otherAssets = otherAccounts
     .filter(a => a.accountType !== AccountType.CREDIT)
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + Number(a.balance), 0);
   const otherDebt = otherAccounts
     .filter(a => a.accountType === AccountType.CREDIT)
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + Number(a.balance), 0);
 
   for (const [month, balance] of monthBalances) {
     const totalAssets = accountType === AccountType.CREDIT ? otherAssets : otherAssets + balance;
@@ -872,7 +890,7 @@ export async function importTransactions(userId: string, accountId: string, rows
         )
       `;
     }
-    await replayAccountBalances(tx as PrismaClient, accountId, { allowNegative: true });
+    await replayAccountBalances(tx as Prisma.TransactionClient, accountId, { allowNegative: true });
   });
 
   await backfillNetWorthSnapshots(userId, accountId, account.accountType as AccountType);
