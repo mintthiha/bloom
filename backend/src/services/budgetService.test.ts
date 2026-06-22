@@ -36,7 +36,10 @@ describe("budgetService", () => {
         category: "Dining",
         monthlyLimit: 0,
       })
-    ).rejects.toMatchObject({ statusCode: 400, message: "Monthly limit must be a positive number" });
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Monthly limit must be a positive number",
+    });
   });
 
   it("normalizes category names when saving budgets", async () => {
@@ -132,11 +135,23 @@ describe("budgetService", () => {
         { day: new Date("2026-04-08T00:00:00.000Z"), total: 49 },
       ])
       .mockResolvedValueOnce([
-        { accountId: "account-1", accountNickname: "Main", accountOwnerName: "Jane Doe", total: "49" },
-        { accountId: "account-2", accountNickname: null, accountOwnerName: "Spending Account", total: 20 },
+        {
+          accountId: "account-1",
+          accountNickname: "Main",
+          accountOwnerName: "Jane Doe",
+          total: "49",
+        },
+        {
+          accountId: "account-2",
+          accountNickname: null,
+          accountOwnerName: "Spending Account",
+          total: 20,
+        },
       ]);
 
-    const result = await getBudgetActivity("user-1", "budget-1", { now: new Date("2026-04-08T00:00:00.000Z") });
+    const result = await getBudgetActivity("user-1", "budget-1", {
+      now: new Date("2026-04-08T00:00:00.000Z"),
+    });
 
     expect(result).toMatchObject({
       id: "budget-1",
@@ -158,7 +173,11 @@ describe("budgetService", () => {
     ]);
     expect(result.accountTotals).toEqual([
       expect.objectContaining({ accountId: "account-1", accountName: "Main", total: 49 }),
-      expect.objectContaining({ accountId: "account-2", accountName: "Spending Account", total: 20 }),
+      expect.objectContaining({
+        accountId: "account-2",
+        accountName: "Spending Account",
+        total: 20,
+      }),
     ]);
   });
 });

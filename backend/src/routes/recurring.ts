@@ -1,7 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as recurringTransactionService from "../services/recurringTransactionService";
 import { AppError } from "../middleware/errorHandler";
-import { optionalString, requireObject, requirePositiveNumber, requireString } from "../lib/validation";
+import {
+  optionalString,
+  requireObject,
+  requirePositiveNumber,
+  requireString,
+} from "../lib/validation";
 
 const router = Router();
 
@@ -57,18 +62,20 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError(400, "frequency must be WEEKLY, BIWEEKLY, or MONTHLY");
     }
 
-    res.status(201).json(await recurringTransactionService.createRecurringTransaction(uid(req), {
-      accountId,
-      name,
-      type,
-      amount: requirePositiveNumber(body.amount, "amount"),
-      category: optionalString(body.category, "category", { max: 50 }),
-      merchant: optionalString(body.merchant, "merchant", { max: 100 }),
-      description: optionalString(body.description, "description", { max: 240 }),
-      frequency,
-      startDate: parseRequiredIsoDate(body.startDate, "startDate"),
-      endDate: parseOptionalIsoDate(body.endDate, "endDate"),
-    }));
+    res.status(201).json(
+      await recurringTransactionService.createRecurringTransaction(uid(req), {
+        accountId,
+        name,
+        type,
+        amount: requirePositiveNumber(body.amount, "amount"),
+        category: optionalString(body.category, "category", { max: 50 }),
+        merchant: optionalString(body.merchant, "merchant", { max: 100 }),
+        description: optionalString(body.description, "description", { max: 240 }),
+        frequency,
+        startDate: parseRequiredIsoDate(body.startDate, "startDate"),
+        endDate: parseOptionalIsoDate(body.endDate, "endDate"),
+      })
+    );
   } catch (err) {
     next(err);
   }
@@ -91,18 +98,24 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError(400, "frequency must be WEEKLY, BIWEEKLY, or MONTHLY");
     }
 
-    res.json(await recurringTransactionService.updateRecurringTransaction(uid(req), req.params["id"] as string, {
-      accountId,
-      name,
-      type,
-      amount: requirePositiveNumber(body.amount, "amount"),
-      category: optionalString(body.category, "category", { max: 50 }),
-      merchant: optionalString(body.merchant, "merchant", { max: 100 }),
-      description: optionalString(body.description, "description", { max: 240 }),
-      frequency,
-      startDate: parseRequiredIsoDate(body.startDate, "startDate"),
-      endDate: parseOptionalIsoDate(body.endDate, "endDate"),
-    }));
+    res.json(
+      await recurringTransactionService.updateRecurringTransaction(
+        uid(req),
+        req.params["id"] as string,
+        {
+          accountId,
+          name,
+          type,
+          amount: requirePositiveNumber(body.amount, "amount"),
+          category: optionalString(body.category, "category", { max: 50 }),
+          merchant: optionalString(body.merchant, "merchant", { max: 100 }),
+          description: optionalString(body.description, "description", { max: 240 }),
+          frequency,
+          startDate: parseRequiredIsoDate(body.startDate, "startDate"),
+          endDate: parseOptionalIsoDate(body.endDate, "endDate"),
+        }
+      )
+    );
   } catch (err) {
     next(err);
   }
@@ -128,7 +141,13 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
     if (typeof body.active !== "boolean") {
       throw new AppError(400, "active must be a boolean");
     }
-    res.json(await recurringTransactionService.setRecurringTransactionActive(uid(req), req.params["id"] as string, body.active));
+    res.json(
+      await recurringTransactionService.setRecurringTransactionActive(
+        uid(req),
+        req.params["id"] as string,
+        body.active
+      )
+    );
   } catch (err) {
     next(err);
   }
@@ -139,7 +158,10 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
  */
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await recurringTransactionService.deleteRecurringTransaction(uid(req), req.params["id"] as string);
+    await recurringTransactionService.deleteRecurringTransaction(
+      uid(req),
+      req.params["id"] as string
+    );
     res.status(204).send();
   } catch (err) {
     next(err);

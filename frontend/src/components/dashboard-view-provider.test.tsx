@@ -15,8 +15,12 @@ function DashboardViewProbe() {
     <div>
       <p data-testid="dashboard-view">{view}</p>
       <p data-testid="effective-view">{effectiveView}</p>
-      <button type="button" onClick={() => setView("single")}>Single</button>
-      <button type="button" onClick={() => setView("double")}>Double</button>
+      <button type="button" onClick={() => setView("single")}>
+        Single
+      </button>
+      <button type="button" onClick={() => setView("double")}>
+        Double
+      </button>
     </div>
   );
 }

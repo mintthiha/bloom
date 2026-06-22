@@ -61,10 +61,7 @@ export function NumCards({ budget }: NumCardsProps) {
         >
           Spent
         </p>
-        <p
-          className="num"
-          style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}
-        >
+        <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}>
           {formatCurrency(budget.currentSpending)}
         </p>
       </div>

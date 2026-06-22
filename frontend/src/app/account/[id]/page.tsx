@@ -24,21 +24,13 @@ import { toast } from "sonner";
 
 const REGISTERED_ACCOUNT_TYPES = new Set(["TFSA", "RRSP", "FHSA"]);
 
-export default function AccountPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { effectiveView } = useDashboardView();
   const isDoubleColumn = effectiveView === "double";
   const pageWidth = isDoubleColumn ? "1200px" : "720px";
-  const summaryColumns = isDoubleColumn
-    ? "minmax(0, 1.15fr) minmax(320px, 0.85fr)"
-    : "1fr";
-  const detailColumns = isDoubleColumn
-    ? "minmax(0, 1.1fr) minmax(0, 0.9fr)"
-    : "1fr";
+  const summaryColumns = isDoubleColumn ? "minmax(0, 1.15fr) minmax(320px, 0.85fr)" : "1fr";
+  const detailColumns = isDoubleColumn ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "1fr";
   const analyticsColumns = isDoubleColumn ? "1fr 1fr" : "1fr";
   const historyFilterColumns = isDoubleColumn
     ? "minmax(0, 160px) minmax(0, 180px) minmax(0, 1fr)"
@@ -50,30 +42,19 @@ export default function AccountPage({
   const [sameTypeTransactions, setSameTypeTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingTransactionId, setEditingTransactionId] = useState<
-    string | null
-  >(null);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [editingTransactionAmount, setEditingTransactionAmount] = useState("");
-  const [editingTransactionCategory, setEditingTransactionCategory] =
-    useState("");
-  const [editingTransactionMerchant, setEditingTransactionMerchant] =
-    useState("");
-  const [editingTransactionDateTime, setEditingTransactionDateTime] =
-    useState("");
+  const [editingTransactionCategory, setEditingTransactionCategory] = useState("");
+  const [editingTransactionMerchant, setEditingTransactionMerchant] = useState("");
+  const [editingTransactionDateTime, setEditingTransactionDateTime] = useState("");
   const [savingTransaction, setSavingTransaction] = useState(false);
-  const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<
-    string | null
-  >(null);
-  const [deletingTransactionId, setDeletingTransactionId] = useState<
-    string | null
-  >(null);
-  const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>(
-    "ALL",
-  );
+  const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
   const [filterDateRange, setFilterDateRange] = useState<DateRangeState>(() =>
-    getPresetDateRange("this-month"),
+    getPresetDateRange("this-month")
   );
   const [timeZone, setTimeZone] = useState("UTC");
 
@@ -121,11 +102,9 @@ export default function AccountPage({
       setProfile(userProfile);
 
       if (REGISTERED_ACCOUNT_TYPES.has(acc.accountType)) {
-        const sameTypeAccounts = allAccounts.filter(
-          (a) => a.accountType === acc.accountType,
-        );
+        const sameTypeAccounts = allAccounts.filter((a) => a.accountType === acc.accountType);
         const transactionLists = await Promise.all(
-          sameTypeAccounts.map((a) => api.getTransactions(a.id)),
+          sameTypeAccounts.map((a) => api.getTransactions(a.id))
         );
         setSameTypeTransactions(transactionLists.flat());
       }
@@ -145,9 +124,7 @@ export default function AccountPage({
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
 
-    const localDate = new Date(
-      date.getTime() - date.getTimezoneOffset() * 60_000,
-    );
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
     return localDate.toISOString().slice(0, 16);
   }
 
@@ -191,9 +168,7 @@ export default function AccountPage({
       toast.success("Transaction updated");
       await refresh();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update transaction",
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to update transaction");
     } finally {
       setSavingTransaction(false);
     }
@@ -219,13 +194,8 @@ export default function AccountPage({
 
   if (error)
     return (
-      <div
-        style={{ maxWidth: pageWidth, margin: "0 auto", padding: "48px 24px" }}
-      >
-        <p
-          className="num"
-          style={{ color: "#f87171", fontSize: "14px", marginBottom: "16px" }}
-        >
+      <div style={{ maxWidth: pageWidth, margin: "0 auto", padding: "48px 24px" }}>
+        <p className="num" style={{ color: "#f87171", fontSize: "14px", marginBottom: "16px" }}>
           {error}
         </p>
         <Link href="/" style={{ color: "#f59e0b", fontSize: "14px" }}>
@@ -243,9 +213,7 @@ export default function AccountPage({
     .map((a) => a.id);
 
   return (
-    <div
-      style={{ maxWidth: pageWidth, margin: "0 auto", padding: "48px 24px" }}
-    >
+    <div style={{ maxWidth: pageWidth, margin: "0 auto", padding: "48px 24px" }}>
       <DeleteTransaction
         accountId={id}
         pendingTransactionId={pendingDeleteTransactionId}
@@ -325,9 +293,7 @@ export default function AccountPage({
               transferTargets={transferTargets}
               onSuccess={refresh}
               onImportSuccess={(imported) => {
-                toast.success(
-                  `Imported ${imported} transaction${imported !== 1 ? "s" : ""}`,
-                );
+                toast.success(`Imported ${imported} transaction${imported !== 1 ? "s" : ""}`);
                 setFilterDateRange(getPresetDateRange("all-time"));
                 refresh();
               }}

@@ -4,14 +4,7 @@ import { BudgetActivity } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useMemo } from "react";
 
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type DailySpendingChartProps = { budget: BudgetActivity };
 
@@ -25,7 +18,7 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
         }).format(new Date(entry.day)),
         total: entry.total,
       })) ?? [],
-    [budget],
+    [budget]
   );
 
   return (
@@ -51,10 +44,7 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
       </p>
       {dailyChartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart
-            data={dailyChartData}
-            margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-          >
+          <BarChart data={dailyChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <XAxis
               dataKey="label"
               tick={{ fontSize: 11, fill: "#9ca3af" }}

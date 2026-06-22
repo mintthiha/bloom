@@ -119,17 +119,28 @@ describe("account routes", () => {
       .post("/api/accounts")
       .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
-      .send({ ownerName: "  Jane\t\nDoe  ", nickname: "  Main\u0000 \n Account ", accountType: "CHEQUING" });
+      .send({
+        ownerName: "  Jane\t\nDoe  ",
+        nickname: "  Main\u0000 \n Account ",
+        accountType: "CHEQUING",
+      });
 
     expect(response.status).toBe(201);
-    expect(serviceMock.createAccount).toHaveBeenCalledWith("user-1", "Jane Doe", "CHEQUING", "Main Account");
+    expect(serviceMock.createAccount).toHaveBeenCalledWith(
+      "user-1",
+      "Jane Doe",
+      "CHEQUING",
+      "Main Account"
+    );
   });
 
   it("passes transaction filters through to the service", async () => {
     serviceMock.getTransactions.mockResolvedValue([]);
 
     const response = await request(app)
-      .get("/api/accounts/account-1/transactions?type=WITHDRAWAL&category=Dining&search=coffee&start=2026-04-01T00:00:00.000Z&end=2026-05-01T00:00:00.000Z")
+      .get(
+        "/api/accounts/account-1/transactions?type=WITHDRAWAL&category=Dining&search=coffee&start=2026-04-01T00:00:00.000Z&end=2026-05-01T00:00:00.000Z"
+      )
       .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1");
 
@@ -150,7 +161,9 @@ describe("account routes", () => {
       .set("X-User-Id", "user-1");
 
     expect(response.status).toBe(400);
-    expect(response.body).toEqual({ error: "type must be DEPOSIT, WITHDRAWAL, TRANSFER_OUT, or TRANSFER_IN" });
+    expect(response.body).toEqual({
+      error: "type must be DEPOSIT, WITHDRAWAL, TRANSFER_OUT, or TRANSFER_IN",
+    });
     expect(serviceMock.getTransactions).not.toHaveBeenCalled();
   });
 
@@ -169,7 +182,13 @@ describe("account routes", () => {
       .patch("/api/accounts/account-1/transactions/txn-1")
       .set("X-Internal-Secret", INTERNAL_SECRET)
       .set("X-User-Id", "user-1")
-      .send({ amount: 20, category: "  Dining \n", merchant: "  Tim\tHortons ", description: "  Coffee\tshop ", effectiveAt: "2026-04-08T12:00:00.000Z" });
+      .send({
+        amount: 20,
+        category: "  Dining \n",
+        merchant: "  Tim\tHortons ",
+        description: "  Coffee\tshop ",
+        effectiveAt: "2026-04-08T12:00:00.000Z",
+      });
 
     expect(response.status).toBe(200);
     expect(serviceMock.updateTransaction).toHaveBeenCalledWith("user-1", "account-1", "txn-1", {
@@ -191,7 +210,15 @@ describe("account routes", () => {
       .send({ amount: 20, category: "  Dining ", merchant: "  Metro \n" });
 
     expect(response.status).toBe(200);
-    expect(serviceMock.deposit).toHaveBeenCalledWith("user-1", "account-1", 20, "Dining", undefined, undefined, "Metro");
+    expect(serviceMock.deposit).toHaveBeenCalledWith(
+      "user-1",
+      "account-1",
+      20,
+      "Dining",
+      undefined,
+      undefined,
+      "Metro"
+    );
   });
 
   it("rejects invalid transaction edit payloads before hitting the service", async () => {

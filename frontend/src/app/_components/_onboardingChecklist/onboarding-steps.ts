@@ -34,8 +34,7 @@ export function deriveOnboardingSteps({
 }: DeriveOnboardingStepsParams): OnboardingStep[] {
   const hasCreatedFirstAccount = accounts.length > 0;
   const hasAddedFirstTransaction =
-    monthlySummary !== null &&
-    (monthlySummary.income > 0 || monthlySummary.spending > 0);
+    monthlySummary !== null && (monthlySummary.income > 0 || monthlySummary.spending > 0);
   const hasSetupBudget = budgets.length > 0;
   const hasCreatedSavingsGoal = goals.length > 0;
 

@@ -8,11 +8,29 @@ const FIXED_NOW = new Date("2026-05-15T12:00:00.000Z");
 
 /** Creates an Account fixture. */
 function makeAccount(accountType: Account["accountType"], balance: number, id = "a-1"): Account {
-  return { id, ownerName: "Test", nickname: null, accountType, balance, frozen: false, isLinked: false, plaidAccountId: null, plaidItemId: null, institutionName: null, createdAt: "", updatedAt: "" };
+  return {
+    id,
+    ownerName: "Test",
+    nickname: null,
+    accountType,
+    balance,
+    frozen: false,
+    isLinked: false,
+    plaidAccountId: null,
+    plaidItemId: null,
+    institutionName: null,
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 /** Creates a Budget fixture with isOverBudget derived from the amounts. */
-function makeBudget(category: string, monthlyLimit: number, currentSpending: number, id = "b-1"): Budget {
+function makeBudget(
+  category: string,
+  monthlyLimit: number,
+  currentSpending: number,
+  id = "b-1"
+): Budget {
   return {
     id,
     userId: "u-1",
@@ -29,7 +47,14 @@ function makeBudget(category: string, monthlyLimit: number, currentSpending: num
 
 /** Creates a MonthlySummary fixture. */
 function makeSummary(income: number, spending: number): MonthlySummary {
-  return { month: "2026-05", income, spending, netCashFlow: income - spending, topExpenseCategory: null, categories: [] };
+  return {
+    month: "2026-05",
+    income,
+    spending,
+    netCashFlow: income - spending,
+    topExpenseCategory: null,
+    categories: [],
+  };
 }
 
 /** Creates an active RecurringTransaction fixture with a given nextRunAt date string. */
@@ -101,7 +126,7 @@ describe("generateInsights — Rule 1: over-budget", () => {
     const result = generateInsights({
       ...EMPTY_INPUT,
       budgets: [
-        makeBudget("Dining", 300, 350, "b-1"),       // overage 50
+        makeBudget("Dining", 300, 350, "b-1"), // overage 50
         makeBudget("Entertainment", 200, 400, "b-2"), // overage 200 — worst
       ],
     });

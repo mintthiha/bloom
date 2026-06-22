@@ -43,8 +43,10 @@ export async function getProfile(userId: string) {
   if (!row) return null;
   return {
     ...row,
-    tfsaRoomUsedElsewhere: row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
-    rrspContributionRoom: row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
+    tfsaRoomUsedElsewhere:
+      row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
+    rrspContributionRoom:
+      row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
   };
 }
 
@@ -76,7 +78,10 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     throw new AppError(400, "Username is required");
   }
   if (!/^[a-z0-9_]+$/.test(username)) {
-    throw new AppError(400, "Username must contain only lowercase letters, numbers, or underscores");
+    throw new AppError(
+      400,
+      "Username must contain only lowercase letters, numbers, or underscores"
+    );
   }
   if (username.length < 3 || username.length > 20) {
     throw new AppError(400, "Username must be between 3 and 20 characters");
@@ -93,7 +98,11 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
 
   if (input.tfsaBirthYear !== undefined && input.tfsaBirthYear !== null) {
     const currentYear = new Date().getFullYear();
-    if (!Number.isInteger(input.tfsaBirthYear) || input.tfsaBirthYear < 1900 || input.tfsaBirthYear > currentYear) {
+    if (
+      !Number.isInteger(input.tfsaBirthYear) ||
+      input.tfsaBirthYear < 1900 ||
+      input.tfsaBirthYear > currentYear
+    ) {
       throw new AppError(400, `tfsaBirthYear must be between 1900 and ${currentYear}`);
     }
   }
@@ -149,7 +158,9 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   const row = rows[0];
   return {
     ...row,
-    tfsaRoomUsedElsewhere: row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
-    rrspContributionRoom: row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
+    tfsaRoomUsedElsewhere:
+      row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
+    rrspContributionRoom:
+      row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
   };
 }

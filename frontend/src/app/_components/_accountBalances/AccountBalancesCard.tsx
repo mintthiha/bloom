@@ -1,14 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell,
-} from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 import { Account } from "@/lib/api";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { CollapsibleCard } from "@/components/collapsible-card";
@@ -29,16 +21,9 @@ export function AccountBalancesCard({ accounts }: Props) {
   }));
 
   return (
-    <CollapsibleCard
-      eyebrow="Account Balances"
-      className="fade-up fade-up-1"
-      style={{}}
-    >
+    <CollapsibleCard eyebrow="Account Balances" className="fade-up fade-up-1" style={{}}>
       <ResponsiveContainer width="100%" height={180}>
-        <BarChart
-          data={chartData}
-          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-        >
+        <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <XAxis
             dataKey="name"
             tick={{ fontSize: 11, fill: "#6b7280" }}
@@ -73,10 +58,7 @@ export function AccountBalancesCard({ accounts }: Props) {
             style={{ cursor: "pointer" }}
           >
             {chartData.map((account, index) => (
-              <Cell
-                key={index}
-                fill={ACCOUNT_TYPE_META[account.type].color}
-              />
+              <Cell key={index} fill={ACCOUNT_TYPE_META[account.type].color} />
             ))}
           </Bar>
         </BarChart>

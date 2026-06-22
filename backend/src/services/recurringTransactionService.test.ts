@@ -127,7 +127,10 @@ describe("recurringTransactionService", () => {
       .mockResolvedValueOnce([]);
     accountServiceMock.deposit.mockResolvedValue([{ id: "account-1" }, { id: "txn-1" }]);
 
-    const result = await applyDueRecurringTransactions("user-1", new Date("2026-04-19T12:00:00.000Z"));
+    const result = await applyDueRecurringTransactions(
+      "user-1",
+      new Date("2026-04-19T12:00:00.000Z")
+    );
 
     expect(accountServiceMock.deposit).toHaveBeenCalledWith(
       "user-1",
@@ -250,7 +253,10 @@ describe("recurringTransactionService", () => {
       .mockResolvedValueOnce([]);
     accountServiceMock.withdraw.mockRejectedValue(new Error("Insufficient funds"));
 
-    const result = await applyDueRecurringTransactions("user-1", new Date("2026-04-19T12:00:00.000Z"));
+    const result = await applyDueRecurringTransactions(
+      "user-1",
+      new Date("2026-04-19T12:00:00.000Z")
+    );
 
     expect(result.appliedCount).toBe(0);
     expect(result.failedCount).toBe(1);

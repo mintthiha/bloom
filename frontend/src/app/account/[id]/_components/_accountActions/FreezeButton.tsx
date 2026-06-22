@@ -28,17 +28,21 @@ export function FreezeButton({ accountId, frozen, onToggled }: FreezeButtonProps
       onClick={handleToggle}
       disabled={freezing}
       style={{
-        padding: '6px 14px',
-        border: `1px solid ${frozen ? '#3b82f640' : '#f8717140'}`,
-        background: frozen ? '#3b82f610' : '#f8717110',
-        color: frozen ? '#60a5fa' : '#f87171',
-        borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-        textTransform: 'uppercase', letterSpacing: '0.08em',
-        cursor: freezing ? 'not-allowed' : 'pointer',
-        opacity: freezing ? 0.5 : 1, transition: 'opacity 0.15s',
+        padding: "6px 14px",
+        border: `1px solid ${frozen ? "#3b82f640" : "#f8717140"}`,
+        background: frozen ? "#3b82f610" : "#f8717110",
+        color: frozen ? "#60a5fa" : "#f87171",
+        borderRadius: "7px",
+        fontSize: "11px",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        cursor: freezing ? "not-allowed" : "pointer",
+        opacity: freezing ? 0.5 : 1,
+        transition: "opacity 0.15s",
       }}
     >
-      {freezing ? '…' : frozen ? 'Unfreeze' : 'Freeze'}
+      {freezing ? "…" : frozen ? "Unfreeze" : "Freeze"}
     </button>
   );
 }

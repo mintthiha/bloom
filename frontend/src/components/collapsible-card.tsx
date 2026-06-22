@@ -100,9 +100,7 @@ export function CollapsibleCard({
             </h2>
           )}
           {description && (
-            <p style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-              {description}
-            </p>
+            <p style={{ color: "var(--text-secondary)", fontSize: "13px" }}>{description}</p>
           )}
         </div>
 

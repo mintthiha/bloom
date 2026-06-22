@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   ALL_CARD_IDS,
   CARD_METADATA,
@@ -75,12 +69,8 @@ function CardToggleRow({ cardId }: { cardId: CardId }) {
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
-          {meta.label}
-        </p>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-          {meta.description}
-        </p>
+        <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>{meta.label}</p>
+        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{meta.description}</p>
       </div>
       <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} />
     </div>
@@ -185,7 +175,11 @@ export function DashboardCustomizePanel() {
 
       <SheetContent
         side="right"
-        style={{ overflowY: "auto", background: "var(--sidebar)", borderLeft: "1px solid var(--border)" }}
+        style={{
+          overflowY: "auto",
+          background: "var(--sidebar)",
+          borderLeft: "1px solid var(--border)",
+        }}
       >
         <SheetHeader style={{ padding: "28px 24px 16px" }}>
           <SheetTitle style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.4px" }}>
@@ -218,12 +212,8 @@ export function DashboardCustomizePanel() {
                 color: "var(--text-secondary)",
                 transition: "border-color 0.15s",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = "var(--border-hover)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = "var(--border)")
-              }
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
             >
               Reset to defaults
             </button>
@@ -246,12 +236,8 @@ export function DashboardCustomizePanel() {
                 color: "var(--text-secondary)",
                 transition: "border-color 0.15s",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = "var(--border-hover)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = "var(--border)")
-              }
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
             >
               Restore getting started checklist
             </button>

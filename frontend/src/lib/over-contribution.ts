@@ -1,4 +1,8 @@
-import { calculateTfsaLifetimeRoom, FHSA_ANNUAL_LIMIT, FHSA_LIFETIME_LIMIT } from "./contribution-room";
+import {
+  calculateTfsaLifetimeRoom,
+  FHSA_ANNUAL_LIMIT,
+  FHSA_LIFETIME_LIMIT,
+} from "./contribution-room";
 import { formatCurrency } from "./format";
 
 /** Fraction of total room remaining below which an amber warning is shown. */
@@ -24,7 +28,13 @@ export function evaluateTfsaContribution(args: {
   roomUsedElsewhere: number | null;
   netTfsaContributionsInBloom: number;
 }): OverContributionWarning {
-  const { contributionAmount, birthYear, currentYear, roomUsedElsewhere, netTfsaContributionsInBloom } = args;
+  const {
+    contributionAmount,
+    birthYear,
+    currentYear,
+    roomUsedElsewhere,
+    netTfsaContributionsInBloom,
+  } = args;
   if (birthYear == null || contributionAmount <= 0) return NONE;
 
   const totalRoom = calculateTfsaLifetimeRoom(birthYear, currentYear);
@@ -86,23 +96,33 @@ export function evaluateFhsaContribution(args: {
   netFhsaContributionsThisYear: number;
   netFhsaContributionsLifetime: number;
 }): OverContributionWarning {
-  const { contributionAmount, currentYear, netFhsaContributionsThisYear, netFhsaContributionsLifetime } = args;
+  const {
+    contributionAmount,
+    currentYear,
+    netFhsaContributionsThisYear,
+    netFhsaContributionsLifetime,
+  } = args;
   if (contributionAmount <= 0) return NONE;
 
   const annualRemaining = FHSA_ANNUAL_LIMIT - (netFhsaContributionsThisYear + contributionAmount);
-  const lifetimeRemaining = FHSA_LIFETIME_LIMIT - (netFhsaContributionsLifetime + contributionAmount);
+  const lifetimeRemaining =
+    FHSA_LIFETIME_LIMIT - (netFhsaContributionsLifetime + contributionAmount);
 
   const severityRank = { none: 0, amber: 1, red: 2 } as const;
 
   const annualSeverity: OverContributionSeverity =
-    annualRemaining < 0 ? "red"
-    : annualRemaining < FHSA_ANNUAL_LIMIT * LOW_ROOM_THRESHOLD ? "amber"
-    : "none";
+    annualRemaining < 0
+      ? "red"
+      : annualRemaining < FHSA_ANNUAL_LIMIT * LOW_ROOM_THRESHOLD
+        ? "amber"
+        : "none";
 
   const lifetimeSeverity: OverContributionSeverity =
-    lifetimeRemaining < 0 ? "red"
-    : lifetimeRemaining < FHSA_LIFETIME_LIMIT * LOW_ROOM_THRESHOLD ? "amber"
-    : "none";
+    lifetimeRemaining < 0
+      ? "red"
+      : lifetimeRemaining < FHSA_LIFETIME_LIMIT * LOW_ROOM_THRESHOLD
+        ? "amber"
+        : "none";
 
   if (annualSeverity === "none" && lifetimeSeverity === "none") return NONE;
 

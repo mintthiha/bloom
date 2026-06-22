@@ -22,23 +22,10 @@ export function BackToHome() {
         transition: "color 0.15s",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.color = "#f59e0b")}
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.color = "var(--text-secondary)")
-      }
+      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
     >
-      <svg
-        width="12"
-        height="12"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 19l-7-7 7-7"
-        />
+      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
       </svg>
       Back to Home
     </Link>

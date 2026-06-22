@@ -74,7 +74,10 @@ async function getBudgetRecord(userId: string, budgetId: string) {
 /**
  * Returns all saved budgets for the current user with this month's spending progress.
  */
-export async function listBudgets(userId: string, input?: { start?: Date; end?: Date; now?: Date }) {
+export async function listBudgets(
+  userId: string,
+  input?: { start?: Date; end?: Date; now?: Date }
+) {
   const { start, end } = resolveDateRange(input);
   const rows = await prisma.$queryRaw<BudgetProgressRow[]>`
     SELECT
@@ -126,7 +129,11 @@ export async function listBudgets(userId: string, input?: { start?: Date; end?: 
  * Returns a single budget plus the current month's matching withdrawals,
  * daily totals, and account totals for drill-down views.
  */
-export async function getBudgetActivity(userId: string, budgetId: string, input?: { start?: Date; end?: Date; now?: Date }) {
+export async function getBudgetActivity(
+  userId: string,
+  budgetId: string,
+  input?: { start?: Date; end?: Date; now?: Date }
+) {
   const budget = await getBudgetRecord(userId, budgetId);
   const { start, end } = resolveDateRange(input);
   const transactions = await prisma.$queryRaw<BudgetActivityRecord[]>`
@@ -199,7 +206,10 @@ export async function getBudgetActivity(userId: string, budgetId: string, input?
     accountNickname: transaction.accountNickname,
     accountOwnerName: transaction.accountOwnerName,
   }));
-  const currentSpending = normalizedTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+  const currentSpending = normalizedTransactions.reduce(
+    (sum, transaction) => sum + transaction.amount,
+    0
+  );
   const monthlyLimit = Number(budget.monthlyLimit);
   const remaining = monthlyLimit - currentSpending;
 

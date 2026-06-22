@@ -72,15 +72,8 @@ export function NetWorthHistory({ history }: Props) {
       style={{ marginBottom: "32px" }}
     >
       <ResponsiveContainer width="100%" height={220}>
-        <LineChart
-          data={history}
-          margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#ffffff08"
-            vertical={false}
-          />
+        <LineChart data={history} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
           <XAxis
             dataKey="month"
             tick={{ fontSize: 11, fill: "#9ca3af" }}
@@ -97,29 +90,15 @@ export function NetWorthHistory({ history }: Props) {
           <Tooltip
             formatter={(value, name) => [
               formatCurrency(Number(value)),
-              name === "netWorth"
-                ? "Net Worth"
-                : name === "totalAssets"
-                ? "Assets"
-                : "Debt",
+              name === "netWorth" ? "Net Worth" : name === "totalAssets" ? "Assets" : "Debt",
             ]}
             contentStyle={TOOLTIP_CONTENT_STYLE}
             labelStyle={{ color: "#9ca3af" }}
             cursor={{ stroke: "#ffffff18" }}
           />
           <ReferenceLine y={0} stroke="#ffffff18" strokeDasharray="4 4" />
-          <Line
-            dataKey="totalAssets"
-            stroke="#22c55e"
-            strokeWidth={2}
-            dot={false}
-          />
-          <Line
-            dataKey="totalDebt"
-            stroke="#ef4444"
-            strokeWidth={2}
-            dot={false}
-          />
+          <Line dataKey="totalAssets" stroke="#22c55e" strokeWidth={2} dot={false} />
+          <Line dataKey="totalDebt" stroke="#ef4444" strokeWidth={2} dot={false} />
           <Line
             dataKey="netWorth"
             stroke="#f59e0b"
@@ -128,11 +107,7 @@ export function NetWorthHistory({ history }: Props) {
           />
           <Legend
             formatter={(value) =>
-              value === "netWorth"
-                ? "Net Worth"
-                : value === "totalAssets"
-                ? "Assets"
-                : "Debt"
+              value === "netWorth" ? "Net Worth" : value === "totalAssets" ? "Assets" : "Debt"
             }
             wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
           />

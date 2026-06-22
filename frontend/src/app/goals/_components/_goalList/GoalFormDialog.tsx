@@ -55,19 +55,20 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [name, setName] = useState(goal?.name ?? "");
   const [selectedAccountId, setSelectedAccountId] = useState(goal?.accountId ?? "");
-  const [targetAmountInput, setTargetAmountInput] = useState(
-    goal ? String(goal.targetAmount) : ""
-  );
+  const [targetAmountInput, setTargetAmountInput] = useState(goal ? String(goal.targetAmount) : "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /** Fetches the user's accounts to populate the account selector. */
   useEffect(() => {
-    api.listAccounts().then((data) => {
-      setAccounts(data);
-      if (!selectedAccountId && data.length > 0) {
-        setSelectedAccountId(data[0]!.id);
-      }
-    }).catch(() => {});
+    api
+      .listAccounts()
+      .then((data) => {
+        setAccounts(data);
+        if (!selectedAccountId && data.length > 0) {
+          setSelectedAccountId(data[0]!.id);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   /** Submits the form to create or update the savings goal. */

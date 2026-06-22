@@ -73,10 +73,7 @@ export async function POST(req: Request) {
     async start(controller) {
       try {
         for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
             controller.enqueue(encoder.encode(event.delta.text));
           }
         }

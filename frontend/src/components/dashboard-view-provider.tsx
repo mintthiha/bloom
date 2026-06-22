@@ -34,11 +34,7 @@ export function DashboardViewProvider({ children }: { children: React.ReactNode 
 
   const value = useMemo(() => ({ view, setView: updateView }), [view]);
 
-  return (
-    <DashboardViewContext.Provider value={value}>
-      {children}
-    </DashboardViewContext.Provider>
-  );
+  return <DashboardViewContext.Provider value={value}>{children}</DashboardViewContext.Provider>;
 }
 
 /** Returns the stored view preference plus an effectiveView that collapses to single on mobile. */

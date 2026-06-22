@@ -14,7 +14,6 @@ import {
   Legend,
 } from "recharts";
 
-
 const TYPE_LABELS: Record<string, string> = {
   DEPOSIT: "Deposit",
   WITHDRAWAL: "Withdrawal",
@@ -105,10 +104,7 @@ export function AccountAnalytics({
             Balance History
           </p>
           <ResponsiveContainer width="100%" height={160}>
-            <LineChart
-              data={balanceData}
-              margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-            >
+            <LineChart data={balanceData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
               <XAxis
                 dataKey="timestamp"

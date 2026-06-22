@@ -60,9 +60,7 @@ function InsightRow({ item, index }: { item: InsightItem; index: number }) {
         >
           {item.message}
         </p>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-          {item.detail}
-        </p>
+        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{item.detail}</p>
       </div>
     </div>
   );

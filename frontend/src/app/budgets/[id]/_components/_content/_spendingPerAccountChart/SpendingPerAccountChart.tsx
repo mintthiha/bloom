@@ -5,9 +5,7 @@ import { formatCurrency } from "@/lib/format";
 
 type SpendingPerAccountChartProps = { budget: BudgetActivity };
 
-export function SpendingPerAccountChart({
-  budget,
-}: SpendingPerAccountChartProps) {
+export function SpendingPerAccountChart({ budget }: SpendingPerAccountChartProps) {
   return (
     <div
       style={{
@@ -41,13 +39,8 @@ export function SpendingPerAccountChart({
                   marginBottom: "6px",
                 }}
               >
-                <span style={{ fontSize: "13px", fontWeight: 600 }}>
-                  {account.accountName}
-                </span>
-                <span
-                  className="num"
-                  style={{ fontSize: "13px", color: "#f59e0b" }}
-                >
+                <span style={{ fontSize: "13px", fontWeight: 600 }}>{account.accountName}</span>
+                <span className="num" style={{ fontSize: "13px", color: "#f59e0b" }}>
                   {formatCurrency(account.total)}
                 </span>
               </div>

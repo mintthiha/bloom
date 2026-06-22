@@ -14,7 +14,10 @@ const FIXED_NOW = new Date("2026-05-15T12:00:00.000Z");
 
 /** Creates a minimal active RecurringTransaction for testing. */
 function makeRule(
-  overrides: Partial<RecurringTransaction> & { frequency: RecurringTransaction["frequency"]; nextRunAt: string }
+  overrides: Partial<RecurringTransaction> & {
+    frequency: RecurringTransaction["frequency"];
+    nextRunAt: string;
+  }
 ): RecurringTransaction {
   return {
     id: "r-1",
@@ -65,7 +68,11 @@ describe("computeUpcomingOccurrences", () => {
   });
 
   it("skips inactive rules entirely", () => {
-    const rule = makeRule({ frequency: "MONTHLY", nextRunAt: "2026-05-20T00:00:00.000Z", active: false });
+    const rule = makeRule({
+      frequency: "MONTHLY",
+      nextRunAt: "2026-05-20T00:00:00.000Z",
+      active: false,
+    });
     expect(computeUpcomingOccurrences([rule])).toHaveLength(0);
   });
 
@@ -159,8 +166,16 @@ describe("computeUpcomingOccurrences", () => {
   });
 
   it("merges and sorts occurrences from multiple rules by date ascending", () => {
-    const ruleA = makeRule({ id: "r-a", frequency: "MONTHLY", nextRunAt: "2026-06-01T00:00:00.000Z" });
-    const ruleB = makeRule({ id: "r-b", frequency: "MONTHLY", nextRunAt: "2026-05-20T00:00:00.000Z" });
+    const ruleA = makeRule({
+      id: "r-a",
+      frequency: "MONTHLY",
+      nextRunAt: "2026-06-01T00:00:00.000Z",
+    });
+    const ruleB = makeRule({
+      id: "r-b",
+      frequency: "MONTHLY",
+      nextRunAt: "2026-05-20T00:00:00.000Z",
+    });
     const result = computeUpcomingOccurrences([ruleA, ruleB]);
 
     const dates = result.map((o) => o.occurrenceDate);
@@ -169,7 +184,11 @@ describe("computeUpcomingOccurrences", () => {
   });
 
   it("keys each occurrence as '<ruleId>-<date>'", () => {
-    const rule = makeRule({ id: "rule-xyz", frequency: "MONTHLY", nextRunAt: "2026-06-01T00:00:00.000Z" });
+    const rule = makeRule({
+      id: "rule-xyz",
+      frequency: "MONTHLY",
+      nextRunAt: "2026-06-01T00:00:00.000Z",
+    });
     const result = computeUpcomingOccurrences([rule]);
 
     expect(result[0].key).toBe("rule-xyz-2026-06-01");

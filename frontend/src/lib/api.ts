@@ -228,8 +228,7 @@ export type TransactionQuery = DateRangeQuery & {
 };
 
 export const api = {
-  listAccounts: () =>
-    request<Account[]>("/accounts"),
+  listAccounts: () => request<Account[]>("/accounts"),
   getMonthlySummary: (query?: DateRangeQuery) =>
     request<MonthlySummary>(withQuery("/accounts/summary/monthly", query)),
   getMonthlyTrends: (months = 6) =>
@@ -240,12 +239,10 @@ export const api = {
     request<NetWorthSnapshot[]>(`/accounts/networth/history?months=${months}`),
   getCategoryBreakdown: (query?: DateRangeQuery) =>
     request<CategoryBreakdownItem[]>(withQuery("/accounts/summary/category-breakdown", query)),
-  getBudgets: (query?: DateRangeQuery) =>
-    request<Budget[]>(withQuery("/budgets", query)),
+  getBudgets: (query?: DateRangeQuery) => request<Budget[]>(withQuery("/budgets", query)),
   getBudgetActivity: (id: string, query?: DateRangeQuery) =>
     request<BudgetActivity>(withQuery(`/budgets/${id}/activity`, query)),
-  listRecurringTransactions: () =>
-    request<RecurringTransaction[]>("/recurring"),
+  listRecurringTransactions: () => request<RecurringTransaction[]>("/recurring"),
   createRecurringTransaction: (input: {
     accountId: string;
     name: string;
@@ -259,67 +256,124 @@ export const api = {
     endDate?: string;
   }) =>
     request<RecurringTransaction>("/recurring", { method: "POST", body: JSON.stringify(input) }),
-  updateRecurringTransaction: (id: string, input: {
-    accountId: string;
-    name: string;
-    type: RecurringTransactionType;
-    amount: number;
-    category?: string;
-    merchant?: string;
-    description?: string;
-    frequency: RecurringFrequency;
-    startDate: string;
-    endDate?: string;
-  }) =>
-    request<RecurringTransaction>(`/recurring/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  updateRecurringTransaction: (
+    id: string,
+    input: {
+      accountId: string;
+      name: string;
+      type: RecurringTransactionType;
+      amount: number;
+      category?: string;
+      merchant?: string;
+      description?: string;
+      frequency: RecurringFrequency;
+      startDate: string;
+      endDate?: string;
+    }
+  ) =>
+    request<RecurringTransaction>(`/recurring/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    }),
   applyDueRecurringTransactions: () =>
     request<ApplyRecurringResult>("/recurring/apply-due", { method: "POST" }),
   setRecurringTransactionActive: (id: string, active: boolean) =>
-    request<RecurringTransaction>(`/recurring/${id}`, { method: "PATCH", body: JSON.stringify({ active }) }),
+    request<RecurringTransaction>(`/recurring/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active }),
+    }),
   deleteRecurringTransaction: (id: string) =>
     request<void>(`/recurring/${id}`, { method: "DELETE" }),
   saveBudget: (category: string, monthlyLimit: number) =>
-    request<Budget>("/budgets", { method: "PUT", body: JSON.stringify({ category, monthlyLimit }) }),
-  deleteBudget: (id: string) =>
-    request<void>(`/budgets/${id}`, { method: "DELETE" }),
-  listSavingsGoals: () =>
-    request<SavingsGoal[]>("/savings-goals"),
+    request<Budget>("/budgets", {
+      method: "PUT",
+      body: JSON.stringify({ category, monthlyLimit }),
+    }),
+  deleteBudget: (id: string) => request<void>(`/budgets/${id}`, { method: "DELETE" }),
+  listSavingsGoals: () => request<SavingsGoal[]>("/savings-goals"),
   createSavingsGoal: (input: { accountId: string; name: string; targetAmount: number }) =>
     request<SavingsGoal>("/savings-goals", { method: "POST", body: JSON.stringify(input) }),
-  updateSavingsGoal: (id: string, input: { accountId: string; name: string; targetAmount: number }) =>
-    request<SavingsGoal>(`/savings-goals/${id}`, { method: "PUT", body: JSON.stringify(input) }),
-  deleteSavingsGoal: (id: string) =>
-    request<void>(`/savings-goals/${id}`, { method: "DELETE" }),
+  updateSavingsGoal: (
+    id: string,
+    input: { accountId: string; name: string; targetAmount: number }
+  ) => request<SavingsGoal>(`/savings-goals/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  deleteSavingsGoal: (id: string) => request<void>(`/savings-goals/${id}`, { method: "DELETE" }),
   createAccount: (ownerName: string, accountType: AccountType, nickname?: string) =>
-    request<Account>("/accounts", { method: "POST", body: JSON.stringify({ ownerName, accountType, nickname }) }),
-  getAccount: (id: string) =>
-    request<Account>(`/accounts/${id}`),
-  deposit: (id: string, amount: number, input?: { category?: string; merchant?: string; description?: string }) =>
-    request<Account>(`/accounts/${id}/deposit`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
-  withdraw: (id: string, amount: number, input?: { category?: string; merchant?: string; description?: string }) =>
-    request<Account>(`/accounts/${id}/withdraw`, { method: "POST", body: JSON.stringify({ amount, ...input }) }),
+    request<Account>("/accounts", {
+      method: "POST",
+      body: JSON.stringify({ ownerName, accountType, nickname }),
+    }),
+  getAccount: (id: string) => request<Account>(`/accounts/${id}`),
+  deposit: (
+    id: string,
+    amount: number,
+    input?: { category?: string; merchant?: string; description?: string }
+  ) =>
+    request<Account>(`/accounts/${id}/deposit`, {
+      method: "POST",
+      body: JSON.stringify({ amount, ...input }),
+    }),
+  withdraw: (
+    id: string,
+    amount: number,
+    input?: { category?: string; merchant?: string; description?: string }
+  ) =>
+    request<Account>(`/accounts/${id}/withdraw`, {
+      method: "POST",
+      body: JSON.stringify({ amount, ...input }),
+    }),
   transfer: (id: string, toAccountId: string, amount: number, description?: string) =>
-    request<Account>(`/accounts/${id}/transfer`, { method: "POST", body: JSON.stringify({ toAccountId, amount, description }) }),
+    request<Account>(`/accounts/${id}/transfer`, {
+      method: "POST",
+      body: JSON.stringify({ toAccountId, amount, description }),
+    }),
   getTransactions: (id: string, query?: TransactionQuery) =>
     request<Transaction[]>(withQuery(`/accounts/${id}/transactions`, query)),
-  updateTransaction: (id: string, transactionId: string, input: { amount: number; category?: string; merchant?: string; description?: string; effectiveAt?: string }) =>
-    request<Account>(`/accounts/${id}/transactions/${transactionId}`, { method: "PATCH", body: JSON.stringify(input) }),
+  updateTransaction: (
+    id: string,
+    transactionId: string,
+    input: {
+      amount: number;
+      category?: string;
+      merchant?: string;
+      description?: string;
+      effectiveAt?: string;
+    }
+  ) =>
+    request<Account>(`/accounts/${id}/transactions/${transactionId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
   deleteTransaction: (id: string, transactionId: string) =>
     request<void>(`/accounts/${id}/transactions/${transactionId}`, { method: "DELETE" }),
-  freeze: (id: string) =>
-    request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
-  unfreeze: (id: string) =>
-    request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
+  freeze: (id: string) => request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
+  unfreeze: (id: string) => request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
   updateNickname: (id: string, nickname?: string) =>
-    request<Account>(`/accounts/${id}/nickname`, { method: "PATCH", body: JSON.stringify({ nickname }) }),
-  deleteAccount: (id: string) =>
-    request<void>(`/accounts/${id}`, { method: "DELETE" }),
-  importCsv: (id: string, rows: Array<{ type: "DEPOSIT" | "WITHDRAWAL"; amount: number; date: string; description?: string; merchant?: string; category?: string }>) =>
-    request<{ imported: number; account: Account }>(`/accounts/${id}/import`, { method: "POST", body: JSON.stringify({ rows }) }),
+    request<Account>(`/accounts/${id}/nickname`, {
+      method: "PATCH",
+      body: JSON.stringify({ nickname }),
+    }),
+  deleteAccount: (id: string) => request<void>(`/accounts/${id}`, { method: "DELETE" }),
+  importCsv: (
+    id: string,
+    rows: Array<{
+      type: "DEPOSIT" | "WITHDRAWAL";
+      amount: number;
+      date: string;
+      description?: string;
+      merchant?: string;
+      category?: string;
+    }>
+  ) =>
+    request<{ imported: number; account: Account }>(`/accounts/${id}/import`, {
+      method: "POST",
+      body: JSON.stringify({ rows }),
+    }),
   searchTransactions: (q: string, limit = 20) =>
-    request<TransactionSearchResult[]>(withQuery("/transactions/search", { q, limit: String(limit) })),
-  createLinkToken: () =>
-    request<{ linkToken: string }>("/plaid/link-token", { method: "POST" }),
+    request<TransactionSearchResult[]>(
+      withQuery("/transactions/search", { q, limit: String(limit) })
+    ),
+  createLinkToken: () => request<{ linkToken: string }>("/plaid/link-token", { method: "POST" }),
   exchangePublicToken: (publicToken: string, institutionName: string) =>
     request<{ itemId: string; accountsLinked: number }>("/plaid/exchange-token", {
       method: "POST",
@@ -327,8 +381,7 @@ export const api = {
     }),
   resyncPlaidItem: (itemId: string) =>
     request<{ accountsLinked: number }>(`/plaid/sync/${itemId}`, { method: "POST" }),
-  getProfile: () =>
-    request<Profile | null>("/profile"),
+  getProfile: () => request<Profile | null>("/profile"),
   saveProfile: (input: {
     firstName: string;
     lastName: string;
@@ -337,6 +390,5 @@ export const api = {
     tfsaBirthYear?: number | null;
     tfsaRoomUsedElsewhere?: number | null;
     rrspContributionRoom?: number | null;
-  }) =>
-    request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
+  }) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
 };

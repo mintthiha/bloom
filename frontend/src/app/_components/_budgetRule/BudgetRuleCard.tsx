@@ -4,13 +4,7 @@ import { api, CategoryBreakdownItem, DateRangeQuery, MonthlySummary } from "@/li
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
 
-const NEEDS_CATEGORIES = new Set([
-  "Groceries",
-  "Rent",
-  "Utilities",
-  "Transport",
-  "Healthcare",
-]);
+const NEEDS_CATEGORIES = new Set(["Groceries", "Rent", "Utilities", "Transport", "Healthcare"]);
 
 const NEEDS_TARGET_PCT = 50;
 const WANTS_TARGET_PCT = 30;
@@ -35,11 +29,7 @@ type CategoryRow = {
 };
 
 /** Returns a color for a bucket bar based on distance from target. */
-function getBucketColor(
-  pct: number,
-  targetPct: number,
-  higherIsBetter: boolean
-): string {
+function getBucketColor(pct: number, targetPct: number, higherIsBetter: boolean): string {
   if (higherIsBetter) {
     if (pct >= targetPct) return "#22c55e";
     if (pct >= targetPct * 0.5) return "#f59e0b";
@@ -100,9 +90,7 @@ function BucketRow({
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
           <span style={{ fontSize: "13px", fontWeight: 700 }}>{label}</span>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-            {sublabel}
-          </span>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{sublabel}</span>
         </div>
         <div
           style={{
@@ -112,16 +100,10 @@ function BucketRow({
             flexShrink: 0,
           }}
         >
-          <span
-            className="num"
-            style={{ fontSize: "14px", fontWeight: 700, color }}
-          >
+          <span className="num" style={{ fontSize: "14px", fontWeight: 700, color }}>
             {pct.toFixed(0)}%
           </span>
-          <span
-            className="num"
-            style={{ fontSize: "12px", color: "var(--text-secondary)" }}
-          >
+          <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
             {formatCurrency(amount)}
           </span>
         </div>
@@ -171,13 +153,9 @@ function BucketRow({
           marginBottom: categories.length > 0 ? "8px" : "0",
         }}
       >
-        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
-          {insightText}
-        </span>
+        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{insightText}</span>
         <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-            target {targetPct}%
-          </span>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>target {targetPct}%</span>
           {categories.length > 0 && (
             <button
               type="button"
@@ -234,9 +212,7 @@ function BucketRow({
           }}
         >
           {loading ? (
-            <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-              Loading...
-            </p>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Loading...</p>
           ) : (
             categories.map((categoryRow) => (
               <div key={categoryRow.category}>
@@ -321,16 +297,21 @@ export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
     let cancelled = false;
     setBreakdownLoading(true);
 
-    api.getCategoryBreakdown(rangeQuery).then((data) => {
-      if (!cancelled) {
-        setBreakdown(data);
-        setBreakdownLoading(false);
-      }
-    }).catch(() => {
-      if (!cancelled) setBreakdownLoading(false);
-    });
+    api
+      .getCategoryBreakdown(rangeQuery)
+      .then((data) => {
+        if (!cancelled) {
+          setBreakdown(data);
+          setBreakdownLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setBreakdownLoading(false);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [rangeQuery]);
 
   /** Groups breakdown rows into CategoryRow objects with nested account rows. */
@@ -445,8 +426,8 @@ export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
               savingsPct >= SAVINGS_TARGET_PCT
                 ? "At or above the 20% savings target."
                 : savingsPct > 0
-                ? `${(SAVINGS_TARGET_PCT - savingsPct).toFixed(0)}% short of the 20% target.`
-                : "Spending exceeds income this month."
+                  ? `${(SAVINGS_TARGET_PCT - savingsPct).toFixed(0)}% short of the 20% target.`
+                  : "Spending exceeds income this month."
             }
             categories={[]}
             loading={false}

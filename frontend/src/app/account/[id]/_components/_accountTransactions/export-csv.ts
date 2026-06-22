@@ -14,14 +14,7 @@ export function transactionsToCsv(transactions: Transaction[]): string {
     const date = txn.effectiveAt.slice(0, 10);
     const type = txn.type.toLowerCase().replace("_", " ");
     const amount = txn.amount.toFixed(2);
-    return [
-      date,
-      type,
-      amount,
-      txn.description ?? "",
-      txn.merchant ?? "",
-      txn.category ?? "",
-    ]
+    return [date, type, amount, txn.description ?? "", txn.merchant ?? "", txn.category ?? ""]
       .map(escapeCell)
       .join(",");
   });

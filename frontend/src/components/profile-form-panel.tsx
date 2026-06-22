@@ -165,12 +165,17 @@ export function ProfileFormPanel({
       }}
     >
       <div style={{ marginBottom: "20px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: 800, letterSpacing: "-0.4px", marginBottom: "6px" }}>
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: 800,
+            letterSpacing: "-0.4px",
+            marginBottom: "6px",
+          }}
+        >
           {title}
         </h2>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-          {description}
-        </p>
+        <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{description}</p>
       </div>
 
       {loading ? (
@@ -181,7 +186,10 @@ export function ProfileFormPanel({
           <div className="skeleton" style={{ height: "44px" }} />
         </div>
       ) : (
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+        >
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
               <label style={sectionLabelStyle}>First Name</label>
@@ -283,7 +291,9 @@ export function ProfileFormPanel({
             </div>
 
             <div>
-              <label style={sectionLabelStyle}>RRSP Deduction Limit (from CRA Notice of Assessment)</label>
+              <label style={sectionLabelStyle}>
+                RRSP Deduction Limit (from CRA Notice of Assessment)
+              </label>
               <input
                 type="number"
                 value={rrspContributionRoom}

@@ -6,8 +6,8 @@ type ChatSectionProps = {
   messages: Message[];
   isDouble: boolean;
   streaming: boolean;
-  bottomRef: React.RefObject<HTMLDivElement|null>;
-  textAreaRef: React.RefObject<HTMLTextAreaElement|null>;
+  bottomRef: React.RefObject<HTMLDivElement | null>;
+  textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   sendMessage: () => void;
@@ -16,7 +16,17 @@ type ChatSectionProps = {
 
 type Message = { role: "user" | "assistant"; content: string };
 
-export function ChatSection({ messages, isDouble, streaming, bottomRef, textAreaRef, input, setInput, sendMessage, handleKeyDown }: ChatSectionProps) {
+export function ChatSection({
+  messages,
+  isDouble,
+  streaming,
+  bottomRef,
+  textAreaRef,
+  input,
+  setInput,
+  sendMessage,
+  handleKeyDown,
+}: ChatSectionProps) {
   return (
     <div
       style={{
@@ -94,8 +104,7 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
               textAlign: "center",
             }}
           >
-            Ask me anything about TFSAs, RRSPs, credit cards, budgeting, or
-            investing in Canada.
+            Ask me anything about TFSAs, RRSPs, credit cards, budgeting, or investing in Canada.
           </div>
         )}
         {messages.map((msg, i) => (
@@ -110,16 +119,9 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
               style={{
                 maxWidth: "75%",
                 padding: "10px 14px",
-                borderRadius:
-                  msg.role === "user"
-                    ? "14px 14px 4px 14px"
-                    : "14px 14px 14px 4px",
-                background:
-                  msg.role === "user" ? "#f59e0b22" : "var(--surface-2)",
-                border:
-                  msg.role === "user"
-                    ? "1px solid #f59e0b44"
-                    : "1px solid var(--border)",
+                borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                background: msg.role === "user" ? "#f59e0b22" : "var(--surface-2)",
+                border: msg.role === "user" ? "1px solid #f59e0b44" : "1px solid var(--border)",
                 fontSize: "13px",
                 lineHeight: 1.6,
                 color: "var(--text-primary)",
@@ -130,9 +132,7 @@ export function ChatSection({ messages, isDouble, streaming, bottomRef, textArea
               {msg.role === "assistant" &&
                 streaming &&
                 i === messages.length - 1 &&
-                msg.content === "" && (
-                  <span style={{ color: "var(--text-muted)" }}>Thinking…</span>
-                )}
+                msg.content === "" && <span style={{ color: "var(--text-muted)" }}>Thinking…</span>}
             </div>
           </div>
         ))}

@@ -119,10 +119,7 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
     window.localStorage.removeItem(STORAGE_KEY);
   }
 
-  const value = useMemo(
-    () => ({ visibleCards, toggleCard, resetToDefaults }),
-    [visibleCards],
-  );
+  const value = useMemo(() => ({ visibleCards, toggleCard, resetToDefaults }), [visibleCards]);
 
   return (
     <DashboardVisibilityContext.Provider value={value}>

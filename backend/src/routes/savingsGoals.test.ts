@@ -58,7 +58,10 @@ describe("savings goal routes", () => {
     it("returns 200 with the user's savings goals", async () => {
       serviceMock.listSavingsGoals.mockResolvedValue([GOAL_FIXTURE]);
 
-      const response = await request(app).get("/api/savings-goals").set("X-Internal-Secret", INTERNAL_SECRET).set("X-User-Id", "u-1");
+      const response = await request(app)
+        .get("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
       expect(serviceMock.listSavingsGoals).toHaveBeenCalledWith("u-1");
@@ -68,7 +71,10 @@ describe("savings goal routes", () => {
     it("returns an empty array when the user has no savings goals", async () => {
       serviceMock.listSavingsGoals.mockResolvedValue([]);
 
-      const response = await request(app).get("/api/savings-goals").set("X-Internal-Secret", INTERNAL_SECRET).set("X-User-Id", "u-1");
+      const response = await request(app)
+        .get("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1");
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([]);

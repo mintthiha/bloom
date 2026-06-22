@@ -102,12 +102,7 @@ function OnboardingStepRow({
 }
 
 /** Onboarding checklist shown at the top of the dashboard until all steps are complete or the user dismisses it. */
-export function OnboardingChecklist({
-  accounts,
-  budgets,
-  goals,
-  monthlySummary,
-}: Props) {
+export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }: Props) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [hasExploredLearnPage, setHasExploredLearnPage] = useState(false);
   const [wasRestoredByUser, setWasRestoredByUser] = useState(false);
@@ -138,7 +133,7 @@ export function OnboardingChecklist({
         monthlySummary,
         hasExploredLearnPage,
       }),
-    [accounts, budgets, goals, monthlySummary, hasExploredLearnPage],
+    [accounts, budgets, goals, monthlySummary, hasExploredLearnPage]
   );
 
   const completedCount = steps.filter((s) => s.isComplete).length;
@@ -245,12 +240,8 @@ export function OnboardingChecklist({
             flexShrink: 0,
             marginTop: "2px",
           }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.color = "var(--text-secondary)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.color = "var(--text-muted)")
-          }
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
         >
           Dismiss
         </button>
@@ -265,11 +256,7 @@ export function OnboardingChecklist({
         }}
       >
         {steps.map((step) => (
-          <OnboardingStepRow
-            key={step.id}
-            step={step}
-            onLearnNavigate={handleLearnNavigate}
-          />
+          <OnboardingStepRow key={step.id} step={step} onLearnNavigate={handleLearnNavigate} />
         ))}
       </div>
     </div>

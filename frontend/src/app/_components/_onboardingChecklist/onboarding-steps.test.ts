@@ -4,22 +4,67 @@ import type { Account, Budget, MonthlySummary, SavingsGoal } from "@/lib/api";
 
 /** Creates a minimal Account fixture. */
 function makeAccount(id = "a-1"): Account {
-  return { id, ownerName: "Test", nickname: null, accountType: "CHEQUING", balance: 0, frozen: false, isLinked: false, plaidAccountId: null, plaidItemId: null, institutionName: null, createdAt: "", updatedAt: "" };
+  return {
+    id,
+    ownerName: "Test",
+    nickname: null,
+    accountType: "CHEQUING",
+    balance: 0,
+    frozen: false,
+    isLinked: false,
+    plaidAccountId: null,
+    plaidItemId: null,
+    institutionName: null,
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 /** Creates a minimal Budget fixture. */
 function makeBudget(id = "b-1"): Budget {
-  return { id, userId: "u-1", category: "Dining", monthlyLimit: 300, currentSpending: 100, remaining: 200, percentageUsed: 33, isOverBudget: false, createdAt: "", updatedAt: "" };
+  return {
+    id,
+    userId: "u-1",
+    category: "Dining",
+    monthlyLimit: 300,
+    currentSpending: 100,
+    remaining: 200,
+    percentageUsed: 33,
+    isOverBudget: false,
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 /** Creates a minimal SavingsGoal fixture. */
 function makeGoal(id = "g-1"): SavingsGoal {
-  return { id, userId: "u-1", accountId: "a-1", name: "Emergency Fund", targetAmount: 5000, currentBalance: 1000, accountName: "Savings", accountNickname: null, accountOwnerName: "Test", accountType: "SAVINGS", percentageReached: 20, createdAt: "", updatedAt: "" };
+  return {
+    id,
+    userId: "u-1",
+    accountId: "a-1",
+    name: "Emergency Fund",
+    targetAmount: 5000,
+    currentBalance: 1000,
+    accountName: "Savings",
+    accountNickname: null,
+    accountOwnerName: "Test",
+    accountType: "SAVINGS",
+    percentageReached: 20,
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 /** Creates a MonthlySummary fixture. */
 function makeSummary(income: number, spending: number): MonthlySummary {
-  return { month: "2026-05", income, spending, netCashFlow: income - spending, topExpenseCategory: null, categories: [] };
+  return {
+    month: "2026-05",
+    income,
+    spending,
+    netCashFlow: income - spending,
+    topExpenseCategory: null,
+    categories: [],
+  };
 }
 
 const EMPTY_INPUT = {
@@ -136,7 +181,9 @@ describe("deriveOnboardingSteps — add-first-transaction href", () => {
 
   it("links to the open-account section hash when no accounts exist", () => {
     const result = deriveOnboardingSteps(EMPTY_INPUT);
-    expect(result.find((s) => s.id === "add-first-transaction")!.href).toBe("#open-account-section");
+    expect(result.find((s) => s.id === "add-first-transaction")!.href).toBe(
+      "#open-account-section"
+    );
   });
 
   it("uses the first account's id even when multiple accounts are present", () => {

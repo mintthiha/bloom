@@ -30,7 +30,9 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     const targetAmount = requirePositiveNumber(body.targetAmount, "targetAmount");
     res
       .status(201)
-      .json(await savingsGoalService.createSavingsGoal(uid(req), { accountId, name, targetAmount }));
+      .json(
+        await savingsGoalService.createSavingsGoal(uid(req), { accountId, name, targetAmount })
+      );
   } catch (err) {
     next(err);
   }

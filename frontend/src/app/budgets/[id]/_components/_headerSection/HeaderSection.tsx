@@ -12,12 +12,7 @@ type HeaderSectionProps = {
   timeZone: string;
 };
 
-export function HeaderSection({
-  budget,
-  dateRange,
-  setDateRange,
-  timeZone,
-}: HeaderSectionProps) {
+export function HeaderSection({ budget, dateRange, setDateRange, timeZone }: HeaderSectionProps) {
   return (
     <div className="fade-up" style={{ marginBottom: "28px" }}>
       <BackToHome />

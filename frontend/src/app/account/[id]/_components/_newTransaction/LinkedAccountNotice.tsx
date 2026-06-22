@@ -23,7 +23,7 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
     try {
       const result = await api.resyncPlaidItem(account.plaidItemId);
       toast.success(
-        `Re-synced ${result.accountsLinked} account${result.accountsLinked !== 1 ? "s" : ""}`,
+        `Re-synced ${result.accountsLinked} account${result.accountsLinked !== 1 ? "s" : ""}`
       );
       await onResynced();
     } catch (err) {
@@ -64,8 +64,8 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
         <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
           {account.institutionName ?? "External Bank"}
         </span>
-        . Transactions are read-only mirrors of your external account and
-        cannot be added or edited here.
+        . Transactions are read-only mirrors of your external account and cannot be added or edited
+        here.
       </p>
       <button
         type="button"

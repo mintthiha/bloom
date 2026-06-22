@@ -48,7 +48,7 @@ interface TransactionHistoryProps {
 /** Returns display metadata for a transaction row based on type and account kind. */
 function txnMeta(
   t: Transaction,
-  isCredit = false,
+  isCredit = false
 ): { label: string; color: string; sign: string; icon: string } {
   switch (t.type) {
     case "DEPOSIT":
@@ -76,12 +76,10 @@ function isEditableTransaction(transaction: Transaction): boolean {
   return (
     transaction.type === "DEPOSIT" ||
     transaction.type === "WITHDRAWAL" ||
-    ((transaction.type === "TRANSFER_OUT" ||
-      transaction.type === "TRANSFER_IN") &&
+    ((transaction.type === "TRANSFER_OUT" || transaction.type === "TRANSFER_IN") &&
       Boolean(transaction.transferGroupId))
   );
 }
-
 
 /** Renders the full transaction history panel with filters, pagination, and inline editing. */
 export function TransactionHistory({
@@ -123,10 +121,7 @@ export function TransactionHistory({
 
   const totalPages = Math.max(1, Math.ceil(txns.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pagedTxns = txns.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const pagedTxns = txns.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div
@@ -170,10 +165,7 @@ export function TransactionHistory({
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span
-            className="num"
-            style={{ fontSize: "11px", color: "var(--text-muted)" }}
-          >
+          <span className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
             {txns.length} records
           </span>
           <ExportCsvButton txns={txns} account={account} />
@@ -191,15 +183,11 @@ export function TransactionHistory({
         <select
           aria-label="Transaction type filter"
           value={filterType}
-          onChange={(e) =>
-            onFilterTypeChange(e.target.value as "ALL" | Transaction["type"])
-          }
+          onChange={(e) => onFilterTypeChange(e.target.value as "ALL" | Transaction["type"])}
           style={{ ...inputStyle, cursor: "pointer", appearance: "none" }}
         >
           <option value="ALL">All types</option>
-          <option value="DEPOSIT">
-            {account.accountType === "CREDIT" ? "Charge" : "Deposit"}
-          </option>
+          <option value="DEPOSIT">{account.accountType === "CREDIT" ? "Charge" : "Deposit"}</option>
           <option value="WITHDRAWAL">
             {account.accountType === "CREDIT" ? "Payment" : "Withdrawal"}
           </option>
@@ -231,26 +219,18 @@ export function TransactionHistory({
       </div>
 
       <div style={{ marginBottom: "18px" }}>
-        <DateRangeControls
-          value={filterDateRange}
-          onChange={onFilterDateRangeChange}
-        />
+        <DateRangeControls value={filterDateRange} onChange={onFilterDateRangeChange} />
       </div>
 
       {txns.length === 0 ? (
         <div style={{ textAlign: "center", padding: "32px 0" }}>
-          <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
-            No transactions yet.
-          </p>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>No transactions yet.</p>
         </div>
       ) : (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             {pagedTxns.map((t) => {
-              const { label, color, sign, icon } = txnMeta(
-                t,
-                account.accountType === "CREDIT",
-              );
+              const { label, color, sign, icon } = txnMeta(t, account.accountType === "CREDIT");
               const isEditing = editingTransactionId === t.id;
               const canEdit = isEditableTransaction(t);
               return (
@@ -266,12 +246,8 @@ export function TransactionHistory({
                     gap: "16px",
                     flexWrap: isEditing ? "wrap" : "nowrap",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "var(--surface-2)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div
                     style={{
@@ -336,11 +312,7 @@ export function TransactionHistory({
                                 min="0.01"
                                 step="0.01"
                                 value={editingTransactionAmount}
-                                onChange={(e) =>
-                                  onEditingTransactionAmountChange(
-                                    e.target.value,
-                                  )
-                                }
+                                onChange={(e) => onEditingTransactionAmountChange(e.target.value)}
                                 aria-label="Transaction amount"
                                 style={inputStyle}
                               />
@@ -359,11 +331,7 @@ export function TransactionHistory({
                               </span>
                               <select
                                 value={editingTransactionCategory}
-                                onChange={(e) =>
-                                  onEditingTransactionCategoryChange(
-                                    e.target.value,
-                                  )
-                                }
+                                onChange={(e) => onEditingTransactionCategoryChange(e.target.value)}
                                 aria-label="Transaction category"
                                 style={{
                                   ...inputStyle,
@@ -373,30 +341,23 @@ export function TransactionHistory({
                                 }}
                               >
                                 <option value="">No category</option>
-                                {(t.type === "DEPOSIT" &&
-                                account.accountType !== "CREDIT"
+                                {(t.type === "DEPOSIT" && account.accountType !== "CREDIT"
                                   ? INCOME_CATEGORIES
                                   : t.type === "WITHDRAWAL" ||
-                                      (t.type === "DEPOSIT" &&
-                                        account.accountType === "CREDIT")
+                                      (t.type === "DEPOSIT" && account.accountType === "CREDIT")
                                     ? EXPENSE_CATEGORIES
                                     : ["Transfer"]
                                 ).map((categoryOption) => (
-                                  <option
-                                    key={categoryOption}
-                                    value={categoryOption}
-                                  >
+                                  <option key={categoryOption} value={categoryOption}>
                                     {categoryOption}
                                   </option>
                                 ))}
                                 {editingTransactionCategory &&
                                   !(
-                                    t.type === "DEPOSIT" &&
-                                    account.accountType !== "CREDIT"
+                                    t.type === "DEPOSIT" && account.accountType !== "CREDIT"
                                       ? INCOME_CATEGORIES
                                       : t.type === "WITHDRAWAL" ||
-                                          (t.type === "DEPOSIT" &&
-                                            account.accountType === "CREDIT")
+                                          (t.type === "DEPOSIT" && account.accountType === "CREDIT")
                                         ? EXPENSE_CATEGORIES
                                         : ["Transfer"]
                                   ).includes(editingTransactionCategory) && (
@@ -428,11 +389,7 @@ export function TransactionHistory({
                             <input
                               type="text"
                               value={editingTransactionMerchant}
-                              onChange={(e) =>
-                                onEditingTransactionMerchantChange(
-                                  e.target.value,
-                                )
-                              }
+                              onChange={(e) => onEditingTransactionMerchantChange(e.target.value)}
                               aria-label="Transaction merchant"
                               placeholder="Merchant"
                               style={inputStyle}
@@ -459,11 +416,7 @@ export function TransactionHistory({
                             <input
                               type="datetime-local"
                               value={editingTransactionDateTime}
-                              onChange={(e) =>
-                                onEditingTransactionDateTimeChange(
-                                  e.target.value,
-                                )
-                              }
+                              onChange={(e) => onEditingTransactionDateTimeChange(e.target.value)}
                               aria-label="Transaction date and time"
                               style={inputStyle}
                             />
@@ -589,9 +542,7 @@ export function TransactionHistory({
                             borderRadius: "8px",
                             fontSize: "12px",
                             fontWeight: 700,
-                            cursor: savingTransaction
-                              ? "not-allowed"
-                              : "pointer",
+                            cursor: savingTransaction ? "not-allowed" : "pointer",
                             opacity: savingTransaction ? 0.45 : 1,
                           }}
                         >
@@ -609,9 +560,7 @@ export function TransactionHistory({
                             borderRadius: "8px",
                             fontSize: "12px",
                             fontWeight: 600,
-                            cursor: savingTransaction
-                              ? "not-allowed"
-                              : "pointer",
+                            cursor: savingTransaction ? "not-allowed" : "pointer",
                           }}
                         >
                           Cancel
@@ -619,10 +568,7 @@ export function TransactionHistory({
                         <button
                           type="button"
                           onClick={() => onRequestDelete(t.id)}
-                          disabled={
-                            savingTransaction ||
-                            deletingTransactionId === t.id
-                          }
+                          disabled={savingTransaction || deletingTransactionId === t.id}
                           style={{
                             padding: "6px 10px",
                             border: "1px solid #f8717130",
@@ -632,20 +578,13 @@ export function TransactionHistory({
                             fontSize: "11px",
                             fontWeight: 600,
                             cursor:
-                              savingTransaction ||
-                              deletingTransactionId === t.id
+                              savingTransaction || deletingTransactionId === t.id
                                 ? "not-allowed"
                                 : "pointer",
-                            opacity:
-                              savingTransaction ||
-                              deletingTransactionId === t.id
-                                ? 0.45
-                                : 1,
+                            opacity: savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
                           }}
                         >
-                          {deletingTransactionId === t.id
-                            ? "Deleting..."
-                            : "Delete"}
+                          {deletingTransactionId === t.id ? "Deleting..." : "Delete"}
                         </button>
                       </div>
                     ) : (
@@ -686,10 +625,7 @@ export function TransactionHistory({
                           <button
                             type="button"
                             onClick={() => onStartEditing(t)}
-                            disabled={
-                              savingTransaction ||
-                              deletingTransactionId === t.id
-                            }
+                            disabled={savingTransaction || deletingTransactionId === t.id}
                             style={{
                               padding: "6px 10px",
                               border: "1px solid var(--border)",
@@ -699,15 +635,11 @@ export function TransactionHistory({
                               fontSize: "11px",
                               fontWeight: 600,
                               cursor:
-                                savingTransaction ||
-                                deletingTransactionId === t.id
+                                savingTransaction || deletingTransactionId === t.id
                                   ? "not-allowed"
                                   : "pointer",
                               opacity:
-                                savingTransaction ||
-                                deletingTransactionId === t.id
-                                  ? 0.45
-                                  : 1,
+                                savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
                             }}
                           >
                             Edit
@@ -717,10 +649,7 @@ export function TransactionHistory({
                           <button
                             type="button"
                             onClick={() => onRequestDelete(t.id)}
-                            disabled={
-                              savingTransaction ||
-                              deletingTransactionId === t.id
-                            }
+                            disabled={savingTransaction || deletingTransactionId === t.id}
                             style={{
                               padding: "6px 10px",
                               border: "1px solid #f8717130",
@@ -730,20 +659,14 @@ export function TransactionHistory({
                               fontSize: "11px",
                               fontWeight: 600,
                               cursor:
-                                savingTransaction ||
-                                deletingTransactionId === t.id
+                                savingTransaction || deletingTransactionId === t.id
                                   ? "not-allowed"
                                   : "pointer",
                               opacity:
-                                savingTransaction ||
-                                deletingTransactionId === t.id
-                                  ? 0.45
-                                  : 1,
+                                savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
                             }}
                           >
-                            {deletingTransactionId === t.id
-                              ? "Deleting..."
-                              : "Delete"}
+                            {deletingTransactionId === t.id ? "Deleting..." : "Delete"}
                           </button>
                         )}
                       </div>
@@ -772,10 +695,7 @@ export function TransactionHistory({
                   padding: "6px 12px",
                   border: "1px solid var(--border)",
                   background: "transparent",
-                  color:
-                    currentPage === 1
-                      ? "var(--text-muted)"
-                      : "var(--text-secondary)",
+                  color: currentPage === 1 ? "var(--text-muted)" : "var(--text-secondary)",
                   borderRadius: "8px",
                   fontSize: "12px",
                   fontWeight: 600,
@@ -784,10 +704,7 @@ export function TransactionHistory({
               >
                 ← Prev
               </button>
-              <span
-                className="num"
-                style={{ fontSize: "12px", color: "var(--text-muted)" }}
-              >
+              <span className="num" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                 {currentPage} / {totalPages}
               </span>
               <button
@@ -797,15 +714,11 @@ export function TransactionHistory({
                   padding: "6px 12px",
                   border: "1px solid var(--border)",
                   background: "transparent",
-                  color:
-                    currentPage === totalPages
-                      ? "var(--text-muted)"
-                      : "var(--text-secondary)",
+                  color: currentPage === totalPages ? "var(--text-muted)" : "var(--text-secondary)",
                   borderRadius: "8px",
                   fontSize: "12px",
                   fontWeight: 600,
-                  cursor:
-                    currentPage === totalPages ? "not-allowed" : "pointer",
+                  cursor: currentPage === totalPages ? "not-allowed" : "pointer",
                 }}
               >
                 Next →

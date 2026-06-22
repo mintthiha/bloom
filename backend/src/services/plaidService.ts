@@ -1,10 +1,4 @@
-import {
-  Configuration,
-  PlaidApi,
-  PlaidEnvironments,
-  Products,
-  CountryCode,
-} from "plaid";
+import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from "plaid";
 import { AccountType, TransactionType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
@@ -23,7 +17,7 @@ function getPlaidClient(): PlaidApi {
   if (!clientId || !secret) {
     throw new AppError(
       503,
-      "Plaid credentials not configured — set PLAID_CLIENT_ID and PLAID_SECRET in backend/.env",
+      "Plaid credentials not configured — set PLAID_CLIENT_ID and PLAID_SECRET in backend/.env"
     );
   }
 
@@ -44,11 +38,16 @@ function getPlaidClient(): PlaidApi {
 /** Maps a Plaid account subtype to the closest Bloom AccountType. Unknown subtypes default to CHEQUING. */
 function mapSubtypeToAccountType(subtype: string | null | undefined): AccountType {
   switch (subtype) {
-    case "checking":      return AccountType.CHEQUING;
-    case "savings":       return AccountType.SAVINGS;
-    case "money market":  return AccountType.SAVINGS;
-    case "credit card":   return AccountType.CREDIT;
-    default:              return AccountType.CHEQUING;
+    case "checking":
+      return AccountType.CHEQUING;
+    case "savings":
+      return AccountType.SAVINGS;
+    case "money market":
+      return AccountType.SAVINGS;
+    case "credit card":
+      return AccountType.CREDIT;
+    default:
+      return AccountType.CHEQUING;
   }
 }
 
@@ -74,7 +73,7 @@ export async function createLinkToken(userId: string): Promise<string> {
 export async function exchangePublicToken(
   publicToken: string,
   userId: string,
-  institutionName: string,
+  institutionName: string
 ): Promise<{ itemId: string; accountsLinked: number }> {
   const client = getPlaidClient();
 
@@ -99,10 +98,7 @@ export async function exchangePublicToken(
  * Transactions are synced from the beginning (no cursor stored) so this is a full re-sync.
  * Returns the number of Bloom accounts that were linked.
  */
-export async function syncAccountsAndTransactions(
-  itemId: string,
-  userId: string,
-): Promise<number> {
+export async function syncAccountsAndTransactions(itemId: string, userId: string): Promise<number> {
   const plaidItem = await prisma.plaidItem.findUnique({ where: { itemId } });
 
   if (!plaidItem || plaidItem.userId !== userId) {
@@ -140,15 +136,12 @@ export async function syncAccountsAndTransactions(
           institutionName: plaidItem.institutionName,
         },
       });
-    }),
+    })
   );
 
   // Build a map from Plaid account_id → Bloom account id for fast lookup
   const accountIdMap = new Map(
-    plaidAccounts.map((plaidAccount, index) => [
-      plaidAccount.account_id,
-      bloomAccounts[index].id,
-    ]),
+    plaidAccounts.map((plaidAccount, index) => [plaidAccount.account_id, bloomAccounts[index].id])
   );
 
   // Use transactionsGet (date-range based) instead of transactionsSync.
@@ -183,9 +176,7 @@ export async function syncAccountsAndTransactions(
       // Plaid sign convention: positive = debit (outflow), negative = credit (inflow).
       const isDeposit = txn.amount < 0;
       const absAmount = Math.abs(txn.amount);
-      const transactionType = isDeposit
-        ? TransactionType.DEPOSIT
-        : TransactionType.WITHDRAWAL;
+      const transactionType = isDeposit ? TransactionType.DEPOSIT : TransactionType.WITHDRAWAL;
       const effectiveAt = new Date(txn.date);
       const category = txn.category?.[0] ?? null;
       const merchantName = txn.merchant_name ?? txn.name;
@@ -202,9 +193,7 @@ export async function syncAccountsAndTransactions(
           description: txn.name,
           effectiveAt,
           plaidTransactionId: txn.transaction_id,
-          ...(isDeposit
-            ? { toAccountId: bloomAccountId }
-            : { fromAccountId: bloomAccountId }),
+          ...(isDeposit ? { toAccountId: bloomAccountId } : { fromAccountId: bloomAccountId }),
         },
         update: {
           amount: absAmount,
@@ -213,7 +202,7 @@ export async function syncAccountsAndTransactions(
           description: txn.name,
         },
       });
-    }),
+    })
   );
 
   return bloomAccounts.length;

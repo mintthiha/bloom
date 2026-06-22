@@ -1,4 +1,9 @@
-export type DateRangePreset = "this-month" | "previous-month" | "last-90-days" | "all-time" | "custom";
+export type DateRangePreset =
+  | "this-month"
+  | "previous-month"
+  | "last-90-days"
+  | "all-time"
+  | "custom";
 
 export type DateRangeState = {
   preset: DateRangePreset;
@@ -31,7 +36,9 @@ export function buildDateRangeQuery(range: DateRangeState) {
   }
 
   const start = parseLocalDate(range.start);
-  const endExclusive = parseLocalDate(range.preset === "custom" ? shiftLocalDate(range.end, 1) : range.end);
+  const endExclusive = parseLocalDate(
+    range.preset === "custom" ? shiftLocalDate(range.end, 1) : range.end
+  );
 
   return {
     start: start.toISOString(),
@@ -43,7 +50,10 @@ export function getBrowserTimeZone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
-export function getPresetDateRange(preset: Exclude<DateRangePreset, "custom">, now = new Date()): DateRangeState {
+export function getPresetDateRange(
+  preset: Exclude<DateRangePreset, "custom">,
+  now = new Date()
+): DateRangeState {
   if (preset === "all-time") {
     return { preset, start: "", end: "" };
   }

@@ -43,18 +43,16 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
       try {
         const result = await api.exchangePublicToken(publicToken, institutionName);
         toast.success(
-          `Linked ${result.accountsLinked} account${result.accountsLinked !== 1 ? "s" : ""} from ${institutionName}`,
+          `Linked ${result.accountsLinked} account${result.accountsLinked !== 1 ? "s" : ""} from ${institutionName}`
         );
         await onLinked();
       } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to link bank account",
-        );
+        toast.error(err instanceof Error ? err.message : "Failed to link bank account");
       } finally {
         setLinking(false);
       }
     },
-    [onLinked],
+    [onLinked]
   );
 
   const { open, ready } = usePlaidLink({
@@ -74,8 +72,8 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
           lineHeight: "1.5",
         }}
       >
-        Connect an external institution — RBC, Chase, and more — to import your
-        accounts and recent transactions automatically.
+        Connect an external institution — RBC, Chase, and more — to import your accounts and recent
+        transactions automatically.
       </p>
 
       {tokenError && (
@@ -86,8 +84,8 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
             marginBottom: "12px",
           }}
         >
-          Plaid credentials not configured. Add PLAID_CLIENT_ID and
-          PLAID_SECRET to backend/.env to enable this feature.
+          Plaid credentials not configured. Add PLAID_CLIENT_ID and PLAID_SECRET to backend/.env to
+          enable this feature.
         </p>
       )}
 

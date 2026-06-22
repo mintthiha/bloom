@@ -3,10 +3,7 @@
 import { useMemo, useState } from "react";
 import { Account, Budget, MonthlySummary, NetWorthSnapshot } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
-import {
-  computeHealthScore,
-  SubScore,
-} from "@/lib/financial-health-score";
+import { computeHealthScore, SubScore } from "@/lib/financial-health-score";
 
 interface FinancialHealthScoreProps {
   accounts: Account[];
@@ -31,15 +28,7 @@ function subScoreColor(score: number): string {
 }
 
 /** Compact score + grade badge shown in the card header, visible even when collapsed. */
-function ScoreBadge({
-  total,
-  grade,
-  color,
-}: {
-  total: number;
-  grade: string;
-  color: string;
-}) {
+function ScoreBadge({ total, grade, color }: { total: number; grade: string; color: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
       <span className="num" style={{ fontSize: "15px", fontWeight: 800, color }}>
@@ -76,10 +65,7 @@ function SubScoreRow({ sub }: { sub: SubScore }) {
         }}
       >
         <span style={{ fontSize: "13px", fontWeight: 600 }}>{sub.label}</span>
-        <span
-          className="num"
-          style={{ fontSize: "13px", fontWeight: 700, color, flexShrink: 0 }}
-        >
+        <span className="num" style={{ fontSize: "13px", fontWeight: 700, color, flexShrink: 0 }}>
           {sub.score} / 20
         </span>
       </div>
@@ -102,9 +88,7 @@ function SubScoreRow({ sub }: { sub: SubScore }) {
           }}
         />
       </div>
-      <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-        {sub.status}
-      </p>
+      <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{sub.status}</p>
       {sub.tip && (
         <p
           style={{
@@ -121,13 +105,7 @@ function SubScoreRow({ sub }: { sub: SubScore }) {
 }
 
 /** A single scoring tier shown as a compact chip inside the methodology explainer. */
-function TierChip({
-  condition,
-  points,
-}: {
-  condition: string;
-  points: number;
-}) {
+function TierChip({ condition, points }: { condition: string; points: number }) {
   return (
     <span
       style={{
@@ -145,10 +123,7 @@ function TierChip({
     >
       {condition}
       <span style={{ color: "var(--text-muted)" }}>→</span>
-      <span
-        className="num"
-        style={{ fontWeight: 700, color: "var(--text-primary)" }}
-      >
+      <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
         {points}
       </span>
     </span>
@@ -167,9 +142,7 @@ function FactorDetail({
 }) {
   return (
     <div style={{ marginBottom: "18px" }}>
-      <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
-        {label}
-      </p>
+      <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>{label}</p>
       <p
         style={{
           fontSize: "12px",
@@ -259,10 +232,9 @@ function CalculationExplainer() {
                 lineHeight: 1.6,
               }}
             >
-              Your score is the sum of five factors, each worth 0–20 points
-              (maximum 100). Every factor is computed from data already on your
-              dashboard — no extra input required. Each chip below shows a
-              condition and the points it earns.
+              Your score is the sum of five factors, each worth 0–20 points (maximum 100). Every
+              factor is computed from data already on your dashboard — no extra input required. Each
+              chip below shows a condition and the points it earns.
             </p>
 
             <FactorDetail
@@ -352,10 +324,7 @@ function CalculationExplainer() {
                 ] as const
               ).map(({ grade, range, label }) => (
                 <span key={grade} style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                  <span
-                    className="num"
-                    style={{ fontWeight: 700, color: "var(--text-secondary)" }}
-                  >
+                  <span className="num" style={{ fontWeight: 700, color: "var(--text-secondary)" }}>
                     {grade}
                   </span>{" "}
                   {range} — {label}
@@ -377,9 +346,8 @@ export function FinancialHealthScore({
   netWorthHistory,
 }: FinancialHealthScoreProps) {
   const healthScore = useMemo(
-    () =>
-      computeHealthScore({ accounts, budgets, monthlySummary, netWorthHistory }),
-    [accounts, budgets, monthlySummary, netWorthHistory],
+    () => computeHealthScore({ accounts, budgets, monthlySummary, netWorthHistory }),
+    [accounts, budgets, monthlySummary, netWorthHistory]
   );
 
   const scoreColor = overallScoreColor(healthScore.total);
@@ -388,11 +356,7 @@ export function FinancialHealthScore({
     <CollapsibleCard
       eyebrow="Financial Health"
       headerRight={
-        <ScoreBadge
-          total={healthScore.total}
-          grade={healthScore.grade}
-          color={scoreColor}
-        />
+        <ScoreBadge total={healthScore.total} grade={healthScore.grade} color={scoreColor} />
       }
     >
       {/* Prominent score display */}

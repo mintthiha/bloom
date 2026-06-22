@@ -6,7 +6,10 @@ import { LearningCards } from "./_components/_cardsSection/LearningCards";
 import { LearnPageSkeleton } from "./_components/_learnSkeleton/LearnPageSkeleton";
 import { useLearnChat } from "@/hooks/useLearnChat";
 import { setLearnPageExplored } from "@/app/_components/_onboardingChecklist/onboarding-storage";
-import { getExploredCardIndices, markCardExplored } from "./_components/_cardsSection/learn-progress";
+import {
+  getExploredCardIndices,
+  markCardExplored,
+} from "./_components/_cardsSection/learn-progress";
 import { LearnProgressBar } from "./_components/_cardsSection/LearnProgressBar";
 import { CARDS } from "./_components/_cardsSection/LearningCards";
 
@@ -84,9 +87,7 @@ export default function LearnPage() {
     >
       {/* Header */}
       <div style={{ marginBottom: "36px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "6px" }}>
-          Learn
-        </h1>
+        <h1 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "6px" }}>Learn</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
           Understand the financial concepts that shape your money.
         </p>
@@ -103,9 +104,7 @@ export default function LearnPage() {
             alignItems: "start",
           }}
         >
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <LearnProgressBar
               exploredCount={exploredCardIndices.size}
               totalCount={CARDS.length}
@@ -169,9 +168,8 @@ export default function LearnPage() {
           textAlign: "center",
         }}
       >
-        Bloom AI provides general financial education only — not personalized
-        financial advice. Consult a licensed advisor for your specific
-        situation.
+        Bloom AI provides general financial education only — not personalized financial advice.
+        Consult a licensed advisor for your specific situation.
       </p>
     </div>
   );

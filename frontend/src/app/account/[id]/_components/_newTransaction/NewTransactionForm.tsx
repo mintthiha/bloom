@@ -4,13 +4,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { api, Account, Profile, Transaction } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
-import {
-  INCOME_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  ACCOUNT_TYPE_META,
-} from "@/lib/constants/account";
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
-import { calculateNetContributions, calculateNetContributionsForYear } from "@/lib/contribution-room";
+import {
+  calculateNetContributions,
+  calculateNetContributionsForYear,
+} from "@/lib/contribution-room";
 import {
   evaluateTfsaContribution,
   evaluateRrspContribution,
@@ -112,9 +111,7 @@ export function NewTransactionForm({
       desc = description.trim() || undefined;
     } else {
       transactionCategory =
-        category === "Custom..."
-          ? customCategory.trim() || undefined
-          : category || undefined;
+        category === "Custom..." ? customCategory.trim() || undefined : category || undefined;
       transactionMerchant = merchant.trim() || undefined;
     }
     try {
@@ -282,13 +279,9 @@ export function NewTransactionForm({
               disabled={transferTargets.length === 0}
               style={{
                 ...inputStyle,
-                cursor:
-                  transferTargets.length === 0 ? "not-allowed" : "pointer",
+                cursor: transferTargets.length === 0 ? "not-allowed" : "pointer",
                 appearance: "none",
-                color:
-                  transferTargets.length === 0
-                    ? "var(--text-muted)"
-                    : "var(--text-primary)",
+                color: transferTargets.length === 0 ? "var(--text-muted)" : "var(--text-primary)",
               }}
             >
               <option value="">
@@ -300,8 +293,7 @@ export function NewTransactionForm({
                 const label = target.nickname ?? target.ownerName;
                 return (
                   <option key={target.id} value={target.id}>
-                    {label} — {ACCOUNT_TYPE_META[target.accountType].label} —{" "}
-                    {target.id.slice(-6)}
+                    {label} — {ACCOUNT_TYPE_META[target.accountType].label} — {target.id.slice(-6)}
                   </option>
                 );
               })}
@@ -336,10 +328,7 @@ export function NewTransactionForm({
             </div>
             <button
               type="submit"
-              disabled={
-                submitting ||
-                (op === "transfer" && transferTargets.length === 0)
-              }
+              disabled={submitting || (op === "transfer" && transferTargets.length === 0)}
               style={{
                 padding: "10px 24px",
                 background: "#f59e0b",
@@ -349,15 +338,11 @@ export function NewTransactionForm({
                 border: "none",
                 borderRadius: "8px",
                 cursor:
-                  submitting ||
-                  (op === "transfer" && transferTargets.length === 0)
+                  submitting || (op === "transfer" && transferTargets.length === 0)
                     ? "not-allowed"
                     : "pointer",
                 opacity:
-                  submitting ||
-                  (op === "transfer" && transferTargets.length === 0)
-                    ? 0.45
-                    : 1,
+                  submitting || (op === "transfer" && transferTargets.length === 0) ? 0.45 : 1,
                 transition: "opacity 0.15s",
                 whiteSpace: "nowrap",
               }}
@@ -417,9 +402,7 @@ export function NewTransactionForm({
                 <option value="">Category (optional)</option>
                 <optgroup
                   label={
-                    op === "deposit" && account.accountType !== "CREDIT"
-                      ? "Income"
-                      : "Expenses"
+                    op === "deposit" && account.accountType !== "CREDIT" ? "Income" : "Expenses"
                   }
                 >
                   {(op === "deposit" && account.accountType !== "CREDIT"

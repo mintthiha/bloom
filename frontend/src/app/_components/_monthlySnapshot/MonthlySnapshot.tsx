@@ -1,14 +1,6 @@
 "use client";
 import { useState } from "react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { MonthlySummary, MonthlyTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
@@ -43,9 +35,7 @@ function computeSpendingForecast(
   const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   if (daysElapsed < 2) return null;
   const projected = (monthlySummary.spending / daysElapsed) * totalDays;
-  const vsLastMonth = previousMonthlySummary
-    ? projected - previousMonthlySummary.spending
-    : null;
+  const vsLastMonth = previousMonthlySummary ? projected - previousMonthlySummary.spending : null;
   return { projected, vsLastMonth };
 }
 
@@ -60,9 +50,7 @@ export function MonthlySnapshot({
   const isMobile = useIsMobile();
 
   const incomeDelta =
-    previousMonthlySummary != null
-      ? monthlySummary.income - previousMonthlySummary.income
-      : null;
+    previousMonthlySummary != null ? monthlySummary.income - previousMonthlySummary.income : null;
   const spendingDelta =
     previousMonthlySummary != null
       ? monthlySummary.spending - previousMonthlySummary.spending
@@ -72,21 +60,18 @@ export function MonthlySnapshot({
       ? monthlySummary.netCashFlow - previousMonthlySummary.netCashFlow
       : null;
 
-  const expenseCategories =
-    monthlySummary.categories.filter((category) => category.spending > 0);
+  const expenseCategories = monthlySummary.categories.filter((category) => category.spending > 0);
 
   const savingsRate =
-    monthlySummary.income > 0
-      ? monthlySummary.netCashFlow / monthlySummary.income
-      : null;
+    monthlySummary.income > 0 ? monthlySummary.netCashFlow / monthlySummary.income : null;
   const savingsRateColor =
     savingsRate === null
       ? "var(--text-muted)"
       : savingsRate >= 0.2
-      ? "#22c55e"
-      : savingsRate >= 0.1
-      ? "#f59e0b"
-      : "#f87171";
+        ? "#22c55e"
+        : savingsRate >= 0.1
+          ? "#f59e0b"
+          : "#f87171";
   const savingsRateTooltip =
     savingsRate !== null
       ? `Saving ${Math.round(savingsRate * 100)}% of your income. Most financial plans suggest 20% as a starting target.`
@@ -99,7 +84,15 @@ export function MonthlySnapshot({
   );
 
   const headerRight = (
-    <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+    <div
+      style={{
+        display: "flex",
+        gap: "6px",
+        alignItems: "center",
+        flexWrap: "wrap",
+        justifyContent: "flex-end",
+      }}
+    >
       {!isMobile && snapshotView === "snapshot" && monthlySummary.topExpenseCategory && (
         <div style={{ textAlign: "right", marginRight: "8px" }}>
           <p
@@ -127,14 +120,9 @@ export function MonthlySnapshot({
           style={{
             padding: "5px 12px",
             borderRadius: "8px",
-            border:
-              snapshotView === viewOption
-                ? "1px solid #f59e0b66"
-                : "1px solid var(--border)",
-            background:
-              snapshotView === viewOption ? "#f59e0b1a" : "var(--surface-2)",
-            color:
-              snapshotView === viewOption ? "#f59e0b" : "var(--text-secondary)",
+            border: snapshotView === viewOption ? "1px solid #f59e0b66" : "1px solid var(--border)",
+            background: snapshotView === viewOption ? "#f59e0b1a" : "var(--surface-2)",
+            color: snapshotView === viewOption ? "#f59e0b" : "var(--text-secondary)",
             fontSize: "11px",
             fontWeight: 600,
             cursor: "pointer",
@@ -150,9 +138,7 @@ export function MonthlySnapshot({
   return (
     <CollapsibleCard
       eyebrow="Monthly Snapshot"
-      title={
-        snapshotView === "snapshot" ? "Cash flow by category" : "Last 6 months"
-      }
+      title={snapshotView === "snapshot" ? "Cash flow by category" : "Last 6 months"}
       headerRight={headerRight}
       className="fade-up fade-up-1"
       style={{
@@ -189,10 +175,7 @@ export function MonthlySnapshot({
               >
                 Income
               </p>
-              <p
-                className="num"
-                style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}
-              >
+              <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}>
                 {formatCurrency(monthlySummary.income)}
               </p>
               {incomeDelta !== null && incomeDelta !== 0 && (
@@ -230,10 +213,7 @@ export function MonthlySnapshot({
               >
                 Spending
               </p>
-              <p
-                className="num"
-                style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}
-              >
+              <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}>
                 {formatCurrency(monthlySummary.spending)}
               </p>
               {spendingDelta !== null && spendingDelta !== 0 && (
@@ -276,8 +256,7 @@ export function MonthlySnapshot({
                 style={{
                   fontSize: "18px",
                   fontWeight: 600,
-                  color:
-                    monthlySummary.netCashFlow >= 0 ? "#22c55e" : "#f97316",
+                  color: monthlySummary.netCashFlow >= 0 ? "#22c55e" : "#f97316",
                 }}
               >
                 {formatCurrency(monthlySummary.netCashFlow)}
@@ -327,9 +306,7 @@ export function MonthlySnapshot({
                   color: savingsRateColor,
                 }}
               >
-                {savingsRate !== null
-                  ? `${Math.round(savingsRate * 100)}%`
-                  : "N/A"}
+                {savingsRate !== null ? `${Math.round(savingsRate * 100)}%` : "N/A"}
               </p>
             </div>
           </div>
@@ -341,13 +318,11 @@ export function MonthlySnapshot({
                 padding: "10px 14px",
                 borderRadius: "10px",
                 background:
-                  spendingForecast.vsLastMonth !== null &&
-                  spendingForecast.vsLastMonth > 0
+                  spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0
                     ? "#f9731608"
                     : "#22c55e08",
                 border: `1px solid ${
-                  spendingForecast.vsLastMonth !== null &&
-                  spendingForecast.vsLastMonth > 0
+                  spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0
                     ? "#f9731622"
                     : "#22c55e22"
                 }`,
@@ -365,8 +340,7 @@ export function MonthlySnapshot({
                     height: "6px",
                     borderRadius: "50%",
                     background:
-                      spendingForecast.vsLastMonth !== null &&
-                      spendingForecast.vsLastMonth > 0
+                      spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0
                         ? "#f97316"
                         : "#22c55e",
                     flexShrink: 0,
@@ -374,10 +348,7 @@ export function MonthlySnapshot({
                 />
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                   On track to spend{" "}
-                  <span
-                    className="num"
-                    style={{ color: "var(--text-primary)", fontWeight: 700 }}
-                  >
+                  <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>
                     {formatCurrency(spendingForecast.projected)}
                   </span>{" "}
                   by end of month
@@ -389,8 +360,7 @@ export function MonthlySnapshot({
                   style={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    color:
-                      spendingForecast.vsLastMonth > 0 ? "#f97316" : "#22c55e",
+                    color: spendingForecast.vsLastMonth > 0 ? "#f97316" : "#22c55e",
                     flexShrink: 0,
                   }}
                 >
@@ -403,10 +373,7 @@ export function MonthlySnapshot({
 
           {expenseCategories.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart
-                data={expenseCategories}
-                margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-              >
+              <BarChart data={expenseCategories} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <XAxis
                   dataKey="category"
                   tick={{ fontSize: 11, fill: "#9ca3af" }}
@@ -438,10 +405,7 @@ export function MonthlySnapshot({
         </>
       ) : monthlyTrends.length > 0 ? (
         <ResponsiveContainer width="100%" height={240}>
-          <BarChart
-            data={monthlyTrends}
-            margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
-          >
+          <BarChart data={monthlyTrends} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <XAxis
               dataKey="month"
               tick={{ fontSize: 11, fill: "#9ca3af" }}
@@ -458,11 +422,7 @@ export function MonthlySnapshot({
             <Tooltip
               formatter={(value, name) => [
                 formatCurrency(Number(value)),
-                name === "income"
-                  ? "Income"
-                  : name === "spending"
-                  ? "Spending"
-                  : "Net",
+                name === "income" ? "Income" : name === "spending" ? "Spending" : "Net",
               ]}
               contentStyle={TOOLTIP_CONTENT_STYLE}
               labelStyle={{ color: "#9ca3af" }}
@@ -470,11 +430,7 @@ export function MonthlySnapshot({
             />
             <Legend
               formatter={(value) =>
-                value === "income"
-                  ? "Income"
-                  : value === "spending"
-                  ? "Spending"
-                  : "Net"
+                value === "income" ? "Income" : value === "spending" ? "Spending" : "Net"
               }
               wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
             />
@@ -483,9 +439,7 @@ export function MonthlySnapshot({
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
-          No transaction history yet.
-        </p>
+        <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>No transaction history yet.</p>
       )}
     </CollapsibleCard>
   );

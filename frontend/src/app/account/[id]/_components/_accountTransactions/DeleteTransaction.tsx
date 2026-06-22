@@ -1,8 +1,14 @@
 "use client";
 import { api } from "@/lib/api";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 type DeleteTransactionProps = {
@@ -28,7 +34,6 @@ export function DeleteTransaction({
   onDeleted,
   onError,
 }: DeleteTransactionProps) {
-
   /** Calls the delete API, cancels any active edit on that transaction, then notifies the parent. */
   async function handleDelete(transactionId: string) {
     onDeletingChange(transactionId);

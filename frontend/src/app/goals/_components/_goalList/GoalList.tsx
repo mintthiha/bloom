@@ -132,10 +132,7 @@ function GoalCard({
           <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
             {formatCurrency(goal.currentBalance)} of {formatCurrency(goal.targetAmount)}
           </span>
-          <span
-            className="num"
-            style={{ fontSize: "13px", fontWeight: 700, color: progressColor }}
-          >
+          <span className="num" style={{ fontSize: "13px", fontWeight: 700, color: progressColor }}>
             {goal.percentageReached.toFixed(0)}%
           </span>
         </div>

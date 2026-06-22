@@ -39,12 +39,7 @@ export function ContributionRoomPanel({
     );
   }
   if (account.accountType === "FHSA") {
-    return (
-      <FhsaRoomPanel
-        transactions={sameTypeTransactions}
-        accountIds={sameTypeAccountIds}
-      />
-    );
+    return <FhsaRoomPanel transactions={sameTypeTransactions} accountIds={sameTypeAccountIds} />;
   }
   return null;
 }

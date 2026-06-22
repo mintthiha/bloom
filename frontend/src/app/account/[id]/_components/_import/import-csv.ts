@@ -59,9 +59,24 @@ const MERCHANT_DICTIONARY: [pattern: RegExp, name: string][] = [
 
 /** City/location words that signal the end of a merchant name in a description. */
 const CITY_WORDS = new Set([
-  "MONTREAL", "TORONTO", "VANCOUVER", "CALGARY", "OTTAWA", "EDMONTON",
-  "WINNIPEG", "LAVAL", "GATINEAU", "BLAINVILLE", "WESTMOUNT", "STOCKHOLM",
-  "CHATEAUGUAY", "KIRKLAND", "LONGUEUIL", "BROSSARD", "LASALLE", "POINTE",
+  "MONTREAL",
+  "TORONTO",
+  "VANCOUVER",
+  "CALGARY",
+  "OTTAWA",
+  "EDMONTON",
+  "WINNIPEG",
+  "LAVAL",
+  "GATINEAU",
+  "BLAINVILLE",
+  "WESTMOUNT",
+  "STOCKHOLM",
+  "CHATEAUGUAY",
+  "KIRKLAND",
+  "LONGUEUIL",
+  "BROSSARD",
+  "LASALLE",
+  "POINTE",
 ]);
 
 /** Returns true for descriptions that represent a credit card payment (no merchant). */
@@ -108,52 +123,52 @@ export function extractMerchant(description: string): string | undefined {
  */
 const MERCHANT_CATEGORY_MAP: Record<string, string> = {
   // Groceries
-  "Loblaws": "Groceries",
-  "Maxi": "Groceries",
-  "IGA": "Groceries",
+  Loblaws: "Groceries",
+  Maxi: "Groceries",
+  IGA: "Groceries",
   "Super C": "Groceries",
-  "Costco": "Groceries",
-  "Walmart": "Groceries",
+  Costco: "Groceries",
+  Walmart: "Groceries",
   // Dining
   "Tim Hortons": "Dining",
-  "Starbucks": "Dining",
+  Starbucks: "Dining",
   "McDonald's": "Dining",
   "Burger King": "Dining",
-  "Subway": "Dining",
+  Subway: "Dining",
   "Pizza Hut": "Dining",
-  "Popeyes": "Dining",
-  "DoorDash": "Dining",
-  "SkipTheDishes": "Dining",
-  "Uber": "Dining",
+  Popeyes: "Dining",
+  DoorDash: "Dining",
+  SkipTheDishes: "Dining",
+  Uber: "Dining",
   // Entertainment
-  "Netflix": "Entertainment",
-  "Spotify": "Entertainment",
-  "Cineplex": "Entertainment",
+  Netflix: "Entertainment",
+  Spotify: "Entertainment",
+  Cineplex: "Entertainment",
   "Ciné Starz": "Entertainment",
-  "Apple": "Entertainment",
-  "Google": "Entertainment",
+  Apple: "Entertainment",
+  Google: "Entertainment",
   // Shopping
-  "Amazon": "Shopping",
-  "Dollarama": "Shopping",
+  Amazon: "Shopping",
+  Dollarama: "Shopping",
   "Best Buy": "Shopping",
   "Canadian Tire": "Shopping",
   "Urban Planet": "Shopping",
-  "SAQ": "Shopping",
-  "Airbnb": "Shopping",
-  "Microsoft": "Shopping",
+  SAQ: "Shopping",
+  Airbnb: "Shopping",
+  Microsoft: "Shopping",
   // Healthcare
-  "Pharmaprix": "Healthcare",
-  "Econofitness": "Healthcare",
+  Pharmaprix: "Healthcare",
+  Econofitness: "Healthcare",
   // Transport
   "Petro-Canada": "Transport",
-  "Impark": "Transport",
-  "RTM": "Transport",
+  Impark: "Transport",
+  RTM: "Transport",
   // Utilities
   "Hydro-Québec": "Utilities",
-  "Bell": "Utilities",
-  "Vidéotron": "Utilities",
-  "Rogers": "Utilities",
-  "Telus": "Utilities",
+  Bell: "Utilities",
+  Vidéotron: "Utilities",
+  Rogers: "Utilities",
+  Telus: "Utilities",
 };
 
 /** Returns the standard category for a known merchant name, or undefined if unrecognized. */
@@ -186,9 +201,11 @@ export function splitCsvLine(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (c === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (c === ',' && !inQuotes) {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else inQuotes = !inQuotes;
+    } else if (c === "," && !inQuotes) {
       result.push(current);
       current = "";
     } else {
@@ -209,76 +226,91 @@ function convertRbcDate(dateStr: string): string {
 export function parseCsvText(text: string): CsvRow[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = splitCsvLine(lines[0]!).map(h => h.toLowerCase().replace(/^"|"$/g, "").trim());
+  const headers = splitCsvLine(lines[0]!).map((h) => h.toLowerCase().replace(/^"|"$/g, "").trim());
 
-  const isRbc = headers.includes("transaction date") && headers.includes("cad$") && headers.includes("cheque number");
+  const isRbc =
+    headers.includes("transaction date") &&
+    headers.includes("cad$") &&
+    headers.includes("cheque number");
 
   // Detect whether this is an RBC credit card export (Visa / Mastercard / Amex)
   let isRbcCredit = false;
   if (isRbc) {
-    const firstDataLine = lines.slice(1).find(l => l.trim());
+    const firstDataLine = lines.slice(1).find((l) => l.trim());
     if (firstDataLine) {
       const csvAccountType = (splitCsvLine(firstDataLine)[0] ?? "").trim().toLowerCase();
-      isRbcCredit = csvAccountType === "visa" || csvAccountType === "mastercard" || csvAccountType === "amex";
+      isRbcCredit =
+        csvAccountType === "visa" || csvAccountType === "mastercard" || csvAccountType === "amex";
     }
   }
 
-  return lines.slice(1).filter(l => l.trim()).map((line) => {
-    const values = splitCsvLine(line);
-    const raw = Object.fromEntries(headers.map((h, i) => [h, (values[i] ?? "").replace(/^"|"$/g, "").trim()]));
+  return lines
+    .slice(1)
+    .filter((l) => l.trim())
+    .map((line) => {
+      const values = splitCsvLine(line);
+      const raw = Object.fromEntries(
+        headers.map((h, i) => [h, (values[i] ?? "").replace(/^"|"$/g, "").trim()])
+      );
 
-    if (isRbc) {
-      const cadRaw = raw["cad$"] ?? "";
-      const cadNum = parseFloat(cadRaw);
-      const desc1 = raw["description 1"] ?? "";
-      const desc2 = raw["description 2"] ?? "";
-      const description = desc1 && desc2 ? `${desc1} - ${desc2}` : (desc1 || desc2 || undefined);
+      if (isRbc) {
+        const cadRaw = raw["cad$"] ?? "";
+        const cadNum = parseFloat(cadRaw);
+        const desc1 = raw["description 1"] ?? "";
+        const desc2 = raw["description 2"] ?? "";
+        const description = desc1 && desc2 ? `${desc1} - ${desc2}` : desc1 || desc2 || undefined;
 
-      // Credit card: negative = charge, positive = payment
-      // Chequing/savings: positive = deposit, negative = withdrawal
-      const type = isRbcCredit
-        ? (cadNum >= 0 ? "payment" : "charge")
-        : (cadNum >= 0 ? "deposit" : "withdrawal");
+        // Credit card: negative = charge, positive = payment
+        // Chequing/savings: positive = deposit, negative = withdrawal
+        const type = isRbcCredit
+          ? cadNum >= 0
+            ? "payment"
+            : "charge"
+          : cadNum >= 0
+            ? "deposit"
+            : "withdrawal";
 
-      const rbcMerchant = extractMerchant(desc1);
+        const rbcMerchant = extractMerchant(desc1);
+        const row: CsvRow = {
+          date: convertRbcDate(raw["transaction date"] ?? ""),
+          type,
+          amount: Math.abs(cadNum).toFixed(2),
+          description: description || undefined,
+          merchant: rbcMerchant,
+          category: rbcMerchant ? lookupMerchantCategory(rbcMerchant) : undefined,
+        };
+        if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
+          row.error = `Invalid date "${raw["transaction date"] ?? ""}"`;
+        } else if (cadRaw === "" || Number.isNaN(cadNum) || cadNum === 0) {
+          row.error = `Invalid amount "${cadRaw}"`;
+        }
+        return row;
+      }
+
+      const csvMerchant = raw["merchant"] || undefined;
+      const csvCategory = raw["category"] || undefined;
       const row: CsvRow = {
-        date: convertRbcDate(raw["transaction date"] ?? ""),
-        type,
-        amount: Math.abs(cadNum).toFixed(2),
-        description: description || undefined,
-        merchant: rbcMerchant,
-        category: rbcMerchant ? lookupMerchantCategory(rbcMerchant) : undefined,
+        date: raw["date"] ?? "",
+        type: raw["type"] ?? "",
+        amount: raw["amount"] ?? "",
+        description: raw["description"] || undefined,
+        merchant: csvMerchant,
+        category: csvCategory ?? (csvMerchant ? lookupMerchantCategory(csvMerchant) : undefined),
       };
-      if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
-        row.error = `Invalid date "${raw["transaction date"] ?? ""}"`;
-      } else if (cadRaw === "" || Number.isNaN(cadNum) || cadNum === 0) {
-        row.error = `Invalid amount "${cadRaw}"`;
+      const normalizedType = row.type.toLowerCase();
+      const resolvedType =
+        normalizedType === "credit" || normalizedType === "charge"
+          ? "deposit"
+          : normalizedType === "debit" || normalizedType === "payment"
+            ? "withdrawal"
+            : normalizedType;
+      if (resolvedType !== "deposit" && resolvedType !== "withdrawal") {
+        row.error = `Unknown type "${row.type}"`;
+      } else if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
+        row.error = `Invalid date "${row.date}"`;
+      } else if (!row.amount || Number.isNaN(Number(row.amount)) || Number(row.amount) <= 0) {
+        row.error = `Invalid amount "${row.amount}"`;
       }
       return row;
-    }
-
-    const csvMerchant = raw["merchant"] || undefined;
-    const csvCategory = raw["category"] || undefined;
-    const row: CsvRow = {
-      date: raw["date"] ?? "",
-      type: raw["type"] ?? "",
-      amount: raw["amount"] ?? "",
-      description: raw["description"] || undefined,
-      merchant: csvMerchant,
-      category: csvCategory ?? (csvMerchant ? lookupMerchantCategory(csvMerchant) : undefined),
-    };
-    const normalizedType = row.type.toLowerCase();
-    const resolvedType =
-      normalizedType === "credit" || normalizedType === "charge" ? "deposit" :
-      normalizedType === "debit" || normalizedType === "payment" ? "withdrawal" :
-      normalizedType;
-    if (resolvedType !== "deposit" && resolvedType !== "withdrawal") {
-      row.error = `Unknown type "${row.type}"`;
-    } else if (!row.date || Number.isNaN(new Date(row.date).getTime())) {
-      row.error = `Invalid date "${row.date}"`;
-    } else if (!row.amount || Number.isNaN(Number(row.amount)) || Number(row.amount) <= 0) {
-      row.error = `Invalid amount "${row.amount}"`;
-    }
-    return row;
-  });
+    });
 }

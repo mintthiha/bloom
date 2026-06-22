@@ -3,12 +3,20 @@ import * as accountService from "../services/accountService";
 import { AccountType, TransactionType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import { parseDateRangeQuery } from "../lib/date-range";
-import { optionalString, requireObject, requirePositiveNumber, requireString } from "../lib/validation";
+import {
+  optionalString,
+  requireObject,
+  requirePositiveNumber,
+  requireString,
+} from "../lib/validation";
 
 const router = Router();
 
-const pid = (req: Request): string => req.params["id"] as string;
-const uid = (req: Request): string => {
+/** Extracts the route :id param from the request. */
+const extractParamId = (req: Request): string => req.params["id"] as string;
+
+/** Extracts the authenticated user id from the internal header, throwing 401 if absent. */
+const extractUserId = (req: Request): string => {
   const id = req.headers["x-user-id"] as string;
   if (!id) throw new AppError(401, "Unauthorized");
   return id;
@@ -16,8 +24,10 @@ const uid = (req: Request): string => {
 
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.listAccounts(uid(req)));
-  } catch (err) { next(err); }
+    res.json(await accountService.listAccounts(extractUserId(req)));
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
@@ -36,9 +46,16 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     ) {
       throw new AppError(400, "accountType must be CHEQUING, SAVINGS, TFSA, RRSP, FHSA, or CREDIT");
     }
-    const account = await accountService.createAccount(uid(req), ownerName, rawAccountType as AccountType, nickname);
+    const account = await accountService.createAccount(
+      extractUserId(req),
+      ownerName,
+      rawAccountType as AccountType,
+      nickname
+    );
     res.status(201).json(account);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
@@ -46,49 +63,77 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
  */
 router.get("/summary/monthly", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.getMonthlySummary(uid(req), parseDateRangeQuery({
-      start: req.query["start"],
-      end: req.query["end"],
-    })));
-  } catch (err) { next(err); }
+    res.json(
+      await accountService.getMonthlySummary(
+        extractUserId(req),
+        parseDateRangeQuery({
+          start: req.query["start"],
+          end: req.query["end"],
+        })
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
  * Returns spending grouped by (category, account) for the 50/30/20 drilldown view.
  */
-router.get("/summary/category-breakdown", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    res.json(await accountService.getCategoryBreakdown(uid(req), parseDateRangeQuery({
-      start: req.query["start"],
-      end: req.query["end"],
-    })));
-  } catch (err) { next(err); }
-});
+router.get(
+  "/summary/category-breakdown",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(
+        await accountService.getCategoryBreakdown(
+          extractUserId(req),
+          parseDateRangeQuery({
+            start: req.query["start"],
+            end: req.query["end"],
+          })
+        )
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.get("/summary/trends", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const months = Math.min(Math.max(parseInt(String(req.query["months"] ?? "6"), 10) || 6, 1), 24);
-    res.json(await accountService.getMonthlyTrends(uid(req), months));
-  } catch (err) { next(err); }
+    res.json(await accountService.getMonthlyTrends(extractUserId(req), months));
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/networth/snapshot", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.recordNetWorthSnapshot(uid(req)));
-  } catch (err) { next(err); }
+    res.json(await accountService.recordNetWorthSnapshot(extractUserId(req)));
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get("/networth/history", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const months = Math.min(Math.max(parseInt(String(req.query["months"] ?? "12"), 10) || 12, 1), 36);
-    res.json(await accountService.getNetWorthHistory(uid(req), months));
-  } catch (err) { next(err); }
+    const months = Math.min(
+      Math.max(parseInt(String(req.query["months"] ?? "12"), 10) || 12, 1),
+      36
+    );
+    res.json(await accountService.getNetWorthHistory(extractUserId(req), months));
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json(await accountService.getAccount(uid(req), pid(req)));
-  } catch (err) { next(err); }
+    res.json(await accountService.getAccount(extractUserId(req), extractParamId(req)));
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/:id/deposit", async (req: Request, res: Response, next: NextFunction) => {
@@ -98,9 +143,19 @@ router.post("/:id/deposit", async (req: Request, res: Response, next: NextFuncti
     const category = optionalString(body.category, "category", { max: 50 });
     const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
-    const [account] = await accountService.deposit(uid(req), pid(req), amount, category, description, undefined, merchant);
+    const [account] = await accountService.deposit(
+      extractUserId(req),
+      extractParamId(req),
+      amount,
+      category,
+      description,
+      undefined,
+      merchant
+    );
     res.json(account);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/:id/withdraw", async (req: Request, res: Response, next: NextFunction) => {
@@ -110,9 +165,19 @@ router.post("/:id/withdraw", async (req: Request, res: Response, next: NextFunct
     const category = optionalString(body.category, "category", { max: 50 });
     const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
-    const [account] = await accountService.withdraw(uid(req), pid(req), amount, category, description, undefined, merchant);
+    const [account] = await accountService.withdraw(
+      extractUserId(req),
+      extractParamId(req),
+      amount,
+      category,
+      description,
+      undefined,
+      merchant
+    );
     res.json(account);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/:id/transfer", async (req: Request, res: Response, next: NextFunction) => {
@@ -122,9 +187,18 @@ router.post("/:id/transfer", async (req: Request, res: Response, next: NextFunct
     const amount = requirePositiveNumber(body.amount, "amount");
     const description = optionalString(body.description, "description", { max: 240 });
     const category = optionalString(body.category, "category", { max: 50 });
-    const [fromAccount] = await accountService.transfer(uid(req), pid(req), toAccountId, amount, description, category);
+    const [fromAccount] = await accountService.transfer(
+      extractUserId(req),
+      extractParamId(req),
+      toAccountId,
+      amount,
+      description,
+      category
+    );
     res.json(fromAccount);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/:id/import", async (req: Request, res: Response, next: NextFunction) => {
@@ -135,7 +209,8 @@ router.post("/:id/import", async (req: Request, res: Response, next: NextFunctio
     if (body.rows.length > 500) throw new AppError(400, "Cannot import more than 500 rows at once");
 
     const rows = (body.rows as unknown[]).map((row, i) => {
-      if (typeof row !== "object" || row === null) throw new AppError(400, `Row ${i + 1}: must be an object`);
+      if (typeof row !== "object" || row === null)
+        throw new AppError(400, `Row ${i + 1}: must be an object`);
       const r = row as Record<string, unknown>;
 
       const rawType = String(r.type ?? "").toUpperCase();
@@ -163,8 +238,12 @@ router.post("/:id/import", async (req: Request, res: Response, next: NextFunctio
       };
     });
 
-    res.json(await accountService.importTransactions(uid(req), pid(req), rows));
-  } catch (err) { next(err); }
+    res.json(
+      await accountService.importTransactions(extractUserId(req), extractParamId(req), rows)
+    );
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get("/:id/transactions", async (req: Request, res: Response, next: NextFunction) => {
@@ -172,7 +251,13 @@ router.get("/:id/transactions", async (req: Request, res: Response, next: NextFu
     const type = req.query["type"];
     const category = req.query["category"];
     const search = req.query["search"];
-    if (type !== undefined && type !== "DEPOSIT" && type !== "WITHDRAWAL" && type !== "TRANSFER_OUT" && type !== "TRANSFER_IN") {
+    if (
+      type !== undefined &&
+      type !== "DEPOSIT" &&
+      type !== "WITHDRAWAL" &&
+      type !== "TRANSFER_OUT" &&
+      type !== "TRANSFER_IN"
+    ) {
       throw new AppError(400, "type must be DEPOSIT, WITHDRAWAL, TRANSFER_OUT, or TRANSFER_IN");
     }
     if (category !== undefined && typeof category !== "string") {
@@ -181,69 +266,97 @@ router.get("/:id/transactions", async (req: Request, res: Response, next: NextFu
     if (search !== undefined && typeof search !== "string") {
       throw new AppError(400, "search must be a string");
     }
-    res.json(await accountService.getTransactions(uid(req), pid(req), {
-      type: type as TransactionType | undefined,
-      category: typeof category === "string" ? category : undefined,
-      search: typeof search === "string" ? search : undefined,
-      ...parseDateRangeQuery({
-        start: req.query["start"],
-        end: req.query["end"],
-      }),
-    }));
-  } catch (err) { next(err); }
+    res.json(
+      await accountService.getTransactions(extractUserId(req), extractParamId(req), {
+        type: type as TransactionType | undefined,
+        category: typeof category === "string" ? category : undefined,
+        search: typeof search === "string" ? search : undefined,
+        ...parseDateRangeQuery({
+          start: req.query["start"],
+          end: req.query["end"],
+        }),
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
  * Updates a manual deposit or withdrawal for the selected account.
  */
-router.patch("/:id/transactions/:transactionId", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const body = requireObject(req.body);
-    const amount = requirePositiveNumber(body.amount, "amount");
-    const category = optionalString(body.category, "category", { max: 50 });
-    const merchant = optionalString(body.merchant, "merchant", { max: 100 });
-    const description = optionalString(body.description, "description", { max: 240 });
-    const effectiveAtValue = body.effectiveAt;
-    if (effectiveAtValue !== undefined && typeof effectiveAtValue !== "string") {
-      throw new AppError(400, "effectiveAt must be an ISO date string");
+router.patch(
+  "/:id/transactions/:transactionId",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = requireObject(req.body);
+      const amount = requirePositiveNumber(body.amount, "amount");
+      const category = optionalString(body.category, "category", { max: 50 });
+      const merchant = optionalString(body.merchant, "merchant", { max: 100 });
+      const description = optionalString(body.description, "description", { max: 240 });
+      const effectiveAtValue = body.effectiveAt;
+      if (effectiveAtValue !== undefined && typeof effectiveAtValue !== "string") {
+        throw new AppError(400, "effectiveAt must be an ISO date string");
+      }
+      const effectiveAt =
+        typeof effectiveAtValue === "string" ? new Date(effectiveAtValue) : undefined;
+      if (effectiveAt && Number.isNaN(effectiveAt.getTime())) {
+        throw new AppError(400, "effectiveAt must be a valid ISO date");
+      }
+      const account = await accountService.updateTransaction(
+        extractUserId(req),
+        extractParamId(req),
+        req.params["transactionId"] as string,
+        {
+          amount,
+          category,
+          merchant,
+          description,
+          effectiveAt,
+        }
+      );
+      res.json(account);
+    } catch (err) {
+      next(err);
     }
-    const effectiveAt = typeof effectiveAtValue === "string" ? new Date(effectiveAtValue) : undefined;
-    if (effectiveAt && Number.isNaN(effectiveAt.getTime())) {
-      throw new AppError(400, "effectiveAt must be a valid ISO date");
-    }
-    const account = await accountService.updateTransaction(uid(req), pid(req), req.params["transactionId"] as string, {
-      amount,
-      category,
-      merchant,
-      description,
-      effectiveAt,
-    });
-    res.json(account);
-  } catch (err) { next(err); }
-});
+  }
+);
 
 /**
  * Deletes a manual deposit or withdrawal for the selected account.
  */
-router.delete("/:id/transactions/:transactionId", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    await accountService.deleteTransaction(uid(req), pid(req), req.params["transactionId"] as string);
-    res.status(204).send();
-  } catch (err) { next(err); }
-});
+router.delete(
+  "/:id/transactions/:transactionId",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await accountService.deleteTransaction(
+        extractUserId(req),
+        extractParamId(req),
+        req.params["transactionId"] as string
+      );
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.patch("/:id/freeze", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const account = await accountService.freezeAccount(uid(req), pid(req));
+    const account = await accountService.freezeAccount(extractUserId(req), extractParamId(req));
     res.json(account);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch("/:id/unfreeze", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const account = await accountService.unfreezeAccount(uid(req), pid(req));
+    const account = await accountService.unfreezeAccount(extractUserId(req), extractParamId(req));
     res.json(account);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
@@ -253,16 +366,24 @@ router.patch("/:id/nickname", async (req: Request, res: Response, next: NextFunc
   try {
     const body = requireObject(req.body);
     const nickname = optionalString(body.nickname, "nickname", { max: 60 });
-    const account = await accountService.updateNickname(uid(req), pid(req), nickname);
+    const account = await accountService.updateNickname(
+      extractUserId(req),
+      extractParamId(req),
+      nickname
+    );
     res.json(account);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await accountService.deleteAccount(uid(req), pid(req));
+    await accountService.deleteAccount(extractUserId(req), extractParamId(req));
     res.status(204).send();
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

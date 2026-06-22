@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from "./savingsGoalService";
-import { AppError } from "../middleware/errorHandler";
+import {
+  listSavingsGoals,
+  createSavingsGoal,
+  updateSavingsGoal,
+  deleteSavingsGoal,
+} from "./savingsGoalService";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
@@ -58,7 +62,9 @@ beforeEach(() => {
 
 describe("normalizeSavingsGoalRow", () => {
   it("coerces string targetAmount and accountBalance to numbers", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([makeGoalRow({ targetAmount: "5000", accountBalance: "1000" })]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ targetAmount: "5000", accountBalance: "1000" }),
+    ]);
 
     const [goal] = await listSavingsGoals("u-1");
 
@@ -89,7 +95,9 @@ describe("normalizeSavingsGoalRow", () => {
   });
 
   it("computes percentageReached correctly for a partial balance", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([makeGoalRow({ targetAmount: "1000", accountBalance: "250" })]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ targetAmount: "1000", accountBalance: "250" }),
+    ]);
 
     const [goal] = await listSavingsGoals("u-1");
 
@@ -97,7 +105,9 @@ describe("normalizeSavingsGoalRow", () => {
   });
 
   it("clamps percentageReached to 100 when balance exceeds target", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([makeGoalRow({ targetAmount: "500", accountBalance: "9999" })]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ targetAmount: "500", accountBalance: "9999" }),
+    ]);
 
     const [goal] = await listSavingsGoals("u-1");
 
@@ -105,7 +115,9 @@ describe("normalizeSavingsGoalRow", () => {
   });
 
   it("clamps percentageReached to 0 when balance is negative", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([makeGoalRow({ targetAmount: "1000", accountBalance: "-500" })]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ targetAmount: "1000", accountBalance: "-500" }),
+    ]);
 
     const [goal] = await listSavingsGoals("u-1");
 
@@ -113,7 +125,9 @@ describe("normalizeSavingsGoalRow", () => {
   });
 
   it("returns percentageReached of 0 when targetAmount is 0", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([makeGoalRow({ targetAmount: "0", accountBalance: "500" })]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ targetAmount: "0", accountBalance: "500" }),
+    ]);
 
     const [goal] = await listSavingsGoals("u-1");
 
@@ -165,10 +179,14 @@ describe("createSavingsGoal", () => {
     const row = makeGoalRow({ name: "New Goal", targetAmount: "2000", accountBalance: "500" });
     prismaMock.$queryRaw
       .mockResolvedValueOnce([{ id: "a-1" }]) // account check
-      .mockResolvedValueOnce([row]);            // fetchSavingsGoalWithAccount
+      .mockResolvedValueOnce([row]); // fetchSavingsGoalWithAccount
     prismaMock.$executeRaw.mockResolvedValueOnce(1);
 
-    const goal = await createSavingsGoal("u-1", { accountId: "a-1", name: "New Goal", targetAmount: 2000 });
+    const goal = await createSavingsGoal("u-1", {
+      accountId: "a-1",
+      name: "New Goal",
+      targetAmount: 2000,
+    });
 
     expect(goal.name).toBe("New Goal");
     expect(goal.targetAmount).toBe(2000);
@@ -192,7 +210,7 @@ describe("updateSavingsGoal", () => {
   it("throws AppError 404 when the new account does not belong to the user", async () => {
     prismaMock.$queryRaw
       .mockResolvedValueOnce([{ id: "g-1" }]) // getSavingsGoalOrThrow → found
-      .mockResolvedValueOnce([]);              // account check → not found
+      .mockResolvedValueOnce([]); // account check → not found
 
     await expect(
       updateSavingsGoal("u-1", "g-1", { accountId: "a-99", name: "Goal", targetAmount: 1000 })
@@ -204,10 +222,14 @@ describe("updateSavingsGoal", () => {
     prismaMock.$queryRaw
       .mockResolvedValueOnce([{ id: "g-1" }]) // getSavingsGoalOrThrow
       .mockResolvedValueOnce([{ id: "a-1" }]) // account check
-      .mockResolvedValueOnce([row]);           // fetchSavingsGoalWithAccount
+      .mockResolvedValueOnce([row]); // fetchSavingsGoalWithAccount
     prismaMock.$executeRaw.mockResolvedValueOnce(1);
 
-    const goal = await updateSavingsGoal("u-1", "g-1", { accountId: "a-1", name: "Updated Goal", targetAmount: 3000 });
+    const goal = await updateSavingsGoal("u-1", "g-1", {
+      accountId: "a-1",
+      name: "Updated Goal",
+      targetAmount: 3000,
+    });
 
     expect(goal.name).toBe("Updated Goal");
     expect(goal.targetAmount).toBe(3000);

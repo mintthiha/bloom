@@ -70,7 +70,10 @@ describe("budget routes", () => {
       .send({ category: "Dining", monthlyLimit: 250 });
 
     expect(response.status).toBe(200);
-    expect(serviceMock.upsertBudget).toHaveBeenCalledWith("user-1", { category: "Dining", monthlyLimit: 250 });
+    expect(serviceMock.upsertBudget).toHaveBeenCalledWith("user-1", {
+      category: "Dining",
+      monthlyLimit: 250,
+    });
     expect(response.body).toMatchObject({ category: "Dining", monthlyLimit: 250 });
   });
 

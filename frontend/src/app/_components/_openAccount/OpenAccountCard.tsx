@@ -33,11 +33,7 @@ export function OpenAccountCard({ onCreated }: Props) {
     setCreating(true);
     setError(null);
     try {
-      await api.createAccount(
-        ownerName.trim(),
-        accountType,
-        nickname.trim() || undefined
-      );
+      await api.createAccount(ownerName.trim(), accountType, nickname.trim() || undefined);
       setOwnerName("");
       setNickname("");
       await onCreated();
@@ -49,11 +45,7 @@ export function OpenAccountCard({ onCreated }: Props) {
   }
 
   return (
-    <CollapsibleCard
-      eyebrow="Open New Account"
-      className="fade-up fade-up-2"
-      style={{}}
-    >
+    <CollapsibleCard eyebrow="Open New Account" className="fade-up fade-up-2" style={{}}>
       <form onSubmit={handleCreate}>
         <div
           style={{
@@ -133,10 +125,7 @@ export function OpenAccountCard({ onCreated }: Props) {
           </div>
         </div>
         {error && (
-          <p
-            className="num"
-            style={{ color: "#f87171", fontSize: "12px", marginTop: "8px" }}
-          >
+          <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "8px" }}>
             {error}
           </p>
         )}

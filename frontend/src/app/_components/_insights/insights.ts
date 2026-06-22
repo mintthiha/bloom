@@ -41,16 +41,13 @@ export function generateInsights({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const daysLeftInMonth =
-    new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() -
-    today.getDate();
+    new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate();
 
   // Rule 1: Over-budget categories (warning — highest priority)
   const overBudgetItems = budgets.filter((b) => b.isOverBudget);
   if (overBudgetItems.length > 0) {
     const worst = overBudgetItems.reduce((a, b) =>
-      a.currentSpending - a.monthlyLimit > b.currentSpending - b.monthlyLimit
-        ? a
-        : b
+      a.currentSpending - a.monthlyLimit > b.currentSpending - b.monthlyLimit ? a : b
     );
     const overage = worst.currentSpending - worst.monthlyLimit;
     insights.push({
@@ -76,8 +73,7 @@ export function generateInsights({
       id: "overdue-recurring",
       severity: "warning",
       message: `${overdueRules.length} recurring transaction${overdueRules.length !== 1 ? "s" : ""} overdue`,
-      detail:
-        "Apply due transactions from the Recurring section to keep your balances accurate.",
+      detail: "Apply due transactions from the Recurring section to keep your balances accurate.",
     });
   }
 
@@ -117,18 +113,14 @@ export function generateInsights({
     .filter((a) => a.accountType === "CHEQUING")
     .reduce((sum, a) => sum + a.balance, 0);
   const hasRegisteredAccounts = accounts.some(
-    (a) =>
-      a.accountType === "TFSA" ||
-      a.accountType === "RRSP" ||
-      a.accountType === "FHSA"
+    (a) => a.accountType === "TFSA" || a.accountType === "RRSP" || a.accountType === "FHSA"
   );
   if (totalChequing > 1000 && hasRegisteredAccounts) {
     insights.push({
       id: "idle-chequing",
       severity: "info",
       message: `${formatCurrencyWhole(totalChequing)} sitting in chequing`,
-      detail:
-        "Consider moving some to your TFSA, RRSP, or FHSA to grow it tax-free.",
+      detail: "Consider moving some to your TFSA, RRSP, or FHSA to grow it tax-free.",
     });
   }
 
@@ -142,8 +134,7 @@ export function generateInsights({
         id: "low-savings-rate",
         severity: "warning",
         message: `Savings rate is only ${Math.round(savingsRate * 100)}% this month`,
-        detail:
-          "Most financial plans target 20%. Review your largest spending categories.",
+        detail: "Most financial plans target 20%. Review your largest spending categories.",
       });
     }
   }

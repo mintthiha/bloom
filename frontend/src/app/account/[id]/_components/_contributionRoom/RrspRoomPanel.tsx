@@ -17,7 +17,14 @@ function RoomProgressBar({ used, total, color }: { used: number; total: number; 
   const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0;
   return (
     <div style={{ marginTop: "8px" }}>
-      <div style={{ height: "8px", background: "var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+      <div
+        style={{
+          height: "8px",
+          background: "var(--border)",
+          borderRadius: "4px",
+          overflow: "hidden",
+        }}
+      >
         <div
           style={{
             height: "100%",
@@ -70,7 +77,8 @@ export function RrspRoomPanel({ transactions, accountIds, profile }: RrspRoomPan
                 color: "#f87171",
               }}
             >
-              You may be over your estimated RRSP deduction limit. RRSP over-contributions above $2,000 are penalized at 1% per month.
+              You may be over your estimated RRSP deduction limit. RRSP over-contributions above
+              $2,000 are penalized at 1% per month.
             </div>
           )}
           <div>
@@ -104,8 +112,13 @@ export function RrspRoomPanel({ transactions, accountIds, profile }: RrspRoomPan
           color: "var(--text-muted)",
         }}
       >
-        <span>Based on deposits tracked in Bloom — does not include contributions made outside the app.</span>
-        <Link href="/learn" style={{ color: accentColor, whiteSpace: "nowrap", marginLeft: "12px" }}>
+        <span>
+          Based on deposits tracked in Bloom — does not include contributions made outside the app.
+        </span>
+        <Link
+          href="/learn"
+          style={{ color: accentColor, whiteSpace: "nowrap", marginLeft: "12px" }}
+        >
           What is this?
         </Link>
       </div>

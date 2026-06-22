@@ -27,12 +27,7 @@ type PayoffScenarioRowProps = {
 };
 
 /** Renders one payoff scenario row with its monthly payment, time to payoff, and total interest. */
-function PayoffScenarioRow({
-  label,
-  monthlyPayment,
-  result,
-  highlighted,
-}: PayoffScenarioRowProps) {
+function PayoffScenarioRow({ label, monthlyPayment, result, highlighted }: PayoffScenarioRowProps) {
   return (
     <div
       style={{
@@ -121,15 +116,13 @@ export function DebtPayoffPanel({ account }: DebtPayoffPanelProps) {
         }
       : null;
 
-  const chartMaxMonths = minimumResult.feasible
-    ? Math.min(minimumResult.monthsToPayoff, 600)
-    : 120;
+  const chartMaxMonths = minimumResult.feasible ? Math.min(minimumResult.monthsToPayoff, 600) : 120;
   const chartStep = Math.max(1, Math.ceil(chartMaxMonths / 80));
   const minimumBalanceSeries = buildPayoffBalanceSeries(
     balance,
     effectiveApr,
     minimumPayment,
-    chartMaxMonths,
+    chartMaxMonths
   );
   const userBalanceSeries =
     isValidPayment && userResult?.feasible

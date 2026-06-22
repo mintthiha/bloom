@@ -2,10 +2,24 @@ import type { Transaction } from "./api";
 
 /** CRA annual TFSA contribution limits by year. */
 const TFSA_ANNUAL_LIMITS: Record<number, number> = {
-  2009: 5000, 2010: 5000, 2011: 5000, 2012: 5000, 2013: 5500,
-  2014: 5500, 2015: 10000, 2016: 5500, 2017: 5500, 2018: 5500,
-  2019: 6000, 2020: 6000, 2021: 6000, 2022: 6000, 2023: 6500,
-  2024: 7000, 2025: 7000, 2026: 7000,
+  2009: 5000,
+  2010: 5000,
+  2011: 5000,
+  2012: 5000,
+  2013: 5500,
+  2014: 5500,
+  2015: 10000,
+  2016: 5500,
+  2017: 5500,
+  2018: 5500,
+  2019: 6000,
+  2020: 6000,
+  2021: 6000,
+  2022: 6000,
+  2023: 6500,
+  2024: 7000,
+  2025: 7000,
+  2026: 7000,
 };
 
 /** CRA fixed annual FHSA contribution limit. */
@@ -35,7 +49,10 @@ export function calculateTfsaLifetimeRoom(birthYear: number, currentYear: number
  * Transfers between accounts of the same type (both in accountIds) are excluded so they
  * don't inflate or deflate the contribution total.
  */
-export function calculateNetContributions(transactions: Transaction[], accountIds: string[]): number {
+export function calculateNetContributions(
+  transactions: Transaction[],
+  accountIds: string[]
+): number {
   const accountIdSet = new Set(accountIds);
   let net = 0;
   for (const txn of transactions) {
@@ -49,14 +66,20 @@ export function calculateNetContributions(transactions: Transaction[], accountId
       }
     } else if (txn.type === "TRANSFER_IN") {
       // Count cross-type inflows only; same-type transfers cancel out
-      if (txn.toAccountId && accountIdSet.has(txn.toAccountId) &&
-          (!txn.fromAccountId || !accountIdSet.has(txn.fromAccountId))) {
+      if (
+        txn.toAccountId &&
+        accountIdSet.has(txn.toAccountId) &&
+        (!txn.fromAccountId || !accountIdSet.has(txn.fromAccountId))
+      ) {
         net += txn.amount;
       }
     } else if (txn.type === "TRANSFER_OUT") {
       // Count cross-type outflows only; same-type transfers cancel out
-      if (txn.fromAccountId && accountIdSet.has(txn.fromAccountId) &&
-          (!txn.toAccountId || !accountIdSet.has(txn.toAccountId))) {
+      if (
+        txn.fromAccountId &&
+        accountIdSet.has(txn.fromAccountId) &&
+        (!txn.toAccountId || !accountIdSet.has(txn.toAccountId))
+      ) {
         net -= txn.amount;
       }
     }

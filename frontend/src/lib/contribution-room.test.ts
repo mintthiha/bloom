@@ -67,9 +67,7 @@ describe("calculateNetContributions", () => {
   });
 
   it("sums WITHDRAWAL negatively for accounts in accountIds", () => {
-    const transactions = [
-      txn({ type: "WITHDRAWAL", amount: 300, fromAccountId: "acc1" }),
-    ];
+    const transactions = [txn({ type: "WITHDRAWAL", amount: 300, fromAccountId: "acc1" })];
     expect(calculateNetContributions(transactions, ["acc1"])).toBe(-300);
   });
 
@@ -113,9 +111,7 @@ describe("calculateNetContributions", () => {
 
   it("only counts transactions whose account is in accountIds", () => {
     // DEPOSIT to acc2 should not count when accountIds = ["acc1"]
-    const transactions = [
-      txn({ type: "DEPOSIT", amount: 999, toAccountId: "acc2" }),
-    ];
+    const transactions = [txn({ type: "DEPOSIT", amount: 999, toAccountId: "acc2" })];
     expect(calculateNetContributions(transactions, ["acc1"])).toBe(0);
   });
 
@@ -132,23 +128,49 @@ describe("calculateNetContributions", () => {
 describe("calculateNetContributionsForYear", () => {
   it("only counts transactions that occurred in the specified year", () => {
     const transactions = [
-      txn({ type: "DEPOSIT", amount: 1000, toAccountId: "acc1", effectiveAt: "2025-03-01T00:00:00.000Z" }),
-      txn({ type: "DEPOSIT", amount: 2000, toAccountId: "acc1", effectiveAt: "2026-01-15T00:00:00.000Z" }),
+      txn({
+        type: "DEPOSIT",
+        amount: 1000,
+        toAccountId: "acc1",
+        effectiveAt: "2025-03-01T00:00:00.000Z",
+      }),
+      txn({
+        type: "DEPOSIT",
+        amount: 2000,
+        toAccountId: "acc1",
+        effectiveAt: "2026-01-15T00:00:00.000Z",
+      }),
     ];
     expect(calculateNetContributionsForYear(transactions, ["acc1"], 2026)).toBe(2000);
   });
 
   it("returns 0 when no transactions fall in the specified year", () => {
     const transactions = [
-      txn({ type: "DEPOSIT", amount: 5000, toAccountId: "acc1", effectiveAt: "2025-12-31T00:00:00.000Z" }),
+      txn({
+        type: "DEPOSIT",
+        amount: 5000,
+        toAccountId: "acc1",
+        effectiveAt: "2025-12-31T00:00:00.000Z",
+      }),
     ];
     expect(calculateNetContributionsForYear(transactions, ["acc1"], 2026)).toBe(0);
   });
 
   it("applies the same same-type transfer exclusion within the year", () => {
     const transactions = [
-      txn({ type: "TRANSFER_IN", amount: 1000, fromAccountId: "acc1", toAccountId: "acc2", effectiveAt: "2026-04-01T00:00:00.000Z" }),
-      txn({ type: "DEPOSIT", amount: 500, toAccountId: "acc1", effectiveAt: "2026-04-01T00:00:00.000Z" }),
+      txn({
+        type: "TRANSFER_IN",
+        amount: 1000,
+        fromAccountId: "acc1",
+        toAccountId: "acc2",
+        effectiveAt: "2026-04-01T00:00:00.000Z",
+      }),
+      txn({
+        type: "DEPOSIT",
+        amount: 500,
+        toAccountId: "acc1",
+        effectiveAt: "2026-04-01T00:00:00.000Z",
+      }),
     ];
     expect(calculateNetContributionsForYear(transactions, ["acc1", "acc2"], 2026)).toBe(500);
   });

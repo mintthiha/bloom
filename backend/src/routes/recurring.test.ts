@@ -90,7 +90,12 @@ describe("recurring routes", () => {
   });
 
   it("passes apply-due through to the service", async () => {
-    serviceMock.applyDueRecurringTransactions.mockResolvedValue({ appliedCount: 1, failedCount: 0, applied: [], failures: [] });
+    serviceMock.applyDueRecurringTransactions.mockResolvedValue({
+      appliedCount: 1,
+      failedCount: 0,
+      applied: [],
+      failures: [],
+    });
 
     const response = await request(app)
       .post("/api/recurring/apply-due")
@@ -145,7 +150,11 @@ describe("recurring routes", () => {
       .send({ active: false });
 
     expect(response.status).toBe(200);
-    expect(serviceMock.setRecurringTransactionActive).toHaveBeenCalledWith("user-1", "rule-1", false);
+    expect(serviceMock.setRecurringTransactionActive).toHaveBeenCalledWith(
+      "user-1",
+      "rule-1",
+      false
+    );
   });
 
   it("passes deletes through to the service", async () => {

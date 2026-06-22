@@ -21,11 +21,7 @@ function makeInputs(overrides: Partial<HealthScoreInputs> = {}): HealthScoreInpu
 }
 
 /** Creates an Account fixture with the given type and balance. */
-function makeAccount(
-  accountType: Account["accountType"],
-  balance: number,
-  id = "a-1"
-): Account {
+function makeAccount(accountType: Account["accountType"], balance: number, id = "a-1"): Account {
   return {
     id,
     ownerName: "Test User",
@@ -84,7 +80,14 @@ describe("computeHealthScore — savings rate sub-score", () => {
   it("returns score 0 when spending exceeds income (negative savings rate)", () => {
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 1100, netCashFlow: -100, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 1100,
+          netCashFlow: -100,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "savings_rate")!.score).toBe(0);
@@ -94,7 +97,14 @@ describe("computeHealthScore — savings rate sub-score", () => {
     // rate = 10 / 1000 = 1%
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 990, netCashFlow: 10, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 990,
+          netCashFlow: 10,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "savings_rate")!.score).toBe(2);
@@ -103,7 +113,14 @@ describe("computeHealthScore — savings rate sub-score", () => {
   it("returns score 6 when savings rate is exactly 5%", () => {
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 950, netCashFlow: 50, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 950,
+          netCashFlow: 50,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "savings_rate")!.score).toBe(6);
@@ -112,7 +129,14 @@ describe("computeHealthScore — savings rate sub-score", () => {
   it("returns score 12 when savings rate is exactly 10%", () => {
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 900, netCashFlow: 100, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 900,
+          netCashFlow: 100,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "savings_rate")!.score).toBe(12);
@@ -121,7 +145,14 @@ describe("computeHealthScore — savings rate sub-score", () => {
   it("returns score 16 when savings rate is exactly 15%", () => {
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 850, netCashFlow: 150, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 850,
+          netCashFlow: 150,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "savings_rate")!.score).toBe(16);
@@ -130,7 +161,14 @@ describe("computeHealthScore — savings rate sub-score", () => {
   it("returns score 20 and null tip when savings rate is exactly 20%", () => {
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 800, netCashFlow: 200, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 800,
+          netCashFlow: 200,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     const sub = result.subScores.find((s) => s.id === "savings_rate")!;
@@ -231,42 +269,54 @@ describe("computeHealthScore — debt ratio sub-score", () => {
   it("returns score 18 when credit balance is below 5% of cash assets (ratio < 0.05)", () => {
     // credit=40, cash=1000, ratio=0.04
     const result = computeHealthScore(
-      makeInputs({ accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 40, "a-2")] })
+      makeInputs({
+        accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 40, "a-2")],
+      })
     );
     expect(result.subScores.find((s) => s.id === "debt_ratio")!.score).toBe(18);
   });
 
   it("returns score 14 when credit balance is 10% of cash assets (0.05 <= ratio < 0.15)", () => {
     const result = computeHealthScore(
-      makeInputs({ accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 100, "a-2")] })
+      makeInputs({
+        accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 100, "a-2")],
+      })
     );
     expect(result.subScores.find((s) => s.id === "debt_ratio")!.score).toBe(14);
   });
 
   it("returns score 10 when credit balance is 20% of cash assets (0.15 <= ratio < 0.3)", () => {
     const result = computeHealthScore(
-      makeInputs({ accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 200, "a-2")] })
+      makeInputs({
+        accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 200, "a-2")],
+      })
     );
     expect(result.subScores.find((s) => s.id === "debt_ratio")!.score).toBe(10);
   });
 
   it("returns score 5 when credit balance is 40% of cash assets (0.3 <= ratio < 0.5)", () => {
     const result = computeHealthScore(
-      makeInputs({ accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 400, "a-2")] })
+      makeInputs({
+        accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 400, "a-2")],
+      })
     );
     expect(result.subScores.find((s) => s.id === "debt_ratio")!.score).toBe(5);
   });
 
   it("returns score 2 when credit balance is 60% of cash assets (0.5 <= ratio < 1.0)", () => {
     const result = computeHealthScore(
-      makeInputs({ accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 600, "a-2")] })
+      makeInputs({
+        accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 600, "a-2")],
+      })
     );
     expect(result.subScores.find((s) => s.id === "debt_ratio")!.score).toBe(2);
   });
 
   it("returns score 0 when credit balance equals or exceeds cash assets (ratio >= 1.0)", () => {
     const result = computeHealthScore(
-      makeInputs({ accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 1000, "a-2")] })
+      makeInputs({
+        accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("CREDIT", 1000, "a-2")],
+      })
     );
     expect(result.subScores.find((s) => s.id === "debt_ratio")!.score).toBe(0);
   });
@@ -301,7 +351,14 @@ describe("computeHealthScore — emergency coverage sub-score", () => {
     const result = computeHealthScore(
       makeInputs({
         accounts: [makeAccount("CHEQUING", 500)],
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "emergency_coverage")!.score).toBe(0);
@@ -311,7 +368,14 @@ describe("computeHealthScore — emergency coverage sub-score", () => {
     const result = computeHealthScore(
       makeInputs({
         accounts: [makeAccount("CHEQUING", 1000)],
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "emergency_coverage")!.score).toBe(6);
@@ -321,7 +385,14 @@ describe("computeHealthScore — emergency coverage sub-score", () => {
     const result = computeHealthScore(
       makeInputs({
         accounts: [makeAccount("CHEQUING", 2000)],
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "emergency_coverage")!.score).toBe(10);
@@ -331,7 +402,14 @@ describe("computeHealthScore — emergency coverage sub-score", () => {
     const result = computeHealthScore(
       makeInputs({
         accounts: [makeAccount("SAVINGS", 3000)],
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.subScores.find((s) => s.id === "emergency_coverage")!.score).toBe(15);
@@ -341,7 +419,14 @@ describe("computeHealthScore — emergency coverage sub-score", () => {
     const result = computeHealthScore(
       makeInputs({
         accounts: [makeAccount("SAVINGS", 6000)],
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     const sub = result.subScores.find((s) => s.id === "emergency_coverage")!;
@@ -354,10 +439,17 @@ describe("computeHealthScore — emergency coverage sub-score", () => {
     const result = computeHealthScore(
       makeInputs({
         accounts: [
-          makeAccount("TFSA", 10000, "a-1"),  // not liquid
+          makeAccount("TFSA", 10000, "a-1"), // not liquid
           makeAccount("CHEQUING", 500, "a-2"), // liquid
         ],
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     // liquidBalance=500, spending=1000 → 0.5 months → score 0
@@ -454,7 +546,14 @@ describe("computeHealthScore — grade boundaries", () => {
       makeInputs({
         accounts: [makeAccount("CREDIT", 500)],
         budgets: [makeBudget(100, 200, "b-1"), makeBudget(100, 200, "b-2")],
-        monthlySummary: { month: "2026-05", income: 1000, spending: 1100, netCashFlow: -100, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 1100,
+          netCashFlow: -100,
+          topExpenseCategory: null,
+          categories: [],
+        },
         netWorthHistory: [makeSnapshot(-1000, "s-1"), makeSnapshot(-1100, "s-2")],
       })
     );
@@ -468,7 +567,14 @@ describe("computeHealthScore — grade boundaries", () => {
     // total = 10+8+20+0+0 = 38
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 0, spending: 1000, netCashFlow: -1000, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 0,
+          spending: 1000,
+          netCashFlow: -1000,
+          topExpenseCategory: null,
+          categories: [],
+        },
         netWorthHistory: [makeSnapshot(-1000, "s-1"), makeSnapshot(-1100, "s-2")],
       })
     );
@@ -481,7 +587,14 @@ describe("computeHealthScore — grade boundaries", () => {
     // total = 20+8+20+0+10 = 58
     const result = computeHealthScore(
       makeInputs({
-        monthlySummary: { month: "2026-05", income: 1000, spending: 800, netCashFlow: 200, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 800,
+          netCashFlow: 200,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.grade).toBe("C");
@@ -494,7 +607,14 @@ describe("computeHealthScore — grade boundaries", () => {
     const result = computeHealthScore(
       makeInputs({
         budgets: [makeBudget(200, 100)],
-        monthlySummary: { month: "2026-05", income: 1000, spending: 800, netCashFlow: 200, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 800,
+          netCashFlow: 200,
+          topExpenseCategory: null,
+          categories: [],
+        },
       })
     );
     expect(result.grade).toBe("B");
@@ -508,7 +628,14 @@ describe("computeHealthScore — grade boundaries", () => {
       makeInputs({
         accounts: [makeAccount("CHEQUING", 3000)],
         budgets: [makeBudget(200, 100)],
-        monthlySummary: { month: "2026-05", income: 1000, spending: 500, netCashFlow: 200, topExpenseCategory: null, categories: [] },
+        monthlySummary: {
+          month: "2026-05",
+          income: 1000,
+          spending: 500,
+          netCashFlow: 200,
+          topExpenseCategory: null,
+          categories: [],
+        },
         netWorthHistory: [makeSnapshot(1000, "s-1"), makeSnapshot(1100, "s-2")],
       })
     );

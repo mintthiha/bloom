@@ -21,7 +21,7 @@ export function computeMinimumPayment(balance: number): number {
 export function computePayoffSchedule(
   balance: number,
   annualRatePercent: number,
-  monthlyPayment: number,
+  monthlyPayment: number
 ): PayoffResult {
   const monthlyRate = annualRatePercent / 100 / 12;
 
@@ -67,7 +67,7 @@ export function buildPayoffBalanceSeries(
   balance: number,
   annualRatePercent: number,
   monthlyPayment: number,
-  maxMonths: number,
+  maxMonths: number
 ): number[] {
   const monthlyRate = annualRatePercent / 100 / 12;
   const series: number[] = [balance];

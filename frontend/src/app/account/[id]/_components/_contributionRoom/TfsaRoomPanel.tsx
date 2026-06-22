@@ -3,10 +3,7 @@ import Link from "next/link";
 import type { Profile, Transaction } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
-import {
-  calculateTfsaLifetimeRoom,
-  calculateNetContributions,
-} from "@/lib/contribution-room";
+import { calculateTfsaLifetimeRoom, calculateNetContributions } from "@/lib/contribution-room";
 import { formatCurrency } from "@/lib/format";
 
 type TfsaRoomPanelProps = {
@@ -78,10 +75,7 @@ export function TfsaRoomPanel({ transactions, accountIds, profile }: TfsaRoomPan
       {lifetimeRoom == null ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-            <Link
-              href="/profile"
-              style={{ color: accentColor, textDecoration: "underline" }}
-            >
+            <Link href="/profile" style={{ color: accentColor, textDecoration: "underline" }}>
               Enter your birth year on your profile to estimate your TFSA room →
             </Link>
           </p>
@@ -104,7 +98,8 @@ export function TfsaRoomPanel({ transactions, accountIds, profile }: TfsaRoomPan
                 color: "#f87171",
               }}
             >
-              You may be over your estimated TFSA room. CRA penalizes TFSA over-contributions at 1% per month.
+              You may be over your estimated TFSA room. CRA penalizes TFSA over-contributions at 1%
+              per month.
             </div>
           )}
 
@@ -124,7 +119,15 @@ export function TfsaRoomPanel({ transactions, accountIds, profile }: TfsaRoomPan
             isOver={isOverContributed}
           />
 
-          <div style={{ fontSize: "12px", color: "var(--text-muted)", display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div
+            style={{
+              fontSize: "12px",
+              color: "var(--text-muted)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+            }}
+          >
             <span>Bloom deposits (net): {formatCurrency(netContributions)}</span>
             {externalUsed > 0 && (
               <span>
@@ -157,8 +160,13 @@ export function TfsaRoomPanel({ transactions, accountIds, profile }: TfsaRoomPan
           color: "var(--text-muted)",
         }}
       >
-        <span>Based on deposits tracked in Bloom — does not include contributions made outside the app.</span>
-        <Link href="/learn" style={{ color: accentColor, whiteSpace: "nowrap", marginLeft: "12px" }}>
+        <span>
+          Based on deposits tracked in Bloom — does not include contributions made outside the app.
+        </span>
+        <Link
+          href="/learn"
+          style={{ color: accentColor, whiteSpace: "nowrap", marginLeft: "12px" }}
+        >
           What is this?
         </Link>
       </div>

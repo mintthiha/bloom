@@ -20,9 +20,7 @@ function LearningCardSkeleton() {
           marginBottom: "12px",
         }}
       >
-        <Skeleton
-          style={{ width: "34px", height: "34px", borderRadius: "10px", flexShrink: 0 }}
-        />
+        <Skeleton style={{ width: "34px", height: "34px", borderRadius: "10px", flexShrink: 0 }} />
         <Skeleton style={{ height: "13px", width: "65%" }} />
       </div>
       <Skeleton style={{ height: "12px", width: "100%", marginBottom: "6px" }} />
@@ -74,9 +72,7 @@ function ChatSkeleton() {
           gap: "10px",
         }}
       >
-        <Skeleton
-          style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 }}
-        />
+        <Skeleton style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 }} />
         <Skeleton style={{ height: "14px", width: "100px" }} />
         <Skeleton style={{ height: "12px", width: "90px" }} />
       </div>
@@ -123,9 +119,7 @@ function ChatSkeleton() {
         }}
       >
         <Skeleton style={{ flex: 1, height: "40px", borderRadius: "12px" }} />
-        <Skeleton
-          style={{ width: "38px", height: "38px", borderRadius: "10px", flexShrink: 0 }}
-        />
+        <Skeleton style={{ width: "38px", height: "38px", borderRadius: "10px", flexShrink: 0 }} />
       </div>
     </div>
   );

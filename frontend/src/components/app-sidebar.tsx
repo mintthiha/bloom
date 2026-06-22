@@ -102,18 +102,46 @@ export function AppSidebar() {
   }, [session?.user?.id]);
 
   const displayName = [firstName, lastName].filter(Boolean).join(" ") || "Your profile";
-  const displayHandle = username ? `@${username}` : session?.user?.email ?? "";
+  const displayHandle = username ? `@${username}` : (session?.user?.email ?? "");
   const avatarFallback = (displayName[0] ?? "B").toUpperCase();
 
   return (
     <Sidebar collapsible="icon" style={{ borderRight: "none" }}>
-      <SidebarHeader style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 12px" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none", color: "inherit" }}>
+      <SidebarHeader
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "16px 12px",
+        }}
+      >
+        <Link
+          href="/"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
           <div style={{ position: "relative", flexShrink: 0 }}>
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
               <rect width="28" height="28" rx="6" fill="#f59e0b" />
-              <path d="M8 20V8h5.5a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M8 16h7a4 4 0 0 1 0 8H8" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M8 20V8h5.5a4 4 0 0 1 0 8H8"
+                stroke="#000"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8 16h7a4 4 0 0 1 0 8H8"
+                stroke="#000"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             {dueRecurringCount > 0 && (
               <span
@@ -130,7 +158,17 @@ export function AppSidebar() {
               />
             )}
           </div>
-          <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 700, fontSize: "16px", letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>Bloom</span>
+          <span
+            className="group-data-[collapsible=icon]:hidden"
+            style={{
+              fontWeight: 700,
+              fontSize: "16px",
+              letterSpacing: "-0.3px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Bloom
+          </span>
         </Link>
       </SidebarHeader>
 
@@ -360,10 +398,27 @@ export function AppSidebar() {
 
               {state !== "collapsed" && (
                 <div style={{ minWidth: 0, overflow: "hidden" }}>
-                  <p style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
                     {displayName}
                   </p>
-                  <p className="num" style={{ fontSize: "11px", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <p
+                    className="num"
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--text-primary)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
                     {displayHandle}
                   </p>
                 </div>
@@ -375,11 +430,21 @@ export function AppSidebar() {
           <SidebarMenuItem className="flex justify-center">
             <SidebarMenuButton
               className="group-data-[collapsible=icon]:!justify-center"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+              }}
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut size={16} style={{ flexShrink: 0 }} />
-              <span className="group-data-[collapsible=icon]:hidden" style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}>Sign out</span>
+              <span
+                className="group-data-[collapsible=icon]:hidden"
+                style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
+              >
+                Sign out
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

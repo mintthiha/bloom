@@ -27,16 +27,31 @@ export function DeleteAccount({ accountId, displayName }: DeleteAccountProps) {
 
   if (confirmDelete) {
     return (
-      <div style={{ display: 'flex', gap: '6px', padding: '32px', borderRadius: '10px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "6px",
+          padding: "32px",
+          borderRadius: "10px",
+          background: "var(--surface-2)",
+          border: "1px solid var(--border)",
+        }}
+      >
         <button
           onClick={() => setConfirmDelete(false)}
           disabled={deleting}
           style={{
-            padding: '6px 12px', border: '1px solid var(--border)',
-            background: 'transparent', color: 'var(--text-secondary)',
-            borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-            cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1,
+            padding: "6px 12px",
+            border: "1px solid var(--border)",
+            background: "transparent",
+            color: "var(--text-secondary)",
+            borderRadius: "7px",
+            fontSize: "11px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            cursor: deleting ? "not-allowed" : "pointer",
+            opacity: deleting ? 0.5 : 1,
           }}
         >
           Cancel
@@ -45,14 +60,20 @@ export function DeleteAccount({ accountId, displayName }: DeleteAccountProps) {
           onClick={handleDelete}
           disabled={deleting}
           style={{
-            padding: '6px 12px', border: '1px solid #f8717160',
-            background: '#f87171', color: '#000',
-            borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-            cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.5 : 1,
+            padding: "6px 12px",
+            border: "1px solid #f8717160",
+            background: "#f87171",
+            color: "#000",
+            borderRadius: "7px",
+            fontSize: "11px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            cursor: deleting ? "not-allowed" : "pointer",
+            opacity: deleting ? 0.5 : 1,
           }}
         >
-          {deleting ? '…' : 'Confirm'}
+          {deleting ? "…" : "Confirm"}
         </button>
       </div>
     );
@@ -63,10 +84,16 @@ export function DeleteAccount({ accountId, displayName }: DeleteAccountProps) {
     <button
       onClick={() => setConfirmDelete(true)}
       style={{
-        padding: '6px 14px', border: '1px solid #f8717130',
-        background: 'transparent', color: '#f87171',
-        borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-        textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
+        padding: "6px 14px",
+        border: "1px solid #f8717130",
+        background: "transparent",
+        color: "#f87171",
+        borderRadius: "7px",
+        fontSize: "11px",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        cursor: "pointer",
       }}
     >
       Delete

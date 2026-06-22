@@ -112,10 +112,10 @@ export function CommandPalette() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex(i => Math.min(i + 1, results.length - 1));
+      setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex(i => Math.max(i - 1, 0));
+      setSelectedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       const result = results[selectedIndex];
       if (result) navigateToResult(result);
@@ -154,18 +154,34 @@ export function CommandPalette() {
           display: "flex",
           flexDirection: "column",
         }}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "14px 18px", borderBottom: "1px solid var(--border)" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" style={{ flexShrink: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "14px 18px",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--text-muted)"
+            strokeWidth="2"
+            style={{ flexShrink: 0 }}
+          >
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             ref={inputRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search transactions…"
             style={{
@@ -180,15 +196,17 @@ export function CommandPalette() {
           {loading && (
             <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>Searching…</span>
           )}
-          <kbd style={{
-            fontSize: "10px",
-            fontWeight: 600,
-            padding: "2px 6px",
-            borderRadius: "5px",
-            background: "var(--surface-2)",
-            border: "1px solid var(--border)",
-            color: "var(--text-muted)",
-          }}>
+          <kbd
+            style={{
+              fontSize: "10px",
+              fontWeight: 600,
+              padding: "2px 6px",
+              borderRadius: "5px",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              color: "var(--text-muted)",
+            }}
+          >
             Esc
           </kbd>
         </div>
@@ -197,8 +215,15 @@ export function CommandPalette() {
         {query.trim() && (
           <div style={{ maxHeight: isMobile ? "min(280px, 50vh)" : "380px", overflowY: "auto" }}>
             {results.length === 0 && !loading ? (
-              <div style={{ padding: "28px 18px", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
-                No transactions found for "{query}"
+              <div
+                style={{
+                  padding: "28px 18px",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  fontSize: "13px",
+                }}
+              >
+                No transactions found for &ldquo;{query}&rdquo;
               </div>
             ) : (
               results.map((result, i) => {
@@ -227,35 +252,60 @@ export function CommandPalette() {
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
-                      <p style={{
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        color: "var(--text-primary)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}>
+                      <p
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {result.merchant ?? result.description ?? "Transaction"}
                       </p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-                        <span style={{
-                          fontSize: "10px",
-                          fontWeight: 600,
-                          padding: "1px 5px",
-                          borderRadius: "4px",
-                          background: typeMeta.soft,
-                          border: `1px solid ${typeMeta.border}`,
-                          color: typeMeta.color,
-                          letterSpacing: "0.04em",
-                          flexShrink: 0,
-                        }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginTop: "4px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            padding: "1px 5px",
+                            borderRadius: "4px",
+                            background: typeMeta.soft,
+                            border: `1px solid ${typeMeta.border}`,
+                            color: typeMeta.color,
+                            letterSpacing: "0.04em",
+                            flexShrink: 0,
+                          }}
+                        >
                           {typeMeta.label}
                         </span>
-                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "var(--text-secondary)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {resolveAccountLabel(result)}
                         </span>
                         {result.category && (
-                          <span style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--text-muted)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             · {result.category}
                           </span>
                         )}
@@ -263,10 +313,17 @@ export function CommandPalette() {
                     </div>
 
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <p className="num" style={{ fontSize: "13px", fontWeight: 700, color: amountColor }}>
-                        {amountSign}{formatCurrency(result.amount)}
+                      <p
+                        className="num"
+                        style={{ fontSize: "13px", fontWeight: 700, color: amountColor }}
+                      >
+                        {amountSign}
+                        {formatCurrency(result.amount)}
                       </p>
-                      <p className="num" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                      <p
+                        className="num"
+                        style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}
+                      >
                         {formatResultDate(result.effectiveAt)}
                       </p>
                     </div>
@@ -279,25 +336,53 @@ export function CommandPalette() {
 
         {/* Footer hint */}
         {!query.trim() && (
-          <div style={{ padding: "20px 18px", textAlign: "center", color: "var(--text-muted)", fontSize: "12px" }}>
+          <div
+            style={{
+              padding: "20px 18px",
+              textAlign: "center",
+              color: "var(--text-muted)",
+              fontSize: "12px",
+            }}
+          >
             Type to search across all accounts
           </div>
         )}
-        <div style={{
-          display: "flex",
-          gap: "16px",
-          justifyContent: "center",
-          padding: "8px 18px",
-          borderTop: "1px solid var(--border)",
-          background: "var(--surface-2)",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "16px",
+            justifyContent: "center",
+            padding: "8px 18px",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface-2)",
+          }}
+        >
           {[
             ["↑↓", "navigate"],
             ["↵", "open account"],
             ["Esc", "close"],
           ].map(([key, label]) => (
-            <span key={key} style={{ fontSize: "11px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
-              <kbd style={{ fontSize: "10px", padding: "1px 5px", borderRadius: "4px", background: "var(--surface-1)", border: "1px solid var(--border)" }}>{key}</kbd>
+            <span
+              key={key}
+              style={{
+                fontSize: "11px",
+                color: "var(--text-muted)",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <kbd
+                style={{
+                  fontSize: "10px",
+                  padding: "1px 5px",
+                  borderRadius: "4px",
+                  background: "var(--surface-1)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {key}
+              </kbd>
               {label}
             </span>
           ))}

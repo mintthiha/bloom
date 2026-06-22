@@ -65,11 +65,7 @@ function makeEmptyForm() {
 }
 
 /** Recurring transactions card: create/edit/pause/delete recurring rules. */
-export function RecurringTransactionsCard({
-  rules,
-  accounts,
-  onChanged,
-}: Props) {
+export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props) {
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [form, setForm] = useState(makeEmptyForm);
   const [saving, setSaving] = useState(false);
@@ -77,14 +73,10 @@ export function RecurringTransactionsCard({
   const [error, setError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pendingDeleteRule, setPendingDeleteRule] =
-    useState<RecurringTransaction | null>(null);
+  const [pendingDeleteRule, setPendingDeleteRule] = useState<RecurringTransaction | null>(null);
 
-  const recurringAccounts = accounts.filter(
-    (account) => account.accountType !== "CREDIT"
-  );
-  const recurringCategories =
-    form.type === "DEPOSIT" ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES;
+  const recurringAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
+  const recurringCategories = form.type === "DEPOSIT" ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES;
   const dueCount = rules.filter(
     (rule) => rule.active && new Date(rule.nextRunAt) <= new Date()
   ).length;
@@ -113,8 +105,7 @@ export function RecurringTransactionsCard({
 
     const supportedCategories =
       rule.type === "DEPOSIT" ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES;
-    const isKnownCategory =
-      rule.category != null && supportedCategories.includes(rule.category);
+    const isKnownCategory = rule.category != null && supportedCategories.includes(rule.category);
 
     setForm({
       accountId: rule.accountId,
@@ -124,10 +115,10 @@ export function RecurringTransactionsCard({
       category: isKnownCategory
         ? rule.category!
         : rule.category
-        ? "Custom..."
-        : rule.type === "DEPOSIT"
-        ? "Salary"
-        : "Rent",
+          ? "Custom..."
+          : rule.type === "DEPOSIT"
+            ? "Salary"
+            : "Rent",
       customCategory: isKnownCategory ? "" : (rule.category ?? ""),
       merchant: rule.merchant ?? "",
       description: rule.description ?? "",
@@ -142,8 +133,7 @@ export function RecurringTransactionsCard({
     e.preventDefault();
     setError(null);
     const amount = parseFloat(form.amount);
-    const category =
-      form.category === "Custom..." ? form.customCategory.trim() : form.category;
+    const category = form.category === "Custom..." ? form.customCategory.trim() : form.category;
 
     if (!form.accountId) {
       setError("Choose an account");
@@ -174,9 +164,7 @@ export function RecurringTransactionsCard({
         description: form.description.trim() || undefined,
         frequency: form.frequency,
         startDate: new Date(`${form.startDate}T12:00:00`).toISOString(),
-        endDate: form.endDate
-          ? new Date(`${form.endDate}T12:00:00`).toISOString()
-          : undefined,
+        endDate: form.endDate ? new Date(`${form.endDate}T12:00:00`).toISOString() : undefined,
       };
 
       if (editingRuleId) {
@@ -191,11 +179,7 @@ export function RecurringTransactionsCard({
       await onChanged();
       window.dispatchEvent(new CustomEvent("recurring-changed"));
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save recurring transaction"
-      );
+      setError(err instanceof Error ? err.message : "Failed to save recurring transaction");
     } finally {
       setSaving(false);
     }
@@ -214,19 +198,12 @@ export function RecurringTransactionsCard({
           `Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`
         );
       } else if (result.failedCount > 0) {
-        setError(
-          result.failures[0]?.message ??
-            "Some recurring transactions could not be applied"
-        );
+        setError(result.failures[0]?.message ?? "Some recurring transactions could not be applied");
       } else {
         toast.success("No recurring transactions are due");
       }
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to apply recurring transactions"
-      );
+      setError(err instanceof Error ? err.message : "Failed to apply recurring transactions");
     } finally {
       setApplying(false);
     }
@@ -241,11 +218,7 @@ export function RecurringTransactionsCard({
       await onChanged();
       window.dispatchEvent(new CustomEvent("recurring-changed"));
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update recurring transaction"
-      );
+      setError(err instanceof Error ? err.message : "Failed to update recurring transaction");
     } finally {
       setTogglingId(null);
     }
@@ -259,15 +232,9 @@ export function RecurringTransactionsCard({
       await api.deleteRecurringTransaction(id);
       await onChanged();
       window.dispatchEvent(new CustomEvent("recurring-changed"));
-      toast.success(
-        `Recurring rule "${pendingDeleteRule?.name ?? "rule"}" deleted`
-      );
+      toast.success(`Recurring rule "${pendingDeleteRule?.name ?? "rule"}" deleted`);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to delete recurring transaction"
-      );
+      setError(err instanceof Error ? err.message : "Failed to delete recurring transaction");
     } finally {
       setDeletingId(null);
       setPendingDeleteRule(null);
@@ -303,11 +270,7 @@ export function RecurringTransactionsCard({
           fontSize: "12px",
         }}
       >
-        {applying
-          ? "Applying..."
-          : dueCount > 0
-          ? `Apply due (${dueCount})`
-          : "Apply due"}
+        {applying ? "Applying..." : dueCount > 0 ? `Apply due (${dueCount})` : "Apply due"}
       </button>
     </div>
   );
@@ -344,9 +307,7 @@ export function RecurringTransactionsCard({
               </AlertDialogCancel>
               <AlertDialogAction
                 type="button"
-                onClick={() =>
-                  pendingDeleteRule && handleConfirmDelete(pendingDeleteRule.id)
-                }
+                onClick={() => pendingDeleteRule && handleConfirmDelete(pendingDeleteRule.id)}
                 disabled={Boolean(deletingId)}
               >
                 {deletingId ? "Deleting..." : "Delete"}
@@ -371,8 +332,8 @@ export function RecurringTransactionsCard({
             marginBottom: "16px",
           }}
         >
-          Start date is the first scheduled occurrence. End date is optional and
-          stops future runs after that date.
+          Start date is the first scheduled occurrence. End date is optional and stops future runs
+          after that date.
         </p>
 
         <form onSubmit={handleSave} style={{ marginBottom: "20px" }}>
@@ -516,9 +477,7 @@ export function RecurringTransactionsCard({
             />
             <select
               value={form.frequency}
-              onChange={(e) =>
-                setField("frequency", e.target.value as RecurringFrequency)
-              }
+              onChange={(e) => setField("frequency", e.target.value as RecurringFrequency)}
               aria-label="Recurring frequency"
               style={{
                 background: "var(--surface-2)",
@@ -659,11 +618,7 @@ export function RecurringTransactionsCard({
                 opacity: saving ? 0.45 : 1,
               }}
             >
-              {saving
-                ? "Saving..."
-                : editingRuleId
-                ? "Save changes"
-                : "Save rule"}
+              {saving ? "Saving..." : editingRuleId ? "Save changes" : "Save rule"}
             </button>
           </div>
 
@@ -702,15 +657,12 @@ export function RecurringTransactionsCard({
             }}
           />
           <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "10px" }}>
-            Changes affect future recurring runs only. Transactions already
-            created from this rule stay unchanged.
+            Changes affect future recurring runs only. Transactions already created from this rule
+            stay unchanged.
           </p>
 
           {error && (
-            <p
-              className="num"
-              style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}
-            >
+            <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}>
               {error}
             </p>
           )}
@@ -746,20 +698,23 @@ export function RecurringTransactionsCard({
                       {rule.name}
                     </p>
                     {rule.merchant && (
-                      <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "4px" }}>
+                      <p
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--text-muted)",
+                          marginBottom: "4px",
+                        }}
+                      >
                         Merchant: {rule.merchant}
                       </p>
                     )}
                     <p className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      {formatCurrency(rule.amount)} ·{" "}
-                      {rule.frequency.toLowerCase()} ·{" "}
+                      {formatCurrency(rule.amount)} · {rule.frequency.toLowerCase()} ·{" "}
                       {rule.accountNickname ?? rule.accountOwnerName}
                     </p>
                     {(rule.category || rule.description) && (
                       <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                        {[rule.category, rule.description]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {[rule.category, rule.description].filter(Boolean).join(" · ")}
                       </p>
                     )}
                   </div>
@@ -796,7 +751,10 @@ export function RecurringTransactionsCard({
                       })}
                     </p>
                     {rule.lastRunAt && (
-                      <p className="num" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}>
+                      <p
+                        className="num"
+                        style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}
+                      >
                         Last applied{" "}
                         {new Date(rule.lastRunAt).toLocaleDateString("en-CA", {
                           dateStyle: "medium",
@@ -844,16 +802,11 @@ export function RecurringTransactionsCard({
                         color: "var(--text-secondary)",
                         borderRadius: "8px",
                         fontSize: "12px",
-                        cursor:
-                          togglingId === rule.id ? "not-allowed" : "pointer",
+                        cursor: togglingId === rule.id ? "not-allowed" : "pointer",
                         opacity: togglingId === rule.id ? 0.45 : 1,
                       }}
                     >
-                      {togglingId === rule.id
-                        ? "Saving..."
-                        : rule.active
-                        ? "Pause"
-                        : "Resume"}
+                      {togglingId === rule.id ? "Saving..." : rule.active ? "Pause" : "Resume"}
                     </button>
                     <button
                       type="button"
@@ -866,8 +819,7 @@ export function RecurringTransactionsCard({
                         color: "#f87171",
                         borderRadius: "8px",
                         fontSize: "12px",
-                        cursor:
-                          deletingId === rule.id ? "not-allowed" : "pointer",
+                        cursor: deletingId === rule.id ? "not-allowed" : "pointer",
                         opacity: deletingId === rule.id ? 0.45 : 1,
                       }}
                     >

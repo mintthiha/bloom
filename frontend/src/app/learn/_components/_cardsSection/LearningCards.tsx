@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  BookOpen,
-  CreditCard,
-  Info,
-  PiggyBank,
-  Target,
-  TrendingUp,
-} from "lucide-react";
+import { BookOpen, CreditCard, Info, PiggyBank, Target, TrendingUp } from "lucide-react";
 
 type LearningCardsProps = {
   isDouble: boolean;
@@ -104,15 +97,18 @@ export const CARDS = [
   },
 ];
 
-
-export function LearningCards({ isDouble, expandedCard, setExpandedCard, exploredCardIndices, onCardExplored }: LearningCardsProps) {
+export function LearningCards({
+  isDouble,
+  expandedCard,
+  setExpandedCard,
+  exploredCardIndices,
+  onCardExplored,
+}: LearningCardsProps) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: isDouble
-          ? "1fr"
-          : "repeat(auto-fill, minmax(280px, 1fr))",
+        gridTemplateColumns: isDouble ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))",
         gap: "16px",
         marginBottom: isDouble ? 0 : "56px",
       }}
@@ -162,9 +158,7 @@ export function LearningCards({ isDouble, expandedCard, setExpandedCard, explore
               >
                 <Icon size={16} style={{ color: card.color }} />
               </div>
-              <span
-                style={{ fontSize: "13px", fontWeight: 700, lineHeight: 1.3 }}
-              >
+              <span style={{ fontSize: "13px", fontWeight: 700, lineHeight: 1.3 }}>
                 {card.title}
               </span>
               {explored && (

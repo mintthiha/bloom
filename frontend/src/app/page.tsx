@@ -48,25 +48,18 @@ function Home() {
   const { visibleCards } = useDashboardVisibility();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(
-    null,
-  );
-  const [previousMonthlySummary, setPreviousMonthlySummary] =
-    useState<MonthlySummary | null>(null);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
+  const [previousMonthlySummary, setPreviousMonthlySummary] = useState<MonthlySummary | null>(null);
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
-  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>(
-    [],
-  );
-  const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>(
-    [],
-  );
+  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([]);
+  const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() =>
-    getPresetDateRange("this-month"),
+    getPresetDateRange("this-month")
   );
   const [timeZone, setTimeZone] = useState("UTC");
   const searchParams = useSearchParams();
@@ -74,7 +67,7 @@ function Home() {
 
   const rangeQuery: DateRangeQuery | undefined = useMemo(
     () => buildDateRangeQuery(dateRange),
-    [dateRange],
+    [dateRange]
   );
 
   const dashboardColumns =
@@ -127,9 +120,7 @@ function Home() {
       ] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(rangeQuery),
-        previousRangeQuery
-          ? api.getMonthlySummary(previousRangeQuery)
-          : Promise.resolve(null),
+        previousRangeQuery ? api.getMonthlySummary(previousRangeQuery) : Promise.resolve(null),
         api.getBudgets(rangeQuery),
         api.listRecurringTransactions(),
         api.getMonthlyTrends(6),
@@ -193,9 +184,7 @@ function Home() {
 
   if (!profileLoading && !profile) {
     return (
-      <div
-        style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 24px" }}
-      >
+      <div style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 24px" }}>
         <div className="fade-up" style={{ marginBottom: "24px" }}>
           <p
             style={{
@@ -226,8 +215,8 @@ function Home() {
               maxWidth: "560px",
             }}
           >
-            We need a few profile details before you start using Bloom. Your
-            first and last name are prefilled from Google when available.
+            We need a few profile details before you start using Bloom. Your first and last name are
+            prefilled from Google when available.
           </p>
         </div>
 
@@ -270,9 +259,8 @@ function Home() {
                 maxWidth: "520px",
               }}
             >
-              Set your name, username, and email. Once this is saved, the
-              dashboard and sidebar will use your Bloom profile instead of the
-              raw Google session name.
+              Set your name, username, and email. Once this is saved, the dashboard and sidebar will
+              use your Bloom profile instead of the raw Google session name.
             </p>
           </div>
 
@@ -360,10 +348,7 @@ function Home() {
   const chequingAccounts = accounts.filter((a) => a.accountType === "CHEQUING");
   const savingsAccounts = accounts.filter((a) => a.accountType === "SAVINGS");
   const registeredAccounts = accounts.filter(
-    (a) =>
-      a.accountType === "TFSA" ||
-      a.accountType === "RRSP" ||
-      a.accountType === "FHSA",
+    (a) => a.accountType === "TFSA" || a.accountType === "RRSP" || a.accountType === "FHSA"
   );
   const totalCash = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
   const totalCredit = creditAccounts.reduce((sum, a) => sum + a.balance, 0);
@@ -397,9 +382,7 @@ function Home() {
                 marginBottom: "6px",
               }}
             >
-              {cachedFirstName
-                ? `${getGreeting()}, ${cachedFirstName}.`
-                : `${getGreeting()}.`}
+              {cachedFirstName ? `${getGreeting()}, ${cachedFirstName}.` : `${getGreeting()}.`}
             </h1>
             <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>
               Here&apos;s your financial overview.
@@ -415,9 +398,9 @@ function Home() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <DashboardCustomizePanel />
-              <DateRangeControls value={dateRange} onChange={setDateRange} />
-            </div>
+            <DashboardCustomizePanel />
+            <DateRangeControls value={dateRange} onChange={setDateRange} />
+          </div>
         </div>
       </div>
 
@@ -497,18 +480,12 @@ function Home() {
                   creditAccounts.length > 0 ? (
                     <>
                       {formatCurrency(totalCredit)}{" "}
-                      <span
-                        style={{ fontSize: "13px", color: "var(--text-muted)" }}
-                      >
-                        owed
-                      </span>
+                      <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>owed</span>
                     </>
                   ) : (
                     <>
                       {creditAccounts.length}{" "}
-                      <span
-                        style={{ fontSize: "13px", color: "var(--text-muted)" }}
-                      >
+                      <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
                         acct{creditAccounts.length !== 1 ? "s" : ""}
                       </span>
                     </>
@@ -520,102 +497,99 @@ function Home() {
           )}
 
           {/* Goals + Financial Health + Insights + 50/30/20 Rule (2×2 grid) */}
-          {accounts.length > 0 && monthlySummary && (
-            visibleCards.has("goals") ||
-            visibleCards.has("financial-health") ||
-            visibleCards.has("insights") ||
-            visibleCards.has("budget-rule")
-          ) && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: twoColumnGrid,
-                gap: "20px",
-                alignItems: "start",
-                marginBottom: "32px",
-              }}
-            >
-              {visibleCards.has("goals") && <GoalWidget goals={goals} />}
-              {visibleCards.has("financial-health") && (
-                <FinancialHealthScore
-                  accounts={accounts}
-                  budgets={budgets}
-                  monthlySummary={monthlySummary!}
-                  netWorthHistory={netWorthHistory}
-                />
-              )}
-              {visibleCards.has("insights") && (
-                <InsightsCard
-                  accounts={accounts}
-                  budgets={budgets}
-                  monthlySummary={monthlySummary!}
-                  previousMonthlySummary={previousMonthlySummary}
-                  recurringRules={recurringRules}
-                />
-              )}
-              {visibleCards.has("budget-rule") && (
-                <BudgetRuleCard monthlySummary={monthlySummary!} rangeQuery={rangeQuery} />
-              )}
-            </div>
-          )}
+          {accounts.length > 0 &&
+            monthlySummary &&
+            (visibleCards.has("goals") ||
+              visibleCards.has("financial-health") ||
+              visibleCards.has("insights") ||
+              visibleCards.has("budget-rule")) && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: twoColumnGrid,
+                  gap: "20px",
+                  alignItems: "start",
+                  marginBottom: "32px",
+                }}
+              >
+                {visibleCards.has("goals") && <GoalWidget goals={goals} />}
+                {visibleCards.has("financial-health") && (
+                  <FinancialHealthScore
+                    accounts={accounts}
+                    budgets={budgets}
+                    monthlySummary={monthlySummary!}
+                    netWorthHistory={netWorthHistory}
+                  />
+                )}
+                {visibleCards.has("insights") && (
+                  <InsightsCard
+                    accounts={accounts}
+                    budgets={budgets}
+                    monthlySummary={monthlySummary!}
+                    previousMonthlySummary={previousMonthlySummary}
+                    recurringRules={recurringRules}
+                  />
+                )}
+                {visibleCards.has("budget-rule") && (
+                  <BudgetRuleCard monthlySummary={monthlySummary!} rangeQuery={rangeQuery} />
+                )}
+              </div>
+            )}
 
           {/* Monthly Snapshot + Budgets */}
-          {accounts.length > 0 && monthlySummary && (
-            visibleCards.has("monthly-snapshot") || visibleCards.has("budgets")
-          ) && (
-            <div
-              id="budgets-card-section"
-              style={{
-                display: "grid",
-                gridTemplateColumns: dashboardColumns,
-                gap: "20px",
-                alignItems: "start",
-                marginBottom: "32px",
-              }}
-            >
-              {visibleCards.has("monthly-snapshot") && (
-                <MonthlySnapshot
-                  monthlySummary={monthlySummary!}
-                  previousMonthlySummary={previousMonthlySummary}
-                  monthlyTrends={monthlyTrends}
-                  isCurrentMonth={dateRange.preset === "this-month"}
-                />
-              )}
-              {visibleCards.has("budgets") && (
-                <BudgetsCard
-                  budgets={budgets}
-                  monthlySummary={monthlySummary!}
-                  onChanged={loadAccounts}
-                />
-              )}
-            </div>
-          )}
+          {accounts.length > 0 &&
+            monthlySummary &&
+            (visibleCards.has("monthly-snapshot") || visibleCards.has("budgets")) && (
+              <div
+                id="budgets-card-section"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: dashboardColumns,
+                  gap: "20px",
+                  alignItems: "start",
+                  marginBottom: "32px",
+                }}
+              >
+                {visibleCards.has("monthly-snapshot") && (
+                  <MonthlySnapshot
+                    monthlySummary={monthlySummary!}
+                    previousMonthlySummary={previousMonthlySummary}
+                    monthlyTrends={monthlyTrends}
+                    isCurrentMonth={dateRange.preset === "this-month"}
+                  />
+                )}
+                {visibleCards.has("budgets") && (
+                  <BudgetsCard
+                    budgets={budgets}
+                    monthlySummary={monthlySummary!}
+                    onChanged={loadAccounts}
+                  />
+                )}
+              </div>
+            )}
 
           {/* Recurring Transactions + Upcoming Schedule */}
-          {accounts.length > 0 && (
-            visibleCards.has("recurring") || visibleCards.has("calendar")
-          ) && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: dashboardColumns,
-                gap: "20px",
-                alignItems: "start",
-                marginBottom: "32px",
-              }}
-            >
-              {visibleCards.has("recurring") && (
-                <RecurringTransactionsCard
-                  rules={recurringRules}
-                  accounts={accounts}
-                  onChanged={loadAccounts}
-                />
-              )}
-              {visibleCards.has("calendar") && (
-                <RecurringCalendar rules={recurringRules} />
-              )}
-            </div>
-          )}
+          {accounts.length > 0 &&
+            (visibleCards.has("recurring") || visibleCards.has("calendar")) && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: dashboardColumns,
+                  gap: "20px",
+                  alignItems: "start",
+                  marginBottom: "32px",
+                }}
+              >
+                {visibleCards.has("recurring") && (
+                  <RecurringTransactionsCard
+                    rules={recurringRules}
+                    accounts={accounts}
+                    onChanged={loadAccounts}
+                  />
+                )}
+                {visibleCards.has("calendar") && <RecurringCalendar rules={recurringRules} />}
+              </div>
+            )}
 
           {/* Net Worth History */}
           {netWorthHistory.length > 0 && visibleCards.has("net-worth") && (
@@ -663,10 +637,7 @@ function Home() {
           >
             Accounts
           </p>
-          <span
-            className="num"
-            style={{ fontSize: "16px", color: "var(--text-primary)" }}
-          >
+          <span className="num" style={{ fontSize: "16px", color: "var(--text-primary)" }}>
             {accounts.length}
           </span>
         </div>

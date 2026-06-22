@@ -34,10 +34,20 @@ function LabeledProgressBar({
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
         <span style={{ color: "var(--text-secondary)" }}>{label}</span>
         <span style={{ fontWeight: 600 }}>
-          {formatCurrency(used)} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>of {formatCurrency(limit)}</span>
+          {formatCurrency(used)}{" "}
+          <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
+            of {formatCurrency(limit)}
+          </span>
         </span>
       </div>
-      <div style={{ height: "8px", background: "var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+      <div
+        style={{
+          height: "8px",
+          background: "var(--border)",
+          borderRadius: "4px",
+          overflow: "hidden",
+        }}
+      >
         <div
           style={{
             height: "100%",
@@ -81,11 +91,14 @@ export function FhsaRoomPanel({ transactions, accountIds }: FhsaRoomPanelProps) 
               color: "#f87171",
             }}
           >
-            {isAnnualOver && !isLifetimeOver &&
+            {isAnnualOver &&
+              !isLifetimeOver &&
               `You may be over your $8,000 FHSA annual limit for ${currentYear}. CRA penalizes FHSA over-contributions at 1% per month.`}
-            {isLifetimeOver && !isAnnualOver &&
+            {isLifetimeOver &&
+              !isAnnualOver &&
               "You may be over your $40,000 FHSA lifetime limit. CRA penalizes FHSA over-contributions at 1% per month."}
-            {isAnnualOver && isLifetimeOver &&
+            {isAnnualOver &&
+              isLifetimeOver &&
               `You may be over both your $8,000 FHSA annual limit for ${currentYear} and your $40,000 lifetime limit. CRA penalizes FHSA over-contributions at 1% per month.`}
           </div>
         )}
@@ -115,8 +128,13 @@ export function FhsaRoomPanel({ transactions, accountIds }: FhsaRoomPanelProps) 
           color: "var(--text-muted)",
         }}
       >
-        <span>Based on deposits tracked in Bloom — does not include contributions made outside the app.</span>
-        <Link href="/learn" style={{ color: accentColor, whiteSpace: "nowrap", marginLeft: "12px" }}>
+        <span>
+          Based on deposits tracked in Bloom — does not include contributions made outside the app.
+        </span>
+        <Link
+          href="/learn"
+          style={{ color: accentColor, whiteSpace: "nowrap", marginLeft: "12px" }}
+        >
           What is this?
         </Link>
       </div>

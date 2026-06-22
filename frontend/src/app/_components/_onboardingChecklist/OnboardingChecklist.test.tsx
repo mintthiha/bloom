@@ -85,14 +85,7 @@ describe("OnboardingChecklist", () => {
   });
 
   it("renders the checklist heading and progress indicator for a brand-new user", () => {
-    render(
-      <OnboardingChecklist
-        accounts={[]}
-        budgets={[]}
-        goals={[]}
-        monthlySummary={null}
-      />,
-    );
+    render(<OnboardingChecklist accounts={[]} budgets={[]} goals={[]} monthlySummary={null} />);
 
     expect(screen.getByText("Get started with Bloom")).toBeInTheDocument();
     // Only profile-setup is complete for a user with no data
@@ -109,7 +102,7 @@ describe("OnboardingChecklist", () => {
         budgets={[sampleBudget]}
         goals={[]}
         monthlySummary={sampleMonthlySummary}
-      />,
+      />
     );
 
     // profile + account + transaction + budget = 4 complete; goal and learn still pending
@@ -125,7 +118,7 @@ describe("OnboardingChecklist", () => {
         budgets={[]}
         goals={[]}
         monthlySummary={sampleMonthlySummary}
-      />,
+      />
     );
 
     // profile + account + transaction = 3 done; budget, goal, learn still pending
@@ -139,7 +132,7 @@ describe("OnboardingChecklist", () => {
         budgets={[]}
         goals={[]}
         monthlySummary={emptyMonthlySummary}
-      />,
+      />
     );
 
     // profile + account = 2 done
@@ -155,51 +148,29 @@ describe("OnboardingChecklist", () => {
         budgets={[sampleBudget]}
         goals={[sampleGoal]}
         monthlySummary={sampleMonthlySummary}
-      />,
+      />
     );
 
-    expect(
-      screen.queryByText("Get started with Bloom"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Get started with Bloom")).not.toBeInTheDocument();
   });
 
   it("hides the checklist and persists the dismissal flag to localStorage when dismissed", () => {
-    render(
-      <OnboardingChecklist
-        accounts={[]}
-        budgets={[]}
-        goals={[]}
-        monthlySummary={null}
-      />,
-    );
+    render(<OnboardingChecklist accounts={[]} budgets={[]} goals={[]} monthlySummary={null} />);
 
     expect(screen.getByText("Get started with Bloom")).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Dismiss onboarding checklist" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss onboarding checklist" }));
 
-    expect(
-      screen.queryByText("Get started with Bloom"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Get started with Bloom")).not.toBeInTheDocument();
     expect(localStorage.getItem("bloom_onboarding_dismissed")).toBe("true");
   });
 
   it("does not render when the dismissal flag is already set in localStorage", () => {
     localStorage.setItem("bloom_onboarding_dismissed", "true");
 
-    render(
-      <OnboardingChecklist
-        accounts={[]}
-        budgets={[]}
-        goals={[]}
-        monthlySummary={null}
-      />,
-    );
+    render(<OnboardingChecklist accounts={[]} budgets={[]} goals={[]} monthlySummary={null} />);
 
-    expect(
-      screen.queryByText("Get started with Bloom"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Get started with Bloom")).not.toBeInTheDocument();
   });
 
   it("counts the Learn page step as complete when the explored flag is set in localStorage", () => {
@@ -211,7 +182,7 @@ describe("OnboardingChecklist", () => {
         budgets={[sampleBudget]}
         goals={[]}
         monthlySummary={sampleMonthlySummary}
-      />,
+      />
     );
 
     // profile + account + transaction + budget + learn = 5 done; only goal remaining
@@ -219,19 +190,10 @@ describe("OnboardingChecklist", () => {
   });
 
   it("sets the Learn-explored flag in localStorage when the Learn page step link is clicked", () => {
-    render(
-      <OnboardingChecklist
-        accounts={[]}
-        budgets={[]}
-        goals={[]}
-        monthlySummary={null}
-      />,
-    );
+    render(<OnboardingChecklist accounts={[]} budgets={[]} goals={[]} monthlySummary={null} />);
 
     fireEvent.click(screen.getByText("Explore the Learn page"));
 
-    expect(localStorage.getItem("bloom_onboarding_learn_explored")).toBe(
-      "true",
-    );
+    expect(localStorage.getItem("bloom_onboarding_learn_explored")).toBe("true");
   });
 });

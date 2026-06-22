@@ -20,10 +20,7 @@ export function useLearnChat() {
     const text = input.trim();
     if (!text || streaming) return;
 
-    const newMessages: Message[] = [
-      ...messages,
-      { role: "user", content: text },
-    ];
+    const newMessages: Message[] = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
     setInput("");
     setStreaming(true);

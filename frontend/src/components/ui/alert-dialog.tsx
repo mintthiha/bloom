@@ -1,27 +1,24 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
+import * as React from "react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function AlertDialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="alert-dialog" {...props} />
+  return <DialogPrimitive.Root data-slot="alert-dialog" {...props} />;
 }
 
 function AlertDialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
+  return <DialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
 }
 
 function AlertDialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
+  return <DialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />;
 }
 
-function AlertDialogOverlay({
-  className,
-  ...props
-}: DialogPrimitive.Backdrop.Props) {
+function AlertDialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
@@ -31,14 +28,10 @@ function AlertDialogOverlay({
       )}
       {...props}
     />
-  )
+  );
 }
 
-function AlertDialogContent({
-  className,
-  children,
-  ...props
-}: DialogPrimitive.Popup.Props) {
+function AlertDialogContent({ className, children, ...props }: DialogPrimitive.Popup.Props) {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -55,7 +48,7 @@ function AlertDialogContent({
         </div>
       </DialogPrimitive.Popup>
     </AlertDialogPortal>
-  )
+  );
 }
 
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -65,7 +58,7 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">)
       className={cn("flex flex-col gap-3 text-left", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -75,30 +68,30 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
       className={cn("mt-8 flex justify-end gap-3 pt-2", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]", className)}
+      className={cn(
+        "text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]",
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
-function AlertDialogDescription({
-  className,
-  ...props
-}: DialogPrimitive.Description.Props) {
+function AlertDialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
   return (
     <DialogPrimitive.Description
       data-slot="alert-dialog-description"
       className={cn("text-sm leading-6 text-[var(--text-secondary)]", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogAction({
@@ -113,7 +106,7 @@ function AlertDialogAction({
       className={cn("min-w-24 px-4", className)}
       {...props}
     />
-  )
+  );
 }
 
 function AlertDialogCancel({
@@ -128,7 +121,7 @@ function AlertDialogCancel({
       className={cn("min-w-24 px-4", className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -141,4 +134,4 @@ export {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-}
+};

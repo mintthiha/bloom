@@ -63,16 +63,6 @@ function normalizeTransaction(row: TransactionRecord) {
   return { ...row, amount: Number(row.amount), balanceAfter: Number(row.balanceAfter) };
 }
 
-async function selectAccountById(id: string) {
-  const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
-    FROM "Account"
-    WHERE "id" = ${id}
-    LIMIT 1
-  `;
-  return rows[0] ?? null;
-}
-
 async function selectAccountByUserId(userId: string, id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
@@ -83,7 +73,11 @@ async function selectAccountByUserId(userId: string, id: string) {
   return rows[0] ?? null;
 }
 
-async function selectTransactionByAccount(userId: string, accountId: string, transactionId: string) {
+async function selectTransactionByAccount(
+  userId: string,
+  accountId: string,
+  transactionId: string
+) {
   const rows = await prisma.$queryRaw<TransactionRecord[]>`
     SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
     FROM "Transaction" t
@@ -112,7 +106,10 @@ async function selectTransactionsByTransferGroup(userId: string, transferGroupId
   `;
 }
 
-async function listTransactionsForBalanceReplay(client: Pick<Prisma.TransactionClient, "$queryRaw">, accountId: string) {
+async function listTransactionsForBalanceReplay(
+  client: Pick<Prisma.TransactionClient, "$queryRaw">,
+  accountId: string
+) {
   return client.$queryRaw<TransactionRecord[]>`
     SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
@@ -135,13 +132,20 @@ function getTransactionDelta(transaction: TransactionRecord, accountId: string):
   if (transaction.type === TransactionType.WITHDRAWAL && transaction.fromAccountId === accountId) {
     return amount.negated();
   }
-  if (transaction.type === TransactionType.TRANSFER_OUT && transaction.fromAccountId === accountId) {
+  if (
+    transaction.type === TransactionType.TRANSFER_OUT &&
+    transaction.fromAccountId === accountId
+  ) {
     return amount.negated();
   }
   return new Prisma.Decimal(0);
 }
 
-async function replayAccountBalances(client: Prisma.TransactionClient, accountId: string, { allowNegative = false } = {}) {
+async function replayAccountBalances(
+  client: Prisma.TransactionClient,
+  accountId: string,
+  { allowNegative = false } = {}
+) {
   const transactions = await listTransactionsForBalanceReplay(client, accountId);
   let balance = new Prisma.Decimal(0);
 
@@ -162,18 +166,21 @@ async function replayAccountBalances(client: Prisma.TransactionClient, accountId
   });
 }
 
-async function createTransaction(client: Pick<Prisma.TransactionClient, "$queryRaw">, input: {
-  type: TransactionType;
-  amount: number;
-  balanceAfter: Prisma.Decimal | number;
-  transferGroupId?: string;
-  category?: string;
-  merchant?: string;
-  description?: string;
-  effectiveAt?: Date;
-  fromAccountId?: string;
-  toAccountId?: string;
-}) {
+async function createTransaction(
+  client: Pick<Prisma.TransactionClient, "$queryRaw">,
+  input: {
+    type: TransactionType;
+    amount: number;
+    balanceAfter: Prisma.Decimal | number;
+    transferGroupId?: string;
+    category?: string;
+    merchant?: string;
+    description?: string;
+    effectiveAt?: Date;
+    fromAccountId?: string;
+    toAccountId?: string;
+  }
+) {
   const id = randomUUID();
   const category = input.category?.trim() ? input.category.trim() : null;
   const merchant = input.merchant?.trim() ? input.merchant.trim() : null;
@@ -191,7 +198,10 @@ async function createTransaction(client: Pick<Prisma.TransactionClient, "$queryR
  * Includes deposits as income and withdrawals as spending; transfers are excluded
  * because they move money between accounts instead of changing total cash flow.
  */
-export async function getMonthlySummary(userId: string, input?: { start?: Date; end?: Date; now?: Date }) {
+export async function getMonthlySummary(
+  userId: string,
+  input?: { start?: Date; end?: Date; now?: Date }
+) {
   const dateRange = input ? resolveDateRange(input) : null;
 
   const rows = dateRange
@@ -397,7 +407,15 @@ export async function recordNetWorthSnapshot(userId: string) {
  * Returns the last N months of net worth snapshots for a user, oldest first.
  */
 export async function getNetWorthHistory(userId: string, months: number = 12) {
-  const rows = await prisma.$queryRaw<{ id: string; month: string; netWorth: number | string; totalAssets: number | string; totalDebt: number | string }[]>`
+  const rows = await prisma.$queryRaw<
+    {
+      id: string;
+      month: string;
+      netWorth: number | string;
+      totalAssets: number | string;
+      totalDebt: number | string;
+    }[]
+  >`
     SELECT "id", "month", "netWorth", "totalAssets", "totalDebt"
     FROM "NetWorthSnapshot"
     WHERE "userId" = ${userId}
@@ -489,7 +507,15 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
  * Throws 403 if the account is frozen.
  * Uses a Prisma transaction to ensure the balance update and transaction record are atomic.
  */
-export async function deposit(userId: string, id: string, amount: number, category?: string, description?: string, effectiveAt?: Date, merchant?: string) {
+export async function deposit(
+  userId: string,
+  id: string,
+  amount: number,
+  category?: string,
+  description?: string,
+  effectiveAt?: Date,
+  merchant?: string
+) {
   if (amount <= 0) throw new AppError(400, "Deposit amount must be positive");
   const rawAccount = await selectAccountByUserId(userId, id);
   if (!rawAccount) throw new AppError(404, `Account ${id} not found`);
@@ -518,12 +544,21 @@ export async function deposit(userId: string, id: string, amount: number, catego
  * Throws 400 if the account has insufficient funds.
  * Uses a Prisma transaction to ensure the balance update and transaction record are atomic.
  */
-export async function withdraw(userId: string, id: string, amount: number, category?: string, description?: string, effectiveAt?: Date, merchant?: string) {
+export async function withdraw(
+  userId: string,
+  id: string,
+  amount: number,
+  category?: string,
+  description?: string,
+  effectiveAt?: Date,
+  merchant?: string
+) {
   if (amount <= 0) throw new AppError(400, "Withdrawal amount must be positive");
   const rawAccount = await selectAccountByUserId(userId, id);
   if (!rawAccount) throw new AppError(404, `Account ${id} not found`);
   if (rawAccount.frozen) throw new AppError(403, "Account is frozen");
-  if (new Prisma.Decimal(rawAccount.balance).lessThan(amount)) throw new AppError(400, "Insufficient funds");
+  if (new Prisma.Decimal(rawAccount.balance).lessThan(amount))
+    throw new AppError(400, "Insufficient funds");
   const newBalance = new Prisma.Decimal(rawAccount.balance).minus(amount);
   const transaction = await prisma.$transaction(async (tx) => {
     await tx.account.update({ where: { id }, data: { balance: newBalance } });
@@ -550,13 +585,21 @@ export async function withdraw(userId: string, id: string, amount: number, categ
  * Throws 400 if the source account has insufficient funds.
  * Uses a Prisma transaction to ensure all four operations (two balance updates, two transaction records) are atomic.
  */
-export async function transfer(userId: string, fromId: string, toId: string, amount: number, description?: string, category: string = "Transfer") {
+export async function transfer(
+  userId: string,
+  fromId: string,
+  toId: string,
+  amount: number,
+  description?: string,
+  category: string = "Transfer"
+) {
   if (amount <= 0) throw new AppError(400, "Transfer amount must be positive");
   if (fromId === toId) throw new AppError(400, "Cannot transfer to the same account");
   const rawFrom = await selectAccountByUserId(userId, fromId);
   if (!rawFrom) throw new AppError(404, `Account ${fromId} not found`);
   if (rawFrom.frozen) throw new AppError(403, "Source account is frozen");
-  if (new Prisma.Decimal(rawFrom.balance).lessThan(amount)) throw new AppError(400, "Insufficient funds");
+  if (new Prisma.Decimal(rawFrom.balance).lessThan(amount))
+    throw new AppError(400, "Insufficient funds");
   const rawTo = await selectAccountByUserId(userId, toId);
   if (!rawTo) throw new AppError(404, `Account ${toId} not found`);
   if (rawTo.frozen) throw new AppError(403, "Destination account is frozen");
@@ -600,7 +643,10 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
   await getAccount(userId, id);
   const categoryFilter = filters?.category?.trim() ? filters.category.trim() : null;
   const searchFilter = filters?.search?.trim().toLowerCase() ?? null;
-  const range = filters?.start && filters?.end ? resolveDateRange({ start: filters.start, end: filters.end }) : null;
+  const range =
+    filters?.start && filters?.end
+      ? resolveDateRange({ start: filters.start, end: filters.end })
+      : null;
 
   const rawTransactions = await prisma.$queryRaw<TransactionRecord[]>`
     SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
@@ -625,12 +671,17 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
         }
       }
       if (searchFilter) {
-        const haystack = [transaction.description ?? "", transaction.merchant ?? ""].join(" ").toLowerCase();
+        const haystack = [transaction.description ?? "", transaction.merchant ?? ""]
+          .join(" ")
+          .toLowerCase();
         if (!haystack.includes(searchFilter)) {
           return false;
         }
       }
-      if (range && !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)) {
+      if (
+        range &&
+        !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)
+      ) {
         return false;
       }
       return true;
@@ -644,7 +695,12 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
  * Throws 404 if the transaction is not visible from this account for the current user.
  * Throws 400 if the updated amount is not positive or the edit would overdraw the account.
  */
-export async function updateTransaction(userId: string, accountId: string, transactionId: string, input: TransactionUpdateInput) {
+export async function updateTransaction(
+  userId: string,
+  accountId: string,
+  transactionId: string,
+  input: TransactionUpdateInput
+) {
   if (input.amount <= 0) throw new AppError(400, "amount must be positive");
   await getAccount(userId, accountId);
   const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
@@ -653,19 +709,32 @@ export async function updateTransaction(userId: string, accountId: string, trans
   const category = input.category?.trim() ? input.category.trim() : null;
   const effectiveAt = input.effectiveAt ?? transaction.effectiveAt;
 
-  if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
+  if (
+    transaction.type === TransactionType.TRANSFER_OUT ||
+    transaction.type === TransactionType.TRANSFER_IN
+  ) {
     if (!transaction.transferGroupId) {
       throw new AppError(400, "Only newly linked transfers can be edited");
     }
 
-    const linkedTransactions = await selectTransactionsByTransferGroup(userId, transaction.transferGroupId);
+    const linkedTransactions = await selectTransactionsByTransferGroup(
+      userId,
+      transaction.transferGroupId
+    );
     if (linkedTransactions.length !== 2) {
       throw new AppError(400, "Transfer records are incomplete");
     }
 
-    const affectedAccountIds = Array.from(new Set(
-      linkedTransactions.flatMap((linkedTransaction) => [linkedTransaction.fromAccountId, linkedTransaction.toAccountId]).filter(Boolean)
-    )) as string[];
+    const affectedAccountIds = Array.from(
+      new Set(
+        linkedTransactions
+          .flatMap((linkedTransaction) => [
+            linkedTransaction.fromAccountId,
+            linkedTransaction.toAccountId,
+          ])
+          .filter(Boolean)
+      )
+    ) as string[];
 
     await prisma.$transaction(async (tx) => {
       for (const linkedTransaction of linkedTransactions) {
@@ -714,19 +783,32 @@ export async function deleteTransaction(userId: string, accountId: string, trans
   await getAccount(userId, accountId);
   const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
   if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
-  if (transaction.type === TransactionType.TRANSFER_OUT || transaction.type === TransactionType.TRANSFER_IN) {
+  if (
+    transaction.type === TransactionType.TRANSFER_OUT ||
+    transaction.type === TransactionType.TRANSFER_IN
+  ) {
     if (!transaction.transferGroupId) {
       throw new AppError(400, "Only newly linked transfers can be deleted");
     }
 
-    const linkedTransactions = await selectTransactionsByTransferGroup(userId, transaction.transferGroupId);
+    const linkedTransactions = await selectTransactionsByTransferGroup(
+      userId,
+      transaction.transferGroupId
+    );
     if (linkedTransactions.length !== 2) {
       throw new AppError(400, "Transfer records are incomplete");
     }
 
-    const affectedAccountIds = Array.from(new Set(
-      linkedTransactions.flatMap((linkedTransaction) => [linkedTransaction.fromAccountId, linkedTransaction.toAccountId]).filter(Boolean)
-    )) as string[];
+    const affectedAccountIds = Array.from(
+      new Set(
+        linkedTransactions
+          .flatMap((linkedTransaction) => [
+            linkedTransaction.fromAccountId,
+            linkedTransaction.toAccountId,
+          ])
+          .filter(Boolean)
+      )
+    ) as string[];
 
     await prisma.$transaction(async (tx) => {
       await tx.transaction.deleteMany({
@@ -803,7 +885,11 @@ type ImportRow = {
  * on the imported account. Uses the last balanceAfter in each month as the
  * month-end balance, combined with the current balances of all other accounts.
  */
-async function backfillNetWorthSnapshots(userId: string, accountId: string, accountType: AccountType) {
+async function backfillNetWorthSnapshots(
+  userId: string,
+  accountId: string,
+  accountType: AccountType
+) {
   type MonthEndRow = { month: string; balanceAfter: string };
   const rows = await prisma.$queryRaw<MonthEndRow[]>`
     SELECT
@@ -831,10 +917,10 @@ async function backfillNetWorthSnapshots(userId: string, accountId: string, acco
     WHERE "userId" = ${userId} AND "id" != ${accountId}
   `;
   const otherAssets = otherAccounts
-    .filter(a => a.accountType !== AccountType.CREDIT)
+    .filter((a) => a.accountType !== AccountType.CREDIT)
     .reduce((sum, a) => sum + Number(a.balance), 0);
   const otherDebt = otherAccounts
-    .filter(a => a.accountType === AccountType.CREDIT)
+    .filter((a) => a.accountType === AccountType.CREDIT)
     .reduce((sum, a) => sum + Number(a.balance), 0);
 
   for (const [month, balance] of monthBalances) {

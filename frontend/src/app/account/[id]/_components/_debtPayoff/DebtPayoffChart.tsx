@@ -28,8 +28,7 @@ const TOOLTIP_CONTENT_STYLE = {
 
 /** Formats a Y-axis balance tick as a compact dollar amount. */
 function formatYAxisTick(value: number): string {
-  if (value >= 1000)
-    return `$${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
   return `$${Math.round(value)}`;
 }
 
@@ -41,19 +40,11 @@ function formatScenarioName(key: string): string {
 }
 
 /** Line chart comparing remaining balance over time across all debt payoff scenarios. */
-export function DebtPayoffChart({
-  data,
-  showUserPayment,
-  showBoosted,
-}: DebtPayoffChartProps) {
+export function DebtPayoffChart({ data, showUserPayment, showBoosted }: DebtPayoffChartProps) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="#ffffff08"
-          vertical={false}
-        />
+        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
         <XAxis
           dataKey="month"
           tick={{ fontSize: 11, fill: "#9ca3af" }}
@@ -90,21 +81,9 @@ export function DebtPayoffChart({
           strokeDasharray="5 3"
         />
         {showUserPayment && (
-          <Line
-            dataKey="userPayment"
-            stroke="#38bdf8"
-            strokeWidth={2.5}
-            dot={false}
-          />
+          <Line dataKey="userPayment" stroke="#38bdf8" strokeWidth={2.5} dot={false} />
         )}
-        {showBoosted && (
-          <Line
-            dataKey="boosted"
-            stroke="#22c55e"
-            strokeWidth={2}
-            dot={false}
-          />
-        )}
+        {showBoosted && <Line dataKey="boosted" stroke="#22c55e" strokeWidth={2} dot={false} />}
       </LineChart>
     </ResponsiveContainer>
   );

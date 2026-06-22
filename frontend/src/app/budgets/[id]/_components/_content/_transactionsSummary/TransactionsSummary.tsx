@@ -35,10 +35,7 @@ export function TransactionsSummary({ budget }: TransactionsSummaryProps) {
         >
           Transactions
         </p>
-        <span
-          className="num"
-          style={{ fontSize: "11px", color: "var(--text-muted)" }}
-        >
+        <span className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
           {budget.activity.length}
         </span>
       </div>
@@ -64,19 +61,13 @@ export function TransactionsSummary({ budget }: TransactionsSummaryProps) {
               }}
             >
               <div>
-                <p
-                  className="num"
-                  style={{ fontSize: "12px", fontWeight: 600 }}
-                >
+                <p className="num" style={{ fontSize: "12px", fontWeight: 600 }}>
                   {new Intl.DateTimeFormat("en-CA", {
                     month: "short",
                     day: "numeric",
                   }).format(new Date(transaction.effectiveAt))}
                 </p>
-                <p
-                  className="num"
-                  style={{ fontSize: "11px", color: "var(--text-muted)" }}
-                >
+                <p className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                   {new Intl.DateTimeFormat("en-CA", {
                     hour: "numeric",
                     minute: "2-digit",
@@ -93,9 +84,7 @@ export function TransactionsSummary({ budget }: TransactionsSummaryProps) {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {transaction.description ||
-                    transaction.category ||
-                    "Withdrawal"}
+                  {transaction.description || transaction.category || "Withdrawal"}
                 </p>
                 <p
                   style={{
@@ -110,9 +99,7 @@ export function TransactionsSummary({ budget }: TransactionsSummaryProps) {
                 </p>
               </div>
               <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                {transaction.description
-                  ? "Custom note"
-                  : "Categorized expense"}
+                {transaction.description ? "Custom note" : "Categorized expense"}
               </div>
               <div
                 className="num"

@@ -64,16 +64,12 @@ function GoalWidgetSkeleton() {
           <Skeleton style={{ height: "24px", width: "24px", borderRadius: "6px" }} />
         </div>
       </div>
-      <div
-        style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}
-      >
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
         <Skeleton style={{ height: "15px", width: "150px" }} />
         <Skeleton style={{ height: "14px", width: "42px", borderRadius: "4px" }} />
         <Skeleton style={{ height: "13px", width: "80px" }} />
       </div>
-      <div
-        style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}
-      >
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
         <Skeleton style={{ flex: 1, height: "8px", borderRadius: "999px" }} />
         <Skeleton style={{ height: "13px", width: "30px", flexShrink: 0 }} />
       </div>
@@ -165,9 +161,7 @@ function InsightsCardSkeleton() {
             borderBottom: i < 3 ? "1px solid var(--border)" : "none",
           }}
         >
-          <Skeleton
-            style={{ width: "3px", height: "36px", borderRadius: "2px", flexShrink: 0 }}
-          />
+          <Skeleton style={{ width: "3px", height: "36px", borderRadius: "2px", flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <Skeleton style={{ height: "13px", width: "80%", marginBottom: "6px" }} />
             <Skeleton style={{ height: "12px", width: "60%" }} />
@@ -228,7 +222,13 @@ function SnapshotAndBudgetsSkeleton({ dashboardColumns }: { dashboardColumns: st
           <Skeleton style={{ height: "11px", width: "130px", marginBottom: "10px" }} />
           <Skeleton style={{ height: "26px", width: "50%", marginBottom: "6px" }} />
           <Skeleton style={{ height: "12px", width: "40%", marginBottom: "20px" }} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+              gap: "10px",
+            }}
+          >
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}

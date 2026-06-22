@@ -26,10 +26,7 @@ type Props = {
 };
 
 /** Builds a sorted, deduplicated list of selectable budget categories. */
-function buildKnownCategories(
-  budgets: Budget[],
-  monthlySummary: MonthlySummary | null
-): string[] {
+function buildKnownCategories(budgets: Budget[], monthlySummary: MonthlySummary | null): string[] {
   const expenseCategories =
     monthlySummary?.categories
       .filter((category) => category.spending > 0)
@@ -61,10 +58,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
     e.preventDefault();
     setBudgetError(null);
     const monthlyLimit = parseFloat(budgetAmount);
-    const category =
-      budgetCategory === "Custom..."
-        ? customBudgetCategory.trim()
-        : budgetCategory;
+    const category = budgetCategory === "Custom..." ? customBudgetCategory.trim() : budgetCategory;
 
     if (!category) {
       setBudgetError("Choose a category");
@@ -83,9 +77,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
       setBudgetCategory("Groceries");
       await onChanged();
     } catch (err) {
-      setBudgetError(
-        err instanceof Error ? err.message : "Failed to save budget"
-      );
+      setBudgetError(err instanceof Error ? err.message : "Failed to save budget");
     } finally {
       setBudgetSaving(false);
     }
@@ -100,9 +92,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
       toast.success("Budget deleted");
       await onChanged();
     } catch (err) {
-      setBudgetError(
-        err instanceof Error ? err.message : "Failed to delete budget"
-      );
+      setBudgetError(err instanceof Error ? err.message : "Failed to delete budget");
     } finally {
       setDeletingBudgetId(null);
     }
@@ -127,9 +117,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile
-            ? "1fr"
-            : "minmax(0, 1fr) minmax(0, 150px) auto",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 150px) auto",
             gap: "10px",
             alignItems: "stretch",
           }}
@@ -212,10 +200,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
         )}
 
         {budgetError && (
-          <p
-            className="num"
-            style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}
-          >
+          <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}>
             {budgetError}
           </p>
         )}
@@ -271,10 +256,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
                       borderRadius: "8px",
                       padding: "8px 12px",
                       fontSize: "12px",
-                      cursor:
-                        deletingBudgetId === budget.id
-                          ? "not-allowed"
-                          : "pointer",
+                      cursor: deletingBudgetId === budget.id ? "not-allowed" : "pointer",
                       opacity: deletingBudgetId === budget.id ? 0.45 : 1,
                     }}
                   >
@@ -315,19 +297,14 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
                     <span
                       className="num"
                       style={{
-                        color: budget.isOverBudget
-                          ? "#f87171"
-                          : "var(--text-secondary)",
+                        color: budget.isOverBudget ? "#f87171" : "var(--text-secondary)",
                       }}
                     >
                       {budget.isOverBudget
                         ? `${formatCurrency(Math.abs(budget.remaining))} over budget`
                         : `${formatCurrency(budget.remaining)} remaining`}
                     </span>
-                    <span
-                      className="num"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <span className="num" style={{ color: "var(--text-muted)" }}>
                       {budget.percentageUsed.toFixed(0)}% used
                     </span>
                   </div>

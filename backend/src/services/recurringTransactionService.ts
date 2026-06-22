@@ -170,7 +170,10 @@ export async function listRecurringTransactions(userId: string) {
 /**
  * Creates a new recurring deposit or withdrawal rule.
  */
-export async function createRecurringTransaction(userId: string, input: CreateRecurringTransactionInput) {
+export async function createRecurringTransaction(
+  userId: string,
+  input: CreateRecurringTransactionInput
+) {
   if (input.amount <= 0) {
     throw new AppError(400, "amount must be positive");
   }
@@ -259,7 +262,11 @@ export async function createRecurringTransaction(userId: string, input: CreateRe
 /**
  * Updates a recurring rule. Previous generated transactions remain unchanged.
  */
-export async function updateRecurringTransaction(userId: string, id: string, input: UpdateRecurringTransactionInput) {
+export async function updateRecurringTransaction(
+  userId: string,
+  id: string,
+  input: UpdateRecurringTransactionInput
+) {
   if (input.amount <= 0) {
     throw new AppError(400, "amount must be positive");
   }
@@ -390,7 +397,10 @@ export async function deleteRecurringTransaction(userId: string, id: string) {
  * Applies all due recurring rules for the current user.
  * Each successful occurrence creates a normal deposit or withdrawal entry.
  */
-export async function applyDueRecurringTransactions(userId: string, now = new Date()): Promise<ApplyDueResult> {
+export async function applyDueRecurringTransactions(
+  userId: string,
+  now = new Date()
+): Promise<ApplyDueResult> {
   const rules = await prisma.$queryRaw<RecurringTransactionRecord[]>`
     SELECT
       r."id",
@@ -442,9 +452,25 @@ export async function applyDueRecurringTransactions(userId: string, now = new Da
       try {
         const ruleAmount = Number(rule.amount);
         if (rule.type === "DEPOSIT") {
-          await deposit(userId, rule.accountId, ruleAmount, rule.category ?? undefined, rule.description ?? undefined, nextRunAt, rule.merchant ?? undefined);
+          await deposit(
+            userId,
+            rule.accountId,
+            ruleAmount,
+            rule.category ?? undefined,
+            rule.description ?? undefined,
+            nextRunAt,
+            rule.merchant ?? undefined
+          );
         } else {
-          await withdraw(userId, rule.accountId, ruleAmount, rule.category ?? undefined, rule.description ?? undefined, nextRunAt, rule.merchant ?? undefined);
+          await withdraw(
+            userId,
+            rule.accountId,
+            ruleAmount,
+            rule.category ?? undefined,
+            rule.description ?? undefined,
+            nextRunAt,
+            rule.merchant ?? undefined
+          );
         }
 
         result.appliedCount += 1;
@@ -459,7 +485,8 @@ export async function applyDueRecurringTransactions(userId: string, now = new Da
         lastRunAt = new Date(nextRunAt);
         nextRunAt = advanceRunDate(nextRunAt, rule.frequency);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to apply recurring transaction";
+        const message =
+          error instanceof Error ? error.message : "Failed to apply recurring transaction";
         result.failedCount += 1;
         result.failures.push({
           recurringTransactionId: rule.id,

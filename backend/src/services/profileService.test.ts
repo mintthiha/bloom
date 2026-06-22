@@ -59,22 +59,20 @@ describe("profileService", () => {
 
   it("creates or updates a profile and normalizes username/email casing", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          userId: "user-1",
-          firstName: "Jane",
-          lastName: "Doe",
-          username: "janedoe",
-          email: "jane@example.com",
-          tfsaBirthYear: null,
-          tfsaRoomUsedElsewhere: null,
-          rrspContributionRoom: null,
-          createdAt: new Date("2026-04-04T00:00:00.000Z"),
-          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
-        },
-      ]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: null,
+        tfsaRoomUsedElsewhere: null,
+        rrspContributionRoom: null,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+      },
+    ]);
 
     const result = await upsertProfile("user-1", {
       firstName: " Jane ",
@@ -133,7 +131,10 @@ describe("profileService", () => {
         email: "jane@example.com",
         tfsaRoomUsedElsewhere: -100,
       })
-    ).rejects.toMatchObject({ statusCode: 400, message: "tfsaRoomUsedElsewhere must be at least 0" });
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "tfsaRoomUsedElsewhere must be at least 0",
+    });
   });
 
   it("rejects negative rrspContributionRoom", async () => {
@@ -147,27 +148,28 @@ describe("profileService", () => {
         email: "jane@example.com",
         rrspContributionRoom: -500,
       })
-    ).rejects.toMatchObject({ statusCode: 400, message: "rrspContributionRoom must be at least 0" });
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "rrspContributionRoom must be at least 0",
+    });
   });
 
   it("accepts null values for all three contribution room fields", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          userId: "user-1",
-          firstName: "Jane",
-          lastName: "Doe",
-          username: "janedoe",
-          email: "jane@example.com",
-          tfsaBirthYear: null,
-          tfsaRoomUsedElsewhere: null,
-          rrspContributionRoom: null,
-          createdAt: new Date("2026-04-04T00:00:00.000Z"),
-          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
-        },
-      ]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: null,
+        tfsaRoomUsedElsewhere: null,
+        rrspContributionRoom: null,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+      },
+    ]);
 
     const result = await upsertProfile("user-1", {
       firstName: "Jane",
@@ -188,22 +190,20 @@ describe("profileService", () => {
 
   it("accepts valid contribution room values", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          userId: "user-1",
-          firstName: "Jane",
-          lastName: "Doe",
-          username: "janedoe",
-          email: "jane@example.com",
-          tfsaBirthYear: 1995,
-          tfsaRoomUsedElsewhere: 5000,
-          rrspContributionRoom: 14000,
-          createdAt: new Date("2026-04-04T00:00:00.000Z"),
-          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
-        },
-      ]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: 1995,
+        tfsaRoomUsedElsewhere: 5000,
+        rrspContributionRoom: 14000,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+      },
+    ]);
 
     const result = await upsertProfile("user-1", {
       firstName: "Jane",

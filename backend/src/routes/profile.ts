@@ -19,7 +19,12 @@ function uid(req: Request): string {
  * Parses an optional nullable integer from a request body field with optional range bounds.
  * Returns null when the field is absent or explicitly null.
  */
-function parseOptionalInt(value: unknown, field: string, min?: number, max?: number): number | null {
+function parseOptionalInt(
+  value: unknown,
+  field: string,
+  min?: number,
+  max?: number
+): number | null {
   if (value === undefined || value === null) return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
@@ -79,17 +84,25 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
     const email = requireString(body.email, "email", { max: 254 });
     const currentYear = new Date().getFullYear();
     const tfsaBirthYear = parseOptionalInt(body.tfsaBirthYear, "tfsaBirthYear", 1900, currentYear);
-    const tfsaRoomUsedElsewhere = parseOptionalNonNegativeFloat(body.tfsaRoomUsedElsewhere, "tfsaRoomUsedElsewhere");
-    const rrspContributionRoom = parseOptionalNonNegativeFloat(body.rrspContributionRoom, "rrspContributionRoom");
-    res.json(await profileService.upsertProfile(uid(req), {
-      firstName,
-      lastName,
-      username,
-      email,
-      tfsaBirthYear,
-      tfsaRoomUsedElsewhere,
-      rrspContributionRoom,
-    }));
+    const tfsaRoomUsedElsewhere = parseOptionalNonNegativeFloat(
+      body.tfsaRoomUsedElsewhere,
+      "tfsaRoomUsedElsewhere"
+    );
+    const rrspContributionRoom = parseOptionalNonNegativeFloat(
+      body.rrspContributionRoom,
+      "rrspContributionRoom"
+    );
+    res.json(
+      await profileService.upsertProfile(uid(req), {
+        firstName,
+        lastName,
+        username,
+        email,
+        tfsaBirthYear,
+        tfsaRoomUsedElsewhere,
+        rrspContributionRoom,
+      })
+    );
   } catch (err) {
     next(err);
   }

@@ -34,7 +34,6 @@ const ACCOUNT_GROUPS: {
   },
 ];
 
-
 interface DraggableAccountListProps {
   accounts: Account[];
   loading: boolean;
@@ -44,10 +43,7 @@ interface DraggableAccountListProps {
  * Account list grouped by type with drag-to-reorder within each group.
  * Display order is persisted to localStorage under `bloom-account-order`.
  */
-export function DraggableAccountList({
-  accounts,
-  loading,
-}: DraggableAccountListProps) {
+export function DraggableAccountList({ accounts, loading }: DraggableAccountListProps) {
   const [order, setOrder] = useState<string[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -78,11 +74,9 @@ export function DraggableAccountList({
     () =>
       ACCOUNT_GROUPS.map((group) => ({
         ...group,
-        accounts: sortedAccounts.filter((acc) =>
-          group.types.includes(acc.accountType),
-        ),
+        accounts: sortedAccounts.filter((acc) => group.types.includes(acc.accountType)),
       })).filter((group) => group.accounts.length > 0),
-    [sortedAccounts],
+    [sortedAccounts]
   );
 
   /** Moves draggedId to just before targetId, then persists to localStorage. */
@@ -124,9 +118,7 @@ export function DraggableAccountList({
           textAlign: "center",
         }}
       >
-        <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>
-          No accounts yet.
-        </p>
+        <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>No accounts yet.</p>
         <p
           style={{
             color: "var(--text-muted)",
@@ -165,9 +157,7 @@ export function DraggableAccountList({
             >
               {group.title}
             </p>
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-              {group.description}
-            </p>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>{group.description}</p>
           </div>
 
           {group.accounts.map((acc) => {
@@ -202,11 +192,7 @@ export function DraggableAccountList({
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (
-                    draggingId &&
-                    draggingId !== acc.id &&
-                    draggingGroupId.current === group.id
-                  ) {
+                  if (draggingId && draggingId !== acc.id && draggingGroupId.current === group.id) {
                     handleReorder(draggingId, acc.id);
                   }
                   setDragOverId(null);
@@ -237,12 +223,7 @@ export function DraggableAccountList({
                     opacity: 0.45,
                   }}
                 >
-                  <svg
-                    width="10"
-                    height="16"
-                    viewBox="0 0 10 16"
-                    fill="currentColor"
-                  >
+                  <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
                     <circle cx="2.5" cy="2.5" r="1.5" />
                     <circle cx="7.5" cy="2.5" r="1.5" />
                     <circle cx="2.5" cy="7.5" r="1.5" />

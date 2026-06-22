@@ -24,11 +24,7 @@ export function requireObject(value: unknown, message = "Request body must be an
   return value as Record<string, unknown>;
 }
 
-export function requireString(
-  value: unknown,
-  field: string,
-  options?: StringOptions
-) {
+export function requireString(value: unknown, field: string, options?: StringOptions) {
   if (typeof value !== "string") {
     throw new AppError(400, `${field} must be a string`);
   }
@@ -48,7 +44,11 @@ export function requireString(
   return normalized;
 }
 
-export function optionalString(value: unknown, field: string, options?: Pick<StringOptions, "max" | "collapseWhitespace">) {
+export function optionalString(
+  value: unknown,
+  field: string,
+  options?: Pick<StringOptions, "max" | "collapseWhitespace">
+) {
   if (value === undefined || value === null) {
     return undefined;
   }

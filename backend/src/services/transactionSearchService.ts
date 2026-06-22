@@ -28,7 +28,7 @@ type RawRow = TransactionSearchResult & { amount: number | string };
 export async function searchTransactions(
   userId: string,
   query: string,
-  limit: number = 20,
+  limit: number = 20
 ): Promise<TransactionSearchResult[]> {
   const searchPattern = `%${query.toLowerCase()}%`;
   const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 50);
@@ -62,7 +62,7 @@ export async function searchTransactions(
     LIMIT ${safeLimit}
   `;
 
-  return rows.map(r => ({
+  return rows.map((r) => ({
     ...r,
     amount: typeof r.amount === "string" ? parseFloat(r.amount) : r.amount,
   }));

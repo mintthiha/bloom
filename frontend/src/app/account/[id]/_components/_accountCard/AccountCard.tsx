@@ -115,10 +115,7 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
               Account holder: {account.ownerName}
             </p>
           )}
-          <p
-            className="num"
-            style={{ fontSize: "12px", color: "var(--text-muted)" }}
-          >
+          <p className="num" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
             {account.id}
           </p>
         </div>
@@ -143,9 +140,7 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
                 marginBottom: "6px",
               }}
             >
-              {account.accountType === "CREDIT"
-                ? "Outstanding Balance"
-                : "Available Balance"}
+              {account.accountType === "CREDIT" ? "Outstanding Balance" : "Available Balance"}
             </p>
             <p
               className="num"
@@ -158,15 +153,8 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
               {formatCurrency(account.balance)}
             </p>
           </div>
-          <FreezeButton
-            accountId={account.id}
-            frozen={account.frozen}
-            onToggled={onRefresh}
-          />
-          <DeleteAccount
-            accountId={account.id}
-            displayName={displayName}
-          />
+          <FreezeButton accountId={account.id} frozen={account.frozen} onToggled={onRefresh} />
+          <DeleteAccount accountId={account.id} displayName={displayName} />
         </div>
       </div>
     </div>

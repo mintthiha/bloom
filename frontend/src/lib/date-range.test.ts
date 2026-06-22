@@ -98,9 +98,7 @@ describe("buildDateRangeQuery", () => {
   });
 
   it("returns undefined for the all-time preset (both strings empty)", () => {
-    expect(
-      buildDateRangeQuery({ preset: "all-time", start: "", end: "" })
-    ).toBeUndefined();
+    expect(buildDateRangeQuery({ preset: "all-time", start: "", end: "" })).toBeUndefined();
   });
 
   it("uses the end date as-is for non-custom presets (already exclusive)", () => {
@@ -130,7 +128,7 @@ describe("buildDateRangeQuery", () => {
     expect(result).toBeDefined();
     const endDate = new Date(result!.end);
     expect(endDate.getFullYear()).toBe(2026);
-    expect(endDate.getMonth()).toBe(5);  // June = 5
+    expect(endDate.getMonth()).toBe(5); // June = 5
     expect(endDate.getDate()).toBe(1);
   });
 

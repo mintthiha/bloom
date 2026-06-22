@@ -17,17 +17,13 @@ import { DailySpendingChart } from "./_components/_content/_dailySpendingChart/D
 import { SpendingPerAccountChart } from "./_components/_content/_spendingPerAccountChart/SpendingPerAccountChart";
 import { TransactionsSummary } from "./_components/_content/_transactionsSummary/TransactionsSummary";
 
-export default function BudgetDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function BudgetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [budget, setBudget] = useState<BudgetActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() =>
-    getPresetDateRange("this-month"),
+    getPresetDateRange("this-month")
   );
   const [timeZone, setTimeZone] = useState("UTC");
 
@@ -56,9 +52,7 @@ export default function BudgetDetailPage({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load budget",
-          );
+          setError(err instanceof Error ? err.message : "Failed to load budget");
         }
       } finally {
         if (!cancelled) {
@@ -82,14 +76,8 @@ export default function BudgetDetailPage({
           padding: "40px 24px 48px",
         }}
       >
-        <div
-          className="skeleton"
-          style={{ height: "120px", marginBottom: "20px" }}
-        />
-        <div
-          className="skeleton"
-          style={{ height: "280px", marginBottom: "20px" }}
-        />
+        <div className="skeleton" style={{ height: "120px", marginBottom: "20px" }} />
+        <div className="skeleton" style={{ height: "280px", marginBottom: "20px" }} />
         <div className="skeleton" style={{ height: "320px" }} />
       </div>
     );
@@ -123,9 +111,7 @@ export default function BudgetDetailPage({
             background: "var(--surface-1)",
           }}
         >
-          <h1
-            style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}
-          >
+          <h1 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>
             Budget activity unavailable
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
