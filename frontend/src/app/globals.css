@@ -164,6 +164,12 @@ body {
   animation-delay: 0.3s;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    animation: none;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;

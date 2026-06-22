@@ -284,16 +284,19 @@ function Home() {
     value,
     color,
     targetAccount,
+    staggerIndex = 0,
   }: {
     title: string;
     value: React.ReactNode;
     color?: string;
     targetAccount?: Account;
+    staggerIndex?: number;
   }) {
     const clickable = Boolean(targetAccount);
     return (
       <button
         type="button"
+        className="fade-up"
         onClick={() => {
           if (targetAccount) router.push(`/account/${targetAccount.id}`);
         }}
@@ -307,6 +310,7 @@ function Home() {
           cursor: clickable ? "pointer" : "default",
           opacity: clickable ? 1 : 0.9,
           transition: "border-color 0.15s, transform 0.15s",
+          animationDelay: `${staggerIndex * 50}ms`,
         }}
         onMouseEnter={(e) => {
           if (clickable) {
@@ -421,7 +425,6 @@ function Home() {
           {/* Stats row */}
           {accounts.length > 0 && (
             <div
-              className="fade-up fade-up-1"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -433,12 +436,14 @@ function Home() {
                 title: "Net Worth",
                 value: <AnimatedCurrency value={netWorth} />,
                 color: netWorth >= 0 ? "#22c55e" : "#ef4444",
+                staggerIndex: 0,
               })}
               {renderSummaryCard({
                 title: "Total Cash",
                 value: <AnimatedCurrency value={totalCash} />,
                 color: "#f59e0b",
                 targetAccount: cashAccounts[0],
+                staggerIndex: 1,
               })}
               {renderSummaryCard({
                 title: "Chequing",
@@ -451,6 +456,7 @@ function Home() {
                   </>
                 ),
                 targetAccount: chequingAccounts[0],
+                staggerIndex: 2,
               })}
               {renderSummaryCard({
                 title: "Savings",
@@ -463,6 +469,7 @@ function Home() {
                   </>
                 ),
                 targetAccount: savingsAccounts[0],
+                staggerIndex: 3,
               })}
               {renderSummaryCard({
                 title: "Registered",
@@ -475,6 +482,7 @@ function Home() {
                   </>
                 ),
                 targetAccount: registeredAccounts[0],
+                staggerIndex: 4,
               })}
               {renderSummaryCard({
                 title: "Credit",
@@ -494,6 +502,7 @@ function Home() {
                   ),
                 color: creditAccounts.length > 0 ? "#ef4444" : undefined,
                 targetAccount: creditAccounts[0],
+                staggerIndex: 5,
               })}
             </div>
           )}
