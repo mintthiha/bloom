@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 type SavingsGoalRow = {
   id: string;

@@ -1,9 +1,8 @@
-import { PrismaClient, TransactionType, AccountType } from "@prisma/client";
+import { TransactionType, AccountType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 type AccountRecord = {
   id: string;

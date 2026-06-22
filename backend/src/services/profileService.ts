@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 type ProfileInput = {
   firstName?: string;

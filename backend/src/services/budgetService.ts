@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 type BudgetRecord = {
   id: string;

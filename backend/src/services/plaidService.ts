@@ -5,10 +5,9 @@ import {
   Products,
   CountryCode,
 } from "plaid";
-import { PrismaClient, AccountType, TransactionType } from "@prisma/client";
+import { AccountType, TransactionType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
-
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma";
 
 /** Lazily initialized singleton — created on first use to avoid startup failure when credentials are absent. */
 let plaidClientSingleton: PlaidApi | null = null;
