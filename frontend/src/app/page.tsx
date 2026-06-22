@@ -27,6 +27,7 @@ import { formatCurrency } from "@/lib/format";
 import { getCachedFirstName, setCachedFirstName, getGreeting } from "@/lib/profile-cache";
 import { AnimatedCurrency } from "@/components/animated-currency";
 import { AnimatedCount } from "@/components/animated-count";
+import { FlashOnChange } from "@/components/flash-on-change";
 import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
 import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
 import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot";
@@ -282,12 +283,14 @@ function Home() {
   function renderSummaryCard({
     title,
     value,
+    flashKey,
     color,
     targetAccount,
     staggerIndex = 0,
   }: {
     title: string;
     value: React.ReactNode;
+    flashKey?: unknown;
     color?: string;
     targetAccount?: Account;
     staggerIndex?: number;
@@ -343,7 +346,7 @@ function Home() {
             color: color ?? "var(--text-primary)",
           }}
         >
-          {value}
+          <FlashOnChange watchKey={flashKey}>{value}</FlashOnChange>
         </div>
       </button>
     );
@@ -413,7 +416,7 @@ function Home() {
       {loading ? (
         <DashboardSkeleton dashboardColumns={dashboardColumns} twoColumnGrid={twoColumnGrid} />
       ) : (
-        <>
+        <div className="content-fade-in">
           {/* Onboarding checklist — only visible to new users until all steps complete or dismissed */}
           <OnboardingChecklist
             accounts={accounts}
@@ -435,12 +438,14 @@ function Home() {
               {renderSummaryCard({
                 title: "Net Worth",
                 value: <AnimatedCurrency value={netWorth} />,
+                flashKey: netWorth,
                 color: netWorth >= 0 ? "#22c55e" : "#ef4444",
                 staggerIndex: 0,
               })}
               {renderSummaryCard({
                 title: "Total Cash",
                 value: <AnimatedCurrency value={totalCash} />,
+                flashKey: totalCash,
                 color: "#f59e0b",
                 targetAccount: cashAccounts[0],
                 staggerIndex: 1,
@@ -455,6 +460,7 @@ function Home() {
                     </span>
                   </>
                 ),
+                flashKey: chequingAccounts.length,
                 targetAccount: chequingAccounts[0],
                 staggerIndex: 2,
               })}
@@ -468,6 +474,7 @@ function Home() {
                     </span>
                   </>
                 ),
+                flashKey: savingsAccounts.length,
                 targetAccount: savingsAccounts[0],
                 staggerIndex: 3,
               })}
@@ -481,6 +488,7 @@ function Home() {
                     </span>
                   </>
                 ),
+                flashKey: registeredAccounts.length,
                 targetAccount: registeredAccounts[0],
                 staggerIndex: 4,
               })}
@@ -500,6 +508,7 @@ function Home() {
                       </span>
                     </>
                   ),
+                flashKey: creditAccounts.length > 0 ? totalCredit : creditAccounts.length,
                 color: creditAccounts.length > 0 ? "#ef4444" : undefined,
                 targetAccount: creditAccounts[0],
                 staggerIndex: 5,
@@ -624,7 +633,7 @@ function Home() {
             <OpenAccountCard onCreated={loadAccounts} />
             <LinkBankAccountCard onLinked={loadAccounts} />
           </div>
-        </>
+        </div>
       )}
 
       {/* Account list */}

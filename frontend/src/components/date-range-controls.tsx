@@ -1,6 +1,6 @@
 "use client";
 
-import { DateRangePreset, DateRangeState, shiftLocalDate } from "@/lib/date-range";
+import { DateRangePreset, DateRangeState, getPresetDateRange, shiftLocalDate } from "@/lib/date-range";
 
 export function DateRangeControls({
   value,
@@ -25,7 +25,7 @@ export function DateRangeControls({
             return;
           }
 
-          onChange({ ...value, preset });
+          onChange(getPresetDateRange(preset));
         }}
         style={{
           background: "var(--surface-2)",

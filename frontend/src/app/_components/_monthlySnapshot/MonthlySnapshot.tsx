@@ -4,6 +4,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } fro
 import { MonthlySummary, MonthlyTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { FlashOnChange } from "@/components/flash-on-change";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Props = {
@@ -176,7 +177,7 @@ export function MonthlySnapshot({
                 Income
               </p>
               <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}>
-                {formatCurrency(monthlySummary.income)}
+                <FlashOnChange watchKey={monthlySummary.income}>{formatCurrency(monthlySummary.income)}</FlashOnChange>
               </p>
               {incomeDelta !== null && incomeDelta !== 0 && (
                 <p
@@ -214,7 +215,7 @@ export function MonthlySnapshot({
                 Spending
               </p>
               <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}>
-                {formatCurrency(monthlySummary.spending)}
+                <FlashOnChange watchKey={monthlySummary.spending}>{formatCurrency(monthlySummary.spending)}</FlashOnChange>
               </p>
               {spendingDelta !== null && spendingDelta !== 0 && (
                 <p
@@ -259,7 +260,7 @@ export function MonthlySnapshot({
                   color: monthlySummary.netCashFlow >= 0 ? "#22c55e" : "#f97316",
                 }}
               >
-                {formatCurrency(monthlySummary.netCashFlow)}
+                <FlashOnChange watchKey={monthlySummary.netCashFlow}>{formatCurrency(monthlySummary.netCashFlow)}</FlashOnChange>
               </p>
               {netDelta !== null && netDelta !== 0 && (
                 <p
@@ -306,7 +307,9 @@ export function MonthlySnapshot({
                   color: savingsRateColor,
                 }}
               >
-                {savingsRate !== null ? `${Math.round(savingsRate * 100)}%` : "N/A"}
+                <FlashOnChange watchKey={savingsRate}>
+                  {savingsRate !== null ? `${Math.round(savingsRate * 100)}%` : "N/A"}
+                </FlashOnChange>
               </p>
             </div>
           </div>
