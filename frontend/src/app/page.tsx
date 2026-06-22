@@ -25,6 +25,8 @@ import {
 } from "@/lib/date-range";
 import { formatCurrency } from "@/lib/format";
 import { getCachedFirstName, setCachedFirstName, getGreeting } from "@/lib/profile-cache";
+import { AnimatedCurrency } from "@/components/animated-currency";
+import { AnimatedCount } from "@/components/animated-count";
 import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
 import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
 import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot";
@@ -224,8 +226,8 @@ function Home() {
           <div
             className="fade-up fade-up-1"
             style={{
-              background: "linear-gradient(135deg, #18120a 0%, #111111 65%)",
-              border: "1px solid #2a2112",
+              background: "var(--surface-1)",
+              border: "1px solid #f59e0b22",
               borderRadius: "16px",
               padding: "24px",
             }}
@@ -429,12 +431,12 @@ function Home() {
             >
               {renderSummaryCard({
                 title: "Net Worth",
-                value: formatCurrency(netWorth),
+                value: <AnimatedCurrency value={netWorth} />,
                 color: netWorth >= 0 ? "#22c55e" : "#ef4444",
               })}
               {renderSummaryCard({
                 title: "Total Cash",
-                value: formatCurrency(totalCash),
+                value: <AnimatedCurrency value={totalCash} />,
                 color: "#f59e0b",
                 targetAccount: cashAccounts[0],
               })}
@@ -442,7 +444,7 @@ function Home() {
                 title: "Chequing",
                 value: (
                   <>
-                    {chequingAccounts.length}{" "}
+                    <AnimatedCount value={chequingAccounts.length} />{" "}
                     <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
                       acct{chequingAccounts.length !== 1 ? "s" : ""}
                     </span>
@@ -454,7 +456,7 @@ function Home() {
                 title: "Savings",
                 value: (
                   <>
-                    {savingsAccounts.length}{" "}
+                    <AnimatedCount value={savingsAccounts.length} />{" "}
                     <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
                       acct{savingsAccounts.length !== 1 ? "s" : ""}
                     </span>
@@ -466,7 +468,7 @@ function Home() {
                 title: "Registered",
                 value: (
                   <>
-                    {registeredAccounts.length}{" "}
+                    <AnimatedCount value={registeredAccounts.length} />{" "}
                     <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
                       acct{registeredAccounts.length !== 1 ? "s" : ""}
                     </span>
@@ -479,12 +481,12 @@ function Home() {
                 value:
                   creditAccounts.length > 0 ? (
                     <>
-                      {formatCurrency(totalCredit)}{" "}
+                      <AnimatedCurrency value={totalCredit} />{" "}
                       <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>owed</span>
                     </>
                   ) : (
                     <>
-                      {creditAccounts.length}{" "}
+                      <AnimatedCount value={creditAccounts.length} />{" "}
                       <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
                         acct{creditAccounts.length !== 1 ? "s" : ""}
                       </span>

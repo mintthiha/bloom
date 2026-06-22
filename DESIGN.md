@@ -59,6 +59,7 @@ rounded:
   xs: "6px"
   sm: "8px"
   md: "10px"
+  card-sm: "12px"
   lg: "14px"
   xl: "16px"
   full: "9999px"

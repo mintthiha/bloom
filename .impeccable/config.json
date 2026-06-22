@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-radius",
+        "value": "2px",
+        "reason": "Scrollbar thumb border-radius — intentional microdetail",
+        "createdAt": "2026-06-22T16:06:20.687Z"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "4px",
+        "reason": "Scrollbar thumb border-radius variant — intentional microdetail",
+        "createdAt": "2026-06-22T16:06:20.747Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#444",
+        "reason": "Scrollbar thumb color — intentional microdetail",
+        "createdAt": "2026-06-22T16:11:17.128Z"
+      }
+    ]
+  }
+}
