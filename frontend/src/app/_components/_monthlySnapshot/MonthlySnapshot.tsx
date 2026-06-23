@@ -17,11 +17,11 @@ type Props = {
 type SnapshotView = "snapshot" | "trends";
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "#1a1a1a",
-  border: "1px solid #2a2a2a",
+  background: "var(--surface-2)",
+  border: "1px solid var(--border)",
   borderRadius: "8px",
   fontSize: "12px",
-  color: "#f3f4f6",
+  color: "var(--text-primary)",
 };
 
 /** Returns a spending forecast for the current month, or null if not applicable. */

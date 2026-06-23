@@ -39,15 +39,15 @@ export function AccountBalancesCard({ accounts }: Props) {
           />
           <Tooltip
             contentStyle={{
-              background: "#1a1a1a",
-              border: "1px solid #2a2a2a",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
               borderRadius: "8px",
               fontSize: "12px",
-              color: "#f3f4f6",
+              color: "var(--text-primary)",
             }}
-            labelStyle={{ color: "#9ca3af" }}
-            itemStyle={{ color: "#f3f4f6" }}
-            cursor={{ fill: "#ffffff06" }}
+            labelStyle={{ color: "var(--text-secondary)" }}
+            itemStyle={{ color: "var(--text-primary)" }}
+            cursor={{ fill: "var(--chart-cursor)" }}
           />
           <Bar
             dataKey="balance"

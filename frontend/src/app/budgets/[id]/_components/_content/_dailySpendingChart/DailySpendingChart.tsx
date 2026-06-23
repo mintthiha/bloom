@@ -61,15 +61,15 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
             <Tooltip
               formatter={(value) => formatCurrency(Number(value))}
               contentStyle={{
-                background: "#1a1a1a",
-                border: "1px solid #2a2a2a",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
                 fontSize: "12px",
-                color: "#f3f4f6",
+                color: "var(--text-primary)",
               }}
-              labelStyle={{ color: "#f59e0b" }}
-              itemStyle={{ color: "#f3f4f6" }}
-              cursor={{ fill: "#ffffff06" }}
+              labelStyle={{ color: "var(--amber)" }}
+              itemStyle={{ color: "var(--text-primary)" }}
+              cursor={{ fill: "var(--chart-cursor)" }}
             />
             <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} />
           </BarChart>

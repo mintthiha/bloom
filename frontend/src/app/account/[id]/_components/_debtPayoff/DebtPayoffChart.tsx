@@ -19,11 +19,11 @@ type DebtPayoffChartProps = {
 };
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "#1a1a1a",
-  border: "1px solid #2a2a2a",
+  background: "var(--surface-2)",
+  border: "1px solid var(--border)",
   borderRadius: "8px",
   fontSize: "12px",
-  color: "#f3f4f6",
+  color: "var(--text-primary)",
 };
 
 /** Formats a Y-axis balance tick as a compact dollar amount. */
@@ -44,7 +44,7 @@ export function DebtPayoffChart({ data, showUserPayment, showBoosted }: DebtPayo
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
         <XAxis
           dataKey="month"
           tick={{ fontSize: 11, fill: "#9ca3af" }}

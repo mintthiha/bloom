@@ -20,11 +20,11 @@ type Props = {
 };
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "#1a1a1a",
-  border: "1px solid #2a2a2a",
+  background: "var(--surface-2)",
+  border: "1px solid var(--border)",
   borderRadius: "8px",
   fontSize: "12px",
-  color: "#f3f4f6",
+  color: "var(--text-primary)",
 };
 
 /** Net worth history card showing assets, debt, and net worth over the last 12 months. */
@@ -73,7 +73,7 @@ export function NetWorthHistory({ history }: Props) {
     >
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={history} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
           <XAxis
             dataKey="month"
             tick={{ fontSize: 11, fill: "#9ca3af" }}
@@ -93,10 +93,10 @@ export function NetWorthHistory({ history }: Props) {
               name === "netWorth" ? "Net Worth" : name === "totalAssets" ? "Assets" : "Debt",
             ]}
             contentStyle={TOOLTIP_CONTENT_STYLE}
-            labelStyle={{ color: "#9ca3af" }}
-            cursor={{ stroke: "#ffffff18" }}
+            labelStyle={{ color: "var(--text-secondary)" }}
+            cursor={{ stroke: "var(--border)" }}
           />
-          <ReferenceLine y={0} stroke="#ffffff18" strokeDasharray="4 4" />
+          <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
           <Line dataKey="totalAssets" stroke="#22c55e" strokeWidth={2} dot={false} />
           <Line dataKey="totalDebt" stroke="#ef4444" strokeWidth={2} dot={false} />
           <Line

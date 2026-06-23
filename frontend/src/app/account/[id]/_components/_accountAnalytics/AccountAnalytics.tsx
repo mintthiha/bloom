@@ -105,7 +105,7 @@ export function AccountAnalytics({
           </p>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={balanceData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis
                 dataKey="timestamp"
                 tick={{ fontSize: 10, fill: "#6b7280" }}
@@ -128,12 +128,12 @@ export function AccountAnalytics({
               />
               <Tooltip
                 contentStyle={{
-                  background: "#1a1a1a",
-                  border: "1px solid #2a2a2a",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                labelStyle={{ color: "#9ca3af" }}
+                labelStyle={{ color: "var(--text-secondary)" }}
                 labelFormatter={(value) =>
                   new Date(value).toLocaleString("en-CA", {
                     dateStyle: "medium",
@@ -181,8 +181,8 @@ export function AccountAnalytics({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: "#1a1a1a",
-                  border: "1px solid #2a2a2a",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
@@ -190,7 +190,7 @@ export function AccountAnalytics({
               <Legend
                 iconType="circle"
                 iconSize={8}
-                wrapperStyle={{ fontSize: "11px", color: "#6b7280" }}
+                wrapperStyle={{ fontSize: "11px", color: "var(--text-secondary)" }}
               />
             </PieChart>
           </ResponsiveContainer>
