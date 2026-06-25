@@ -18,7 +18,7 @@ import { AccountAnalytics } from "./_components/_accountAnalytics/AccountAnalyti
 import { NewTransactionForm } from "./_components/_newTransaction/NewTransactionForm";
 import { LinkedAccountNotice } from "./_components/_newTransaction/LinkedAccountNotice";
 import { ContributionRoomPanel } from "./_components/_contributionRoom/ContributionRoomPanel";
-import { DebtPayoffPanel } from "./_components/_debtPayoff/DebtPayoffPanel";
+import { CreditCardPanels } from "./_components/_creditCardPanels/CreditCardPanels";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { toast } from "sonner";
 
@@ -263,7 +263,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
       {account.accountType === "CREDIT" && (
         <div style={{ marginBottom: "16px" }}>
-          <DebtPayoffPanel account={account} />
+          <CreditCardPanels account={account} txns={txns} />
         </div>
       )}
 
