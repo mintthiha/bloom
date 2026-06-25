@@ -29,8 +29,12 @@ const TOOLTIP_CONTENT_STYLE = {
   color: "var(--text-primary)",
 };
 
-/** Formats a points X-axis tick as a compact number. */
-function formatPointsTick(value: number): string {
+/** Formats an X-axis tick — compact number for points, dollar for cashback. */
+function formatRewardTick(value: number, isCashback: boolean): string {
+  if (isCashback) {
+    if (value >= 1000) return `$${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+    return `$${value.toFixed(value % 1 === 0 ? 0 : 2)}`;
+  }
   if (value >= 1000) return `${(value / 1000).toFixed(1).replace(/\.0$/, "")}k`;
   return String(value);
 }
@@ -53,6 +57,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
     [charges, selectedProgram]
   );
 
+  const isCashback = selectedProgram.rewardType === "cashback";
   const totalPoints = computeTotalPoints(categoryPoints);
   const totalSpending = charges.reduce((sum, transaction) => sum + transaction.amount, 0);
   const hasData = categoryPoints.length > 0;
@@ -111,7 +116,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                   color: accentColor,
                 }}
               >
-                {totalPoints.toLocaleString()} pts
+                {isCashback ? formatCurrency(totalPoints) : `${totalPoints.toLocaleString()} pts`}
               </p>
               <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
                 Estimated total · {charges.length} charge{charges.length !== 1 ? "s" : ""} ·{" "}
@@ -148,7 +153,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                     tick={{ fontSize: 10, fill: "#6b7280" }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={formatPointsTick}
+                    tickFormatter={(v) => formatRewardTick(v, isCashback)}
                   />
                   <YAxis
                     type="category"
@@ -165,16 +170,24 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                       fontWeight: 600,
                       marginBottom: "4px",
                     }}
-                    formatter={(value, _name, props) => [
-                      `${Number(value).toLocaleString()} pts · ${props.payload.multiplier}x · ${formatCurrency(props.payload.spending)}`,
-                      "Estimated points",
-                    ]}
+                    formatter={(value, _name, props) => {
+                      const reward = isCashback
+                        ? formatCurrency(Number(value))
+                        : `${Number(value).toLocaleString()} pts`;
+                      const rate = isCashback
+                        ? `${props.payload.multiplier}%`
+                        : `${props.payload.multiplier}x`;
+                      return [
+                        `${reward} · ${rate} · ${formatCurrency(props.payload.spending)}`,
+                        isCashback ? "Estimated cash back" : "Estimated points",
+                      ];
+                    }}
                   />
                   <Bar dataKey="points" radius={[0, 4, 4, 0]}>
                     {categoryPoints.map((entry, index) => {
                       const isBonus =
-                        (selectedProgram.categoryMultipliers[entry.category] ??
-                          selectedProgram.basePtsPerDollar) > 1;
+                        (selectedProgram.categoryMultipliers[entry.category] ?? 0) >
+                        selectedProgram.baseRate;
                       return (
                         <Cell key={index} fill={accentColor} fillOpacity={isBonus ? 0.85 : 0.35} />
                       );
@@ -200,7 +213,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                         fontWeight: 600,
                       }}
                     >
-                      {multiplier}x {category}
+                      {isCashback ? `${multiplier}%` : `${multiplier}x`} {category}
                     </div>
                   )
                 )}
