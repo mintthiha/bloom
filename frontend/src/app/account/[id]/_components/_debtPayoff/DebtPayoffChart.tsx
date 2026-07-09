@@ -19,8 +19,8 @@ type DebtPayoffChartProps = {
 };
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "var(--surface-2)",
-  border: "1px solid var(--border)",
+  background: "var(--surface-4)",
+  border: "1px solid var(--border-hover)",
   borderRadius: "8px",
   fontSize: "12px",
   color: "var(--text-primary)",

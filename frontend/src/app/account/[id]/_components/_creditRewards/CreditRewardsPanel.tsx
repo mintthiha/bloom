@@ -6,6 +6,8 @@ import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import { CARD_PROGRAMS, computePointsByCategory, computeTotalPoints } from "./credit-rewards-math";
+import { loadCustomPrograms, saveCustomPrograms, isCustomProgram } from "./custom-programs-store";
+import { CustomProgramForm } from "./CustomProgramForm";
 import {
   ResponsiveContainer,
   BarChart,
@@ -22,8 +24,8 @@ type CreditRewardsPanelProps = {
 };
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "var(--surface-2)",
-  border: "1px solid var(--border)",
+  background: "var(--surface-4)",
+  border: "1px solid var(--border-hover)",
   borderRadius: "8px",
   fontSize: "12px",
   color: "var(--text-primary)",
@@ -39,13 +41,21 @@ function formatRewardTick(value: number, isCashback: boolean): string {
   return String(value);
 }
 
-/** Bar chart panel estimating credit card rewards points by spending category. */
+/** Bar chart panel estimating credit card rewards by spending category. */
 export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
   const accentColor = ACCOUNT_TYPE_META.CREDIT.color;
+
+  const [customPrograms, setCustomPrograms] = useState(() => {
+    if (typeof window === "undefined") return [];
+    return loadCustomPrograms();
+  });
   const [selectedProgramId, setSelectedProgramId] = useState(CARD_PROGRAMS[0].id);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const allPrograms = useMemo(() => [...CARD_PROGRAMS, ...customPrograms], [customPrograms]);
 
   const selectedProgram =
-    CARD_PROGRAMS.find((program) => program.id === selectedProgramId) ?? CARD_PROGRAMS[0];
+    allPrograms.find((program) => program.id === selectedProgramId) ?? CARD_PROGRAMS[0];
 
   const charges = useMemo(
     () => txns.filter((transaction) => transaction.type === "DEPOSIT"),
@@ -63,14 +73,32 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
   const hasData = categoryPoints.length > 0;
   const chartHeight = Math.max(180, categoryPoints.length * 44);
 
+  /** Persists and applies a newly created custom program, then selects it. */
+  function handleSaveCustomProgram(program: Parameters<typeof saveCustomPrograms>[0][number]) {
+    const updated = [...customPrograms, program];
+    saveCustomPrograms(updated);
+    setCustomPrograms(updated);
+    setSelectedProgramId(program.id);
+    setIsFormOpen(false);
+  }
+
+  /** Deletes the currently selected custom program and falls back to the first built-in. */
+  function handleDeleteCustomProgram() {
+    const updated = customPrograms.filter((p) => p.id !== selectedProgramId);
+    saveCustomPrograms(updated);
+    setCustomPrograms(updated);
+    setSelectedProgramId(CARD_PROGRAMS[0].id);
+  }
+
   return (
     <CollapsibleCard
       eyebrow="Credit Card"
-      title="Rewards Points Estimator"
+      title="Rewards Estimator"
       defaultCollapsed={false}
       style={{ borderTop: `3px solid ${accentColor}` }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {/* Program selector */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label
             htmlFor="rewards-card-program"
@@ -87,23 +115,93 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
           <select
             id="rewards-card-program"
             value={selectedProgramId}
-            onChange={(event) => setSelectedProgramId(event.target.value)}
+            onChange={(event) => {
+              setSelectedProgramId(event.target.value);
+              setIsFormOpen(false);
+            }}
             style={inputStyle}
           >
-            {CARD_PROGRAMS.map((program) => (
-              <option key={program.id} value={program.id}>
-                {program.name}
-              </option>
-            ))}
+            <optgroup label="Built-in Programs">
+              {CARD_PROGRAMS.map((program) => (
+                <option key={program.id} value={program.id}>
+                  {program.name}
+                </option>
+              ))}
+            </optgroup>
+            {customPrograms.length > 0 && (
+              <optgroup label="My Templates">
+                {customPrograms.map((program) => (
+                  <option key={program.id} value={program.id}>
+                    {program.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
-          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-            {selectedProgram.description}
-          </p>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "8px",
+            }}
+          >
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
+              {selectedProgram.description}
+            </p>
+            {isCustomProgram(selectedProgramId) && !isFormOpen && (
+              <button
+                type="button"
+                onClick={handleDeleteCustomProgram}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              >
+                Delete template
+              </button>
+            )}
+          </div>
+
+          {!isFormOpen ? (
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(true)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: accentColor,
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                padding: 0,
+                alignSelf: "flex-start",
+                opacity: 0.8,
+              }}
+            >
+              + New template
+            </button>
+          ) : (
+            <CustomProgramForm
+              onSave={handleSaveCustomProgram}
+              onCancel={() => setIsFormOpen(false)}
+            />
+          )}
         </div>
 
         {!hasData ? (
           <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-            No charges in the current view — add transactions to see estimated points.
+            No charges in the current view. add transactions to see estimated rewards, or change the
+            date.
           </p>
         ) : (
           <>
@@ -135,7 +233,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                   textTransform: "uppercase",
                 }}
               >
-                Points by Category
+                {isCashback ? "Cash Back by Category" : "Points by Category"}
               </p>
               <ResponsiveContainer width="100%" height={chartHeight}>
                 <BarChart
@@ -166,7 +264,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                   <Tooltip
                     contentStyle={TOOLTIP_CONTENT_STYLE}
                     labelStyle={{
-                      color: "var(--text-secondary)",
+                      color: "var(--text-primary)",
                       fontWeight: 600,
                       marginBottom: "4px",
                     }}
