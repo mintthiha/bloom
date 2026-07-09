@@ -19,12 +19,14 @@ type DebtPayoffChartProps = {
 };
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "var(--surface-4)",
-  border: "1px solid var(--border-hover)",
+  background: "#1e1e1e",
+  border: "1px solid #363636",
   borderRadius: "8px",
   fontSize: "12px",
-  color: "var(--text-primary)",
+  color: "#f0f0f0",
 };
+
+const TOOLTIP_ITEM_STYLE = { color: "rgba(255,255,255,0.68)" };
 
 /** Formats a Y-axis balance tick as a compact dollar amount. */
 function formatYAxisTick(value: number): string {
@@ -66,7 +68,8 @@ export function DebtPayoffChart({ data, showUserPayment, showBoosted }: DebtPayo
           ]}
           labelFormatter={(v) => (v === 0 ? "Now" : `Month ${v}`)}
           contentStyle={TOOLTIP_CONTENT_STYLE}
-          labelStyle={{ color: "#9ca3af" }}
+          itemStyle={TOOLTIP_ITEM_STYLE}
+          labelStyle={{ color: "rgba(255,255,255,0.45)" }}
           cursor={{ stroke: "#ffffff18" }}
         />
         <Legend
