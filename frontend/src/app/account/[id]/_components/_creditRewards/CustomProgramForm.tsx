@@ -72,6 +72,7 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
   const [baseRate, setBaseRate] = useState("");
   const [rows, setRows] = useState<CategoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<string | null>(null);
 
   const rateLabel = rewardType === "cashback" ? "% back per $1" : "pts per $1";
 
@@ -139,6 +140,7 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
         display: "flex",
         flexDirection: "column",
         gap: "14px",
+        animation: "fadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) both",
       }}
     >
       <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
@@ -166,23 +168,40 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
         <div style={{ display: "flex", gap: "6px" }}>
           {(["points", "cashback"] as const).map((type) => {
             const isActive = rewardType === type;
+            const isHovered = hoveredElement === `type-${type}`;
             return (
               <button
                 key={type}
                 type="button"
                 onClick={() => setRewardType(type)}
+                onMouseEnter={() => setHoveredElement(`type-${type}`)}
+                onMouseLeave={() => setHoveredElement(null)}
                 style={{
                   padding: "6px 14px",
                   borderRadius: "20px",
-                  border: isActive ? `1px solid ${accentColor}55` : "1px solid var(--border)",
-                  background: isActive ? `${accentColor}18` : "transparent",
-                  color: isActive ? accentColor : "var(--text-muted)",
+                  border: isActive
+                    ? `1px solid ${accentColor}55`
+                    : isHovered
+                      ? "1px solid var(--border-hover)"
+                      : "1px solid var(--border)",
+                  background: isActive
+                    ? `${accentColor}18`
+                    : isHovered
+                      ? "var(--surface-3)"
+                      : "transparent",
+                  color: isActive
+                    ? accentColor
+                    : isHovered
+                      ? "var(--text-secondary)"
+                      : "var(--text-muted)",
                   fontSize: "12px",
                   fontWeight: 600,
                   cursor: "pointer",
                   fontFamily: "inherit",
                   letterSpacing: "0.02em",
-                  transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease",
+                  transition:
+                    "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease",
+                  transform: isHovered && !isActive ? "translateY(-1px)" : "translateY(0)",
                 }}
               >
                 {type === "points" ? "Points" : "Cash Back"}
@@ -221,59 +240,84 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
           ))}
         </datalist>
 
-        {rows.map((row) => (
-          <div key={row.rowId} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <input
-              type="text"
-              list="custom-program-categories"
-              value={row.category}
-              onChange={(event) => updateRow(row.rowId, "category", event.target.value)}
-              placeholder="Category"
-              style={{ ...inputStyle, flex: 1, padding: "8px 12px", fontSize: "13px" }}
-            />
-            <input
-              type="number"
-              value={row.rate}
-              onChange={(event) => updateRow(row.rowId, "rate", event.target.value)}
-              min="0"
-              step="0.1"
-              placeholder={rewardType === "cashback" ? "%" : "×"}
-              style={{ ...inputStyle, width: "72px", padding: "8px 12px", fontSize: "13px" }}
-            />
-            <button
-              type="button"
-              onClick={() => removeRow(row.rowId)}
-              aria-label="Remove category"
+        {rows.map((row) => {
+          const isRemoveHovered = hoveredElement === `remove-${row.rowId}`;
+          return (
+            <div
+              key={row.rowId}
               style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-                fontSize: "18px",
-                lineHeight: 1,
-                padding: "4px",
-                fontFamily: "inherit",
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                animation: "fadeUp 0.18s cubic-bezier(0.16, 1, 0.3, 1) both",
               }}
             >
-              ×
-            </button>
-          </div>
-        ))}
+              <input
+                type="text"
+                list="custom-program-categories"
+                value={row.category}
+                onChange={(event) => updateRow(row.rowId, "category", event.target.value)}
+                placeholder="Category"
+                style={{ ...inputStyle, flex: 1, padding: "8px 12px", fontSize: "13px" }}
+              />
+              <input
+                type="number"
+                value={row.rate}
+                onChange={(event) => updateRow(row.rowId, "rate", event.target.value)}
+                min="0"
+                step="0.1"
+                placeholder={rewardType === "cashback" ? "%" : "×"}
+                style={{ ...inputStyle, width: "72px", padding: "8px 12px", fontSize: "13px" }}
+              />
+              <button
+                type="button"
+                onClick={() => removeRow(row.rowId)}
+                onMouseEnter={() => setHoveredElement(`remove-${row.rowId}`)}
+                onMouseLeave={() => setHoveredElement(null)}
+                aria-label="Remove category"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: isRemoveHovered ? "#f87171" : "var(--text-muted)",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                  lineHeight: 1,
+                  padding: "4px",
+                  fontFamily: "inherit",
+                  transition: "color 0.15s ease, transform 0.12s ease",
+                  transform: isRemoveHovered ? "scale(1.2)" : "scale(1)",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
 
+        {/* Add category button */}
         <button
           type="button"
           onClick={addRow}
+          onMouseEnter={() => setHoveredElement("add-category")}
+          onMouseLeave={() => setHoveredElement(null)}
           style={{
-            background: "transparent",
-            border: "1px dashed var(--border)",
+            background: hoveredElement === "add-category" ? "var(--surface-3)" : "transparent",
+            border:
+              hoveredElement === "add-category"
+                ? "1px solid var(--border-hover)"
+                : "1px dashed var(--border)",
             borderRadius: "6px",
-            color: "var(--text-muted)",
+            color:
+              hoveredElement === "add-category" ? "var(--text-secondary)" : "var(--text-muted)",
             fontSize: "12px",
             fontWeight: 600,
             padding: "6px 12px",
             cursor: "pointer",
             fontFamily: "inherit",
             alignSelf: "flex-start",
+            transition:
+              "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease",
+            transform: hoveredElement === "add-category" ? "translateY(-1px)" : "translateY(0)",
           }}
         >
           + Add category
@@ -287,16 +331,20 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
         <button
           type="button"
           onClick={handleSave}
+          onMouseEnter={() => setHoveredElement("save")}
+          onMouseLeave={() => setHoveredElement(null)}
           style={{
             padding: "8px 16px",
             borderRadius: "8px",
-            border: `1px solid ${accentColor}55`,
-            background: `${accentColor}18`,
+            border: `1px solid ${accentColor}${hoveredElement === "save" ? "99" : "55"}`,
+            background: `${accentColor}${hoveredElement === "save" ? "28" : "18"}`,
             color: accentColor,
             fontSize: "13px",
             fontWeight: 600,
             cursor: "pointer",
             fontFamily: "inherit",
+            transition: "background 0.15s ease, border-color 0.15s ease, transform 0.12s ease",
+            transform: hoveredElement === "save" ? "translateY(-1px)" : "translateY(0)",
           }}
         >
           Save Template
@@ -304,16 +352,24 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
         <button
           type="button"
           onClick={onCancel}
+          onMouseEnter={() => setHoveredElement("cancel")}
+          onMouseLeave={() => setHoveredElement(null)}
           style={{
             padding: "8px 16px",
             borderRadius: "8px",
-            border: "1px solid var(--border)",
-            background: "transparent",
+            border:
+              hoveredElement === "cancel"
+                ? "1px solid var(--border-hover)"
+                : "1px solid var(--border)",
+            background: hoveredElement === "cancel" ? "var(--surface-3)" : "transparent",
             color: "var(--text-muted)",
             fontSize: "13px",
             fontWeight: 600,
             cursor: "pointer",
             fontFamily: "inherit",
+            transition:
+              "background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease",
+            transform: hoveredElement === "cancel" ? "translateY(-1px)" : "translateY(0)",
           }}
         >
           Cancel

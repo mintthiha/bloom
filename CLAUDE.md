@@ -35,6 +35,7 @@ Before building a custom UI component, check whether shadcn/ui or the existing s
 - **Toasts / notifications** → always use `toast` from `sonner`. Never use inline `opError` / `opSuccess` state for user feedback. Import and call `toast.success(...)` or `toast.error(...)` directly in the component that performs the action.
 - **Dialogs / confirms** → use shadcn `AlertDialog` before writing a custom modal.
 - **Delete actions** → every delete must go through two steps: (1) an `AlertDialog` asking "Are you sure?" with the item name in the description, and (2) a `toast.success("X deleted")` after the deletion completes. Never delete immediately on button click.
+- **Create actions** → always call `toast.success("X created")` (or equivalent) immediately after a successful creation so the user gets visual confirmation. Sonner's `toast.success` renders green by default — use it as-is.
 - **Other UI primitives** (buttons, inputs, selects, etc.) → check `src/components/ui/` for an existing shadcn component before writing raw HTML with inline styles.
 
 Shared, non-route-specific components (e.g. `BackToHome`) belong in `src/components/`, not inside a route's `_components/` folder.

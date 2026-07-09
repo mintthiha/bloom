@@ -94,6 +94,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
     setCustomPrograms(updated);
     setSelectedProgramId(program.id);
     setIsFormOpen(false);
+    toast.success("Template saved");
   }
 
   /** Removes the selected custom program, falls back to the first built-in, and confirms via toast. */
