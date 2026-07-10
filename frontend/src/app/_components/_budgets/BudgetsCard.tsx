@@ -133,7 +133,6 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
               padding: "10px 14px",
               fontSize: "14px",
               color: "var(--text-primary)",
-              outline: "none",
             }}
           >
             {knownBudgetCategories.map((category) => (
@@ -157,7 +156,6 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
               padding: "10px 14px",
               fontSize: "14px",
               color: "var(--text-primary)",
-              outline: "none",
             }}
           />
           <button
@@ -194,7 +192,6 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
               padding: "10px 14px",
               fontSize: "14px",
               color: "var(--text-primary)",
-              outline: "none",
             }}
           />
         )}

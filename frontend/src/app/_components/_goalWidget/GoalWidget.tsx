@@ -125,7 +125,6 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
                 fontWeight: 600,
                 color: "var(--text-primary)",
                 cursor: "pointer",
-                outline: "none",
                 maxWidth: "200px",
               }}
             >

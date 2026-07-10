@@ -122,7 +122,6 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
     padding: "2px 6px",
     fontSize: "12px",
     color: "var(--text-primary)",
-    outline: "none",
     width: "120px",
   };
 

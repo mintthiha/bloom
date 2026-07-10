@@ -166,7 +166,6 @@ export function ChatSection({
             padding: "10px 14px",
             fontSize: "13px",
             color: "var(--text-primary)",
-            outline: "none",
             lineHeight: 1.5,
             fontFamily: "inherit",
             opacity: 0.5,

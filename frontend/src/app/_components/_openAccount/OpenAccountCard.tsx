@@ -15,7 +15,6 @@ const inputStyle: React.CSSProperties = {
   padding: "10px 14px",
   fontSize: "14px",
   color: "var(--text-primary)",
-  outline: "none",
 };
 
 /** Open new account card: collects owner name, optional nickname, and account type. */
@@ -88,7 +87,6 @@ export function OpenAccountCard({ onCreated }: Props) {
                 fontWeight: 600,
                 letterSpacing: "0.04em",
                 color: "var(--text-primary)",
-                outline: "none",
                 cursor: "pointer",
                 appearance: "none",
                 textAlign: "center",

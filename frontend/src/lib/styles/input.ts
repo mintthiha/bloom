@@ -9,6 +9,5 @@ export const inputStyle: CSSProperties = {
   padding: "10px 14px",
   fontSize: "14px",
   color: "var(--text-primary)",
-  outline: "none",
   fontFamily: "inherit",
 };

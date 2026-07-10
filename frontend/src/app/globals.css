@@ -154,6 +154,36 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Keyboard focus ring baseline.
+ * Wrapped in :where() so it has zero specificity — any component that defines
+ * its own focus style (e.g. shadcn Button/Input rings) overrides this, while
+ * every raw <button>, <a>, <input>, select, or role-based control that would
+ * otherwise show no focus indicator gets a consistent amber ring.
+ */
+:where(
+  a[href],
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+/* Never fall back to the browser default ring when focus-visible does not apply. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
