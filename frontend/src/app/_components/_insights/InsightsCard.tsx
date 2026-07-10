@@ -1,7 +1,9 @@
 "use client";
 import { useMemo } from "react";
+import { CircleCheck } from "lucide-react";
 import { Account, Budget, MonthlySummary, RecurringTransaction } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { EmptyState } from "@/components/EmptyState";
 import { generateInsights, InsightItem, InsightSeverity } from "./insights";
 
 type Props = {
@@ -113,9 +115,12 @@ export function InsightsCard({
       style={{}}
     >
       {insights.length === 0 ? (
-        <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
-          All clear! No action items right now.
-        </p>
+        <EmptyState
+          icon={CircleCheck}
+          variant="inline"
+          title="All clear"
+          description="No action items right now — your accounts are looking healthy."
+        />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {insights.map((item, index) => (

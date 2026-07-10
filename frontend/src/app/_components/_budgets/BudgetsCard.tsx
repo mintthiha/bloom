@@ -2,9 +2,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { PiggyBank } from "lucide-react";
 import { api, Budget, MonthlySummary } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { EmptyState } from "@/components/EmptyState";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const EXPENSE_BUDGET_CATEGORIES = [
@@ -204,9 +206,12 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
       </form>
 
       {budgets.length === 0 ? (
-        <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
-          No budgets yet. Add one above to start tracking category limits.
-        </p>
+        <EmptyState
+          icon={PiggyBank}
+          variant="inline"
+          title="No budgets yet"
+          description="Add one above to start tracking spending against category limits."
+        />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {budgets.map((budget) => {

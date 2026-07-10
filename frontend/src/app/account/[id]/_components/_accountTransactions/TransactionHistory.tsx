@@ -8,8 +8,10 @@ import {
   EXPENSE_CATEGORIES,
   TRANSACTION_FILTER_CATEGORIES,
 } from "@/lib/constants/account";
+import { Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { inputStyle } from "@/lib/styles/input";
+import { EmptyState } from "@/components/EmptyState";
 import { ExportCsvButton } from "./ExportCsvButton";
 
 const PAGE_SIZE = 4;
@@ -223,9 +225,12 @@ export function TransactionHistory({
       </div>
 
       {txns.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "32px 0" }}>
-          <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>No transactions yet.</p>
-        </div>
+        <EmptyState
+          icon={Receipt}
+          variant="inline"
+          title="No transactions yet"
+          description="Deposits, withdrawals, and transfers on this account will show up here."
+        />
       ) : (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>

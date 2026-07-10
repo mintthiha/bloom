@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import { Wallet } from "lucide-react";
 import { Account, AccountType } from "@/lib/api";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
+import { EmptyState } from "@/components/EmptyState";
 
 const ORDER_KEY = "bloom-account-order";
 
@@ -110,25 +112,11 @@ export function DraggableAccountList({ accounts, loading }: DraggableAccountList
 
   if (accounts.length === 0) {
     return (
-      <div
-        style={{
-          border: "1px dashed var(--border)",
-          borderRadius: "14px",
-          padding: "48px 24px",
-          textAlign: "center",
-        }}
-      >
-        <p style={{ color: "var(--text-muted)", fontSize: "14px" }}>No accounts yet.</p>
-        <p
-          style={{
-            color: "var(--text-muted)",
-            fontSize: "13px",
-            marginTop: "4px",
-          }}
-        >
-          Open one above to get started.
-        </p>
-      </div>
+      <EmptyState
+        icon={Wallet}
+        title="No accounts yet"
+        description="Open your first account above to start tracking balances and transactions."
+      />
     );
   }
 

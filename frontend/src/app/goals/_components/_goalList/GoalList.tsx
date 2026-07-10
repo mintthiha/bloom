@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Target } from "lucide-react";
 import { api, AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { EmptyState } from "@/components/EmptyState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -293,35 +295,29 @@ export function GoalList() {
           ))}
         </div>
       ) : goals.length === 0 ? (
-        <div
-          style={{
-            background: "var(--surface-1)",
-            border: "1px solid var(--border)",
-            borderRadius: "14px",
-            padding: "48px 24px",
-            textAlign: "center",
-          }}
-        >
-          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginBottom: "16px" }}>
-            No savings goals yet.
-          </p>
-          <button
-            type="button"
-            onClick={handleOpenCreate}
-            style={{
-              padding: "10px 20px",
-              background: "#f59e0b",
-              border: "none",
-              borderRadius: "10px",
-              color: "#000",
-              fontSize: "13px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Add your first goal
-          </button>
-        </div>
+        <EmptyState
+          icon={Target}
+          title="No savings goals yet"
+          description="Set a target balance on any account and track your progress toward it."
+          action={
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              style={{
+                padding: "10px 20px",
+                background: "#f59e0b",
+                border: "none",
+                borderRadius: "10px",
+                color: "#000",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Add your first goal
+            </button>
+          }
+        />
       ) : (
         <div
           style={{

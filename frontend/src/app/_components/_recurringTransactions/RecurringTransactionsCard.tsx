@@ -8,9 +8,11 @@ import {
   RecurringTransaction,
   RecurringTransactionType,
 } from "@/lib/api";
+import { Repeat } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { formatLocalDate } from "@/lib/date-range";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { EmptyState } from "@/components/EmptyState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -669,9 +671,12 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
         </form>
 
         {rules.length === 0 ? (
-          <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
-            No recurring rules yet. Add salary, rent, or subscriptions above.
-          </p>
+          <EmptyState
+            icon={Repeat}
+            variant="inline"
+            title="No recurring rules yet"
+            description="Add salary, rent, or subscriptions above to automate recurring transactions."
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {rules.map((rule) => (
