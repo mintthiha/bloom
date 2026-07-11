@@ -162,6 +162,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
           />
           <button
             type="submit"
+            className="press"
             disabled={budgetSaving}
             style={{
               padding: "10px 18px",

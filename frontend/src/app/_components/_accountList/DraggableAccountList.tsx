@@ -185,14 +185,15 @@ export function DraggableAccountList({ accounts, loading }: DraggableAccountList
                   }
                   setDragOverId(null);
                 }}
-                className="fade-up"
+                className="fade-up lift"
                 style={{
                   display: "flex",
                   alignItems: "center",
                   background: isDragOver ? "var(--surface-2)" : "var(--surface-1)",
                   border: `1px solid ${isDragOver ? "#f59e0b66" : "var(--border)"}`,
                   borderRadius: "12px",
-                  transition: "border-color 0.15s, background 0.15s, opacity 0.15s",
+                  transition:
+                    "border-color 0.15s, background 0.15s, opacity 0.15s, box-shadow 0.18s",
                   opacity: isDragging ? 0.4 : 1,
                   outline: isDragOver ? "1px solid #f59e0b44" : "none",
                 }}

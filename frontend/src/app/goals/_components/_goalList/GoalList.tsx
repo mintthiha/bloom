@@ -89,6 +89,7 @@ function GoalCard({
         <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
           <button
             type="button"
+            className="press"
             onClick={onEdit}
             style={{
               background: "none",
@@ -105,6 +106,7 @@ function GoalCard({
           </button>
           <button
             type="button"
+            className="press"
             onClick={onDelete}
             style={{
               background: "none",
@@ -265,6 +267,7 @@ export function GoalList() {
         </div>
         <button
           type="button"
+          className="press"
           onClick={handleOpenCreate}
           style={{
             padding: "10px 18px",
@@ -302,6 +305,7 @@ export function GoalList() {
           action={
             <button
               type="button"
+              className="press"
               onClick={handleOpenCreate}
               style={{
                 padding: "10px 20px",

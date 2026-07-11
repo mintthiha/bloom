@@ -121,6 +121,7 @@ export function LearningCards({
           <button
             key={card.title}
             type="button"
+            className="lift"
             onClick={() => {
               const nextExpanded = expanded ? null : i;
               setExpandedCard(nextExpanded);
@@ -133,7 +134,7 @@ export function LearningCards({
               borderRadius: "16px",
               padding: "20px",
               cursor: "pointer",
-              transition: "border-color 0.15s",
+              transition: "border-color 0.15s, box-shadow 0.18s",
             }}
           >
             <div

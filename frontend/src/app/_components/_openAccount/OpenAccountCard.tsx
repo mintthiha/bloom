@@ -104,6 +104,7 @@ export function OpenAccountCard({ onCreated }: Props) {
             </select>
             <button
               type="submit"
+              className="press"
               disabled={creating || !ownerName.trim()}
               style={{
                 padding: "10px 20px",

@@ -21,6 +21,8 @@
   --chart-grid: rgba(0, 0, 0, 0.07);
   --chart-cursor: rgba(0, 0, 0, 0.04);
   --scrollbar-thumb: #c4c4ca;
+  --shadow-hover: 0 6px 20px -8px rgba(0, 0, 0, 0.16), inset 0 0 0 1px #f59e0b2e;
+  --shadow-pressed: 0 2px 6px -3px rgba(0, 0, 0, 0.12), inset 0 0 0 1px #f59e0b1f;
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -64,6 +66,8 @@
   --chart-grid: rgba(255, 255, 255, 0.05);
   --chart-cursor: rgba(255, 255, 255, 0.04);
   --scrollbar-thumb: #444;
+  --shadow-hover: 0 8px 24px -10px rgba(0, 0, 0, 0.6), inset 0 0 0 1px #f59e0b33;
+  --shadow-pressed: 0 2px 8px -4px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #f59e0b26;
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -182,6 +186,52 @@ body {
 /* Never fall back to the browser default ring when focus-visible does not apply. */
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+/*
+ * Hover/press feedback utilities.
+ *
+ * `.lift` drives feedback through box-shadow only (not transform), so it works
+ * even on elements running the `fade-up` entrance animation, whose `both` fill
+ * would otherwise lock any transform. Hover raises a soft shadow with a subtle
+ * amber inset ring; press eases it back down.
+ *
+ * `.press` gives buttons a tactile scale + brightness response. Buttons never
+ * carry `fade-up`, so a transform is safe here.
+ */
+.lift {
+  transition:
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  cursor: pointer;
+}
+.lift:hover {
+  box-shadow: var(--shadow-hover);
+}
+.lift:active {
+  box-shadow: var(--shadow-pressed);
+  transition-duration: 0.09s;
+}
+
+.press {
+  transition:
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.15s ease;
+}
+.press:hover {
+  filter: brightness(1.06);
+}
+.press:active {
+  transform: scale(0.97);
+  filter: brightness(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:hover,
+  .press:active,
+  .lift:active {
+    transform: none;
+  }
 }
 
 @keyframes fadeUp {

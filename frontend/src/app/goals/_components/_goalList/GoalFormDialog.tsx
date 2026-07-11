@@ -210,6 +210,7 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
             </button>
             <button
               type="submit"
+              className="press"
               disabled={isSubmitting}
               style={{
                 padding: "10px 18px",

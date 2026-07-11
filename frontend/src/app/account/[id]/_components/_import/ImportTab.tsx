@@ -210,6 +210,7 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
             </span>
             {validCount > 0 && (
               <button
+                className="press"
                 onClick={handleImportCsv}
                 disabled={csvImporting}
                 style={{

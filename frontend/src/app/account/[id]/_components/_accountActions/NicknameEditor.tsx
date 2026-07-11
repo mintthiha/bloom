@@ -106,6 +106,7 @@ export function NicknameEditor({ accountId, nickname, onUpdated, onError }: Nick
             style={{ ...inputStyle, flex: "1 1 220px" }}
           />
           <button
+            className="press"
             onClick={handleSave}
             disabled={saving}
             style={{

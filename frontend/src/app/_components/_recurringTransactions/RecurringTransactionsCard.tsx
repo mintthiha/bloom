@@ -607,6 +607,7 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
             </label>
             <button
               type="submit"
+              className="press"
               disabled={saving}
               style={{
                 padding: "10px 18px",

@@ -328,6 +328,7 @@ export function NewTransactionForm({
             </div>
             <button
               type="submit"
+              className="press"
               disabled={submitting || (op === "transfer" && transferTargets.length === 0)}
               style={{
                 padding: "10px 24px",
