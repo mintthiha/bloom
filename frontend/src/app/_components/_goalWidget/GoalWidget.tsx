@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Target } from "lucide-react";
 import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { EmptyState } from "@/components/EmptyState";
 
 const STORAGE_KEY = "bloom_goal_widget_id";
 
@@ -53,7 +55,45 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
     localStorage.setItem(STORAGE_KEY, id);
   }
 
-  if (goals.length === 0) return null;
+  if (goals.length === 0) {
+    return (
+      <div
+        className="fade-up fade-up-1"
+        style={{
+          background: "var(--surface-1)",
+          border: "1px solid var(--border)",
+          borderRadius: "14px",
+          padding: "20px 24px",
+        }}
+      >
+        <EmptyState
+          icon={Target}
+          variant="inline"
+          title="No goals yet"
+          description="Set a target balance on any account and track your progress toward it."
+          action={
+            <button
+              type="button"
+              className="press"
+              onClick={() => router.push("/goals")}
+              style={{
+                padding: "10px 20px",
+                background: "#f59e0b",
+                border: "none",
+                borderRadius: "10px",
+                color: "#000",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Set a goal
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? goals[0]!;
   const typeMeta = ACCOUNT_TYPE_META[selectedGoal.accountType as AccountType];
