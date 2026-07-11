@@ -1,6 +1,7 @@
 "use client";
-import { CSSProperties, ReactNode, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
 type CollapsibleCardProps = {
   eyebrow: string;
@@ -51,8 +52,19 @@ export function CollapsibleCard({
   style,
   className,
 }: CollapsibleCardProps) {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const { allCollapsed } = useDashboardVisibility();
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed || allCollapsed);
+  const isFirstRender = useRef(true);
   const isMobile = useIsMobile();
+
+  /** Bulk-collapses or expands this card when the dashboard-wide toggle changes, leaving the initial mount to honor defaultCollapsed. */
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setIsCollapsed(allCollapsed);
+  }, [allCollapsed]);
 
   return (
     <div

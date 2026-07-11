@@ -79,7 +79,7 @@ function CardToggleRow({ cardId }: { cardId: CardId }) {
 
 /** Right-side drawer for toggling which dashboard cards are shown or hidden. */
 export function DashboardCustomizePanel() {
-  const { resetToDefaults, visibleCards } = useDashboardVisibility();
+  const { resetToDefaults, visibleCards, allCollapsed, setAllCollapsed } = useDashboardVisibility();
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
   const [isChecklistHidden, setIsChecklistHidden] = useState(false);
 
@@ -191,6 +191,40 @@ export function DashboardCustomizePanel() {
         </SheetHeader>
 
         <div style={{ padding: "0 24px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 0",
+              borderBottom: "1px solid var(--border)",
+              gap: "12px",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
+                Collapse all cards by on load
+              </p>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                Close every card down to its compact header
+              </p>
+            </div>
+            <CardToggle checked={allCollapsed} onChange={() => setAllCollapsed(!allCollapsed)} />
+          </div>
+
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--text-muted)",
+              margin: "20px 0 4px",
+            }}
+          >
+            Cards
+          </p>
+
           {ALL_CARD_IDS.map((cardId) => (
             <CardToggleRow key={cardId} cardId={cardId} />
           ))}

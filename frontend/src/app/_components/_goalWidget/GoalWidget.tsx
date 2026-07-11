@@ -7,6 +7,7 @@ import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { EmptyState } from "@/components/EmptyState";
+import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
 const STORAGE_KEY = "bloom_goal_widget_id";
 
@@ -36,9 +37,20 @@ function CollapseChevron({ isCollapsed }: { isCollapsed: boolean }) {
 /** Compact dashboard card showing one selected savings goal with a progress bar. Clicking navigates to /goals. */
 export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const router = useRouter();
+  const { allCollapsed } = useDashboardVisibility();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(allCollapsed);
   const seededRef = useRef(false);
+  const isFirstCollapseRender = useRef(true);
+
+  /** Syncs this card's collapsed state with the dashboard-wide toggle, ignoring the initial mount. */
+  useEffect(() => {
+    if (isFirstCollapseRender.current) {
+      isFirstCollapseRender.current = false;
+      return;
+    }
+    setIsCollapsed(allCollapsed);
+  }, [allCollapsed]);
 
   /** Seeds the selected goal from localStorage the first time a non-empty goals list arrives. */
   useEffect(() => {

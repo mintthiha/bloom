@@ -71,17 +71,22 @@ export const CARD_METADATA: Record<CardId, { label: string; description: string 
 };
 
 const STORAGE_KEY = "bloom_dashboard_visible_cards";
+const COLLAPSE_STORAGE_KEY = "bloom_dashboard_cards_collapsed";
 
 type DashboardVisibilityContextValue = {
   visibleCards: Set<CardId>;
   toggleCard: (id: CardId) => void;
   resetToDefaults: () => void;
+  allCollapsed: boolean;
+  setAllCollapsed: (collapsed: boolean) => void;
 };
 
 const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue>({
   visibleCards: new Set(ALL_CARD_IDS),
   toggleCard: () => {},
   resetToDefaults: () => {},
+  allCollapsed: false,
+  setAllCollapsed: () => {},
 });
 
 /** Reads the persisted visible-card set from localStorage synchronously to avoid a flash on first render. */
@@ -96,8 +101,15 @@ function readStoredVisibility(): Set<CardId> {
   return new Set(ALL_CARD_IDS);
 }
 
+/** Reads the persisted "collapse all cards" preference synchronously to avoid a flash on first render. */
+function readStoredCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === "true";
+}
+
 export function DashboardVisibilityProvider({ children }: { children: React.ReactNode }) {
   const [visibleCards, setVisibleCards] = useState<Set<CardId>>(readStoredVisibility);
+  const [allCollapsed, setAllCollapsedState] = useState<boolean>(readStoredCollapsed);
 
   /** Toggles a card on or off and writes the updated set to localStorage. */
   function toggleCard(cardId: CardId) {
@@ -119,7 +131,16 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
     window.localStorage.removeItem(STORAGE_KEY);
   }
 
-  const value = useMemo(() => ({ visibleCards, toggleCard, resetToDefaults }), [visibleCards]);
+  /** Collapses or expands every card at once and persists the preference. */
+  function setAllCollapsed(collapsed: boolean) {
+    setAllCollapsedState(collapsed);
+    window.localStorage.setItem(COLLAPSE_STORAGE_KEY, String(collapsed));
+  }
+
+  const value = useMemo(
+    () => ({ visibleCards, toggleCard, resetToDefaults, allCollapsed, setAllCollapsed }),
+    [visibleCards, allCollapsed]
+  );
 
   return (
     <DashboardVisibilityContext.Provider value={value}>
