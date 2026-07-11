@@ -198,6 +198,7 @@ export function AppSidebar() {
               >
                 <button
                   type="button"
+                  className="nav-item"
                   onClick={() => setView("single")}
                   title="Single column"
                   style={{
@@ -220,6 +221,7 @@ export function AppSidebar() {
                 </button>
                 <button
                   type="button"
+                  className="nav-item"
                   onClick={() => setView("double")}
                   title="Two columns"
                   style={{
@@ -256,6 +258,7 @@ export function AppSidebar() {
             >
               <button
                 type="button"
+                className="nav-item"
                 onClick={openCommandPalette}
                 title="Search transactions (⌘K)"
                 style={{
@@ -294,6 +297,7 @@ export function AppSidebar() {
               </button>
               <Link
                 href="/goals"
+                className="nav-item"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -315,6 +319,7 @@ export function AppSidebar() {
               </Link>
               <Link
                 href="/learn"
+                className="nav-item"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -351,6 +356,7 @@ export function AppSidebar() {
           >
             <Link
               href="/profile"
+              className="nav-item"
               style={{
                 display: "flex",
                 alignItems: "center",
