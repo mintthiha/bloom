@@ -56,7 +56,7 @@ export function CollapsibleCard({
 
   return (
     <div
-      className={className}
+      className={["lift", className].filter(Boolean).join(" ")}
       style={{
         background: "var(--surface-1)",
         border: "1px solid var(--border)",

@@ -58,7 +58,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   if (goals.length === 0) {
     return (
       <div
-        className="fade-up fade-up-1"
+        className="fade-up fade-up-1 lift"
         style={{
           background: "var(--surface-1)",
           border: "1px solid var(--border)",
@@ -102,13 +102,13 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
 
   return (
     <div
-      className="fade-up fade-up-1"
+      className="fade-up fade-up-1 lift"
       style={{
         background: "var(--surface-1)",
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "20px 24px",
-        transition: "border-color 0.15s, transform 0.15s",
+        transition: "border-color 0.15s, transform 0.15s, box-shadow 0.18s",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = "var(--border-hover)";
