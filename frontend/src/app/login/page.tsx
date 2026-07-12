@@ -3,14 +3,38 @@ import { useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { Check } from "lucide-react";
 
-// Resting geometry of the showcase glow, mirrored from its inline style below.
-const GLOW_REST_CENTER_FROM_RIGHT = 100; // px from the panel's right edge
-const GLOW_REST_CENTER_FROM_TOP = 80; // px from the panel's top edge
-const GLOW_INFLUENCE_RADIUS = 340; // cursor distance at which repulsion kicks in
-const GLOW_PUSH_ACCEL = 1.6; // how hard the cursor shoves the glow each frame
-const GLOW_FRICTION = 0.92; // velocity retained each frame — higher = more coasting
-const GLOW_EDGE_MARGIN = 20; // keep the glow's center at least this far inside the panel
-const GLOW_BOUNCE = 0.6; // velocity kept after bouncing off an edge (0 = dead stop, 1 = perfect)
+const GLOW_INFLUENCE_RADIUS = 200; // cursor distance at which repulsion kicks in — smaller = get closer first
+const GLOW_PUSH_ACCEL = 2.4; // peak shove strength when the cursor is right next to a glow
+const GLOW_FRICTION = 0.965; // velocity retained each frame — higher = coasts/decelerates more gradually
+const GLOW_MAX_SPEED = 30; // cap so a close cursor can't fling one uncontrollably fast
+const GLOW_EDGE_MARGIN = 20; // keep each glow's center at least this far inside the panel
+const GLOW_BOUNCE = 0.6; // energy kept after bouncing off an edge or another orb (0 = dead stop, 1 = perfect)
+
+type Orb = {
+  size: number; // rendered diameter in px
+  radius: number; // collision radius (roughly the visible core)
+  background: string; // radial-gradient fill
+  entranceDelay: string; // stagger for the scale-in animation
+  rest: (rect: DOMRect) => { x: number; y: number }; // resting center within the panel
+};
+
+/** The two floating showcase orbs. Both are repelled by the cursor and bounce off each other and the edges. */
+const ORBS: Orb[] = [
+  {
+    size: 440,
+    radius: 130,
+    background: "radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%)",
+    entranceDelay: "0s",
+    rest: (rect) => ({ x: rect.width - 100, y: 80 }),
+  },
+  {
+    size: 300,
+    radius: 92,
+    background: "radial-gradient(circle, rgba(251,191,36,0.13), transparent 70%)",
+    entranceDelay: "0.18s",
+    rest: (rect) => ({ x: 130, y: rect.height - 120 }),
+  },
+];
 
 const VALUE_PROPS = [
   { title: "Net worth at a glance", body: "Assets, debt, and the trend in one clear number." },
@@ -75,12 +99,13 @@ function GoogleMark() {
 
 export default function LoginPage() {
   const panelRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const offsetRef = useRef({ x: 0, y: 0 });
-  const velocityRef = useRef({ x: 0, y: 0 });
+  const orbElsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const orbStateRef = useRef(
+    ORBS.map(() => ({ offset: { x: 0, y: 0 }, velocity: { x: 0, y: 0 } }))
+  );
   const cursorRef = useRef({ x: 0, y: 0, active: false });
 
-  /** Records the cursor position within the panel so the physics loop can repel the glow. */
+  /** Records the cursor position within the panel so the physics loop can repel the orbs. */
   function handlePanelMouseMove(event: React.MouseEvent<HTMLDivElement>) {
     const panel = panelRef.current;
     if (!panel) return;
@@ -92,68 +117,139 @@ export default function LoginPage() {
     };
   }
 
-  /** Stops repelling when the cursor leaves; the glow keeps its momentum and coasts to a stop. */
+  /** Stops repelling when the cursor leaves; orbs keep their momentum and coast to a stop. */
   function handlePanelMouseLeave() {
     cursorRef.current.active = false;
   }
 
-  /** Physics loop for the glow: cursor repulsion + momentum (friction). It rests wherever it stops. */
+  /** Physics loop: cursor repulsion + momentum, orb-vs-orb elastic collisions, and edge bounce. */
   useEffect(() => {
+    const states = orbStateRef.current;
+
+    /** Writes each orb's transform from its rest center + current offset (also used for the static/reduced-motion frame). */
+    function render(rect: DOMRect) {
+      ORBS.forEach((orb, i) => {
+        const rest = orb.rest(rect);
+        const el = orbElsRef.current[i];
+        if (el) {
+          const translateX = rest.x - orb.size / 2 + states[i].offset.x;
+          const translateY = rest.y - orb.size / 2 + states[i].offset.y;
+          el.style.transform = `translate(${translateX}px, ${translateY}px)`;
+        }
+      });
+    }
+
+    // Place the orbs at rest for the first paint (and permanently under reduced motion).
+    const initialPanel = panelRef.current;
+    if (initialPanel) render(initialPanel.getBoundingClientRect());
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let frame = requestAnimationFrame(function step() {
       const panel = panelRef.current;
-      const glow = glowRef.current;
-      if (panel && glow) {
+      if (panel) {
         const rect = panel.getBoundingClientRect();
-        const offset = offsetRef.current;
-        const velocity = velocityRef.current;
-
-        // Repel the glow's current center away from the cursor.
         const cursor = cursorRef.current;
-        if (cursor.active) {
-          const dx = rect.width - GLOW_REST_CENTER_FROM_RIGHT + offset.x - cursor.x;
-          const dy = GLOW_REST_CENTER_FROM_TOP + offset.y - cursor.y;
-          const distance = Math.hypot(dx, dy) || 1;
-          if (distance < GLOW_INFLUENCE_RADIUS) {
-            const push = (1 - distance / GLOW_INFLUENCE_RADIUS) * GLOW_PUSH_ACCEL;
-            velocity.x += (dx / distance) * push;
-            velocity.y += (dy / distance) * push;
+
+        // 1. Per orb: cursor repulsion, friction, speed cap, then integrate position.
+        ORBS.forEach((orb, i) => {
+          const state = states[i];
+          const rest = orb.rest(rect);
+          const centerX = rest.x + state.offset.x;
+          const centerY = rest.y + state.offset.y;
+
+          if (cursor.active) {
+            const dx = centerX - cursor.x;
+            const dy = centerY - cursor.y;
+            const distance = Math.hypot(dx, dy) || 1;
+            if (distance < GLOW_INFLUENCE_RADIUS) {
+              // Quadratic falloff: the closer the cursor, the sharply faster it accelerates away.
+              const proximity = 1 - distance / GLOW_INFLUENCE_RADIUS;
+              const push = proximity * proximity * GLOW_PUSH_ACCEL;
+              state.velocity.x += (dx / distance) * push;
+              state.velocity.y += (dy / distance) * push;
+            }
+          }
+
+          state.velocity.x *= GLOW_FRICTION;
+          state.velocity.y *= GLOW_FRICTION;
+
+          const speed = Math.hypot(state.velocity.x, state.velocity.y);
+          if (speed > GLOW_MAX_SPEED) {
+            state.velocity.x = (state.velocity.x / speed) * GLOW_MAX_SPEED;
+            state.velocity.y = (state.velocity.y / speed) * GLOW_MAX_SPEED;
+          }
+
+          state.offset.x += state.velocity.x;
+          state.offset.y += state.velocity.y;
+        });
+
+        // 2. Elastic collisions between every pair of orbs (equal mass).
+        for (let i = 0; i < ORBS.length; i++) {
+          for (let j = i + 1; j < ORBS.length; j++) {
+            const a = states[i];
+            const b = states[j];
+            const restA = ORBS[i].rest(rect);
+            const restB = ORBS[j].rest(rect);
+            const ax = restA.x + a.offset.x;
+            const ay = restA.y + a.offset.y;
+            const bx = restB.x + b.offset.x;
+            const by = restB.y + b.offset.y;
+
+            const dx = bx - ax;
+            const dy = by - ay;
+            const distance = Math.hypot(dx, dy) || 0.0001;
+            const minDistance = ORBS[i].radius + ORBS[j].radius;
+            if (distance >= minDistance) continue;
+
+            const nx = dx / distance;
+            const ny = dy / distance;
+
+            // Separate them so they no longer overlap (split evenly).
+            const overlap = (minDistance - distance) / 2;
+            a.offset.x -= nx * overlap;
+            a.offset.y -= ny * overlap;
+            b.offset.x += nx * overlap;
+            b.offset.y += ny * overlap;
+
+            // Exchange velocity along the collision normal (only if closing in).
+            const velAlongNormal =
+              (b.velocity.x - a.velocity.x) * nx + (b.velocity.y - a.velocity.y) * ny;
+            if (velAlongNormal < 0) {
+              const impulse = (-(1 + GLOW_BOUNCE) * velAlongNormal) / 2;
+              a.velocity.x -= impulse * nx;
+              a.velocity.y -= impulse * ny;
+              b.velocity.x += impulse * nx;
+              b.velocity.y += impulse * ny;
+            }
           }
         }
 
-        // Friction only — the glow coasts to a stop and stays where you leave it.
-        velocity.x *= GLOW_FRICTION;
-        velocity.y *= GLOW_FRICTION;
+        // 3. Bounce off the panel edges, then paint.
+        ORBS.forEach((orb, i) => {
+          const state = states[i];
+          const rest = orb.rest(rect);
+          const minOffsetX = GLOW_EDGE_MARGIN - rest.x;
+          const maxOffsetX = rect.width - GLOW_EDGE_MARGIN - rest.x;
+          const minOffsetY = GLOW_EDGE_MARGIN - rest.y;
+          const maxOffsetY = rect.height - GLOW_EDGE_MARGIN - rest.y;
 
-        offset.x += velocity.x;
-        offset.y += velocity.y;
+          if (state.offset.x < minOffsetX) {
+            state.offset.x = minOffsetX;
+            state.velocity.x = Math.abs(state.velocity.x) * GLOW_BOUNCE;
+          } else if (state.offset.x > maxOffsetX) {
+            state.offset.x = maxOffsetX;
+            state.velocity.x = -Math.abs(state.velocity.x) * GLOW_BOUNCE;
+          }
+          if (state.offset.y < minOffsetY) {
+            state.offset.y = minOffsetY;
+            state.velocity.y = Math.abs(state.velocity.y) * GLOW_BOUNCE;
+          } else if (state.offset.y > maxOffsetY) {
+            state.offset.y = maxOffsetY;
+            state.velocity.y = -Math.abs(state.velocity.y) * GLOW_BOUNCE;
+          }
+        });
 
-        // Bounce off the panel edges so the glow roams the whole panel but never leaves it.
-        // Offsets are measured from the rest center, so convert the panel bounds into offset bounds.
-        const restX = rect.width - GLOW_REST_CENTER_FROM_RIGHT;
-        const restY = GLOW_REST_CENTER_FROM_TOP;
-        const minOffsetX = GLOW_EDGE_MARGIN - restX;
-        const maxOffsetX = rect.width - GLOW_EDGE_MARGIN - restX;
-        const minOffsetY = GLOW_EDGE_MARGIN - restY;
-        const maxOffsetY = rect.height - GLOW_EDGE_MARGIN - restY;
-
-        if (offset.x < minOffsetX) {
-          offset.x = minOffsetX;
-          velocity.x = Math.abs(velocity.x) * GLOW_BOUNCE;
-        } else if (offset.x > maxOffsetX) {
-          offset.x = maxOffsetX;
-          velocity.x = -Math.abs(velocity.x) * GLOW_BOUNCE;
-        }
-        if (offset.y < minOffsetY) {
-          offset.y = minOffsetY;
-          velocity.y = Math.abs(velocity.y) * GLOW_BOUNCE;
-        } else if (offset.y > maxOffsetY) {
-          offset.y = maxOffsetY;
-          velocity.y = -Math.abs(velocity.y) * GLOW_BOUNCE;
-        }
-
-        glow.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+        render(rect);
       }
       frame = requestAnimationFrame(step);
     });
@@ -186,30 +282,36 @@ export default function LoginPage() {
           color: "#efefef",
         }}
       >
-        {/* Outer wrapper is driven by the physics loop (transform); inner handles the entrance scale. */}
-        <div
-          ref={glowRef}
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: "-140px",
-            right: "-120px",
-            width: "440px",
-            height: "440px",
-            pointerEvents: "none",
-            willChange: "transform",
-          }}
-        >
+        {/* Each orb's outer wrapper is driven by the physics loop (transform); inner handles the entrance scale. */}
+        {ORBS.map((orb, index) => (
           <div
-            className="login-glow"
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%)",
+            key={index}
+            ref={(el) => {
+              orbElsRef.current[index] = el;
             }}
-          />
-        </div>
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: `${orb.size}px`,
+              height: `${orb.size}px`,
+              pointerEvents: "none",
+              willChange: "transform",
+            }}
+          >
+            <div
+              className="login-glow"
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                background: orb.background,
+                animationDelay: orb.entranceDelay,
+              }}
+            />
+          </div>
+        ))}
 
         <div
           className="fade-up"
