@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { Check } from "lucide-react";
 
@@ -7,6 +7,8 @@ const GLOW_INFLUENCE_RADIUS = 200; // cursor distance at which repulsion kicks i
 const GLOW_PUSH_ACCEL = 2.4; // peak shove strength when the cursor is right next to a glow
 const GLOW_FRICTION = 0.965; // velocity retained each frame — higher = coasts/decelerates more gradually
 const GLOW_MAX_SPEED = 30; // cap so a close cursor can't fling one uncontrollably fast
+const GLOW_AMBIENT_SPEED = 0.4; // baseline drift speed — orbs float forever and never fully stop
+const GLOW_AMBIENT_JITTER = 0.03; // tiny random nudge each frame so the drift wanders organically
 const GLOW_EDGE_MARGIN = 20; // keep each glow's center at least this far inside the panel
 const GLOW_BOUNCE = 0.6; // energy kept after bouncing off an edge or another orb (0 = dead stop, 1 = perfect)
 
@@ -107,6 +109,8 @@ export default function LoginPage() {
     ORBS.map(() => ({ offset: { x: 0, y: 0 }, velocity: { x: 0, y: 0 } }))
   );
   const cursorRef = useRef({ x: 0, y: 0, active: false });
+  // Orbs stay invisible until the physics effect places them at their random spawn, so no flash.
+  const [started, setStarted] = useState(false);
 
   /** Records the cursor position within the panel so the physics loop can repel the orbs. */
   function handlePanelMouseMove(event: React.MouseEvent<HTMLDivElement>) {
@@ -137,7 +141,27 @@ export default function LoginPage() {
       });
     }
 
-    // Orbs already sit at rest via their CSS anchor, so nothing to place under reduced motion.
+    // Spawn each orb at a random spot within the panel, drifting in a random direction.
+    const initialPanel = panelRef.current;
+    if (initialPanel) {
+      const rect = initialPanel.getBoundingClientRect();
+      ORBS.forEach((orb, i) => {
+        const rest = orb.rest(rect);
+        const spawnX = GLOW_EDGE_MARGIN + Math.random() * (rect.width - 2 * GLOW_EDGE_MARGIN);
+        const spawnY = GLOW_EDGE_MARGIN + Math.random() * (rect.height - 2 * GLOW_EDGE_MARGIN);
+        states[i].offset.x = spawnX - rest.x;
+        states[i].offset.y = spawnY - rest.y;
+        const angle = Math.random() * Math.PI * 2;
+        states[i].velocity.x = Math.cos(angle) * GLOW_AMBIENT_SPEED;
+        states[i].velocity.y = Math.sin(angle) * GLOW_AMBIENT_SPEED;
+      });
+      render();
+    }
+
+    // Reveal now that the orbs are positioned — this is what prevents the first-paint flash.
+    setStarted(true);
+
+    // Under reduced motion the orbs stay at their random spawn — no drift loop.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let frame = requestAnimationFrame(function step() {
@@ -166,13 +190,27 @@ export default function LoginPage() {
             }
           }
 
+          // Gentle random wander so the drift never looks perfectly straight.
+          state.velocity.x += (Math.random() - 0.5) * GLOW_AMBIENT_JITTER;
+          state.velocity.y += (Math.random() - 0.5) * GLOW_AMBIENT_JITTER;
+
           state.velocity.x *= GLOW_FRICTION;
           state.velocity.y *= GLOW_FRICTION;
 
+          // Keep speed within [ambient floor, max]: never fully stops, never flings.
           const speed = Math.hypot(state.velocity.x, state.velocity.y);
           if (speed > GLOW_MAX_SPEED) {
             state.velocity.x = (state.velocity.x / speed) * GLOW_MAX_SPEED;
             state.velocity.y = (state.velocity.y / speed) * GLOW_MAX_SPEED;
+          } else if (speed < GLOW_AMBIENT_SPEED) {
+            if (speed < 0.0001) {
+              const angle = Math.random() * Math.PI * 2;
+              state.velocity.x = Math.cos(angle) * GLOW_AMBIENT_SPEED;
+              state.velocity.y = Math.sin(angle) * GLOW_AMBIENT_SPEED;
+            } else {
+              state.velocity.x = (state.velocity.x / speed) * GLOW_AMBIENT_SPEED;
+              state.velocity.y = (state.velocity.y / speed) * GLOW_AMBIENT_SPEED;
+            }
           }
 
           state.offset.x += state.velocity.x;
@@ -296,13 +334,14 @@ export default function LoginPage() {
             }}
           >
             <div
-              className="login-glow"
+              className={started ? "login-glow" : undefined}
               style={{
                 width: "100%",
                 height: "100%",
                 borderRadius: "50%",
                 background: orb.background,
                 animationDelay: orb.entranceDelay,
+                opacity: started ? undefined : 0,
               }}
             />
           </div>
