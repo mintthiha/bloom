@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   ALL_CARD_IDS,
@@ -77,9 +78,19 @@ function CardToggleRow({ cardId }: { cardId: CardId }) {
   );
 }
 
-/** Right-side drawer for toggling which dashboard cards are shown or hidden. */
+/** Right-side drawer for app-wide appearance settings plus dashboard-only card controls. */
 export function DashboardCustomizePanel() {
-  const { resetToDefaults, visibleCards, allCollapsed, setAllCollapsed } = useDashboardVisibility();
+  const {
+    resetToDefaults,
+    visibleCards,
+    allCollapsed,
+    setAllCollapsed,
+    orbsEnabled,
+    setOrbsEnabled,
+  } = useDashboardVisibility();
+  const pathname = usePathname();
+  // Card visibility, collapse-all, and the onboarding checklist only apply to the dashboard.
+  const isDashboard = pathname === "/";
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
   const [isChecklistHidden, setIsChecklistHidden] = useState(false);
 
@@ -156,7 +167,7 @@ export function DashboardCustomizePanel() {
           <rect x="14" y="14" width="7" height="7" />
         </svg>
         Customize
-        {hiddenCount > 0 && (
+        {isDashboard && hiddenCount > 0 && (
           <span
             style={{
               fontSize: "10px",
@@ -183,14 +194,39 @@ export function DashboardCustomizePanel() {
       >
         <SheetHeader style={{ padding: "28px 24px 16px" }}>
           <SheetTitle style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.4px" }}>
-            Customize Dashboard
+            {isDashboard ? "Customize Dashboard" : "Customize"}
           </SheetTitle>
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Choose which cards appear on your dashboard.
+            {isDashboard
+              ? "Choose which cards appear on your dashboard."
+              : "Adjust how Bloom looks."}
           </p>
         </SheetHeader>
 
         <div style={{ padding: "0 24px" }}>
+          {isDashboard && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "12px 0",
+                borderBottom: "1px solid var(--border)",
+                gap: "12px",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
+                  Collapse all cards by on load
+                </p>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                  Close every card down to its compact header
+                </p>
+              </div>
+              <CardToggle checked={allCollapsed} onChange={() => setAllCollapsed(!allCollapsed)} />
+            </div>
+          )}
+
           <div
             style={{
               display: "flex",
@@ -203,78 +239,82 @@ export function DashboardCustomizePanel() {
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
-                Collapse all cards by on load
+                Ambient background orbs
               </p>
               <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Close every card down to its compact header
+                Soft glows that drift in the background
               </p>
             </div>
-            <CardToggle checked={allCollapsed} onChange={() => setAllCollapsed(!allCollapsed)} />
+            <CardToggle checked={orbsEnabled} onChange={() => setOrbsEnabled(!orbsEnabled)} />
           </div>
 
-          <p
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "var(--text-muted)",
-              margin: "20px 0 4px",
-            }}
-          >
-            Cards
-          </p>
+          {isDashboard && (
+            <>
+              <p
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--text-muted)",
+                  margin: "20px 0 4px",
+                }}
+              >
+                Cards
+              </p>
 
-          {ALL_CARD_IDS.map((cardId) => (
-            <CardToggleRow key={cardId} cardId={cardId} />
-          ))}
+              {ALL_CARD_IDS.map((cardId) => (
+                <CardToggleRow key={cardId} cardId={cardId} />
+              ))}
 
-          {hiddenCount > 0 && (
-            <button
-              type="button"
-              onClick={resetToDefaults}
-              style={{
-                marginTop: "24px",
-                width: "100%",
-                background: "none",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "8px",
-                cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--text-secondary)",
-                transition: "border-color 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-            >
-              Reset to defaults
-            </button>
-          )}
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={resetToDefaults}
+                  style={{
+                    marginTop: "24px",
+                    width: "100%",
+                    background: "none",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--text-secondary)",
+                    transition: "border-color 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                >
+                  Reset to defaults
+                </button>
+              )}
 
-          {isChecklistHidden && (
-            <button
-              type="button"
-              onClick={handleRestoreChecklist}
-              style={{
-                marginTop: hiddenCount > 0 ? "10px" : "24px",
-                width: "100%",
-                background: "none",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "8px",
-                cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--text-secondary)",
-                transition: "border-color 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-            >
-              Restore getting started checklist
-            </button>
+              {isChecklistHidden && (
+                <button
+                  type="button"
+                  onClick={handleRestoreChecklist}
+                  style={{
+                    marginTop: hiddenCount > 0 ? "10px" : "24px",
+                    width: "100%",
+                    background: "none",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--text-secondary)",
+                    transition: "border-color 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                >
+                  Restore getting started checklist
+                </button>
+              )}
+            </>
           )}
         </div>
       </SheetContent>

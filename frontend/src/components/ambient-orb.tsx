@@ -65,8 +65,8 @@ function readPlayArea(): PlayArea | null {
 }
 
 /**
- * Ambient glow orbs that drift through the dashboard's content region, are repelled by the cursor,
- * and bounce off one another and the edges formed by the sidebar, header, and footer. Decorative.
+ * Ambient glow orbs that drift through the app's content region, are repelled by the cursor, and
+ * bounce off one another and the edges formed by the sidebar, header, and footer. Decorative.
  */
 export function AmbientOrb() {
   const layerRef = useRef<HTMLDivElement>(null);

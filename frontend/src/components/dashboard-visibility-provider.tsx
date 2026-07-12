@@ -72,6 +72,7 @@ export const CARD_METADATA: Record<CardId, { label: string; description: string 
 
 const STORAGE_KEY = "bloom_dashboard_visible_cards";
 const COLLAPSE_STORAGE_KEY = "bloom_dashboard_cards_collapsed";
+const ORBS_STORAGE_KEY = "bloom_dashboard_orbs_enabled";
 
 type DashboardVisibilityContextValue = {
   visibleCards: Set<CardId>;
@@ -79,6 +80,8 @@ type DashboardVisibilityContextValue = {
   resetToDefaults: () => void;
   allCollapsed: boolean;
   setAllCollapsed: (collapsed: boolean) => void;
+  orbsEnabled: boolean;
+  setOrbsEnabled: (enabled: boolean) => void;
 };
 
 const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue>({
@@ -87,6 +90,8 @@ const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue
   resetToDefaults: () => {},
   allCollapsed: false,
   setAllCollapsed: () => {},
+  orbsEnabled: true,
+  setOrbsEnabled: () => {},
 });
 
 /** Reads the persisted visible-card set from localStorage synchronously to avoid a flash on first render. */
@@ -107,9 +112,16 @@ function readStoredCollapsed(): boolean {
   return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === "true";
 }
 
+/** Reads the persisted "ambient orbs" preference synchronously; enabled unless explicitly turned off. */
+function readStoredOrbsEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(ORBS_STORAGE_KEY) !== "false";
+}
+
 export function DashboardVisibilityProvider({ children }: { children: React.ReactNode }) {
   const [visibleCards, setVisibleCards] = useState<Set<CardId>>(readStoredVisibility);
   const [allCollapsed, setAllCollapsedState] = useState<boolean>(readStoredCollapsed);
+  const [orbsEnabled, setOrbsEnabledState] = useState<boolean>(readStoredOrbsEnabled);
 
   /** Toggles a card on or off and writes the updated set to localStorage. */
   function toggleCard(cardId: CardId) {
@@ -137,9 +149,23 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
     window.localStorage.setItem(COLLAPSE_STORAGE_KEY, String(collapsed));
   }
 
+  /** Enables or disables the ambient background orbs and persists the preference. */
+  function setOrbsEnabled(enabled: boolean) {
+    setOrbsEnabledState(enabled);
+    window.localStorage.setItem(ORBS_STORAGE_KEY, String(enabled));
+  }
+
   const value = useMemo(
-    () => ({ visibleCards, toggleCard, resetToDefaults, allCollapsed, setAllCollapsed }),
-    [visibleCards, allCollapsed]
+    () => ({
+      visibleCards,
+      toggleCard,
+      resetToDefaults,
+      allCollapsed,
+      setAllCollapsed,
+      orbsEnabled,
+      setOrbsEnabled,
+    }),
+    [visibleCards, allCollapsed, orbsEnabled]
   );
 
   return (

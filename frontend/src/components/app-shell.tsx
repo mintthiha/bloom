@@ -7,6 +7,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { AmbientOrb } from "@/components/ambient-orb";
+import { DashboardCustomizePanel } from "@/app/_components/_dashboardCustomize/DashboardCustomizePanel";
+import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
 /** Routes that render standalone, without the sidebar/header/footer app chrome. */
 const CHROMELESS_ROUTES = new Set(["/login"]);
@@ -14,6 +17,7 @@ const CHROMELESS_ROUTES = new Set(["/login"]);
 /** Wraps the app in its sidebar/header/footer shell, except on standalone routes like /login. */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { orbsEnabled } = useDashboardVisibility();
 
   if (CHROMELESS_ROUTES.has(pathname)) {
     return <>{children}</>;
@@ -63,11 +67,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             </div>
           </div>
-          <ThemeToggle />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <DashboardCustomizePanel />
+            <ThemeToggle />
+          </div>
         </header>
         <CommandPalette />
         <ThemedToaster />
-        <main style={{ flex: 1, overflowX: "hidden" }}>{children}</main>
+        <main style={{ flex: 1, overflowX: "hidden" }}>
+          {orbsEnabled && <AmbientOrb />}
+          {/* Content sits above the ambient orbs (which render at z-index 0). */}
+          <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+        </main>
         <footer
           style={{
             borderTop: "1px solid var(--border)",

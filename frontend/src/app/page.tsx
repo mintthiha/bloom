@@ -41,11 +41,9 @@ import { InsightsCard } from "./_components/_insights/InsightsCard";
 import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
 import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHealthScore";
 import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
-import { DashboardCustomizePanel } from "./_components/_dashboardCustomize/DashboardCustomizePanel";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 import { OnboardingChecklist } from "./_components/_onboardingChecklist/OnboardingChecklist";
 import { LinkBankAccountCard } from "./_components/_linkAccount/LinkBankAccountCard";
-import { AmbientOrb } from "./_components/_ambientOrb/AmbientOrb";
 
 function Home() {
   const { effectiveView } = useDashboardView();
@@ -367,16 +365,11 @@ function Home() {
   return (
     <div
       style={{
-        position: "relative",
-        zIndex: 1,
         maxWidth: "1200px",
         margin: "0 auto",
         padding: "40px 24px 48px",
       }}
     >
-      {/* Ambient background orb — drifts behind the content, bounded by the sidebar/header/footer */}
-      <AmbientOrb />
-
       {/* Welcome */}
       <div className="fade-up" style={{ marginBottom: "28px" }}>
         <div
@@ -413,7 +406,6 @@ function Home() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <DashboardCustomizePanel />
             <DateRangeControls value={dateRange} onChange={setDateRange} />
           </div>
         </div>
