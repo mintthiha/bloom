@@ -244,11 +244,37 @@ body {
   transform: scale(0.98);
 }
 
+/*
+ * Login value-prop rows. The row runs the fade-up entrance (which locks its own
+ * transform), so the hover animates the children instead: the icon pops with a
+ * soft glow, the text nudges over, and the title brightens.
+ */
+.value-prop-icon,
+.value-prop-text,
+.value-prop-title {
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+.value-prop:hover .value-prop-icon {
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+.value-prop:hover .value-prop-text {
+  transform: translateX(3px);
+}
+.value-prop:hover .value-prop-title {
+  color: #fbbf24;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .press:hover,
   .press:active,
   .lift:active,
-  .nav-item:active {
+  .nav-item:active,
+  .value-prop:hover .value-prop-icon,
+  .value-prop:hover .value-prop-text {
     transform: none;
   }
 }

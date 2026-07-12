@@ -49,7 +49,7 @@ const VALUE_PROPS = [
   },
   {
     title: "Every account, unified",
-    body: "Chequing, savings, TFSA, RRSP, FHSA, and credit — together.",
+    body: "Chequing, savings, TFSA, RRSP, FHSA, and credit, side by side.",
   },
 ];
 
@@ -379,15 +379,14 @@ export default function LoginPage() {
               animationDelay: "0.16s",
             }}
           >
-            A personal banking dashboard that surfaces the signal — net worth, budgets, and cash
-            flow — and gets out of the way.
+            A clear view of your net worth, budgets, and cash flow, all in one place.
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {VALUE_PROPS.map((prop, index) => (
               <div
                 key={prop.title}
-                className="fade-up"
+                className="fade-up value-prop"
                 style={{
                   display: "flex",
                   gap: "12px",
@@ -396,6 +395,7 @@ export default function LoginPage() {
               >
                 <span
                   aria-hidden
+                  className="value-prop-icon"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -412,8 +412,11 @@ export default function LoginPage() {
                 >
                   <Check size={13} strokeWidth={2.5} />
                 </span>
-                <div>
-                  <p style={{ fontSize: "14px", fontWeight: 600, marginBottom: "2px" }}>
+                <div className="value-prop-text">
+                  <p
+                    className="value-prop-title"
+                    style={{ fontSize: "14px", fontWeight: 600, marginBottom: "2px" }}
+                  >
                     {prop.title}
                   </p>
                   <p style={{ fontSize: "13px", color: "#888", lineHeight: 1.5 }}>{prop.body}</p>
@@ -462,7 +465,7 @@ export default function LoginPage() {
             animationDelay: "0.6s",
           }}
         >
-          Sharp · Minimal · Focused
+          Know where you stand, every day.
         </p>
       </div>
 
