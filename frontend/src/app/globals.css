@@ -217,6 +217,22 @@ body {
   transition-duration: 0.09s;
 }
 
+/* Drag handle for reorderable dashboard cards — hidden until the card is hovered. */
+.card-drag-handle {
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.card-drag-slot:hover .card-drag-handle {
+  opacity: 1;
+}
+.card-drag-handle:hover {
+  color: #f59e0b;
+  border-color: #f59e0b66;
+}
+
 .press {
   transition:
     transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),

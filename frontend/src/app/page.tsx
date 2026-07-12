@@ -41,6 +41,7 @@ import { InsightsCard } from "./_components/_insights/InsightsCard";
 import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
 import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHealthScore";
 import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
+import { DraggableCardGrid, DashboardCard } from "./_components/_dashboardCards/DraggableCardGrid";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 import { OnboardingChecklist } from "./_components/_onboardingChecklist/OnboardingChecklist";
 import { LinkBankAccountCard } from "./_components/_linkAccount/LinkBankAccountCard";
@@ -362,6 +363,93 @@ function Home() {
   const totalCredit = creditAccounts.reduce((sum, a) => sum + a.balance, 0);
   const netWorth = totalCash - totalCredit;
 
+  // Build the reorderable card set in default order; each card carries its own data-availability gate.
+  const reorderableCards: DashboardCard[] = [];
+  if (accounts.length > 0 && monthlySummary) {
+    if (visibleCards.has("goals")) {
+      reorderableCards.push({ id: "goals", node: <GoalWidget goals={goals} /> });
+    }
+    if (visibleCards.has("financial-health")) {
+      reorderableCards.push({
+        id: "financial-health",
+        node: (
+          <FinancialHealthScore
+            accounts={accounts}
+            budgets={budgets}
+            monthlySummary={monthlySummary}
+            netWorthHistory={netWorthHistory}
+          />
+        ),
+      });
+    }
+    if (visibleCards.has("insights")) {
+      reorderableCards.push({
+        id: "insights",
+        node: (
+          <InsightsCard
+            accounts={accounts}
+            budgets={budgets}
+            monthlySummary={monthlySummary}
+            previousMonthlySummary={previousMonthlySummary}
+            recurringRules={recurringRules}
+          />
+        ),
+      });
+    }
+    if (visibleCards.has("budget-rule")) {
+      reorderableCards.push({
+        id: "budget-rule",
+        node: <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />,
+      });
+    }
+    if (visibleCards.has("monthly-snapshot")) {
+      reorderableCards.push({
+        id: "monthly-snapshot",
+        node: (
+          <MonthlySnapshot
+            monthlySummary={monthlySummary}
+            previousMonthlySummary={previousMonthlySummary}
+            monthlyTrends={monthlyTrends}
+            isCurrentMonth={dateRange.preset === "this-month"}
+          />
+        ),
+      });
+    }
+    if (visibleCards.has("budgets")) {
+      reorderableCards.push({
+        id: "budgets",
+        anchorId: "budgets-card-section",
+        node: (
+          <BudgetsCard budgets={budgets} monthlySummary={monthlySummary} onChanged={loadAccounts} />
+        ),
+      });
+    }
+  }
+  if (accounts.length > 0 && visibleCards.has("recurring")) {
+    reorderableCards.push({
+      id: "recurring",
+      node: (
+        <RecurringTransactionsCard
+          rules={recurringRules}
+          accounts={accounts}
+          onChanged={loadAccounts}
+        />
+      ),
+    });
+  }
+  if (accounts.length > 0 && visibleCards.has("calendar")) {
+    reorderableCards.push({ id: "calendar", node: <RecurringCalendar rules={recurringRules} /> });
+  }
+  if (netWorthHistory.length > 0 && visibleCards.has("net-worth")) {
+    reorderableCards.push({ id: "net-worth", node: <NetWorthHistory history={netWorthHistory} /> });
+  }
+  if (accounts.length > 1 && visibleCards.has("account-balances")) {
+    reorderableCards.push({
+      id: "account-balances",
+      node: <AccountBalancesCard accounts={accounts} />,
+    });
+  }
+
   return (
     <div
       style={{
@@ -514,107 +602,10 @@ function Home() {
             </div>
           )}
 
-          {/* Goals + Financial Health + Insights + 50/30/20 Rule (2×2 grid) */}
-          {accounts.length > 0 &&
-            monthlySummary &&
-            (visibleCards.has("goals") ||
-              visibleCards.has("financial-health") ||
-              visibleCards.has("insights") ||
-              visibleCards.has("budget-rule")) && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: twoColumnGrid,
-                  gap: "20px",
-                  alignItems: "start",
-                  marginBottom: "32px",
-                }}
-              >
-                {visibleCards.has("goals") && <GoalWidget goals={goals} />}
-                {visibleCards.has("financial-health") && (
-                  <FinancialHealthScore
-                    accounts={accounts}
-                    budgets={budgets}
-                    monthlySummary={monthlySummary!}
-                    netWorthHistory={netWorthHistory}
-                  />
-                )}
-                {visibleCards.has("insights") && (
-                  <InsightsCard
-                    accounts={accounts}
-                    budgets={budgets}
-                    monthlySummary={monthlySummary!}
-                    previousMonthlySummary={previousMonthlySummary}
-                    recurringRules={recurringRules}
-                  />
-                )}
-                {visibleCards.has("budget-rule") && (
-                  <BudgetRuleCard monthlySummary={monthlySummary!} rangeQuery={rangeQuery} />
-                )}
-              </div>
-            )}
+          {/* Customizable cards — drag any card by its handle to reorder; the order persists per user. */}
+          <DraggableCardGrid cards={reorderableCards} columns={dashboardColumns} />
 
-          {/* Monthly Snapshot + Budgets */}
-          {accounts.length > 0 &&
-            monthlySummary &&
-            (visibleCards.has("monthly-snapshot") || visibleCards.has("budgets")) && (
-              <div
-                id="budgets-card-section"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: dashboardColumns,
-                  gap: "20px",
-                  alignItems: "start",
-                  marginBottom: "32px",
-                }}
-              >
-                {visibleCards.has("monthly-snapshot") && (
-                  <MonthlySnapshot
-                    monthlySummary={monthlySummary!}
-                    previousMonthlySummary={previousMonthlySummary}
-                    monthlyTrends={monthlyTrends}
-                    isCurrentMonth={dateRange.preset === "this-month"}
-                  />
-                )}
-                {visibleCards.has("budgets") && (
-                  <BudgetsCard
-                    budgets={budgets}
-                    monthlySummary={monthlySummary!}
-                    onChanged={loadAccounts}
-                  />
-                )}
-              </div>
-            )}
-
-          {/* Recurring Transactions + Upcoming Schedule */}
-          {accounts.length > 0 &&
-            (visibleCards.has("recurring") || visibleCards.has("calendar")) && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: dashboardColumns,
-                  gap: "20px",
-                  alignItems: "start",
-                  marginBottom: "32px",
-                }}
-              >
-                {visibleCards.has("recurring") && (
-                  <RecurringTransactionsCard
-                    rules={recurringRules}
-                    accounts={accounts}
-                    onChanged={loadAccounts}
-                  />
-                )}
-                {visibleCards.has("calendar") && <RecurringCalendar rules={recurringRules} />}
-              </div>
-            )}
-
-          {/* Net Worth History */}
-          {netWorthHistory.length > 0 && visibleCards.has("net-worth") && (
-            <NetWorthHistory history={netWorthHistory} />
-          )}
-
-          {/* Account Balances + Open New Account + Link Bank Account */}
+          {/* Open New Account + Link Bank Account (utility cards, not reorderable) */}
           <div
             id="open-account-section"
             style={{
@@ -625,9 +616,6 @@ function Home() {
               marginBottom: "32px",
             }}
           >
-            {accounts.length > 1 && visibleCards.has("account-balances") && (
-              <AccountBalancesCard accounts={accounts} />
-            )}
             <OpenAccountCard onCreated={loadAccounts} />
             <LinkBankAccountCard onLinked={loadAccounts} />
           </div>

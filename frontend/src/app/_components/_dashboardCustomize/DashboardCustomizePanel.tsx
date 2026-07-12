@@ -87,11 +87,15 @@ export function DashboardCustomizePanel() {
     setAllCollapsed,
     orbsEnabled,
     setOrbsEnabled,
+    cardOrder,
   } = useDashboardVisibility();
   const pathname = usePathname();
   // Card visibility, collapse-all, and the onboarding checklist only apply to the dashboard.
   const isDashboard = pathname === "/";
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
+  // True when the user has hidden a card or dragged the layout away from its default order.
+  const hasCustomLayout =
+    hiddenCount > 0 || cardOrder.some((id, index) => id !== ALL_CARD_IDS[index]);
   const [isChecklistHidden, setIsChecklistHidden] = useState(false);
 
   /** Reads both hide-flags from localStorage on mount to decide whether to show the restore button. */
@@ -267,7 +271,7 @@ export function DashboardCustomizePanel() {
                 <CardToggleRow key={cardId} cardId={cardId} />
               ))}
 
-              {hiddenCount > 0 && (
+              {hasCustomLayout && (
                 <button
                   type="button"
                   onClick={resetToDefaults}
@@ -296,7 +300,7 @@ export function DashboardCustomizePanel() {
                   type="button"
                   onClick={handleRestoreChecklist}
                   style={{
-                    marginTop: hiddenCount > 0 ? "10px" : "24px",
+                    marginTop: hasCustomLayout ? "10px" : "24px",
                     width: "100%",
                     background: "none",
                     border: "1px solid var(--border)",

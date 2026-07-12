@@ -73,6 +73,7 @@ export const CARD_METADATA: Record<CardId, { label: string; description: string 
 const STORAGE_KEY = "bloom_dashboard_visible_cards";
 const COLLAPSE_STORAGE_KEY = "bloom_dashboard_cards_collapsed";
 const ORBS_STORAGE_KEY = "bloom_dashboard_orbs_enabled";
+const CARD_ORDER_STORAGE_KEY = "bloom_dashboard_card_order";
 
 type DashboardVisibilityContextValue = {
   visibleCards: Set<CardId>;
@@ -82,6 +83,8 @@ type DashboardVisibilityContextValue = {
   setAllCollapsed: (collapsed: boolean) => void;
   orbsEnabled: boolean;
   setOrbsEnabled: (enabled: boolean) => void;
+  cardOrder: CardId[];
+  reorderCard: (draggedId: CardId, targetId: CardId) => void;
 };
 
 const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue>({
@@ -92,6 +95,8 @@ const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue
   setAllCollapsed: () => {},
   orbsEnabled: true,
   setOrbsEnabled: () => {},
+  cardOrder: [...ALL_CARD_IDS],
+  reorderCard: () => {},
 });
 
 /** Reads the persisted visible-card set from localStorage synchronously to avoid a flash on first render. */
@@ -118,10 +123,31 @@ function readStoredOrbsEnabled(): boolean {
   return window.localStorage.getItem(ORBS_STORAGE_KEY) !== "false";
 }
 
+/**
+ * Reads the persisted card display order synchronously, always returning a complete list:
+ * stored ids first (in their saved order), then any cards missing from storage appended in
+ * their default position so newly added cards still appear.
+ */
+function readStoredCardOrder(): CardId[] {
+  if (typeof window === "undefined") return [...ALL_CARD_IDS];
+  try {
+    const stored = window.localStorage.getItem(CARD_ORDER_STORAGE_KEY);
+    if (!stored) return [...ALL_CARD_IDS];
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed)) {
+      const valid = parsed.filter((id): id is CardId => ALL_CARD_IDS.includes(id));
+      const missing = ALL_CARD_IDS.filter((id) => !valid.includes(id));
+      return [...valid, ...missing];
+    }
+  } catch {}
+  return [...ALL_CARD_IDS];
+}
+
 export function DashboardVisibilityProvider({ children }: { children: React.ReactNode }) {
   const [visibleCards, setVisibleCards] = useState<Set<CardId>>(readStoredVisibility);
   const [allCollapsed, setAllCollapsedState] = useState<boolean>(readStoredCollapsed);
   const [orbsEnabled, setOrbsEnabledState] = useState<boolean>(readStoredOrbsEnabled);
+  const [cardOrder, setCardOrder] = useState<CardId[]>(readStoredCardOrder);
 
   /** Toggles a card on or off and writes the updated set to localStorage. */
   function toggleCard(cardId: CardId) {
@@ -137,10 +163,26 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
     });
   }
 
-  /** Shows all cards and removes the stored preference. */
+  /** Shows all cards in their default order and clears the stored visibility and layout preferences. */
   function resetToDefaults() {
     setVisibleCards(new Set(ALL_CARD_IDS));
     window.localStorage.removeItem(STORAGE_KEY);
+    setCardOrder([...ALL_CARD_IDS]);
+    window.localStorage.removeItem(CARD_ORDER_STORAGE_KEY);
+  }
+
+  /** Moves the dragged card to just before the target card and persists the new order. */
+  function reorderCard(draggedId: CardId, targetId: CardId) {
+    setCardOrder((previousOrder) => {
+      const fromIndex = previousOrder.indexOf(draggedId);
+      const toIndex = previousOrder.indexOf(targetId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return previousOrder;
+      const nextOrder = [...previousOrder];
+      nextOrder.splice(fromIndex, 1);
+      nextOrder.splice(toIndex, 0, draggedId);
+      window.localStorage.setItem(CARD_ORDER_STORAGE_KEY, JSON.stringify(nextOrder));
+      return nextOrder;
+    });
   }
 
   /** Collapses or expands every card at once and persists the preference. */
@@ -164,8 +206,10 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
       setAllCollapsed,
       orbsEnabled,
       setOrbsEnabled,
+      cardOrder,
+      reorderCard,
     }),
-    [visibleCards, allCollapsed, orbsEnabled]
+    [visibleCards, allCollapsed, orbsEnabled, cardOrder]
   );
 
   return (
