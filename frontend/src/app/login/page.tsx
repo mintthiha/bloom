@@ -1,6 +1,16 @@
 "use client";
+import { useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { Check } from "lucide-react";
+
+// Resting geometry of the showcase glow, mirrored from its inline style below.
+const GLOW_REST_CENTER_FROM_RIGHT = 100; // px from the panel's right edge
+const GLOW_REST_CENTER_FROM_TOP = 80; // px from the panel's top edge
+const GLOW_INFLUENCE_RADIUS = 340; // cursor distance at which repulsion kicks in
+const GLOW_PUSH_ACCEL = 1.6; // how hard the cursor shoves the glow each frame
+const GLOW_FRICTION = 0.92; // velocity retained each frame — higher = more coasting
+const GLOW_EDGE_MARGIN = 20; // keep the glow's center at least this far inside the panel
+const GLOW_BOUNCE = 0.6; // velocity kept after bouncing off an edge (0 = dead stop, 1 = perfect)
 
 const VALUE_PROPS = [
   { title: "Net worth at a glance", body: "Assets, debt, and the trend in one clear number." },
@@ -64,6 +74,93 @@ function GoogleMark() {
 }
 
 export default function LoginPage() {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const velocityRef = useRef({ x: 0, y: 0 });
+  const cursorRef = useRef({ x: 0, y: 0, active: false });
+
+  /** Records the cursor position within the panel so the physics loop can repel the glow. */
+  function handlePanelMouseMove(event: React.MouseEvent<HTMLDivElement>) {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    cursorRef.current = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      active: true,
+    };
+  }
+
+  /** Stops repelling when the cursor leaves; the glow keeps its momentum and coasts to a stop. */
+  function handlePanelMouseLeave() {
+    cursorRef.current.active = false;
+  }
+
+  /** Physics loop for the glow: cursor repulsion + momentum (friction). It rests wherever it stops. */
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let frame = requestAnimationFrame(function step() {
+      const panel = panelRef.current;
+      const glow = glowRef.current;
+      if (panel && glow) {
+        const rect = panel.getBoundingClientRect();
+        const offset = offsetRef.current;
+        const velocity = velocityRef.current;
+
+        // Repel the glow's current center away from the cursor.
+        const cursor = cursorRef.current;
+        if (cursor.active) {
+          const dx = rect.width - GLOW_REST_CENTER_FROM_RIGHT + offset.x - cursor.x;
+          const dy = GLOW_REST_CENTER_FROM_TOP + offset.y - cursor.y;
+          const distance = Math.hypot(dx, dy) || 1;
+          if (distance < GLOW_INFLUENCE_RADIUS) {
+            const push = (1 - distance / GLOW_INFLUENCE_RADIUS) * GLOW_PUSH_ACCEL;
+            velocity.x += (dx / distance) * push;
+            velocity.y += (dy / distance) * push;
+          }
+        }
+
+        // Friction only — the glow coasts to a stop and stays where you leave it.
+        velocity.x *= GLOW_FRICTION;
+        velocity.y *= GLOW_FRICTION;
+
+        offset.x += velocity.x;
+        offset.y += velocity.y;
+
+        // Bounce off the panel edges so the glow roams the whole panel but never leaves it.
+        // Offsets are measured from the rest center, so convert the panel bounds into offset bounds.
+        const restX = rect.width - GLOW_REST_CENTER_FROM_RIGHT;
+        const restY = GLOW_REST_CENTER_FROM_TOP;
+        const minOffsetX = GLOW_EDGE_MARGIN - restX;
+        const maxOffsetX = rect.width - GLOW_EDGE_MARGIN - restX;
+        const minOffsetY = GLOW_EDGE_MARGIN - restY;
+        const maxOffsetY = rect.height - GLOW_EDGE_MARGIN - restY;
+
+        if (offset.x < minOffsetX) {
+          offset.x = minOffsetX;
+          velocity.x = Math.abs(velocity.x) * GLOW_BOUNCE;
+        } else if (offset.x > maxOffsetX) {
+          offset.x = maxOffsetX;
+          velocity.x = -Math.abs(velocity.x) * GLOW_BOUNCE;
+        }
+        if (offset.y < minOffsetY) {
+          offset.y = minOffsetY;
+          velocity.y = Math.abs(velocity.y) * GLOW_BOUNCE;
+        } else if (offset.y > maxOffsetY) {
+          offset.y = maxOffsetY;
+          velocity.y = -Math.abs(velocity.y) * GLOW_BOUNCE;
+        }
+
+        glow.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+      }
+      frame = requestAnimationFrame(step);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <div
       className="grid h-screen overflow-hidden lg:grid-cols-2"
@@ -74,6 +171,9 @@ export default function LoginPage() {
         split reads intentionally in both light and dark mode. Hidden below lg.
       */}
       <div
+        ref={panelRef}
+        onMouseMove={handlePanelMouseMove}
+        onMouseLeave={handlePanelMouseLeave}
         className="hidden lg:flex"
         style={{
           position: "relative",
@@ -86,20 +186,30 @@ export default function LoginPage() {
           color: "#efefef",
         }}
       >
+        {/* Outer wrapper is driven by the physics loop (transform); inner handles the entrance scale. */}
         <div
+          ref={glowRef}
           aria-hidden
-          className="login-glow"
           style={{
             position: "absolute",
             top: "-140px",
             right: "-120px",
             width: "440px",
             height: "440px",
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%)",
             pointerEvents: "none",
+            willChange: "transform",
           }}
-        />
+        >
+          <div
+            className="login-glow"
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%)",
+            }}
+          />
+        </div>
 
         <div
           className="fade-up"
