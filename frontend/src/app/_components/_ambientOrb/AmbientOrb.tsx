@@ -15,62 +15,30 @@ const BOUNCE = 0.6; // energy kept after bouncing off an edge or another orb (0 
 type Orb = {
   size: number; // rendered diameter in px
   radius: number; // collision radius (roughly the visible core)
-  background: string; // radial-gradient fill
+  color: string; // "r,g,b" amber/gold tint
+  alphaDark: number; // opacity on the dark theme
+  alphaLight: number; // opacity on the light theme — higher, since amber washes out on white
 };
 
 /** The ambient orbs. Each is repelled by the cursor and bounces off the others and the edges. */
 const ORBS: Orb[] = [
-  {
-    size: 360,
-    radius: 108,
-    background: "radial-gradient(circle, rgba(245,158,11,0.12), transparent 70%)",
-  },
-  {
-    size: 260,
-    radius: 78,
-    background: "radial-gradient(circle, rgba(251,191,36,0.10), transparent 70%)",
-  },
-  {
-    size: 200,
-    radius: 60,
-    background: "radial-gradient(circle, rgba(234,179,8,0.09), transparent 70%)",
-  },
-  {
-    size: 320,
-    radius: 96,
-    background: "radial-gradient(circle, rgba(245,158,11,0.10), transparent 70%)",
-  },
-  {
-    size: 150,
-    radius: 45,
-    background: "radial-gradient(circle, rgba(251,191,36,0.11), transparent 70%)",
-  },
-  {
-    size: 290,
-    radius: 87,
-    background: "radial-gradient(circle, rgba(234,179,8,0.08), transparent 70%)",
-  },
-  {
-    size: 180,
-    radius: 54,
-    background: "radial-gradient(circle, rgba(245,158,11,0.11), transparent 70%)",
-  },
-  {
-    size: 230,
-    radius: 69,
-    background: "radial-gradient(circle, rgba(251,191,36,0.09), transparent 70%)",
-  },
-  {
-    size: 130,
-    radius: 39,
-    background: "radial-gradient(circle, rgba(234,179,8,0.12), transparent 70%)",
-  },
-  {
-    size: 340,
-    radius: 102,
-    background: "radial-gradient(circle, rgba(245,158,11,0.08), transparent 70%)",
-  },
+  { size: 360, radius: 108, color: "245,158,11", alphaDark: 0.12, alphaLight: 0.26 },
+  { size: 260, radius: 78, color: "251,191,36", alphaDark: 0.1, alphaLight: 0.24 },
+  { size: 200, radius: 60, color: "234,179,8", alphaDark: 0.09, alphaLight: 0.22 },
+  { size: 320, radius: 96, color: "245,158,11", alphaDark: 0.1, alphaLight: 0.24 },
+  { size: 150, radius: 45, color: "251,191,36", alphaDark: 0.11, alphaLight: 0.26 },
+  { size: 290, radius: 87, color: "234,179,8", alphaDark: 0.08, alphaLight: 0.2 },
+  { size: 180, radius: 54, color: "245,158,11", alphaDark: 0.11, alphaLight: 0.26 },
+  { size: 230, radius: 69, color: "251,191,36", alphaDark: 0.09, alphaLight: 0.22 },
+  { size: 130, radius: 39, color: "234,179,8", alphaDark: 0.12, alphaLight: 0.28 },
+  { size: 340, radius: 102, color: "245,158,11", alphaDark: 0.08, alphaLight: 0.2 },
 ];
+
+/** Builds an orb's radial-gradient fill for the current theme. */
+function orbBackground(orb: Orb, isDark: boolean): string {
+  const alpha = isDark ? orb.alphaDark : orb.alphaLight;
+  return `radial-gradient(circle, rgba(${orb.color},${alpha}), transparent 70%)`;
+}
 
 type PlayArea = { left: number; top: number; width: number; height: number };
 
@@ -107,6 +75,18 @@ export function AmbientOrb() {
   const cursorRef = useRef({ x: 0, y: 0 });
   // Orbs stay invisible until the physics effect places them at their random spawns, so no flash.
   const [started, setStarted] = useState(false);
+  // The theme drives orb opacity — amber needs to be stronger on the light background.
+  const [isDark, setIsDark] = useState(true);
+
+  /** Tracks the current theme via the `dark` class so the orbs restyle live when it's toggled. */
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setIsDark(root.classList.contains("dark"));
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   /** Tracks the cursor in viewport coordinates so the physics loop can repel the orbs. */
   useEffect(() => {
@@ -305,7 +285,7 @@ export function AmbientOrb() {
             width: `${orb.size}px`,
             height: `${orb.size}px`,
             borderRadius: "50%",
-            background: orb.background,
+            background: orbBackground(orb, isDark),
             willChange: "transform",
             opacity: started ? 1 : 0,
             transition: "opacity 0.5s ease",
