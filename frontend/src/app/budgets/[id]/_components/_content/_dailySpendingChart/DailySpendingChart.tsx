@@ -1,10 +1,10 @@
 "use client";
 
 import { BudgetActivity } from "@/lib/api";
-import { formatCurrency } from "@/lib/format";
 import { useMemo } from "react";
 
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartTooltip } from "@/components/chart-tooltip";
 
 type DailySpendingChartProps = { budget: BudgetActivity };
 
@@ -59,16 +59,7 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
               width={48}
             />
             <Tooltip
-              formatter={(value) => formatCurrency(Number(value))}
-              contentStyle={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                fontSize: "12px",
-                color: "var(--text-primary)",
-              }}
-              labelStyle={{ color: "var(--amber)" }}
-              itemStyle={{ color: "var(--text-primary)" }}
+              content={<ChartTooltip nameMap={{ total: "Spent" }} />}
               cursor={{ fill: "var(--chart-cursor)" }}
             />
             <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} />

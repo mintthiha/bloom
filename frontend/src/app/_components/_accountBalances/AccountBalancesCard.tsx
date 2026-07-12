@@ -4,6 +4,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 
 import { Account } from "@/lib/api";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { ChartTooltip } from "@/components/chart-tooltip";
 
 type Props = {
   accounts: Account[];
@@ -38,15 +39,7 @@ export function AccountBalancesCard({ accounts }: Props) {
             width={48}
           />
           <Tooltip
-            contentStyle={{
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              fontSize: "12px",
-              color: "var(--text-primary)",
-            }}
-            labelStyle={{ color: "var(--text-secondary)" }}
-            itemStyle={{ color: "var(--text-primary)" }}
+            content={<ChartTooltip nameMap={{ balance: "Balance" }} />}
             cursor={{ fill: "var(--chart-cursor)" }}
           />
           <Bar

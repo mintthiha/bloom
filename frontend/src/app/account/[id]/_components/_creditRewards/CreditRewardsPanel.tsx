@@ -35,14 +35,15 @@ type CreditRewardsPanelProps = {
 };
 
 const TOOLTIP_CONTENT_STYLE = {
-  background: "#1e1e1e",
-  border: "1px solid #363636",
-  borderRadius: "8px",
+  background: "var(--surface-1)",
+  border: "1px solid var(--border)",
+  borderRadius: "10px",
   fontSize: "12px",
-  color: "#f0f0f0",
+  color: "var(--text-primary)",
+  boxShadow: "0 8px 24px -8px rgba(0, 0, 0, 0.45)",
 };
 
-const TOOLTIP_ITEM_STYLE = { color: "rgba(255,255,255,0.68)" };
+const TOOLTIP_ITEM_STYLE = { color: "var(--text-secondary)" };
 
 /** Formats an X-axis tick — compact number for points, dollar for cashback. */
 function formatRewardTick(value: number, isCashback: boolean): string {
@@ -283,7 +284,7 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
                       contentStyle={TOOLTIP_CONTENT_STYLE}
                       itemStyle={TOOLTIP_ITEM_STYLE}
                       labelStyle={{
-                        color: "#f0f0f0",
+                        color: "var(--text-primary)",
                         fontWeight: 600,
                         marginBottom: "4px",
                       }}

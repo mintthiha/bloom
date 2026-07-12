@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatCurrency } from "@/lib/format";
+import { ChartTooltip } from "@/components/chart-tooltip";
 import type { PayoffChartPoint } from "./debt-payoff-math";
 
 type DebtPayoffChartProps = {
@@ -18,15 +18,11 @@ type DebtPayoffChartProps = {
   showBoosted: boolean;
 };
 
-const TOOLTIP_CONTENT_STYLE = {
-  background: "#1e1e1e",
-  border: "1px solid #363636",
-  borderRadius: "8px",
-  fontSize: "12px",
-  color: "#f0f0f0",
+const DEBT_PAYOFF_NAME_MAP = {
+  minimum: "Minimum payment",
+  userPayment: "Your payment",
+  boosted: "+$50/month",
 };
-
-const TOOLTIP_ITEM_STYLE = { color: "rgba(255,255,255,0.68)" };
 
 /** Formats a Y-axis balance tick as a compact dollar amount. */
 function formatYAxisTick(value: number): string {
@@ -62,15 +58,13 @@ export function DebtPayoffChart({ data, showUserPayment, showBoosted }: DebtPayo
           width={48}
         />
         <Tooltip
-          formatter={(value, name) => [
-            formatCurrency(Number(value)),
-            formatScenarioName(String(name)),
-          ]}
-          labelFormatter={(v) => (v === 0 ? "Now" : `Month ${v}`)}
-          contentStyle={TOOLTIP_CONTENT_STYLE}
-          itemStyle={TOOLTIP_ITEM_STYLE}
-          labelStyle={{ color: "rgba(255,255,255,0.45)" }}
-          cursor={{ stroke: "#ffffff18" }}
+          content={
+            <ChartTooltip
+              nameMap={DEBT_PAYOFF_NAME_MAP}
+              labelFormatter={(v) => (v === 0 ? "Now" : `Month ${v}`)}
+            />
+          }
+          cursor={{ stroke: "var(--border)" }}
         />
         <Legend
           formatter={formatScenarioName}

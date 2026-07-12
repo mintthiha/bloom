@@ -4,6 +4,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } fro
 import { MonthlySummary, MonthlyTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { ChartTooltip } from "@/components/chart-tooltip";
 import { FlashOnChange } from "@/components/flash-on-change";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -15,14 +16,6 @@ type Props = {
 };
 
 type SnapshotView = "snapshot" | "trends";
-
-const TOOLTIP_CONTENT_STYLE = {
-  background: "var(--surface-2)",
-  border: "1px solid var(--border)",
-  borderRadius: "8px",
-  fontSize: "12px",
-  color: "var(--text-primary)",
-};
 
 /** Returns a spending forecast for the current month, or null if not applicable. */
 function computeSpendingForecast(
@@ -397,11 +390,8 @@ export function MonthlySnapshot({
                   width={48}
                 />
                 <Tooltip
-                  formatter={(value) => formatCurrency(Number(value))}
-                  contentStyle={TOOLTIP_CONTENT_STYLE}
-                  labelStyle={{ color: "#f59e0b" }}
-                  itemStyle={{ color: "#f3f4f6" }}
-                  cursor={{ fill: "#ffffff06" }}
+                  content={<ChartTooltip nameMap={{ spending: "Spending" }} />}
+                  cursor={{ fill: "var(--chart-cursor)" }}
                 />
                 <Bar dataKey="spending" fill="#f97316" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -429,13 +419,10 @@ export function MonthlySnapshot({
               width={56}
             />
             <Tooltip
-              formatter={(value, name) => [
-                formatCurrency(Number(value)),
-                name === "income" ? "Income" : name === "spending" ? "Spending" : "Net",
-              ]}
-              contentStyle={TOOLTIP_CONTENT_STYLE}
-              labelStyle={{ color: "#9ca3af" }}
-              cursor={{ fill: "#ffffff06" }}
+              content={
+                <ChartTooltip nameMap={{ income: "Income", spending: "Spending", net: "Net" }} />
+              }
+              cursor={{ fill: "var(--chart-cursor)" }}
             />
             <Legend
               formatter={(value) =>

@@ -13,6 +13,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { ChartTooltip } from "@/components/chart-tooltip";
 
 const TYPE_LABELS: Record<string, string> = {
   DEPOSIT: "Deposit",
@@ -127,20 +128,17 @@ export function AccountAnalytics({
                 width={48}
               />
               <Tooltip
-                contentStyle={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-                labelStyle={{ color: "var(--text-secondary)" }}
-                labelFormatter={(value) =>
-                  new Date(value).toLocaleString("en-CA", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })
+                content={
+                  <ChartTooltip
+                    nameMap={{ balance: "Balance" }}
+                    labelFormatter={(value) =>
+                      new Date(value).toLocaleString("en-CA", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })
+                    }
+                  />
                 }
-                formatter={(value) => [formatCurrency(Number(value)), "Balance"]}
               />
               <Line
                 type="monotone"
@@ -180,12 +178,9 @@ export function AccountAnalytics({
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
+                content={
+                  <ChartTooltip hideLabel valueFormatter={(value) => value.toLocaleString()} />
+                }
               />
               <Legend
                 iconType="circle"

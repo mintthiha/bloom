@@ -1,8 +1,9 @@
 "use client";
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
   Line,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -13,18 +14,17 @@ import {
 import { NetWorthSnapshot } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { ChartTooltip } from "@/components/chart-tooltip";
 import { NetWorthEmpathyNote } from "./NetWorthEmpathyNote";
 
 type Props = {
   history: NetWorthSnapshot[];
 };
 
-const TOOLTIP_CONTENT_STYLE = {
-  background: "var(--surface-2)",
-  border: "1px solid var(--border)",
-  borderRadius: "8px",
-  fontSize: "12px",
-  color: "var(--text-primary)",
+const NET_WORTH_NAME_MAP = {
+  netWorth: "Net Worth",
+  totalAssets: "Assets",
+  totalDebt: "Debt",
 };
 
 /** Net worth history card showing assets, debt, and net worth over the last 12 months. */
@@ -72,7 +72,13 @@ export function NetWorthHistory({ history }: Props) {
       style={{ marginBottom: "32px" }}
     >
       <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={history} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <ComposedChart data={history} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="netWorthFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
           <XAxis
             dataKey="month"
@@ -88,30 +94,27 @@ export function NetWorthHistory({ history }: Props) {
             width={56}
           />
           <Tooltip
-            formatter={(value, name) => [
-              formatCurrency(Number(value)),
-              name === "netWorth" ? "Net Worth" : name === "totalAssets" ? "Assets" : "Debt",
-            ]}
-            contentStyle={TOOLTIP_CONTENT_STYLE}
-            labelStyle={{ color: "var(--text-secondary)" }}
+            content={<ChartTooltip nameMap={NET_WORTH_NAME_MAP} />}
             cursor={{ stroke: "var(--border)" }}
           />
           <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
-          <Line dataKey="totalAssets" stroke="#22c55e" strokeWidth={2} dot={false} />
-          <Line dataKey="totalDebt" stroke="#ef4444" strokeWidth={2} dot={false} />
-          <Line
+          <Area
             dataKey="netWorth"
             stroke="#f59e0b"
             strokeWidth={2.5}
+            fill="url(#netWorthFill)"
             dot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: "#f59e0b", strokeWidth: 0 }}
           />
+          <Line dataKey="totalAssets" stroke="#22c55e" strokeWidth={2} dot={false} />
+          <Line dataKey="totalDebt" stroke="#ef4444" strokeWidth={2} dot={false} />
           <Legend
             formatter={(value) =>
               value === "netWorth" ? "Net Worth" : value === "totalAssets" ? "Assets" : "Debt"
             }
             wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
           />
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
       <NetWorthEmpathyNote history={history} />
     </CollapsibleCard>
