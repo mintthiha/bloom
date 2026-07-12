@@ -166,7 +166,7 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
     <div
       className="fade-up"
       style={{
-        background: "var(--surface-1)",
+        background: "var(--snapshot-gradient)",
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "20px 24px",

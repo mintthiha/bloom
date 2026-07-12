@@ -24,6 +24,8 @@
   --shadow-hover: 0 6px 20px -8px rgba(0, 0, 0, 0.16), inset 0 0 0 1px #f59e0b2e;
   --shadow-pressed: 0 2px 6px -3px rgba(0, 0, 0, 0.12), inset 0 0 0 1px #f59e0b1f;
   --hover-overlay: rgba(0, 0, 0, 0.04);
+  /* Warm "featured card" accent — a soft cream on light, deep amber-black on dark. */
+  --snapshot-gradient: linear-gradient(135deg, #fdf1dd 0%, var(--surface-1) 58%);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -70,6 +72,7 @@
   --shadow-hover: 0 8px 24px -10px rgba(0, 0, 0, 0.6), inset 0 0 0 1px #f59e0b33;
   --shadow-pressed: 0 2px 8px -4px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #f59e0b26;
   --hover-overlay: rgba(255, 255, 255, 0.05);
+  --snapshot-gradient: linear-gradient(135deg, #17120a 0%, var(--surface-1) 58%);
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

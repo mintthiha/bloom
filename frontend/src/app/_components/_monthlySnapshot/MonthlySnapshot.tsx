@@ -135,9 +135,6 @@ export function MonthlySnapshot({
       title={snapshotView === "snapshot" ? "Cash flow by category" : "Last 6 months"}
       headerRight={headerRight}
       className="fade-up fade-up-1"
-      style={{
-        background: "linear-gradient(135deg, #17120a 0%, var(--surface-1) 58%)",
-      }}
     >
       {snapshotView === "snapshot" ? (
         <>

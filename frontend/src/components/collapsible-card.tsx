@@ -70,7 +70,7 @@ export function CollapsibleCard({
     <div
       className={["lift", className].filter(Boolean).join(" ")}
       style={{
-        background: "var(--surface-1)",
+        background: "var(--snapshot-gradient)",
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "24px",

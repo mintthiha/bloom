@@ -72,7 +72,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
       <div
         className="fade-up fade-up-1 lift"
         style={{
-          background: "var(--surface-1)",
+          background: "var(--snapshot-gradient)",
           border: "1px solid var(--border)",
           borderRadius: "14px",
           padding: "20px 24px",
@@ -116,7 +116,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
     <div
       className="fade-up fade-up-1 lift"
       style={{
-        background: "var(--surface-1)",
+        background: "var(--snapshot-gradient)",
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "20px 24px",
