@@ -299,6 +299,7 @@ export function AppSidebar() {
               <Link
                 href="/transactions"
                 className="nav-item"
+                title="Transactions"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -321,6 +322,7 @@ export function AppSidebar() {
               <Link
                 href="/goals"
                 className="nav-item"
+                title="Goals"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -343,6 +345,7 @@ export function AppSidebar() {
               <Link
                 href="/learn"
                 className="nav-item"
+                title="Learn"
                 style={{
                   display: "flex",
                   alignItems: "center",
