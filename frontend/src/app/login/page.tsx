@@ -15,7 +15,8 @@ type Orb = {
   radius: number; // collision radius (roughly the visible core)
   background: string; // radial-gradient fill
   entranceDelay: string; // stagger for the scale-in animation
-  rest: (rect: DOMRect) => { x: number; y: number }; // resting center within the panel
+  anchor: React.CSSProperties; // CSS resting position, so the first paint is correct with no JS (avoids a flash)
+  rest: (rect: DOMRect) => { x: number; y: number }; // resting center within the panel — must match `anchor`
 };
 
 /** The two floating showcase orbs. Both are repelled by the cursor and bounce off each other and the edges. */
@@ -25,6 +26,7 @@ const ORBS: Orb[] = [
     radius: 130,
     background: "radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%)",
     entranceDelay: "0s",
+    anchor: { top: "-140px", right: "-120px" },
     rest: (rect) => ({ x: rect.width - 100, y: 80 }),
   },
   {
@@ -32,6 +34,7 @@ const ORBS: Orb[] = [
     radius: 92,
     background: "radial-gradient(circle, rgba(251,191,36,0.13), transparent 70%)",
     entranceDelay: "0.18s",
+    anchor: { bottom: "-30px", left: "-20px" },
     rest: (rect) => ({ x: 130, y: rect.height - 120 }),
   },
 ];
@@ -126,22 +129,15 @@ export default function LoginPage() {
   useEffect(() => {
     const states = orbStateRef.current;
 
-    /** Writes each orb's transform from its rest center + current offset (also used for the static/reduced-motion frame). */
-    function render(rect: DOMRect) {
-      ORBS.forEach((orb, i) => {
-        const rest = orb.rest(rect);
+    /** Writes each orb's transform from its offset only; the CSS `anchor` already positions it at rest. */
+    function render() {
+      states.forEach((state, i) => {
         const el = orbElsRef.current[i];
-        if (el) {
-          const translateX = rest.x - orb.size / 2 + states[i].offset.x;
-          const translateY = rest.y - orb.size / 2 + states[i].offset.y;
-          el.style.transform = `translate(${translateX}px, ${translateY}px)`;
-        }
+        if (el) el.style.transform = `translate(${state.offset.x}px, ${state.offset.y}px)`;
       });
     }
 
-    // Place the orbs at rest for the first paint (and permanently under reduced motion).
-    const initialPanel = panelRef.current;
-    if (initialPanel) render(initialPanel.getBoundingClientRect());
+    // Orbs already sit at rest via their CSS anchor, so nothing to place under reduced motion.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let frame = requestAnimationFrame(function step() {
@@ -249,7 +245,7 @@ export default function LoginPage() {
           }
         });
 
-        render(rect);
+        render();
       }
       frame = requestAnimationFrame(step);
     });
@@ -292,8 +288,7 @@ export default function LoginPage() {
             aria-hidden
             style={{
               position: "absolute",
-              top: 0,
-              left: 0,
+              ...orb.anchor,
               width: `${orb.size}px`,
               height: `${orb.size}px`,
               pointerEvents: "none",
