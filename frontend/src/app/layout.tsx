@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("dark font-sans", geist.variable)}>
+    <html lang="en" className={cn("dark font-sans", geist.variable)} suppressHydrationWarning>
       <head>
         {/* Removes the dark class before first paint if the user has saved light mode */}
         <script
