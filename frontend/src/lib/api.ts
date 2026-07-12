@@ -227,6 +227,31 @@ export type TransactionQuery = DateRangeQuery & {
   search?: string;
 };
 
+/** A single row from the cross-account transactions list (shares the search-result shape). */
+export type TransactionListItem = TransactionSearchResult;
+
+/** Sort orders accepted by the cross-account transactions list endpoint. */
+export type TransactionSortKey = "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
+
+export type TransactionListQuery = DateRangeQuery & {
+  account?: string;
+  type?: Transaction["type"];
+  category?: string;
+  search?: string;
+  sort?: TransactionSortKey;
+  page?: number;
+  limit?: number;
+};
+
+/** Paginated envelope returned by the cross-account transactions list endpoint. */
+export type TransactionListResult = {
+  rows: TransactionListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+};
+
 export const api = {
   listAccounts: () => request<Account[]>("/accounts"),
   getMonthlySummary: (query?: DateRangeQuery) =>
@@ -329,6 +354,20 @@ export const api = {
     }),
   getTransactions: (id: string, query?: TransactionQuery) =>
     request<Transaction[]>(withQuery(`/accounts/${id}/transactions`, query)),
+  listTransactions: (query?: TransactionListQuery) =>
+    request<TransactionListResult>(
+      withQuery("/transactions", {
+        account: query?.account,
+        type: query?.type,
+        category: query?.category,
+        search: query?.search,
+        start: query?.start,
+        end: query?.end,
+        sort: query?.sort,
+        page: query?.page !== undefined ? String(query.page) : undefined,
+        limit: query?.limit !== undefined ? String(query.limit) : undefined,
+      })
+    ),
   updateTransaction: (
     id: string,
     transactionId: string,

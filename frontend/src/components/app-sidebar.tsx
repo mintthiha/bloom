@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BookOpen, Columns2, LogOut, Rows3, Search, Target } from "lucide-react";
+import { BookOpen, Columns2, LogOut, Receipt, Rows3, Search, Target } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +28,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const onLearn = pathname === "/learn";
   const onGoals = pathname === "/goals";
+  const onTransactions = pathname === "/transactions";
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -295,6 +296,28 @@ export function AppSidebar() {
                   ⌘K
                 </kbd>
               </button>
+              <Link
+                href="/transactions"
+                className="nav-item"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "44px",
+                  borderRadius: "10px",
+                  border: onTransactions ? "1px solid #f59e0b66" : "1px solid var(--border)",
+                  background: onTransactions ? "#f59e0b1a" : "var(--surface-1)",
+                  color: onTransactions ? "#f59e0b" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "none",
+                }}
+              >
+                <Receipt size={15} style={{ flexShrink: 0 }} />
+                <span className="group-data-[collapsible=icon]:hidden">Transactions</span>
+              </Link>
               <Link
                 href="/goals"
                 className="nav-item"
