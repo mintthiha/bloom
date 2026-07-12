@@ -294,6 +294,21 @@ body {
   animation: fadeIn 700ms ease both;
 }
 
+/* One-shot reveal for the login showcase glow — scales gently into view on load. */
+@keyframes loginGlowIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.login-glow {
+  animation: loginGlowIn 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @keyframes flashAmber {
   0% {
     text-shadow: none;
@@ -315,7 +330,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .fade-up,
   .flash-amber,
-  .content-fade-in {
+  .content-fade-in,
+  .login-glow {
     animation: none;
   }
 }
