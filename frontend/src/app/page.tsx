@@ -58,6 +58,7 @@ function Home() {
   const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newAccountId, setNewAccountId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
@@ -616,7 +617,12 @@ function Home() {
               marginBottom: "32px",
             }}
           >
-            <OpenAccountCard onCreated={loadAccounts} />
+            <OpenAccountCard
+              onCreated={async (createdId) => {
+                await loadAccounts();
+                setNewAccountId(createdId);
+              }}
+            />
             <LinkBankAccountCard onLinked={loadAccounts} />
           </div>
         </div>
@@ -647,7 +653,7 @@ function Home() {
             {accounts.length}
           </span>
         </div>
-        <DraggableAccountList accounts={accounts} loading={loading} />
+        <DraggableAccountList accounts={accounts} loading={loading} newAccountId={newAccountId} />
       </div>
     </div>
   );

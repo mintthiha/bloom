@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
+import { toast } from "sonner";
 import { api, AccountType } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 
 type Props = {
-  onCreated: () => Promise<void>;
+  onCreated: (newAccountId: string) => Promise<void>;
 };
 
 const inputStyle: React.CSSProperties = {
@@ -32,10 +33,16 @@ export function OpenAccountCard({ onCreated }: Props) {
     setCreating(true);
     setError(null);
     try {
-      await api.createAccount(ownerName.trim(), accountType, nickname.trim() || undefined);
+      const newAccount = await api.createAccount(
+        ownerName.trim(),
+        accountType,
+        nickname.trim() || undefined
+      );
       setOwnerName("");
       setNickname("");
-      await onCreated();
+      await onCreated(newAccount.id);
+      toast.success("Account opened");
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {

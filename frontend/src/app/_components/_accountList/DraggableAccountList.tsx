@@ -39,17 +39,31 @@ const ACCOUNT_GROUPS: {
 interface DraggableAccountListProps {
   accounts: Account[];
   loading: boolean;
+  newAccountId?: string | null;
 }
 
 /**
  * Account list grouped by type with drag-to-reorder within each group.
  * Display order is persisted to localStorage under `bloom-account-order`.
  */
-export function DraggableAccountList({ accounts, loading }: DraggableAccountListProps) {
+export function DraggableAccountList({
+  accounts,
+  loading,
+  newAccountId,
+}: DraggableAccountListProps) {
   const [order, setOrder] = useState<string[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [highlightedAccountId, setHighlightedAccountId] = useState<string | null>(null);
   const draggingGroupId = useRef<string | null>(null);
+
+  /** Highlights the newly created account for 2 seconds, then fades it out. */
+  useEffect(() => {
+    if (!newAccountId) return;
+    setHighlightedAccountId(newAccountId);
+    const timer = setTimeout(() => setHighlightedAccountId(null), 2000);
+    return () => clearTimeout(timer);
+  }, [newAccountId]);
 
   /** Load persisted order from localStorage after mount. */
   useEffect(() => {
@@ -152,6 +166,7 @@ export function DraggableAccountList({ accounts, loading }: DraggableAccountList
             const meta = ACCOUNT_TYPE_META[acc.accountType];
             const isDragging = draggingId === acc.id;
             const isDragOver = dragOverId === acc.id;
+            const isHighlighted = highlightedAccountId === acc.id;
 
             return (
               <div
@@ -189,13 +204,13 @@ export function DraggableAccountList({ accounts, loading }: DraggableAccountList
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  background: isDragOver ? "var(--surface-2)" : "var(--surface-1)",
-                  border: `1px solid ${isDragOver ? "#f59e0b66" : "var(--border)"}`,
+                  background: isDragOver || isHighlighted ? "var(--surface-2)" : "var(--surface-1)",
+                  border: `1px solid ${isDragOver ? "#f59e0b66" : isHighlighted ? "#f59e0baa" : "var(--border)"}`,
                   borderRadius: "12px",
-                  transition:
-                    "border-color 0.15s, background 0.15s, opacity 0.15s, box-shadow 0.18s",
+                  transition: "border-color 0.6s, background 0.6s, opacity 0.15s, box-shadow 0.6s",
                   opacity: isDragging ? 0.4 : 1,
                   outline: isDragOver ? "1px solid #f59e0b44" : "none",
+                  boxShadow: isHighlighted ? "0 0 0 3px #f59e0b22" : "none",
                 }}
               >
                 {/* Drag handle */}
