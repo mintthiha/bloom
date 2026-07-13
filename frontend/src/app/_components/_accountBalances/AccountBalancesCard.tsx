@@ -16,7 +16,7 @@ export function AccountBalancesCard({ accounts }: Props) {
 
   const chartData = accounts.map((account) => ({
     id: account.id,
-    name: (account.nickname ?? account.ownerName).split(" ")[0],
+    name: account.nickname ?? account.ownerName,
     balance: account.balance,
     type: account.accountType,
   }));
@@ -30,6 +30,7 @@ export function AccountBalancesCard({ accounts }: Props) {
             tick={{ fontSize: 11, fill: "#6b7280" }}
             tickLine={false}
             axisLine={false}
+            tickFormatter={(value: string) => value.split(" ")[0]}
           />
           <YAxis
             tick={{ fontSize: 10, fill: "#6b7280" }}
