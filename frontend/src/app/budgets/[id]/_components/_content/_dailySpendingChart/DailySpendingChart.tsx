@@ -8,14 +8,19 @@ import { ChartTooltip } from "@/components/chart-tooltip";
 
 type DailySpendingChartProps = { budget: BudgetActivity };
 
+/** Formats an ISO day string as a compact "Mon D" label. */
+function formatDayLabel(day: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(day));
+}
+
 export function DailySpendingChart({ budget }: DailySpendingChartProps) {
   const dailyChartData = useMemo(
     () =>
       budget.dailySpending.map((entry) => ({
-        label: new Intl.DateTimeFormat("en-CA", {
-          month: "short",
-          day: "numeric",
-        }).format(new Date(entry.day)),
+        day: entry.day,
         total: entry.total,
       })) ?? [],
     [budget]
@@ -46,7 +51,8 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={dailyChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <XAxis
-              dataKey="label"
+              dataKey="day"
+              tickFormatter={formatDayLabel}
               tick={{ fontSize: 11, fill: "#9ca3af" }}
               tickLine={false}
               axisLine={false}
@@ -59,7 +65,12 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
               width={48}
             />
             <Tooltip
-              content={<ChartTooltip nameMap={{ total: "Spent" }} />}
+              content={
+                <ChartTooltip
+                  nameMap={{ total: "Spent" }}
+                  labelFormatter={(value) => formatDayLabel(String(value))}
+                />
+              }
               cursor={{ fill: "var(--chart-cursor)" }}
             />
             <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} />

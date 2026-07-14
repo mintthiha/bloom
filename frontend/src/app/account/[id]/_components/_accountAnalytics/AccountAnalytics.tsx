@@ -50,7 +50,10 @@ export function AccountAnalytics({
   const isCredit = accountType === "CREDIT";
   const typeLabels = isCredit ? CREDIT_TYPE_LABELS : TYPE_LABELS;
 
-  const balanceData = [...txns].reverse().map((t) => ({
+  // Key each point on its row index (not the timestamp) so transactions sharing an
+  // identical effectiveAt don't collapse into one band and break tooltip/hover targeting.
+  const balanceData = [...txns].reverse().map((t, index) => ({
+    index,
     timestamp: t.effectiveAt,
     balance: t.balanceAfter,
   }));
@@ -108,16 +111,19 @@ export function AccountAnalytics({
             <LineChart data={balanceData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis
-                dataKey="timestamp"
+                dataKey="index"
                 tick={{ fontSize: 10, fill: "#6b7280" }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) =>
-                  new Date(value).toLocaleDateString("en-CA", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                }
+                tickFormatter={(value) => {
+                  const point = balanceData[Number(value)];
+                  return point
+                    ? new Date(point.timestamp).toLocaleDateString("en-CA", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "";
+                }}
                 minTickGap={24}
               />
               <YAxis
@@ -131,12 +137,15 @@ export function AccountAnalytics({
                 content={
                   <ChartTooltip
                     nameMap={{ balance: "Balance" }}
-                    labelFormatter={(value) =>
-                      new Date(value).toLocaleString("en-CA", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })
-                    }
+                    labelFormatter={(value) => {
+                      const point = balanceData[Number(value)];
+                      return point
+                        ? new Date(point.timestamp).toLocaleString("en-CA", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        : "";
+                    }}
                   />
                 }
               />
