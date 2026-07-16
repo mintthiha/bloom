@@ -12,12 +12,13 @@ export function CardExplainerCallout({
 }) {
   return (
     <div
-      className="fade-up"
       style={{
         position: "absolute",
-        top: "12px",
-        left: "12px",
-        right: "12px",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "90%",
+        maxWidth: "360px",
         zIndex: 5,
         background: "var(--surface-1)",
         border: "1px solid #f59e0b",

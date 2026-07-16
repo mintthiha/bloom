@@ -114,14 +114,9 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               position: "relative",
               borderRadius: "16px",
               opacity: isDragging ? 0.4 : 1,
-              outline: isExplaining
-                ? "2px solid #f59e0b"
-                : isDragOver
-                  ? "2px dashed #f59e0b99"
-                  : "2px dashed transparent",
+              outline: isDragOver ? "2px dashed #f59e0b99" : "2px dashed transparent",
               outlineOffset: "5px",
-              boxShadow: isExplaining ? "0 0 0 6px #f59e0b22" : undefined,
-              transition: "opacity 0.15s ease, outline-color 0.15s ease, box-shadow 0.3s ease",
+              transition: "opacity 0.15s ease, outline-color 0.15s ease",
             }}
           >
             {/* Grip handle — floats above the card's top edge and is the only drag initiator. */}
@@ -159,7 +154,17 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
                 onDismiss={dismissExplainedCard}
               />
             )}
-            {card.node}
+            {/* Dim the card itself while its explainer is up; it returns to normal on "Got it". */}
+            <div
+              style={{
+                opacity: isExplaining ? 0.4 : 1,
+                filter: isExplaining ? "grayscale(0.5)" : undefined,
+                pointerEvents: isExplaining ? "none" : undefined,
+                transition: "opacity 0.25s ease, filter 0.25s ease",
+              }}
+            >
+              {card.node}
+            </div>
           </div>
         );
       })}
