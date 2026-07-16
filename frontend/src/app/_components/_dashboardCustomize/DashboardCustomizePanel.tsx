@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { api } from "@/lib/api";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   ALL_CARD_IDS,
@@ -17,13 +18,22 @@ import {
 } from "@/app/_components/_onboardingChecklist/onboarding-storage";
 
 /** Animated pill switch indicating whether a card is visible. */
-function CardToggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function CardToggle({
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={onChange}
+      disabled={disabled}
+      onClick={disabled ? undefined : onChange}
       style={{
         width: "36px",
         height: "20px",
@@ -31,8 +41,9 @@ function CardToggle({ checked, onChange }: { checked: boolean; onChange: () => v
         background: checked ? "#f59e0b" : "var(--surface-2)",
         border: `1px solid ${checked ? "#f59e0b" : "var(--border)"}`,
         position: "relative",
-        cursor: "pointer",
-        transition: "background 0.2s, border-color 0.2s",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        transition: "background 0.2s, border-color 0.2s, opacity 0.2s",
         flexShrink: 0,
       }}
     >
@@ -52,11 +63,16 @@ function CardToggle({ checked, onChange }: { checked: boolean; onChange: () => v
   );
 }
 
-/** One row inside the panel showing the card label, description, and its visibility toggle. */
-function CardToggleRow({ cardId }: { cardId: CardId }) {
+/**
+ * One row inside the panel showing the card label, description, and its visibility toggle.
+ * When `lockedHint` is set the card can't be shown yet (its data requirement isn't met), so the
+ * toggle is disabled and the hint replaces the description.
+ */
+function CardToggleRow({ cardId, lockedHint }: { cardId: CardId; lockedHint?: string }) {
   const { visibleCards, toggleCard } = useDashboardVisibility();
   const meta = CARD_METADATA[cardId];
   const isVisible = visibleCards.has(cardId);
+  const isLocked = Boolean(lockedHint);
 
   return (
     <div
@@ -67,13 +83,16 @@ function CardToggleRow({ cardId }: { cardId: CardId }) {
         padding: "12px 0",
         borderBottom: "1px solid var(--border)",
         gap: "12px",
+        opacity: isLocked ? 0.6 : 1,
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>{meta.label}</p>
-        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{meta.description}</p>
+        <p style={{ fontSize: "12px", color: isLocked ? "#f59e0b" : "var(--text-secondary)" }}>
+          {lockedHint ?? meta.description}
+        </p>
       </div>
-      <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} />
+      <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} disabled={isLocked} />
     </div>
   );
 }
@@ -97,6 +116,31 @@ export function DashboardCustomizePanel() {
   const hasCustomLayout =
     hiddenCount > 0 || cardOrder.some((id, index) => id !== ALL_CARD_IDS[index]);
   const [isChecklistHidden, setIsChecklistHidden] = useState(false);
+  const [accountCount, setAccountCount] = useState<number | null>(null);
+
+  /** Loads the account count so cards that require a minimum number can be locked until it's met. */
+  async function refreshAccountCount() {
+    try {
+      const accounts = await api.listAccounts();
+      setAccountCount(accounts.length);
+    } catch {
+      setAccountCount(null);
+    }
+  }
+
+  /** Pre-fetches the account count on the dashboard so lock states are ready before the drawer opens. */
+  useEffect(() => {
+    if (isDashboard) refreshAccountCount();
+  }, [isDashboard]);
+
+  /** Returns a hint when a card can't be shown yet because too few accounts exist, otherwise undefined. */
+  function lockedHintFor(cardId: CardId): string | undefined {
+    const required = CARD_METADATA[cardId].requiresAccounts;
+    if (required != null && accountCount != null && accountCount < required) {
+      return `Needs ${required}+ accounts`;
+    }
+    return undefined;
+  }
 
   /** Reads both hide-flags from localStorage on mount to decide whether to show the restore button. */
   useEffect(() => {
@@ -125,7 +169,11 @@ export function DashboardCustomizePanel() {
   }
 
   return (
-    <Sheet>
+    <Sheet
+      onOpenChange={(open) => {
+        if (open && isDashboard) refreshAccountCount();
+      }}
+    >
       <SheetTrigger
         render={
           <button
@@ -268,7 +316,7 @@ export function DashboardCustomizePanel() {
               </p>
 
               {ALL_CARD_IDS.map((cardId) => (
-                <CardToggleRow key={cardId} cardId={cardId} />
+                <CardToggleRow key={cardId} cardId={cardId} lockedHint={lockedHintFor(cardId)} />
               ))}
 
               {hasCustomLayout && (

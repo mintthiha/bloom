@@ -35,7 +35,7 @@ export const DEFAULT_VISIBLE_CARDS: CardId[] = ["monthly-snapshot", "budgets"];
 
 export const CARD_METADATA: Record<
   CardId,
-  { label: string; description: string; howItWorks: string }
+  { label: string; description: string; howItWorks: string; requiresAccounts?: number }
 > = {
   goals: {
     label: "Savings Goals",
@@ -93,6 +93,8 @@ export const CARD_METADATA: Record<
     label: "Account Balances Chart",
     description: "Visual breakdown of balances across accounts",
     howItWorks: "A bar chart comparing balances across every account at a glance.",
+    // The chart compares accounts, so it only renders (and can only be enabled) with 2+ accounts.
+    requiresAccounts: 2,
   },
 };
 
