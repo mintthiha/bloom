@@ -273,7 +273,14 @@ function Home() {
             description="This is the first step of onboarding. You can update these details later from the profile page."
             submitLabel="Continue to Bloom"
             successMessage="Profile saved. Loading your dashboard..."
-            onSaved={(savedProfile) => setProfile(savedProfile)}
+            onSaved={(savedProfile) => {
+              setProfile(savedProfile);
+              // Cache the name so the greeting personalizes immediately, without a reload.
+              if (savedProfile.firstName) {
+                setCachedFirstName(savedProfile.firstName);
+                setCachedFirstNameState(savedProfile.firstName);
+              }
+            }}
           />
         </div>
       </div>

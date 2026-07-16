@@ -1,7 +1,12 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import { CardId, useDashboardVisibility } from "@/components/dashboard-visibility-provider";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import {
+  CardId,
+  CARD_METADATA,
+  useDashboardVisibility,
+} from "@/components/dashboard-visibility-provider";
+import { CardExplainerCallout } from "./CardExplainerCallout";
 
 /** A single dashboard card slotted into the reorderable grid. */
 export type DashboardCard = {
@@ -36,15 +41,25 @@ interface DraggableCardGridProps {
  * arms the drag, so the cards themselves stay fully clickable and their content stays selectable.
  */
 export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
-  const { cardOrder, reorderCard } = useDashboardVisibility();
+  const { cardOrder, reorderCard, pendingExplainCardId, dismissExplainedCard } =
+    useDashboardVisibility();
   const [grabbedId, setGrabbedId] = useState<CardId | null>(null);
   const [draggingId, setDraggingId] = useState<CardId | null>(null);
   const [dragOverId, setDragOverId] = useState<CardId | null>(null);
+  const explainRef = useRef<HTMLDivElement | null>(null);
 
   const cardById = new Map(cards.map((card) => [card.id, card]));
   const orderedCards = cardOrder
     .map((id) => cardById.get(id))
     .filter((card): card is DashboardCard => Boolean(card));
+
+  /** Scrolls a newly enabled card into view so its first-time explainer callout is seen. */
+  useEffect(() => {
+    const element = explainRef.current;
+    if (pendingExplainCardId && element && typeof element.scrollIntoView === "function") {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [pendingExplainCardId]);
 
   if (orderedCards.length === 0) return null;
 
@@ -61,11 +76,13 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
       {orderedCards.map((card) => {
         const isDragging = draggingId === card.id;
         const isDragOver = dragOverId === card.id && draggingId !== null && draggingId !== card.id;
+        const isExplaining = pendingExplainCardId === card.id;
 
         return (
           <div
             key={card.id}
             id={card.anchorId}
+            ref={isExplaining ? explainRef : undefined}
             className="card-drag-slot"
             draggable={grabbedId === card.id}
             onDragStart={(event) => {
@@ -97,9 +114,14 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               position: "relative",
               borderRadius: "16px",
               opacity: isDragging ? 0.4 : 1,
-              outline: isDragOver ? "2px dashed #f59e0b99" : "2px dashed transparent",
+              outline: isExplaining
+                ? "2px solid #f59e0b"
+                : isDragOver
+                  ? "2px dashed #f59e0b99"
+                  : "2px dashed transparent",
               outlineOffset: "5px",
-              transition: "opacity 0.15s ease, outline-color 0.15s ease",
+              boxShadow: isExplaining ? "0 0 0 6px #f59e0b22" : undefined,
+              transition: "opacity 0.15s ease, outline-color 0.15s ease, box-shadow 0.3s ease",
             }}
           >
             {/* Grip handle — floats above the card's top edge and is the only drag initiator. */}
@@ -130,6 +152,13 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
             >
               <DragGrip />
             </div>
+            {isExplaining && (
+              <CardExplainerCallout
+                label={CARD_METADATA[card.id].label}
+                howItWorks={CARD_METADATA[card.id].howItWorks}
+                onDismiss={dismissExplainedCard}
+              />
+            )}
             {card.node}
           </div>
         );
