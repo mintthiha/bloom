@@ -41,25 +41,31 @@ interface DraggableCardGridProps {
  * arms the drag, so the cards themselves stay fully clickable and their content stays selectable.
  */
 export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
-  const { cardOrder, reorderCard, pendingExplainCardId, dismissExplainedCard } =
+  const { cardOrder, reorderCard, pendingExplainCardIds, dismissExplainedCard } =
     useDashboardVisibility();
   const [grabbedId, setGrabbedId] = useState<CardId | null>(null);
   const [draggingId, setDraggingId] = useState<CardId | null>(null);
   const [dragOverId, setDragOverId] = useState<CardId | null>(null);
-  const explainRef = useRef<HTMLDivElement | null>(null);
+  const cardWrapperRefs = useRef<Map<CardId, HTMLDivElement>>(new Map());
+  const previousPendingIdsRef = useRef<Set<CardId>>(new Set());
 
   const cardById = new Map(cards.map((card) => [card.id, card]));
   const orderedCards = cardOrder
     .map((id) => cardById.get(id))
     .filter((card): card is DashboardCard => Boolean(card));
 
-  /** Scrolls a newly enabled card into view so its first-time explainer callout is seen. */
+  /** Scrolls each newly enabled card into view so its first-time explainer callout is seen. */
   useEffect(() => {
-    const element = explainRef.current;
-    if (pendingExplainCardId && element && typeof element.scrollIntoView === "function") {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    const previousPendingIds = previousPendingIdsRef.current;
+    const newlyPendingId = [...pendingExplainCardIds].find((id) => !previousPendingIds.has(id));
+    if (newlyPendingId) {
+      const element = cardWrapperRefs.current.get(newlyPendingId);
+      if (element && typeof element.scrollIntoView === "function") {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
-  }, [pendingExplainCardId]);
+    previousPendingIdsRef.current = new Set(pendingExplainCardIds);
+  }, [pendingExplainCardIds]);
 
   if (orderedCards.length === 0) return null;
 
@@ -76,13 +82,16 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
       {orderedCards.map((card) => {
         const isDragging = draggingId === card.id;
         const isDragOver = dragOverId === card.id && draggingId !== null && draggingId !== card.id;
-        const isExplaining = pendingExplainCardId === card.id;
+        const isExplaining = pendingExplainCardIds.has(card.id);
 
         return (
           <div
             key={card.id}
             id={card.anchorId}
-            ref={isExplaining ? explainRef : undefined}
+            ref={(element) => {
+              if (element) cardWrapperRefs.current.set(card.id, element);
+              else cardWrapperRefs.current.delete(card.id);
+            }}
             className="card-drag-slot"
             draggable={grabbedId === card.id}
             onDragStart={(event) => {
@@ -151,7 +160,7 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               <CardExplainerCallout
                 label={CARD_METADATA[card.id].label}
                 howItWorks={CARD_METADATA[card.id].howItWorks}
-                onDismiss={dismissExplainedCard}
+                onDismiss={() => dismissExplainedCard(card.id)}
               />
             )}
             {/* Dim the card itself while its explainer is up; it returns to normal on "Got it". */}

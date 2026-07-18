@@ -114,10 +114,10 @@ type DashboardVisibilityContextValue = {
   setOrbsEnabled: (enabled: boolean) => void;
   cardOrder: CardId[];
   reorderCard: (draggedId: CardId, targetId: CardId) => void;
-  /** The card just enabled for the first time, awaiting its on-dashboard "how it works" callout. */
-  pendingExplainCardId: CardId | null;
-  /** Dismisses the pending explainer and remembers the card so it never explains again. */
-  dismissExplainedCard: () => void;
+  /** Cards enabled for the first time, each awaiting its own on-dashboard "how it works" callout. */
+  pendingExplainCardIds: Set<CardId>;
+  /** Dismisses one card's explainer and remembers it so that card never explains again. */
+  dismissExplainedCard: (cardId: CardId) => void;
 };
 
 const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue>({
@@ -130,7 +130,7 @@ const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue
   setOrbsEnabled: () => {},
   cardOrder: [...ALL_CARD_IDS],
   reorderCard: () => {},
-  pendingExplainCardId: null,
+  pendingExplainCardIds: new Set(),
   dismissExplainedCard: () => {},
 });
 
@@ -201,7 +201,7 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
   const [orbsEnabled, setOrbsEnabledState] = useState<boolean>(true);
   const [cardOrder, setCardOrder] = useState<CardId[]>(() => [...ALL_CARD_IDS]);
   const [explainedCards, setExplainedCards] = useState<Set<CardId>>(() => new Set());
-  const [pendingExplainCardId, setPendingExplainCardId] = useState<CardId | null>(null);
+  const [pendingExplainCardIds, setPendingExplainCardIds] = useState<Set<CardId>>(() => new Set());
 
   // Hydrate persisted preferences after mount. Reading localStorage during the initial render
   // would make the server markup (defaults) and the client markup (stored values) diverge and
@@ -216,7 +216,8 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
 
   /**
    * Toggles a card on or off and persists the set. When a card is turned on for the very first
-   * time, it is queued for the on-dashboard "how it works" callout.
+   * time, it is queued for its own on-dashboard "how it works" callout, alongside any other cards
+   * still awaiting theirs — enabling a second card never dismisses the first card's callout.
    */
   function toggleCard(cardId: CardId) {
     setVisibleCards((prev) => {
@@ -225,25 +226,32 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
         next.delete(cardId);
       } else {
         next.add(cardId);
-        if (!explainedCards.has(cardId)) setPendingExplainCardId(cardId);
+        if (!explainedCards.has(cardId)) {
+          setPendingExplainCardIds((pending) => {
+            const nextPending = new Set(pending);
+            nextPending.add(cardId);
+            return nextPending;
+          });
+        }
       }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
       return next;
     });
   }
 
-  /** Dismisses the pending explainer and records the card so its callout never shows again. */
-  function dismissExplainedCard() {
-    setPendingExplainCardId((current) => {
-      if (current) {
-        setExplainedCards((prev) => {
-          const next = new Set(prev);
-          next.add(current);
-          window.localStorage.setItem(EXPLAINED_STORAGE_KEY, JSON.stringify([...next]));
-          return next;
-        });
-      }
-      return null;
+  /** Dismisses one card's explainer and records the card so its callout never shows again. */
+  function dismissExplainedCard(cardId: CardId) {
+    setPendingExplainCardIds((pending) => {
+      if (!pending.has(cardId)) return pending;
+      const nextPending = new Set(pending);
+      nextPending.delete(cardId);
+      return nextPending;
+    });
+    setExplainedCards((prev) => {
+      const next = new Set(prev);
+      next.add(cardId);
+      window.localStorage.setItem(EXPLAINED_STORAGE_KEY, JSON.stringify([...next]));
+      return next;
     });
   }
 
@@ -292,10 +300,10 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
       setOrbsEnabled,
       cardOrder,
       reorderCard,
-      pendingExplainCardId,
+      pendingExplainCardIds,
       dismissExplainedCard,
     }),
-    [visibleCards, allCollapsed, orbsEnabled, cardOrder, pendingExplainCardId]
+    [visibleCards, allCollapsed, orbsEnabled, cardOrder, pendingExplainCardIds]
   );
 
   return (
