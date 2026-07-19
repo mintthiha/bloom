@@ -287,13 +287,85 @@ body {
   color: #60a5fa;
 }
 
+/*
+ * Customize-panel settings rows. Hover lays the theme-aware overlay behind the
+ * whole row and nudges its label across, so a row reads as interactive without
+ * disturbing the toggle it controls.
+ */
+.customize-row {
+  border-radius: 8px;
+  transition: box-shadow 0.15s ease;
+}
+.customize-row:hover {
+  box-shadow: inset 0 0 0 999px var(--hover-overlay);
+}
+.customize-row-label {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.customize-row:hover .customize-row-label {
+  transform: translateX(3px);
+}
+
+/*
+ * Reset-to-defaults button. Hover brightens the border and winds the reset icon a
+ * full turn back; press gives a tactile dip. Its fade-up entrance lives on a
+ * wrapper so the animation's transform lock leaves the press transform free.
+ */
+.reset-button {
+  transition:
+    border-color 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reset-button:hover {
+  border-color: var(--border-hover);
+}
+.reset-button:active {
+  transform: scale(0.98);
+}
+.reset-button-icon {
+  transform-origin: center;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reset-button:hover .reset-button-icon {
+  transform: rotate(-360deg);
+}
+
+/*
+ * Budget delete button. Neutral at rest so a destructive action never nags; hover
+ * reveals its intent by shifting the border and label to the destructive red with
+ * a faint tint, and press gives a tactile dip.
+ */
+.budget-delete-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.budget-delete-button:not(:disabled):hover {
+  border-color: #f8717160;
+  color: #f87171;
+  background: #f8717114;
+}
+.budget-delete-button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .press:hover,
   .press:active,
   .lift:active,
   .nav-item:active,
   .value-prop:hover .value-prop-icon,
-  .value-prop:hover .value-prop-text {
+  .value-prop:hover .value-prop-text,
+  .customize-row:hover .customize-row-label,
+  .reset-button:active,
+  .reset-button:hover .reset-button-icon,
+  .budget-delete-button:not(:disabled):active {
     transform: none;
   }
 }

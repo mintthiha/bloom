@@ -255,11 +255,8 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
                     type="button"
                     onClick={() => setPendingDeleteId(budget.id)}
                     disabled={deletingBudgetId === budget.id}
+                    className="budget-delete-button"
                     style={{
-                      background: "transparent",
-                      border: "1px solid var(--border)",
-                      color: "var(--text-secondary)",
-                      borderRadius: "8px",
                       padding: "8px 12px",
                       fontSize: "12px",
                       cursor: deletingBudgetId === budget.id ? "not-allowed" : "pointer",

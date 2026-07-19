@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Columns2, Rows3 } from "lucide-react";
+import { Columns2, Rows3, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -66,6 +66,50 @@ function CardToggle({
 }
 
 /**
+ * Shared settings row: a title/description block on the left and a control on the right.
+ * `interactive` adds the hover highlight (skip it for rows whose control is disabled), and
+ * `dimmed` fades the row when its option isn't available yet.
+ */
+function SettingRow({
+  title,
+  description,
+  descriptionColor,
+  control,
+  interactive = true,
+  dimmed = false,
+}: {
+  title: string;
+  description: string;
+  descriptionColor?: string;
+  control: ReactNode;
+  interactive?: boolean;
+  dimmed?: boolean;
+}) {
+  return (
+    <div
+      className={interactive ? "customize-row" : undefined}
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "12px 0",
+        borderBottom: "1px solid var(--border)",
+        gap: "12px",
+        opacity: dimmed ? 0.6 : 1,
+      }}
+    >
+      <div className="customize-row-label" style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>{title}</p>
+        <p style={{ fontSize: "12px", color: descriptionColor ?? "var(--text-secondary)" }}>
+          {description}
+        </p>
+      </div>
+      {control}
+    </div>
+  );
+}
+
+/**
  * One row inside the panel showing the card label, description, and its visibility toggle.
  * When `lockedHint` is set the card can't be shown yet (its data requirement isn't met), so the
  * toggle is disabled and the hint replaces the description.
@@ -77,25 +121,16 @@ function CardToggleRow({ cardId, lockedHint }: { cardId: CardId; lockedHint?: st
   const isLocked = Boolean(lockedHint);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "12px 0",
-        borderBottom: "1px solid var(--border)",
-        gap: "12px",
-        opacity: isLocked ? 0.6 : 1,
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>{meta.label}</p>
-        <p style={{ fontSize: "12px", color: isLocked ? "#3b82f6" : "var(--text-secondary)" }}>
-          {lockedHint ?? meta.description}
-        </p>
-      </div>
-      <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} disabled={isLocked} />
-    </div>
+    <SettingRow
+      title={meta.label}
+      description={lockedHint ?? meta.description}
+      descriptionColor={isLocked ? "#3b82f6" : undefined}
+      interactive={!isLocked}
+      dimmed={isLocked}
+      control={
+        <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} disabled={isLocked} />
+      }
+    />
   );
 }
 
@@ -314,48 +349,25 @@ export function DashboardCustomizePanel() {
             </div>
           </div>
           {isDashboard && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "12px 0",
-                borderBottom: "1px solid var(--border)",
-                gap: "12px",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
-                  Collapse all cards by on load
-                </p>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                  Close every card down to its compact header
-                </p>
-              </div>
-              <CardToggle checked={allCollapsed} onChange={() => setAllCollapsed(!allCollapsed)} />
-            </div>
+            <SettingRow
+              title="Collapse all cards by on load"
+              description="Close every card down to its compact header"
+              control={
+                <CardToggle
+                  checked={allCollapsed}
+                  onChange={() => setAllCollapsed(!allCollapsed)}
+                />
+              }
+            />
           )}
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "12px 0",
-              borderBottom: "1px solid var(--border)",
-              gap: "12px",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>
-                Ambient background orbs
-              </p>
-              <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                Soft glows that drift in the background
-              </p>
-            </div>
-            <CardToggle checked={orbsEnabled} onChange={() => setOrbsEnabled(!orbsEnabled)} />
-          </div>
+          <SettingRow
+            title="Ambient background orbs"
+            description="Soft glows that drift in the background"
+            control={
+              <CardToggle checked={orbsEnabled} onChange={() => setOrbsEnabled(!orbsEnabled)} />
+            }
+          />
 
           {isDashboard && (
             <>
@@ -377,27 +389,31 @@ export function DashboardCustomizePanel() {
               ))}
 
               {hasCustomLayout && (
-                <button
-                  type="button"
-                  onClick={resetToDefaults}
-                  style={{
-                    marginTop: "24px",
-                    width: "100%",
-                    background: "none",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "8px",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    transition: "border-color 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                >
-                  Reset to defaults
-                </button>
+                <div className="fade-up" style={{ marginTop: "24px" }}>
+                  <button
+                    type="button"
+                    onClick={resetToDefaults}
+                    className="reset-button"
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "7px",
+                      background: "none",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      padding: "8px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    <RotateCcw className="reset-button-icon" size={13} aria-hidden />
+                    Reset to defaults
+                  </button>
+                </div>
               )}
 
               {isChecklistHidden && (
