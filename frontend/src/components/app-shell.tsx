@@ -56,26 +56,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
             <SidebarTrigger />
-            <div
-              className="header-status"
-              style={{ display: "flex", alignItems: "center", gap: "6px" }}
-            >
-              <div
-                style={{
-                  width: "7px",
-                  height: "7px",
-                  borderRadius: "50%",
-                  background: "#22c55e",
-                  flexShrink: 0,
-                }}
-              />
-              <span
-                className="num"
-                style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
-              >
-                All systems operational
-              </span>
-            </div>
           </div>
           <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
             <HeaderSearch />
