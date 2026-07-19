@@ -355,6 +355,26 @@ body {
   transform: scale(0.97);
 }
 
+/*
+ * Budget card. In multi-column layouts it's hard to tell which budget you're
+ * pointing at, so hover lifts the card and lights its border with the accent to
+ * mark the one you're about to choose.
+ */
+.budget-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.budget-card:hover {
+  border-color: #3b82f666;
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .press:hover,
   .press:active,
@@ -365,7 +385,8 @@ body {
   .customize-row:hover .customize-row-label,
   .reset-button:active,
   .reset-button:hover .reset-button-icon,
-  .budget-delete-button:not(:disabled):active {
+  .budget-delete-button:not(:disabled):active,
+  .budget-card:hover {
     transform: none;
   }
 }

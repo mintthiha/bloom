@@ -16,7 +16,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const EXPENSE_BUDGET_CATEGORIES = [
   "Groceries",
@@ -58,7 +57,6 @@ function buildKnownCategories(budgets: Budget[], monthlySummary: MonthlySummary 
  * the parent owns the data and passes budgets, monthlySummary, and an onChanged refresh.
  */
 export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
-  const isMobile = useIsMobile();
   const [budgetCategory, setBudgetCategory] = useState("Groceries");
   const [customBudgetCategory, setCustomBudgetCategory] = useState("");
   const [budgetAmount, setBudgetAmount] = useState("");
@@ -121,8 +119,8 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
       <form onSubmit={handleSaveBudget} style={{ marginBottom: "20px" }}>
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 150px) auto",
+            display: "flex",
+            flexWrap: "wrap",
             gap: "10px",
             alignItems: "stretch",
           }}
@@ -132,6 +130,8 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
             onChange={(e) => setBudgetCategory(e.target.value)}
             aria-label="Budget category"
             style={{
+              flex: "1 1 180px",
+              minWidth: 0,
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
               borderRadius: "8px",
@@ -155,6 +155,8 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
             onChange={(e) => setBudgetAmount(e.target.value)}
             placeholder="Monthly limit"
             style={{
+              flex: "0 1 150px",
+              minWidth: 0,
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
               borderRadius: "8px",
@@ -168,6 +170,7 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
             className="press"
             disabled={budgetSaving}
             style={{
+              flex: "0 0 auto",
               padding: "10px 18px",
               background: "#3b82f6",
               color: "#000",
@@ -223,10 +226,8 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
             return (
               <div
                 key={budget.id}
+                className="budget-card"
                 style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "12px",
                   padding: "16px",
                 }}
               >
