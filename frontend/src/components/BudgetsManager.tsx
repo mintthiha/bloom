@@ -6,6 +6,16 @@ import { PiggyBank } from "lucide-react";
 import { api, Budget, MonthlySummary } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const EXPENSE_BUDGET_CATEGORIES = [
@@ -54,9 +64,11 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
   const [budgetAmount, setBudgetAmount] = useState("");
   const [budgetSaving, setBudgetSaving] = useState(false);
   const [budgetError, setBudgetError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
 
   const knownBudgetCategories = buildKnownCategories(budgets, monthlySummary);
+  const pendingDeleteBudget = budgets.find((budget) => budget.id === pendingDeleteId) ?? null;
 
   /** Validates and saves a budget category limit via the API. */
   async function handleSaveBudget(e: React.FormEvent) {
@@ -100,6 +112,7 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
       setBudgetError(err instanceof Error ? err.message : "Failed to delete budget");
     } finally {
       setDeletingBudgetId(null);
+      setPendingDeleteId(null);
     }
   }
 
@@ -240,7 +253,7 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => handleDeleteBudget(budget.id)}
+                    onClick={() => setPendingDeleteId(budget.id)}
                     disabled={deletingBudgetId === budget.id}
                     style={{
                       background: "transparent",
@@ -307,6 +320,42 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
           })}
         </div>
       )}
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingBudgetId) setPendingDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <div style={{ padding: "12px 14px" }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete budget?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingDeleteBudget
+                  ? `Your "${pendingDeleteBudget.category}" budget will be permanently removed.`
+                  : "This budget will be permanently removed."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                onClick={() => setPendingDeleteId(null)}
+                disabled={Boolean(deletingBudgetId)}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                type="button"
+                onClick={() => pendingDeleteId && handleDeleteBudget(pendingDeleteId)}
+                disabled={Boolean(deletingBudgetId)}
+              >
+                {deletingBudgetId ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

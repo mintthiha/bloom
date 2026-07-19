@@ -7,7 +7,9 @@ type CollapsibleCardProps = {
   eyebrow: string;
   title?: string;
   description?: string;
-  headerRight?: ReactNode;
+  // A node, or a render function receiving the collapsed state so cards can hide wide/interactive
+  // controls while collapsed (which would otherwise crush the title in the narrow tile).
+  headerRight?: ReactNode | ((isCollapsed: boolean) => ReactNode);
   children: ReactNode;
   defaultCollapsed?: boolean;
   style?: CSSProperties;
@@ -156,7 +158,7 @@ export function CollapsibleCard({
             justifyContent: isMobile ? "flex-end" : undefined,
           }}
         >
-          {headerRight}
+          {typeof headerRight === "function" ? headerRight(isCollapsed) : headerRight}
           <button
             type="button"
             onClick={() => setIsCollapsed((prev) => !prev)}
