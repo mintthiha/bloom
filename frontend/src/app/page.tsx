@@ -40,6 +40,7 @@ import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
 import { InsightsCard } from "./_components/_insights/InsightsCard";
 import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
 import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHealthScore";
+import { SafeToSpendCard } from "./_components/_safeToSpend/SafeToSpendCard";
 import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
 import { DraggableCardGrid, DashboardCard } from "./_components/_dashboardCards/DraggableCardGrid";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
@@ -374,6 +375,12 @@ function Home() {
   // Build the reorderable card set in default order; each card carries its own data-availability gate.
   const reorderableCards: DashboardCard[] = [];
   if (accounts.length > 0 && monthlySummary) {
+    if (visibleCards.has("safe-to-spend")) {
+      reorderableCards.push({
+        id: "safe-to-spend",
+        node: <SafeToSpendCard accounts={accounts} recurringRules={recurringRules} />,
+      });
+    }
     if (visibleCards.has("goals")) {
       reorderableCards.push({ id: "goals", node: <GoalWidget goals={goals} /> });
     }

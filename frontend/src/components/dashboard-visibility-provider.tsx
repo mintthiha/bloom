@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type CardId =
+  | "safe-to-spend"
   | "goals"
   | "financial-health"
   | "insights"
@@ -15,6 +16,7 @@ export type CardId =
   | "account-balances";
 
 export const ALL_CARD_IDS: CardId[] = [
+  "safe-to-spend",
   "goals",
   "financial-health",
   "insights",
@@ -31,12 +33,18 @@ export const ALL_CARD_IDS: CardId[] = [
  * Cards shown to a brand-new user — a lean starter set that avoids first-run overwhelm.
  * The rest stay off until the user opts in from the Customize panel.
  */
-export const DEFAULT_VISIBLE_CARDS: CardId[] = ["monthly-snapshot", "budgets"];
+export const DEFAULT_VISIBLE_CARDS: CardId[] = ["safe-to-spend", "monthly-snapshot", "budgets"];
 
 export const CARD_METADATA: Record<
   CardId,
   { label: string; description: string; howItWorks: string; requiresAccounts?: number }
 > = {
+  "safe-to-spend": {
+    label: "Safe to Spend",
+    description: "What's free to spend for the rest of the month",
+    howItWorks:
+      "Your liquid cash plus expected income, minus the recurring bills still due before month-end — with a per-day allowance for whatever's left.",
+  },
   goals: {
     label: "Savings Goals",
     description: "Track progress toward your savings targets",

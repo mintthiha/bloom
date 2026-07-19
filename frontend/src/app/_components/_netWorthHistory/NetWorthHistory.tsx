@@ -70,7 +70,6 @@ export function NetWorthHistory({ history }: Props) {
       description="Watch how your assets and debts shift month over month."
       headerRight={headerRight ?? undefined}
       className="fade-up fade-up-2"
-      style={{ marginBottom: "32px" }}
     >
       <ResponsiveContainer width="100%" height={220}>
         <ComposedChart data={history} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
