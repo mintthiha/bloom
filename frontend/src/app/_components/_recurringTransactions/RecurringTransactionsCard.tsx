@@ -262,7 +262,7 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
         disabled={applying}
         style={{
           padding: "8px 12px",
-          background: dueCount > 0 ? "#f59e0b" : "var(--surface-2)",
+          background: dueCount > 0 ? "#3b82f6" : "var(--surface-2)",
           color: dueCount > 0 ? "#000" : "var(--text-secondary)",
           border: dueCount > 0 ? "none" : "1px solid var(--border)",
           borderRadius: "8px",
@@ -611,7 +611,7 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
               disabled={saving}
               style={{
                 padding: "10px 18px",
-                background: "#f59e0b",
+                background: "#3b82f6",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",

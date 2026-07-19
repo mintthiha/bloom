@@ -40,7 +40,7 @@ export function SpendingPerAccountChart({ budget }: SpendingPerAccountChartProps
                 }}
               >
                 <span style={{ fontSize: "13px", fontWeight: 600 }}>{account.accountName}</span>
-                <span className="num" style={{ fontSize: "13px", color: "#f59e0b" }}>
+                <span className="num" style={{ fontSize: "13px", color: "#3b82f6" }}>
                   {formatCurrency(account.total)}
                 </span>
               </div>
@@ -56,7 +56,7 @@ export function SpendingPerAccountChart({ budget }: SpendingPerAccountChartProps
                   style={{
                     width: `${budget.currentSpending > 0 ? (account.total / budget.currentSpending) * 100 : 0}%`,
                     height: "100%",
-                    background: index % 2 === 0 ? "#f59e0b" : "#22c55e",
+                    background: index % 2 === 0 ? "#3b82f6" : "#22c55e",
                   }}
                 />
               </div>

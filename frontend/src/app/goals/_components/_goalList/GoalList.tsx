@@ -31,7 +31,7 @@ function GoalCard({
 }) {
   const typeMeta = ACCOUNT_TYPE_META[goal.accountType as AccountType];
   const isComplete = goal.percentageReached >= 100;
-  const progressColor = isComplete ? "#22c55e" : "#f59e0b";
+  const progressColor = isComplete ? "#22c55e" : "#3b82f6";
 
   return (
     <div
@@ -271,7 +271,7 @@ export function GoalList() {
           onClick={handleOpenCreate}
           style={{
             padding: "10px 18px",
-            background: "#f59e0b",
+            background: "#3b82f6",
             border: "none",
             borderRadius: "10px",
             color: "#000",
@@ -309,7 +309,7 @@ export function GoalList() {
               onClick={handleOpenCreate}
               style={{
                 padding: "10px 20px",
-                background: "#f59e0b",
+                background: "#3b82f6",
                 border: "none",
                 borderRadius: "10px",
                 color: "#000",

@@ -16,14 +16,14 @@ type Props = {
 
 const STATUS_DOT_COLOR: Record<OccurrenceStatus, string> = {
   overdue: "#f87171",
-  "due-soon": "#f59e0b",
+  "due-soon": "#3b82f6",
   upcoming: "var(--text-muted)",
 };
 
 const STATUS_BADGE: Record<OccurrenceStatus, { label: string; color: string; bg: string } | null> =
   {
     overdue: { label: "Overdue", color: "#f87171", bg: "#f8717122" },
-    "due-soon": { label: "Due soon", color: "#f59e0b", bg: "#f59e0b22" },
+    "due-soon": { label: "Due soon", color: "#3b82f6", bg: "#3b82f622" },
     upcoming: null,
   };
 
@@ -73,7 +73,7 @@ export function RecurringCalendar({ rules }: Props) {
                     status === "overdue"
                       ? "#f87171"
                       : status === "due-soon"
-                        ? "#f59e0b"
+                        ? "#3b82f6"
                         : "var(--text-secondary)",
                 }}
               >

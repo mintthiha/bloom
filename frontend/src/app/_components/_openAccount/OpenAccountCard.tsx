@@ -68,7 +68,7 @@ export function OpenAccountCard({ onCreated }: Props) {
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Account nickname"
             style={inputStyle}
-            onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
+            onFocus={(e) => (e.target.style.borderColor = "#3b82f6")}
             onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
           <input
@@ -77,7 +77,7 @@ export function OpenAccountCard({ onCreated }: Props) {
             onChange={(e) => setOwnerName(e.target.value)}
             placeholder="Account holder name"
             style={inputStyle}
-            onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
+            onFocus={(e) => (e.target.style.borderColor = "#3b82f6")}
             onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
           />
           <div style={{ display: "grid", gridTemplateColumns: "140px auto", gap: "10px" }}>
@@ -99,7 +99,7 @@ export function OpenAccountCard({ onCreated }: Props) {
                 textAlign: "center",
                 textAlignLast: "center",
               }}
-              onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
+              onFocus={(e) => (e.target.style.borderColor = "#3b82f6")}
               onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
             >
               <option value="CHEQUING">Chequing</option>
@@ -115,7 +115,7 @@ export function OpenAccountCard({ onCreated }: Props) {
               disabled={creating || !ownerName.trim()}
               style={{
                 padding: "10px 20px",
-                background: "#f59e0b",
+                background: "#3b82f6",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",

@@ -20,7 +20,7 @@ export function BackToHome() {
         marginBottom: "32px",
         transition: "color 0.15s",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "#f59e0b")}
+      onMouseEnter={(e) => (e.currentTarget.style.color = "#3b82f6")}
       onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
     >
       <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -15,7 +15,7 @@ interface FinancialHealthScoreProps {
 /** Returns the display colour for an overall 0–100 score. */
 function overallScoreColor(total: number): string {
   if (total > 70) return "#22c55e";
-  if (total >= 40) return "#f59e0b";
+  if (total >= 40) return "#3b82f6";
   return "#ef4444";
 }
 
@@ -23,7 +23,7 @@ function overallScoreColor(total: number): string {
 function subScoreColor(score: number): string {
   const pct = score / 20;
   if (pct >= 0.7) return "#22c55e";
-  if (pct >= 0.4) return "#f59e0b";
+  if (pct >= 0.4) return "#3b82f6";
   return "#ef4444";
 }
 

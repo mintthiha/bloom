@@ -32,11 +32,11 @@ type CategoryRow = {
 function getBucketColor(pct: number, targetPct: number, higherIsBetter: boolean): string {
   if (higherIsBetter) {
     if (pct >= targetPct) return "#22c55e";
-    if (pct >= targetPct * 0.5) return "#f59e0b";
+    if (pct >= targetPct * 0.5) return "#3b82f6";
     return "#f87171";
   }
   if (pct <= targetPct) return "#22c55e";
-  if (pct <= targetPct * 1.2) return "#f59e0b";
+  if (pct <= targetPct * 1.2) return "#3b82f6";
   return "#f87171";
 }
 

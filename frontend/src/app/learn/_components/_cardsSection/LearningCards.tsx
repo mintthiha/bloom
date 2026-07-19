@@ -42,7 +42,7 @@ export const CARDS = [
   {
     icon: BookOpen,
     title: "FHSA — First Home Savings Account",
-    color: "#f59e0b",
+    color: "#3b82f6",
     summary:
       "The best of both worlds: RRSP-like deductions on contributions and TFSA-like tax-free withdrawals for a first home.",
     points: [

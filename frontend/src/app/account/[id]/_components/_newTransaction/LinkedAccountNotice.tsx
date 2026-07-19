@@ -37,8 +37,8 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
     <div
       className="fade-up fade-up-2"
       style={{
-        border: "1px solid #f59e0b30",
-        background: "#f59e0b06",
+        border: "1px solid #3b82f630",
+        background: "#3b82f606",
         borderRadius: "16px",
         padding: "24px",
         marginBottom: "16px",
@@ -53,7 +53,7 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "#f59e0b",
+          color: "#3b82f6",
           margin: 0,
         }}
       >
@@ -75,20 +75,20 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           alignSelf: "flex-start",
           padding: "10px 20px",
           background: "transparent",
-          color: resyncing ? "var(--text-muted)" : "#f59e0b",
+          color: resyncing ? "var(--text-muted)" : "#3b82f6",
           fontWeight: 700,
           fontSize: "14px",
-          border: `1px solid ${resyncing ? "var(--border)" : "#f59e0b55"}`,
+          border: `1px solid ${resyncing ? "var(--border)" : "#3b82f655"}`,
           borderRadius: "8px",
           cursor: resyncing ? "not-allowed" : "pointer",
           opacity: resyncing ? 0.5 : 1,
           transition: "opacity 0.15s, border-color 0.15s",
         }}
         onMouseEnter={(e) => {
-          if (!resyncing) e.currentTarget.style.borderColor = "#f59e0b";
+          if (!resyncing) e.currentTarget.style.borderColor = "#3b82f6";
         }}
         onMouseLeave={(e) => {
-          if (!resyncing) e.currentTarget.style.borderColor = "#f59e0b55";
+          if (!resyncing) e.currentTarget.style.borderColor = "#3b82f655";
         }}
       >
         {resyncing ? "Syncing..." : "Re-sync"}

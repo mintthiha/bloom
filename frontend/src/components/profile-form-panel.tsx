@@ -327,7 +327,7 @@ export function ProfileFormPanel({
               disabled={saving}
               style={{
                 padding: "12px 20px",
-                background: "#f59e0b",
+                background: "#3b82f6",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",

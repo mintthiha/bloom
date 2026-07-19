@@ -166,7 +166,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
             disabled={budgetSaving}
             style={{
               padding: "10px 18px",
-              background: "#f59e0b",
+              background: "#3b82f6",
               color: "#000",
               fontWeight: 700,
               fontSize: "14px",
@@ -284,7 +284,7 @@ export function BudgetsCard({ budgets, monthlySummary, onChanged }: Props) {
                       style={{
                         width: `${progress}%`,
                         height: "100%",
-                        background: budget.isOverBudget ? "#ef4444" : "#f59e0b",
+                        background: budget.isOverBudget ? "#ef4444" : "#3b82f6",
                         transition: "width 0.2s ease",
                       }}
                     />

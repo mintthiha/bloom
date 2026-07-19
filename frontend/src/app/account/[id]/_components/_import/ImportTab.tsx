@@ -117,7 +117,7 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
 
   const editableInputStyle: React.CSSProperties = {
     background: "var(--surface-2)",
-    border: "1px solid #f59e0b",
+    border: "1px solid #3b82f6",
     borderRadius: "5px",
     padding: "2px 6px",
     fontSize: "12px",
@@ -182,7 +182,7 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
         <a
           href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`}
           download="bloom-import-template.csv"
-          style={{ fontSize: "12px", color: "#f59e0b", textDecoration: "none", fontWeight: 600 }}
+          style={{ fontSize: "12px", color: "#3b82f6", textDecoration: "none", fontWeight: 600 }}
         >
           Download template
         </a>
@@ -215,7 +215,7 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
                 disabled={csvImporting}
                 style={{
                   padding: "8px 16px",
-                  background: "#f59e0b",
+                  background: "#3b82f6",
                   color: "#000",
                   border: "none",
                   borderRadius: "8px",

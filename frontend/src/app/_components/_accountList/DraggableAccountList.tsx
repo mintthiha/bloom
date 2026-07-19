@@ -153,7 +153,7 @@ export function DraggableAccountList({
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
-                color: "#f59e0b",
+                color: "#3b82f6",
                 marginBottom: "4px",
               }}
             >
@@ -205,12 +205,12 @@ export function DraggableAccountList({
                   display: "flex",
                   alignItems: "center",
                   background: isDragOver || isHighlighted ? "var(--surface-2)" : "var(--surface-1)",
-                  border: `1px solid ${isDragOver ? "#f59e0b66" : isHighlighted ? "#f59e0baa" : "var(--border)"}`,
+                  border: `1px solid ${isDragOver ? "#3b82f666" : isHighlighted ? "#3b82f6aa" : "var(--border)"}`,
                   borderRadius: "12px",
                   transition: "border-color 0.6s, background 0.6s, opacity 0.15s, box-shadow 0.6s",
                   opacity: isDragging ? 0.4 : 1,
-                  outline: isDragOver ? "1px solid #f59e0b44" : "none",
-                  boxShadow: isHighlighted ? "0 0 0 3px #f59e0b22" : "none",
+                  outline: isDragOver ? "1px solid #3b82f644" : "none",
+                  boxShadow: isHighlighted ? "0 0 0 3px #3b82f622" : "none",
                 }}
               >
                 {/* Drag handle */}
@@ -360,8 +360,8 @@ export function DraggableAccountList({
                               letterSpacing: "0.04em",
                               padding: "2px 6px",
                               borderRadius: "4px",
-                              background: "#f59e0b18",
-                              color: "#f59e0b",
+                              background: "#3b82f618",
+                              color: "#3b82f6",
                             }}
                           >
                             Linked · {acc.institutionName}

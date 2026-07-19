@@ -90,7 +90,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
               onClick={() => router.push("/goals")}
               style={{
                 padding: "10px 20px",
-                background: "#f59e0b",
+                background: "#3b82f6",
                 border: "none",
                 borderRadius: "10px",
                 color: "#000",
@@ -110,7 +110,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? goals[0]!;
   const typeMeta = ACCOUNT_TYPE_META[selectedGoal.accountType as AccountType];
   const isComplete = selectedGoal.percentageReached >= 100;
-  const progressColor = isComplete ? "#22c55e" : "#f59e0b";
+  const progressColor = isComplete ? "#22c55e" : "#3b82f6";
 
   return (
     <div
@@ -155,7 +155,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#f59e0b",
+              color: "#3b82f6",
             }}
           >
             Goal
@@ -198,7 +198,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
                 cursor: "pointer",
                 fontSize: "12px",
                 fontWeight: 600,
-                color: "#f59e0b",
+                color: "#3b82f6",
               }}
             >
               View all →

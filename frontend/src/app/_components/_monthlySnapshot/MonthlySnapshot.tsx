@@ -64,7 +64,7 @@ export function MonthlySnapshot({
       : savingsRate >= 0.2
         ? "#22c55e"
         : savingsRate >= 0.1
-          ? "#f59e0b"
+          ? "#3b82f6"
           : "#f87171";
   const savingsRateTooltip =
     savingsRate !== null
@@ -101,7 +101,7 @@ export function MonthlySnapshot({
           >
             Top Spend
           </p>
-          <p style={{ fontSize: "13px", fontWeight: 700, color: "#f59e0b" }}>
+          <p style={{ fontSize: "13px", fontWeight: 700, color: "#3b82f6" }}>
             {monthlySummary.topExpenseCategory}
           </p>
         </div>
@@ -114,9 +114,9 @@ export function MonthlySnapshot({
           style={{
             padding: "5px 12px",
             borderRadius: "8px",
-            border: snapshotView === viewOption ? "1px solid #f59e0b66" : "1px solid var(--border)",
-            background: snapshotView === viewOption ? "#f59e0b1a" : "var(--surface-2)",
-            color: snapshotView === viewOption ? "#f59e0b" : "var(--text-secondary)",
+            border: snapshotView === viewOption ? "1px solid #3b82f666" : "1px solid var(--border)",
+            background: snapshotView === viewOption ? "#3b82f61a" : "var(--surface-2)",
+            color: snapshotView === viewOption ? "#3b82f6" : "var(--text-secondary)",
             fontSize: "11px",
             fontWeight: 600,
             cursor: "pointer",

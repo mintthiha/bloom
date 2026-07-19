@@ -93,7 +93,7 @@ export function CollapsibleCard({
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#f59e0b",
+              color: "#3b82f6",
               marginBottom: title ? "8px" : "0",
             }}
           >

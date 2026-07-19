@@ -53,7 +53,7 @@ export function ChatSection({
             width: "8px",
             height: "8px",
             borderRadius: "50%",
-            background: "#f59e0b",
+            background: "#3b82f6",
             flexShrink: 0,
           }}
         />
@@ -120,8 +120,8 @@ export function ChatSection({
                 maxWidth: "75%",
                 padding: "10px 14px",
                 borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                background: msg.role === "user" ? "#f59e0b22" : "var(--surface-2)",
-                border: msg.role === "user" ? "1px solid #f59e0b44" : "1px solid var(--border)",
+                background: msg.role === "user" ? "#3b82f622" : "var(--surface-2)",
+                border: msg.role === "user" ? "1px solid #3b82f644" : "1px solid var(--border)",
                 fontSize: "13px",
                 lineHeight: 1.6,
                 color: "var(--text-primary)",

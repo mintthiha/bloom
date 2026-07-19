@@ -190,7 +190,7 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#f59e0b",
+              color: "#3b82f6",
               marginBottom: "4px",
             }}
           >
@@ -214,8 +214,8 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
                 fontWeight: 700,
                 padding: "2px 8px",
                 borderRadius: "999px",
-                background: "#f59e0b22",
-                color: "#f59e0b",
+                background: "#3b82f622",
+                color: "#3b82f6",
                 flexShrink: 0,
               }}
             >

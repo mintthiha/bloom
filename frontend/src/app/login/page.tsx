@@ -26,7 +26,7 @@ const ORBS: Orb[] = [
   {
     size: 440,
     radius: 130,
-    background: "radial-gradient(circle, rgba(245,158,11,0.16), transparent 70%)",
+    background: "radial-gradient(circle, rgba(59,130,246,0.16), transparent 70%)",
     entranceDelay: "0s",
     anchor: { top: "-140px", right: "-120px" },
     rest: (rect) => ({ x: rect.width - 100, y: 80 }),
@@ -59,7 +59,7 @@ const ACCOUNT_TAGS = ["Chequing", "Savings", "TFSA", "RRSP", "FHSA", "Credit"];
 function BloomMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="6" fill="#f59e0b" />
+      <rect width="28" height="28" rx="6" fill="#3b82f6" />
       <path
         d="M8 20V8h5.5a4 4 0 0 1 0 8H8"
         stroke="#000"
@@ -403,9 +403,9 @@ export default function LoginPage() {
                     width: "22px",
                     height: "22px",
                     borderRadius: "999px",
-                    background: "#f59e0b1f",
-                    border: "1px solid #f59e0b44",
-                    color: "#f59e0b",
+                    background: "#3b82f61f",
+                    border: "1px solid #3b82f644",
+                    color: "#3b82f6",
                     flexShrink: 0,
                     marginTop: "1px",
                   }}

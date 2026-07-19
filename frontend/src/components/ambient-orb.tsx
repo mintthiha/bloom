@@ -15,23 +15,23 @@ const BOUNCE = 0.6; // energy kept after bouncing off an edge or another orb (0 
 type Orb = {
   size: number; // rendered diameter in px
   radius: number; // collision radius (roughly the visible core)
-  color: string; // "r,g,b" amber/gold tint
+  color: string; // "r,g,b" blue tint
   alphaDark: number; // opacity on the dark theme
-  alphaLight: number; // opacity on the light theme — higher, since amber washes out on white
+  alphaLight: number; // opacity on the light theme — higher, since blue washes out on white
 };
 
 /** The ambient orbs. Each is repelled by the cursor and bounces off the others and the edges. */
 const ORBS: Orb[] = [
-  { size: 360, radius: 108, color: "245,158,11", alphaDark: 0.12, alphaLight: 0.26 },
-  { size: 260, radius: 78, color: "251,191,36", alphaDark: 0.1, alphaLight: 0.24 },
-  { size: 200, radius: 60, color: "234,179,8", alphaDark: 0.09, alphaLight: 0.22 },
-  { size: 320, radius: 96, color: "245,158,11", alphaDark: 0.1, alphaLight: 0.24 },
-  { size: 150, radius: 45, color: "251,191,36", alphaDark: 0.11, alphaLight: 0.26 },
-  { size: 290, radius: 87, color: "234,179,8", alphaDark: 0.08, alphaLight: 0.2 },
-  { size: 180, radius: 54, color: "245,158,11", alphaDark: 0.11, alphaLight: 0.26 },
-  { size: 230, radius: 69, color: "251,191,36", alphaDark: 0.09, alphaLight: 0.22 },
-  { size: 130, radius: 39, color: "234,179,8", alphaDark: 0.12, alphaLight: 0.28 },
-  { size: 340, radius: 102, color: "245,158,11", alphaDark: 0.08, alphaLight: 0.2 },
+  { size: 360, radius: 108, color: "59,130,246", alphaDark: 0.12, alphaLight: 0.26 },
+  { size: 260, radius: 78, color: "96,165,250", alphaDark: 0.1, alphaLight: 0.24 },
+  { size: 200, radius: 60, color: "37,99,235", alphaDark: 0.09, alphaLight: 0.22 },
+  { size: 320, radius: 96, color: "59,130,246", alphaDark: 0.1, alphaLight: 0.24 },
+  { size: 150, radius: 45, color: "96,165,250", alphaDark: 0.11, alphaLight: 0.26 },
+  { size: 290, radius: 87, color: "37,99,235", alphaDark: 0.08, alphaLight: 0.2 },
+  { size: 180, radius: 54, color: "59,130,246", alphaDark: 0.11, alphaLight: 0.26 },
+  { size: 230, radius: 69, color: "96,165,250", alphaDark: 0.09, alphaLight: 0.22 },
+  { size: 130, radius: 39, color: "37,99,235", alphaDark: 0.12, alphaLight: 0.28 },
+  { size: 340, radius: 102, color: "59,130,246", alphaDark: 0.08, alphaLight: 0.2 },
 ];
 
 /** Builds an orb's radial-gradient fill for the current theme. */
@@ -75,7 +75,7 @@ export function AmbientOrb() {
   const cursorRef = useRef({ x: 0, y: 0 });
   // Orbs stay invisible until the physics effect places them at their random spawns, so no flash.
   const [started, setStarted] = useState(false);
-  // The theme drives orb opacity — amber needs to be stronger on the light background.
+  // The theme drives orb opacity — blue needs to be stronger on the light background.
   const [isDark, setIsDark] = useState(true);
 
   /** Tracks the current theme via the `dark` class so the orbs restyle live when it's toggled. */

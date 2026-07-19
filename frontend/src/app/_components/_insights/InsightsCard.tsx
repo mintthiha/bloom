@@ -16,7 +16,7 @@ type Props = {
 
 const SEVERITY_ACCENT_COLOR: Record<InsightSeverity, string> = {
   warning: "#f87171",
-  info: "#f59e0b",
+  info: "#3b82f6",
   success: "#22c55e",
 };
 

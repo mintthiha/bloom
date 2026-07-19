@@ -75,8 +75,8 @@ export function NetWorthHistory({ history }: Props) {
         <ComposedChart data={history} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="netWorthFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
@@ -100,11 +100,11 @@ export function NetWorthHistory({ history }: Props) {
           <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="4 4" />
           <Area
             dataKey="netWorth"
-            stroke="#f59e0b"
+            stroke="#3b82f6"
             strokeWidth={2.5}
             fill="url(#netWorthFill)"
-            dot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
-            activeDot={{ r: 4, fill: "#f59e0b", strokeWidth: 0 }}
+            dot={{ r: 3, fill: "#3b82f6", strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: "#3b82f6", strokeWidth: 0 }}
           />
           <Line dataKey="totalAssets" stroke="#22c55e" strokeWidth={2} dot={false} />
           <Line dataKey="totalDebt" stroke="#ef4444" strokeWidth={2} dot={false} />

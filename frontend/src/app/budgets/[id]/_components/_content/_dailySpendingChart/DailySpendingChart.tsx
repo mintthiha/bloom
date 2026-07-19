@@ -73,7 +73,7 @@ export function DailySpendingChart({ budget }: DailySpendingChartProps) {
               }
               cursor={{ fill: "var(--chart-cursor)" }}
             />
-            <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       ) : (

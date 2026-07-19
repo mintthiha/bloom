@@ -32,7 +32,7 @@ export function HeaderSection({ budget, dateRange, setDateRange, timeZone }: Hea
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#f59e0b",
+              color: "#3b82f6",
               marginBottom: "10px",
             }}
           >

@@ -123,7 +123,7 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               position: "relative",
               borderRadius: "16px",
               opacity: isDragging ? 0.4 : 1,
-              outline: isDragOver ? "2px dashed #f59e0b99" : "2px dashed transparent",
+              outline: isDragOver ? "2px dashed #3b82f699" : "2px dashed transparent",
               outlineOffset: "5px",
               transition: "opacity 0.15s ease, outline-color 0.15s ease",
             }}

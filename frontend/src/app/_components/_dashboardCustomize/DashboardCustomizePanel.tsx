@@ -38,8 +38,8 @@ function CardToggle({
         width: "36px",
         height: "20px",
         borderRadius: "999px",
-        background: checked ? "#f59e0b" : "var(--surface-2)",
-        border: `1px solid ${checked ? "#f59e0b" : "var(--border)"}`,
+        background: checked ? "#3b82f6" : "var(--surface-2)",
+        border: `1px solid ${checked ? "#3b82f6" : "var(--border)"}`,
         position: "relative",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.4 : 1,
@@ -88,7 +88,7 @@ function CardToggleRow({ cardId, lockedHint }: { cardId: CardId; lockedHint?: st
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>{meta.label}</p>
-        <p style={{ fontSize: "12px", color: isLocked ? "#f59e0b" : "var(--text-secondary)" }}>
+        <p style={{ fontSize: "12px", color: isLocked ? "#3b82f6" : "var(--text-secondary)" }}>
           {lockedHint ?? meta.description}
         </p>
       </div>
@@ -226,9 +226,9 @@ export function DashboardCustomizePanel() {
               fontWeight: 700,
               padding: "1px 5px",
               borderRadius: "999px",
-              background: "#f59e0b22",
-              color: "#f59e0b",
-              border: "1px solid #f59e0b44",
+              background: "#3b82f622",
+              color: "#3b82f6",
+              border: "1px solid #3b82f644",
             }}
           >
             {hiddenCount} hidden

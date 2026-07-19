@@ -242,7 +242,7 @@ export function NewTransactionForm({
               fontWeight: 600,
               letterSpacing: "0.02em",
               transition: "all 0.15s",
-              background: op === o ? "#f59e0b" : "transparent",
+              background: op === o ? "#3b82f6" : "transparent",
               color: op === o ? "#000" : "var(--text-secondary)",
             }}
           >
@@ -332,7 +332,7 @@ export function NewTransactionForm({
               disabled={submitting || (op === "transfer" && transferTargets.length === 0)}
               style={{
                 padding: "10px 24px",
-                background: "#f59e0b",
+                background: "#3b82f6",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",
@@ -361,8 +361,8 @@ export function NewTransactionForm({
           {overContributionWarning && overContributionWarning.severity !== "none" && (
             <div
               style={{
-                border: `1px solid ${overContributionWarning.severity === "red" ? "#ef4444" : "#f59e0b"}`,
-                background: overContributionWarning.severity === "red" ? "#ef444408" : "#f59e0b08",
+                border: `1px solid ${overContributionWarning.severity === "red" ? "#ef4444" : "#3b82f6"}`,
+                background: overContributionWarning.severity === "red" ? "#ef444408" : "#3b82f608",
                 borderRadius: "12px",
                 padding: "16px 20px",
               }}
