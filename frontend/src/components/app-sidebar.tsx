@@ -1,73 +1,31 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BookOpen, Columns2, LogOut, Receipt, Rows3, Search, Target } from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
+import { BookOpen, LayoutDashboard, Receipt, Target, Wallet, type LucideIcon } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
-import { openCommandPalette } from "@/components/CommandPalette";
-import { useDashboardView } from "@/components/dashboard-view-provider";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
+
+/** Primary navigation destinations, in sidebar order. */
+const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/transactions", label: "Transactions", icon: Receipt },
+  { href: "/budgets", label: "Budgets", icon: Wallet },
+  { href: "/goals", label: "Goals", icon: Target },
+  { href: "/learn", label: "Learn", icon: BookOpen },
+];
 
 export function AppSidebar() {
   const { data: session } = useSession();
-  const { state, isMobile } = useSidebar();
-  const { view, setView } = useDashboardView();
   const pathname = usePathname();
-  const onLearn = pathname === "/learn";
-  const onGoals = pathname === "/goals";
-  const onTransactions = pathname === "/transactions";
-  const [firstName, setFirstName] = useState<string | null>(null);
-  const [lastName, setLastName] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
   const [dueRecurringCount, setDueRecurringCount] = useState(0);
-
-  /**
-   * Loads the current user's saved profile so the sidebar reflects Prisma data
-   * instead of relying on the auth session name.
-   */
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfile() {
-      try {
-        const profile = await api.getProfile();
-        if (!cancelled) {
-          setFirstName(profile?.firstName ?? null);
-          setLastName(profile?.lastName ?? null);
-          setUsername(profile?.username ?? null);
-        }
-      } catch {
-        if (!cancelled) {
-          setFirstName(null);
-          setLastName(null);
-          setUsername(null);
-        }
-      }
-    }
-
-    if (session?.user?.id) {
-      loadProfile();
-    } else {
-      setUsername(null);
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.user?.id]);
 
   /** Counts active recurring rules whose next run date is today or in the past. */
   useEffect(() => {
@@ -102,9 +60,10 @@ export function AppSidebar() {
     };
   }, [session?.user?.id]);
 
-  const displayName = [firstName, lastName].filter(Boolean).join(" ") || "Your profile";
-  const displayHandle = username ? `@${username}` : (session?.user?.email ?? "");
-  const avatarFallback = (displayName[0] ?? "B").toUpperCase();
+  /** Overview is active only on the exact root; other items match their route prefix. */
+  function isActive(href: string): boolean {
+    return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  }
 
   return (
     <Sidebar collapsible="icon" style={{ borderRight: "none" }}>
@@ -174,79 +133,6 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {!isMobile && (
-          <SidebarGroup>
-            {state !== "collapsed" && (
-              <SidebarGroupLabel
-                style={{
-                  justifyContent: "center",
-                  fontWeight: 900,
-                  textAlign: "center",
-                  paddingBottom: "12px",
-                }}
-              >
-                Dashboard View
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: state === "collapsed" ? "1fr" : "1fr 1fr",
-                  gap: "8px",
-                  padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
-                }}
-              >
-                <button
-                  type="button"
-                  className="nav-item"
-                  onClick={() => setView("single")}
-                  title="Single column"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    minHeight: "44px",
-                    borderRadius: "10px",
-                    border: view === "single" ? "1px solid #3b82f666" : "1px solid var(--border)",
-                    background: view === "single" ? "#3b82f61a" : "var(--surface-1)",
-                    color: view === "single" ? "#3b82f6" : "var(--text-secondary)",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  <Rows3 size={15} />
-                  <span className="group-data-[collapsible=icon]:hidden">Single</span>
-                </button>
-                <button
-                  type="button"
-                  className="nav-item"
-                  onClick={() => setView("double")}
-                  title="Two columns"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    minHeight: "44px",
-                    borderRadius: "10px",
-                    border: view === "double" ? "1px solid #3b82f666" : "1px solid var(--border)",
-                    background: view === "double" ? "#3b82f61a" : "var(--surface-1)",
-                    color: view === "double" ? "#3b82f6" : "var(--text-secondary)",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  <Columns2 size={15} />
-                  <span className="group-data-[collapsible=icon]:hidden">Double</span>
-                </button>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
         <SidebarGroup>
           <SidebarGroupContent>
             <div
@@ -254,233 +140,42 @@ export function AppSidebar() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "6px",
-                padding: state === "collapsed" ? "0 8px" : "0 8px 8px",
+                padding: "8px",
               }}
             >
-              <button
-                type="button"
-                className="nav-item"
-                onClick={openCommandPalette}
-                title="Search transactions (⌘K)"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "44px",
-                  borderRadius: "10px",
-                  border: "1px solid var(--border)",
-                  background: "var(--surface-1)",
-                  color: "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  width: "100%",
-                }}
-              >
-                <Search size={15} style={{ flexShrink: 0 }} />
-                <span className="group-data-[collapsible=icon]:hidden">Search</span>
-                <kbd
-                  className="group-data-[collapsible=icon]:hidden"
-                  style={{
-                    marginLeft: "auto",
-                    fontSize: "10px",
-                    padding: "1px 5px",
-                    borderRadius: "4px",
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    color: "var(--text-muted)",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  ⌘K
-                </kbd>
-              </button>
-              <Link
-                href="/transactions"
-                className="nav-item"
-                title="Transactions"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "44px",
-                  borderRadius: "10px",
-                  border: onTransactions ? "1px solid #3b82f666" : "1px solid var(--border)",
-                  background: onTransactions ? "#3b82f61a" : "var(--surface-1)",
-                  color: onTransactions ? "#3b82f6" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textDecoration: "none",
-                }}
-              >
-                <Receipt size={15} style={{ flexShrink: 0 }} />
-                <span className="group-data-[collapsible=icon]:hidden">Transactions</span>
-              </Link>
-              <Link
-                href="/goals"
-                className="nav-item"
-                title="Goals"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "44px",
-                  borderRadius: "10px",
-                  border: onGoals ? "1px solid #3b82f666" : "1px solid var(--border)",
-                  background: onGoals ? "#3b82f61a" : "var(--surface-1)",
-                  color: onGoals ? "#3b82f6" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textDecoration: "none",
-                }}
-              >
-                <Target size={15} style={{ flexShrink: 0 }} />
-                <span className="group-data-[collapsible=icon]:hidden">Goals</span>
-              </Link>
-              <Link
-                href="/learn"
-                className="nav-item"
-                title="Learn"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "44px",
-                  borderRadius: "10px",
-                  border: onLearn ? "1px solid #3b82f666" : "1px solid var(--border)",
-                  background: onLearn ? "#3b82f61a" : "var(--surface-1)",
-                  color: onLearn ? "#3b82f6" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textDecoration: "none",
-                }}
-              >
-                <BookOpen size={15} style={{ flexShrink: 0 }} />
-                <span className="group-data-[collapsible=icon]:hidden">Learn</span>
-              </Link>
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="nav-item"
+                    title={label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      minHeight: "44px",
+                      borderRadius: "10px",
+                      border: active ? "1px solid #3b82f666" : "1px solid var(--border)",
+                      background: active ? "#3b82f61a" : "var(--surface-1)",
+                      color: active ? "#3b82f6" : "var(--text-secondary)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <Icon size={15} style={{ flexShrink: 0 }} />
+                    <span className="group-data-[collapsible=icon]:hidden">{label}</span>
+                  </Link>
+                );
+              })}
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter style={{ padding: "12px 0" }}>
-        {session?.user && (
-          <div
-            style={{
-              padding: state === "collapsed" ? "0 8px 10px" : "0 12px 10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: state === "collapsed" ? "center" : "flex-start",
-            }}
-          >
-            <Link
-              href="/profile"
-              className="nav-item"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                width: "100%",
-                minWidth: 0,
-                textDecoration: "none",
-                color: "inherit",
-                padding: state === "collapsed" ? "0" : "10px 12px",
-                borderRadius: "14px",
-                background: state === "collapsed" ? "transparent" : "var(--surface-1)",
-                border: state === "collapsed" ? "none" : "1px solid var(--border)",
-                justifyContent: state === "collapsed" ? "center" : "flex-start",
-              }}
-            >
-              {session.user.image ? (
-                <img
-                  src={session.user.image}
-                  alt={displayName}
-                  width={36}
-                  height={36}
-                  style={{ borderRadius: "999px", flexShrink: 0 }}
-                />
-              ) : (
-                <div
-                  className="num"
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "999px",
-                    flexShrink: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "#3b82f622",
-                    border: "1px solid #3b82f644",
-                    color: "#3b82f6",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {avatarFallback}
-                </div>
-              )}
-
-              {state !== "collapsed" && (
-                <div style={{ minWidth: 0, overflow: "hidden" }}>
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {displayName}
-                  </p>
-                  <p
-                    className="num"
-                    style={{
-                      fontSize: "11px",
-                      color: "var(--text-primary)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {displayHandle}
-                  </p>
-                </div>
-              )}
-            </Link>
-          </div>
-        )}
-        <SidebarMenu>
-          <SidebarMenuItem className="flex justify-center">
-            <SidebarMenuButton
-              className="group-data-[collapsible=icon]:!justify-center"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-              }}
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              <LogOut size={16} style={{ flexShrink: 0 }} />
-              <span
-                className="group-data-[collapsible=icon]:hidden"
-                style={{ fontWeight: 600, fontSize: "13px", whiteSpace: "nowrap" }}
-              >
-                Sign out
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }

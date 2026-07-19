@@ -263,6 +263,13 @@ body {
   transform: scale(0.98);
 }
 
+/* Hide the header status pill on mobile so the centered search has room. */
+@media (max-width: 767px) {
+  .header-status {
+    display: none !important;
+  }
+}
+
 /*
  * Login value-prop rows. The row runs the fade-up entrance (which locks its own
  * transform), so the hover animates the children instead: the icon pops with a

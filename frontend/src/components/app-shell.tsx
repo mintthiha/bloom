@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { HeaderSearch } from "@/components/header-search";
+import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { AmbientOrb } from "@/components/ambient-orb";
@@ -41,9 +43,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             borderBottom: "1px solid var(--border)",
             padding: "0 24px",
             height: "56px",
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: "16px",
             position: "sticky",
             top: 0,
             background: "var(--header-bg)",
@@ -51,25 +54,43 @@ export function AppShell({ children }: { children: ReactNode }) {
             zIndex: 20,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
             <SidebarTrigger />
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div
+              className="header-status"
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
               <div
                 style={{
                   width: "7px",
                   height: "7px",
                   borderRadius: "50%",
                   background: "#22c55e",
+                  flexShrink: 0,
                 }}
               />
-              <span className="num" style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+              <span
+                className="num"
+                style={{ fontSize: "11px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
+              >
                 All systems operational
               </span>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <HeaderSearch />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "8px",
+            }}
+          >
             <DashboardCustomizePanel />
             <ThemeToggle />
+            <ProfileMenu />
           </div>
         </header>
         <CommandPalette />

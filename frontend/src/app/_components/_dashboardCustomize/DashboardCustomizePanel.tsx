@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { Columns2, Rows3 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useDashboardView } from "@/components/dashboard-view-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   ALL_CARD_IDS,
@@ -108,6 +110,7 @@ export function DashboardCustomizePanel() {
     setOrbsEnabled,
     cardOrder,
   } = useDashboardVisibility();
+  const { view, setView } = useDashboardView();
   const pathname = usePathname();
   // Card visibility, collapse-all, and the onboarding checklist only apply to the dashboard.
   const isDashboard = pathname === "/";
@@ -256,6 +259,60 @@ export function DashboardCustomizePanel() {
         </SheetHeader>
 
         <div style={{ padding: "0 24px" }}>
+          <div style={{ padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+            <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>Layout density</p>
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "10px" }}>
+              How many columns cards use on wide screens
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                type="button"
+                className="nav-item"
+                onClick={() => setView("single")}
+                aria-pressed={view === "single"}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "40px",
+                  borderRadius: "10px",
+                  border: view === "single" ? "1px solid #3b82f666" : "1px solid var(--border)",
+                  background: view === "single" ? "#3b82f61a" : "var(--surface-1)",
+                  color: view === "single" ? "#3b82f6" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Rows3 size={15} />
+                Single
+              </button>
+              <button
+                type="button"
+                className="nav-item"
+                onClick={() => setView("double")}
+                aria-pressed={view === "double"}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  minHeight: "40px",
+                  borderRadius: "10px",
+                  border: view === "double" ? "1px solid #3b82f666" : "1px solid var(--border)",
+                  background: view === "double" ? "#3b82f61a" : "var(--surface-1)",
+                  color: view === "double" ? "#3b82f6" : "var(--text-secondary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <Columns2 size={15} />
+                Double
+              </button>
+            </div>
+          </div>
           {isDashboard && (
             <div
               style={{
