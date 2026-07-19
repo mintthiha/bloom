@@ -356,7 +356,7 @@ export function FinancialHealthScore({
     <CollapsibleCard
       eyebrow="Financial Health"
       title="How your finances are doing"
-      description="A single grade from your savings, debt, spending, and net worth trend."
+      description="A single grade from your savings, debt, spending, and net worth trend. Scroll down to see the five factors and how each is calculated."
       headerRight={
         <ScoreBadge total={healthScore.total} grade={healthScore.grade} color={scoreColor} />
       }
