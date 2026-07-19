@@ -133,6 +133,7 @@ export function MonthlySnapshot({
     <CollapsibleCard
       eyebrow="Monthly Snapshot"
       title={snapshotView === "snapshot" ? "Cash flow by category" : "Last 6 months"}
+      description="See where your money comes from and where it goes."
       headerRight={headerRight}
       className="fade-up fade-up-1"
     >

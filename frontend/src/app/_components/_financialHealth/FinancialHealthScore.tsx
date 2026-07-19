@@ -355,6 +355,8 @@ export function FinancialHealthScore({
   return (
     <CollapsibleCard
       eyebrow="Financial Health"
+      title="How your finances are doing"
+      description="A single grade from your savings, debt, spending, and net worth trend."
       headerRight={
         <ScoreBadge total={healthScore.total} grade={healthScore.grade} color={scoreColor} />
       }

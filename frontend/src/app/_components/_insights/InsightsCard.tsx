@@ -109,6 +109,7 @@ export function InsightsCard({
   return (
     <CollapsibleCard
       eyebrow="Your Next Moves"
+      title="What to focus on next"
       description="Personalized action items based on your current data."
       headerRight={headerRight}
       className="fade-up fade-up-2"

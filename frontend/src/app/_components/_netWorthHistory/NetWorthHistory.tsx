@@ -67,6 +67,7 @@ export function NetWorthHistory({ history }: Props) {
     <CollapsibleCard
       eyebrow="Net Worth History"
       title="Assets vs debt over time"
+      description="Watch how your assets and debts shift month over month."
       headerRight={headerRight ?? undefined}
       className="fade-up fade-up-2"
       style={{ marginBottom: "32px" }}

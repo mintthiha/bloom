@@ -2,58 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Target } from "lucide-react";
 import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
-import { EmptyState } from "@/components/EmptyState";
-import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
-import { COLLAPSED_CARD_HEIGHT } from "@/components/collapsible-card";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { CollapsibleCard } from "@/components/collapsible-card";
 
 const STORAGE_KEY = "bloom_goal_widget_id";
-
-/** Chevron icon that rotates based on collapsed state. */
-function CollapseChevron({ isCollapsed }: { isCollapsed: boolean }) {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{
-        transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-        transition: "transform 0.25s ease",
-        display: "block",
-      }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
 
 /** Compact dashboard card showing one selected savings goal with a progress bar. Clicking navigates to /goals. */
 export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const router = useRouter();
-  const { allCollapsed } = useDashboardVisibility();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(allCollapsed);
   const seededRef = useRef(false);
-  const isFirstCollapseRender = useRef(true);
-  const isMobile = useIsMobile();
-
-  /** Syncs this card's collapsed state with the dashboard-wide toggle, ignoring the initial mount. */
-  useEffect(() => {
-    if (isFirstCollapseRender.current) {
-      isFirstCollapseRender.current = false;
-      return;
-    }
-    setIsCollapsed(allCollapsed);
-  }, [allCollapsed]);
 
   /** Seeds the selected goal from localStorage the first time a non-empty goals list arrives. */
   useEffect(() => {
@@ -70,95 +30,40 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
     localStorage.setItem(STORAGE_KEY, id);
   }
 
+  /** Small muted count shown beside the chevron; stays visible while collapsed so the tile still reads as "GOAL — N saved". */
+  const goalCountLabel = (
+    <span className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+      {goals.length} saved
+    </span>
+  );
+
   if (goals.length === 0) {
     return (
-      <div
-        className="fade-up fade-up-1 lift"
-        style={{
-          background: "var(--snapshot-gradient)",
-          border: "1px solid var(--border)",
-          borderRadius: "14px",
-          padding: "20px 24px",
-          // Collapsed cards lock to the shared tile height so the dashboard grid stays even.
-          height: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
-          overflow: isCollapsed && !isMobile ? "hidden" : undefined,
-        }}
+      <CollapsibleCard
+        eyebrow="Goal"
+        title="No goals yet"
+        description="Set a target balance on any account and track your progress toward it."
+        headerRight={goalCountLabel}
+        className="fade-up fade-up-1"
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <p
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#3b82f6",
-            }}
-          >
-            Goal
-          </p>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            aria-label={isCollapsed ? "Expand goal" : "Collapse goal"}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              borderRadius: "6px",
-            }}
-          >
-            <CollapseChevron isCollapsed={isCollapsed} />
-          </button>
-        </div>
-
-        <div
+        <button
+          type="button"
+          className="press"
+          onClick={() => router.push("/goals")}
           style={{
-            display: "grid",
-            gridTemplateRows: isCollapsed ? "0fr" : "1fr",
-            transition: "grid-template-rows 0.28s ease",
+            padding: "10px 20px",
+            background: "#3b82f6",
+            border: "none",
+            borderRadius: "10px",
+            color: "#000",
+            fontSize: "13px",
+            fontWeight: 700,
+            cursor: "pointer",
           }}
         >
-          <div style={{ overflow: "hidden" }}>
-            <div
-              style={{
-                paddingTop: "8px",
-                opacity: isCollapsed ? 0 : 1,
-                transition: "opacity 0.2s ease",
-              }}
-            >
-              <EmptyState
-                icon={Target}
-                variant="inline"
-                title="No goals yet"
-                description="Set a target balance on any account and track your progress toward it."
-                action={
-                  <button
-                    type="button"
-                    className="press"
-                    onClick={() => router.push("/goals")}
-                    style={{
-                      padding: "10px 20px",
-                      background: "#3b82f6",
-                      border: "none",
-                      borderRadius: "10px",
-                      color: "#000",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Set a goal
-                  </button>
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+          Set a goal
+        </button>
+      </CollapsibleCard>
     );
   }
 
@@ -168,32 +73,38 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const progressColor = isComplete ? "#22c55e" : "#3b82f6";
 
   return (
-    <div
-      className="fade-up fade-up-1 lift"
-      style={{
-        background: "var(--snapshot-gradient)",
-        border: "1px solid var(--border)",
-        borderRadius: "14px",
-        padding: "20px 24px",
-        // Collapsed cards lock to the shared tile height so the dashboard grid stays even.
-        height: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
-        overflow: isCollapsed && !isMobile ? "hidden" : undefined,
-        transition: "border-color 0.15s, transform 0.15s, box-shadow 0.18s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "var(--border-hover)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "var(--border)";
-      }}
+    <CollapsibleCard
+      eyebrow="Goal"
+      title="Track your savings goals"
+      description="Progress toward your target balances, updated as your account changes."
+      headerRight={goalCountLabel}
+      className="fade-up fade-up-1"
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      {/* Selector + shortcut row: pick which goal to preview, or jump to the full goals page. */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+        {goals.length > 1 && (
+          <select
+            value={selectedGoal.id}
+            onChange={(e) => handleSelectGoal(e.target.value)}
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "7px",
+              padding: "4px 10px",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              cursor: "pointer",
+              maxWidth: "200px",
+            }}
+          >
+            {goals.map((goal) => (
+              <option key={goal.id} value={goal.id}>
+                {goal.name}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="button"
           onClick={() => router.push("/goals")}
@@ -202,193 +113,99 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
             border: "none",
             padding: 0,
             cursor: "pointer",
-            textAlign: "left",
-            flex: 1,
-            minWidth: 0,
+            fontSize: "12px",
+            fontWeight: 600,
+            color: "#3b82f6",
+            marginLeft: goals.length > 1 ? "auto" : "0",
           }}
         >
-          <p
-            style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#3b82f6",
-            }}
-          >
-            Goal
-          </p>
+          View all →
         </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {goals.length > 1 && !isCollapsed && (
-            <select
-              value={selectedGoal.id}
-              onChange={(e) => handleSelectGoal(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "7px",
-                padding: "4px 10px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--text-primary)",
-                cursor: "pointer",
-                maxWidth: "200px",
-              }}
-            >
-              {goals.map((goal) => (
-                <option key={goal.id} value={goal.id}>
-                  {goal.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {!isCollapsed && (
-            <button
-              type="button"
-              onClick={() => router.push("/goals")}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "#3b82f6",
-              }}
-            >
-              View all →
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            aria-label={isCollapsed ? "Expand goal" : "Collapse goal"}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              borderRadius: "6px",
-            }}
-          >
-            <CollapseChevron isCollapsed={isCollapsed} />
-          </button>
-        </div>
       </div>
 
-      <div
+      <button
+        type="button"
+        onClick={() => router.push("/goals")}
         style={{
-          display: "grid",
-          gridTemplateRows: isCollapsed ? "0fr" : "1fr",
-          transition: "grid-template-rows 0.28s ease",
+          display: "block",
+          width: "100%",
+          background: "none",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          textAlign: "left",
         }}
       >
-        <div style={{ overflow: "hidden" }}>
-          <button
-            type="button"
-            onClick={() => router.push("/goals")}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+          <p style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "-0.01em" }}>
+            {selectedGoal.name}
+          </p>
+          <span
             style={{
-              display: "block",
-              width: "100%",
-              background: "none",
-              border: "none",
-              padding: "14px 0 0",
-              cursor: "pointer",
-              textAlign: "left",
-              opacity: isCollapsed ? 0 : 1,
-              transition: "opacity 0.2s ease",
+              fontSize: "10px",
+              fontWeight: 600,
+              padding: "1px 6px",
+              borderRadius: "4px",
+              background: typeMeta.soft,
+              border: `1px solid ${typeMeta.border}`,
+              color: typeMeta.color,
+              letterSpacing: "0.04em",
+            }}
+          >
+            {typeMeta.label}
+          </span>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            {selectedGoal.accountName}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              flex: 1,
+              height: "8px",
+              borderRadius: "999px",
+              background: "#ffffff0a",
+              overflow: "hidden",
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "12px",
+                width: `${selectedGoal.percentageReached}%`,
+                height: "100%",
+                background: progressColor,
+                borderRadius: "999px",
+                transition: "width 0.3s ease",
               }}
-            >
-              <p style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "-0.01em" }}>
-                {selectedGoal.name}
-              </p>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  padding: "1px 6px",
-                  borderRadius: "4px",
-                  background: typeMeta.soft,
-                  border: `1px solid ${typeMeta.border}`,
-                  color: typeMeta.color,
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {typeMeta.label}
-              </span>
-              <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                {selectedGoal.accountName}
-              </span>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div
-                style={{
-                  flex: 1,
-                  height: "8px",
-                  borderRadius: "999px",
-                  background: "#ffffff0a",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${selectedGoal.percentageReached}%`,
-                    height: "100%",
-                    background: progressColor,
-                    borderRadius: "999px",
-                    transition: "width 0.3s ease",
-                  }}
-                />
-              </div>
-              <span
-                className="num"
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  color: progressColor,
-                  flexShrink: 0,
-                }}
-              >
-                {selectedGoal.percentageReached.toFixed(0)}%
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginTop: "8px",
-              }}
-            >
-              <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                {formatCurrency(selectedGoal.currentBalance)} of{" "}
-                {formatCurrency(selectedGoal.targetAmount)}
-              </span>
-              {isComplete && (
-                <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>
-                  Goal reached!
-                </span>
-              )}
-            </div>
-          </button>
+            />
+          </div>
+          <span
+            className="num"
+            style={{ fontSize: "13px", fontWeight: 700, color: progressColor, flexShrink: 0 }}
+          >
+            {selectedGoal.percentageReached.toFixed(0)}%
+          </span>
         </div>
-      </div>
-    </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "8px",
+          }}
+        >
+          <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+            {formatCurrency(selectedGoal.currentBalance)} of{" "}
+            {formatCurrency(selectedGoal.targetAmount)}
+          </span>
+          {isComplete && (
+            <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>
+              Goal reached!
+            </span>
+          )}
+        </div>
+      </button>
+    </CollapsibleCard>
   );
 }
