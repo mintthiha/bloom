@@ -15,7 +15,7 @@ type CollapsibleCardProps = {
 };
 
 /** Uniform height every card snaps to while collapsed so the dashboard grid reads as an even set of tiles. */
-export const COLLAPSED_CARD_HEIGHT = 180;
+export const COLLAPSED_CARD_HEIGHT = 204;
 
 /** Line-clamp styles applied to header text while collapsed so long titles/descriptions can't break the uniform height. */
 function clampLines(lines: number): CSSProperties {
@@ -101,6 +101,10 @@ export function CollapsibleCard({
           justifyContent: isMobile ? "flex-start" : "space-between",
           gap: isMobile ? "8px" : "16px",
           alignItems: isMobile ? "stretch" : "flex-start",
+          // While collapsed on desktop, cap the header to the tile's inner height (minus the 24px
+          // top+bottom padding) so long text clips above the bottom padding instead of touching the edge.
+          maxHeight: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT - 48}px` : undefined,
+          overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>

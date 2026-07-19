@@ -258,7 +258,7 @@ export function DashboardCustomizePanel() {
           </p>
         </SheetHeader>
 
-        <div style={{ padding: "0 24px" }}>
+        <div style={{ padding: "0 24px 24px" }}>
           <div style={{ padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
             <p style={{ fontSize: "13px", fontWeight: 600, marginBottom: "2px" }}>Layout density</p>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "10px" }}>
