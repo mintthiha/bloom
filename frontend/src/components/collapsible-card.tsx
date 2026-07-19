@@ -14,6 +14,19 @@ type CollapsibleCardProps = {
   className?: string;
 };
 
+/** Uniform height every card snaps to while collapsed so the dashboard grid reads as an even set of tiles. */
+export const COLLAPSED_CARD_HEIGHT = 180;
+
+/** Line-clamp styles applied to header text while collapsed so long titles/descriptions can't break the uniform height. */
+function clampLines(lines: number): CSSProperties {
+  return {
+    display: "-webkit-box",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: lines,
+    overflow: "hidden",
+  };
+}
+
 /** Chevron SVG that rotates 180° depending on collapsed state. */
 function CollapseChevron({ isCollapsed }: { isCollapsed: boolean }) {
   return (
@@ -74,6 +87,10 @@ export function CollapsibleCard({
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "24px",
+        // While collapsed, every card locks to one height so the grid reads as an even set of tiles.
+        // Skip on mobile, where cards stack full-width and the header wraps to its own column.
+        height: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
+        overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         ...style,
       }}
     >
@@ -106,13 +123,22 @@ export function CollapsibleCard({
                 fontWeight: 800,
                 letterSpacing: "-0.3px",
                 marginBottom: description ? "6px" : "0",
+                ...(isCollapsed ? clampLines(2) : {}),
               }}
             >
               {title}
             </h2>
           )}
           {description && (
-            <p style={{ color: "var(--text-secondary)", fontSize: "13px" }}>{description}</p>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: "13px",
+                ...(isCollapsed ? clampLines(2) : {}),
+              }}
+            >
+              {description}
+            </p>
           )}
         </div>
 

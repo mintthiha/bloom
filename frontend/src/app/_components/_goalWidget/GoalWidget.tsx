@@ -8,6 +8,8 @@ import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { EmptyState } from "@/components/EmptyState";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
+import { COLLAPSED_CARD_HEIGHT } from "@/components/collapsible-card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const STORAGE_KEY = "bloom_goal_widget_id";
 
@@ -42,6 +44,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const [isCollapsed, setIsCollapsed] = useState(allCollapsed);
   const seededRef = useRef(false);
   const isFirstCollapseRender = useRef(true);
+  const isMobile = useIsMobile();
 
   /** Syncs this card's collapsed state with the dashboard-wide toggle, ignoring the initial mount. */
   useEffect(() => {
@@ -76,33 +79,85 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
           border: "1px solid var(--border)",
           borderRadius: "14px",
           padding: "20px 24px",
+          // Collapsed cards lock to the shared tile height so the dashboard grid stays even.
+          height: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
+          overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         }}
       >
-        <EmptyState
-          icon={Target}
-          variant="inline"
-          title="No goals yet"
-          description="Set a target balance on any account and track your progress toward it."
-          action={
-            <button
-              type="button"
-              className="press"
-              onClick={() => router.push("/goals")}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "#3b82f6",
+            }}
+          >
+            Goal
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            aria-label={isCollapsed ? "Expand goal" : "Collapse goal"}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--text-muted)",
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: "6px",
+            }}
+          >
+            <CollapseChevron isCollapsed={isCollapsed} />
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateRows: isCollapsed ? "0fr" : "1fr",
+            transition: "grid-template-rows 0.28s ease",
+          }}
+        >
+          <div style={{ overflow: "hidden" }}>
+            <div
               style={{
-                padding: "10px 20px",
-                background: "#3b82f6",
-                border: "none",
-                borderRadius: "10px",
-                color: "#000",
-                fontSize: "13px",
-                fontWeight: 700,
-                cursor: "pointer",
+                paddingTop: "8px",
+                opacity: isCollapsed ? 0 : 1,
+                transition: "opacity 0.2s ease",
               }}
             >
-              Set a goal
-            </button>
-          }
-        />
+              <EmptyState
+                icon={Target}
+                variant="inline"
+                title="No goals yet"
+                description="Set a target balance on any account and track your progress toward it."
+                action={
+                  <button
+                    type="button"
+                    className="press"
+                    onClick={() => router.push("/goals")}
+                    style={{
+                      padding: "10px 20px",
+                      background: "#3b82f6",
+                      border: "none",
+                      borderRadius: "10px",
+                      color: "#000",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Set a goal
+                  </button>
+                }
+              />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -120,6 +175,9 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
         border: "1px solid var(--border)",
         borderRadius: "14px",
         padding: "20px 24px",
+        // Collapsed cards lock to the shared tile height so the dashboard grid stays even.
+        height: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
+        overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         transition: "border-color 0.15s, transform 0.15s, box-shadow 0.18s",
       }}
       onMouseEnter={(e) => {
