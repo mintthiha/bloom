@@ -63,7 +63,13 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
   const buttonReady = ready && !linking && !tokenError;
 
   return (
-    <CollapsibleCard eyebrow="Link Bank Account" className="fade-up fade-up-2" style={{}}>
+    <CollapsibleCard
+      eyebrow="Link Bank Account"
+      title="Connect an external bank"
+      description="Securely link an outside bank account to import its balances and transactions."
+      className="fade-up fade-up-2"
+      style={{}}
+    >
       <p
         style={{
           fontSize: "13px",

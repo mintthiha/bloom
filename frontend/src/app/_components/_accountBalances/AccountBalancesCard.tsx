@@ -22,7 +22,13 @@ export function AccountBalancesCard({ accounts }: Props) {
   }));
 
   return (
-    <CollapsibleCard eyebrow="Account Balances" className="fade-up fade-up-1" style={{}}>
+    <CollapsibleCard
+      eyebrow="Account Balances"
+      title="Balances at a glance"
+      description="Compare how much sits in each of your accounts side by side."
+      className="fade-up fade-up-1"
+      style={{}}
+    >
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <XAxis

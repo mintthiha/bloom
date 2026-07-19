@@ -51,7 +51,13 @@ export function OpenAccountCard({ onCreated }: Props) {
   }
 
   return (
-    <CollapsibleCard eyebrow="Open New Account" className="fade-up fade-up-2" style={{}}>
+    <CollapsibleCard
+      eyebrow="Open New Account"
+      title="Add a new account"
+      description="Create a checking, savings, or credit account to start tracking its balance."
+      className="fade-up fade-up-2"
+      style={{}}
+    >
       <form onSubmit={handleCreate}>
         <div
           style={{
