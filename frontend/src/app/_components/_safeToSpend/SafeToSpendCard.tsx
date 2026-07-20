@@ -26,7 +26,7 @@ function LedgerRow({
 }: {
   label: string;
   amount: number;
-  sign: "+" | "−";
+  sign: "+" | "−" | "";
   emphasis?: boolean;
 }) {
   return (
