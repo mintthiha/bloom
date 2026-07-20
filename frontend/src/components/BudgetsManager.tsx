@@ -87,6 +87,7 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
     setBudgetSaving(true);
     try {
       await api.saveBudget(category, monthlyLimit);
+      toast.success("Budget created");
       setBudgetAmount("");
       setCustomBudgetCategory("");
       setBudgetCategory("Groceries");
