@@ -2,7 +2,12 @@ import { Router, Request, Response, NextFunction } from "express";
 import * as budgetService from "../services/budgetService";
 import { AppError } from "../middleware/errorHandler";
 import { parseDateRangeQuery } from "../lib/date-range";
-import { requireObject, requirePositiveNumber, requireString } from "../lib/validation";
+import {
+  optionalString,
+  requireObject,
+  requirePositiveNumber,
+  requireString,
+} from "../lib/validation";
 
 const router = Router();
 
@@ -64,6 +69,39 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
     const category = requireString(body.category, "category", { max: 50 });
     const monthlyLimit = requirePositiveNumber(body.monthlyLimit, "monthlyLimit");
     res.json(await budgetService.upsertBudget(uid(req), { category, monthlyLimit }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Toggles carry-forward (rollover) for one budget.
+ */
+router.patch("/:id/rollover", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    if (typeof body.enabled !== "boolean") {
+      throw new AppError(400, "enabled must be a boolean");
+    }
+    res.json(
+      await budgetService.setRolloverEnabled(uid(req), req.params["id"] as string, body.enabled)
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Moves money between two of the user's envelopes for a given month.
+ */
+router.post("/move", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const fromBudgetId = requireString(body.fromBudgetId, "fromBudgetId");
+    const toBudgetId = requireString(body.toBudgetId, "toBudgetId");
+    const amount = requirePositiveNumber(body.amount, "amount");
+    const month = optionalString(body.month, "month");
+    res.json(await budgetService.moveBudgetMoney(uid(req), { fromBudgetId, toBudgetId, month, amount }));
   } catch (err) {
     next(err);
   }

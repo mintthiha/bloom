@@ -69,14 +69,36 @@ model Profile {
 }
 
 model CategoryBudget {
-  id           String   @id
-  userId       String
-  category     String
-  monthlyLimit Decimal @db.Decimal(19, 4)
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  id              String   @id
+  userId          String
+  category        String
+  monthlyLimit    Decimal  @db.Decimal(19, 4)
+  rolloverEnabled Boolean  @default(false)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  periods BudgetPeriod[]
 
   @@unique([userId, category])
+}
+
+/// Per-month envelope state for a budget: an optional limit override for that
+/// month and a manual adjustment (money moved in/out of the envelope). Carry-in
+/// and carry-out are derived from the chain of months, not stored here.
+model BudgetPeriod {
+  id            String   @id @default(cuid())
+  budgetId      String
+  userId        String
+  month         DateTime @db.Date
+  limitOverride Decimal? @db.Decimal(19, 4)
+  adjustment    Decimal  @default(0) @db.Decimal(19, 4)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  budget CategoryBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, month])
+  @@index([userId])
 }
 
 model Transaction {

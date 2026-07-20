@@ -115,8 +115,15 @@ export type Budget = {
   userId: string;
   category: string;
   monthlyLimit: number;
+  rolloverEnabled: boolean;
+  month: string;
+  limit: number;
+  carryIn: number;
+  adjustment: number;
+  available: number;
   currentSpending: number;
   remaining: number;
+  carryOut: number;
   percentageUsed: number;
   isOverBudget: boolean;
   createdAt: string;
@@ -314,6 +321,21 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ category, monthlyLimit }),
     }),
+  setBudgetRollover: (id: string, enabled: boolean) =>
+    request<Budget>(`/budgets/${id}/rollover`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }),
+  moveBudgetMoney: (input: {
+    fromBudgetId: string;
+    toBudgetId: string;
+    amount: number;
+    month?: string;
+  }) =>
+    request<{ fromBudgetId: string; toBudgetId: string; month: string; amount: number }>(
+      "/budgets/move",
+      { method: "POST", body: JSON.stringify(input) }
+    ),
   deleteBudget: (id: string) => request<void>(`/budgets/${id}`, { method: "DELETE" }),
   listSavingsGoals: () => request<SavingsGoal[]>("/savings-goals"),
   createSavingsGoal: (input: { accountId: string; name: string; targetAmount: number }) =>

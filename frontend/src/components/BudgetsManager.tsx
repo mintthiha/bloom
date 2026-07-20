@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { PiggyBank } from "lucide-react";
 import { api, Budget, MonthlySummary } from "@/lib/api";
-import { formatCurrency } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
+import { BudgetCard } from "@/components/BudgetCard";
+import { RolloverInfoDialog } from "@/components/RolloverInfoDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -221,101 +221,19 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {budgets.map((budget) => {
-            const progress = Math.min(budget.percentageUsed, 100);
-            return (
-              <div
-                key={budget.id}
-                className="budget-card"
-                style={{
-                  padding: "16px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    alignItems: "center",
-                    marginBottom: "10px",
-                  }}
-                >
-                  <Link
-                    href={`/budgets/${budget.id}`}
-                    style={{ minWidth: 0, flex: 1, textDecoration: "none", color: "inherit" }}
-                  >
-                    <p style={{ fontSize: "15px", fontWeight: 700, marginBottom: "4px" }}>
-                      {budget.category}
-                    </p>
-                    <p className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      {formatCurrency(budget.currentSpending)} spent of{" "}
-                      {formatCurrency(budget.monthlyLimit)}
-                    </p>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setPendingDeleteId(budget.id)}
-                    disabled={deletingBudgetId === budget.id}
-                    className="budget-delete-button"
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      cursor: deletingBudgetId === budget.id ? "not-allowed" : "pointer",
-                      opacity: deletingBudgetId === budget.id ? 0.45 : 1,
-                    }}
-                  >
-                    {deletingBudgetId === budget.id ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-
-                <Link
-                  href={`/budgets/${budget.id}`}
-                  style={{ display: "block", textDecoration: "none", color: "inherit" }}
-                >
-                  <div
-                    style={{
-                      height: "10px",
-                      borderRadius: "999px",
-                      background: "#ffffff0a",
-                      overflow: "hidden",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${progress}%`,
-                        height: "100%",
-                        background: budget.isOverBudget ? "#ef4444" : "#3b82f6",
-                        transition: "width 0.2s ease",
-                      }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: "12px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    <span
-                      className="num"
-                      style={{
-                        color: budget.isOverBudget ? "#f87171" : "var(--text-secondary)",
-                      }}
-                    >
-                      {budget.isOverBudget
-                        ? `${formatCurrency(Math.abs(budget.remaining))} over budget`
-                        : `${formatCurrency(budget.remaining)} remaining`}
-                    </span>
-                    <span className="num" style={{ color: "var(--text-muted)" }}>
-                      {budget.percentageUsed.toFixed(0)}% used
-                    </span>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <RolloverInfoDialog />
+          </div>
+          {budgets.map((budget) => (
+            <BudgetCard
+              key={budget.id}
+              budget={budget}
+              budgets={budgets}
+              deletingBudgetId={deletingBudgetId}
+              onRequestDelete={setPendingDeleteId}
+              onChanged={onChanged}
+            />
+          ))}
         </div>
       )}
 
