@@ -12,6 +12,7 @@ import { Repeat } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { formatLocalDate } from "@/lib/date-range";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { CollapsibleFormSection } from "./CollapsibleFormSection";
 import { EmptyState } from "@/components/EmptyState";
 import {
   AlertDialog,
@@ -69,6 +70,7 @@ function makeEmptyForm() {
 /** Recurring transactions card: create/edit/pause/delete recurring rules. */
 export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props) {
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState(makeEmptyForm);
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -104,6 +106,7 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
   function startEditing(rule: RecurringTransaction) {
     setError(null);
     setEditingRuleId(rule.id);
+    setIsFormOpen(true);
 
     const supportedCategories =
       rule.type === "DEPOSIT" ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES;
@@ -327,349 +330,355 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
         className="fade-up fade-up-2"
         style={{}}
       >
-        <p
-          style={{
-            color: "var(--text-muted)",
-            fontSize: "12px",
-            marginBottom: "16px",
-          }}
+        <CollapsibleFormSection
+          title={editingRuleId ? "Edit recurring rule" : "New recurring rule"}
+          open={isFormOpen}
+          onToggle={() => setIsFormOpen((previous) => !previous)}
         >
-          Start date is the first scheduled occurrence. End date is optional and stops future runs
-          after that date.
-        </p>
-
-        <form onSubmit={handleSave} style={{ marginBottom: "20px" }}>
-          {editingRuleId && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "12px",
-                alignItems: "center",
-                marginBottom: "12px",
-                padding: "12px 14px",
-                borderRadius: "10px",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                Editing:{" "}
-                <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>
-                  {form.name || "Untitled rule"}
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={resetForm}
-                style={{
-                  padding: "8px 12px",
-                  border: "1px solid var(--border)",
-                  background: "transparent",
-                  color: "var(--text-secondary)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  cursor: "pointer",
-                }}
-              >
-                Cancel edit
-              </button>
-            </div>
-          )}
-
-          <div style={{ marginBottom: "12px" }}>
-            <label style={{ display: "grid", gap: "6px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                Rule name
-              </span>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-                placeholder='e.g. "Monthly rent" or "Main payroll"'
-                aria-label="Recurring rule name"
-                style={{
-                  width: "100%",
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontSize: "14px",
-                  color: "var(--text-primary)",
-                }}
-              />
-            </label>
-          </div>
-
-          <div
+          <p
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: "10px",
-              marginBottom: "10px",
+              color: "var(--text-muted)",
+              fontSize: "12px",
+              marginBottom: "16px",
             }}
           >
-            <select
-              value={form.accountId}
-              onChange={(e) => setField("accountId", e.target.value)}
-              aria-label="Recurring account"
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="">Choose account</option>
-              {recurringAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.nickname ?? account.ownerName}
-                </option>
-              ))}
-            </select>
-            <select
-              value={form.type}
-              onChange={(e) => {
-                const nextType = e.target.value as RecurringTransactionType;
-                setForm((previous) => ({
-                  ...previous,
-                  type: nextType,
-                  category: nextType === "DEPOSIT" ? "Salary" : "Rent",
-                  customCategory: "",
-                }));
-              }}
-              aria-label="Recurring transaction type"
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="WITHDRAWAL">Withdrawal</option>
-              <option value="DEPOSIT">Deposit</option>
-            </select>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={form.amount}
-              onChange={(e) => setField("amount", e.target.value)}
-              placeholder="Amount"
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                color: "var(--text-primary)",
-              }}
-            />
-            <select
-              value={form.frequency}
-              onChange={(e) => setField("frequency", e.target.value as RecurringFrequency)}
-              aria-label="Recurring frequency"
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="WEEKLY">Weekly</option>
-              <option value="BIWEEKLY">Biweekly</option>
-              <option value="MONTHLY">Monthly</option>
-            </select>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "10px",
-              marginBottom: "10px",
-            }}
-          >
-            <select
-              value={form.category}
-              onChange={(e) => setField("category", e.target.value)}
-              aria-label="Recurring category"
-              style={{
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                color: "var(--text-primary)",
-              }}
-            >
-              {recurringCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-            <label style={{ display: "grid", gap: "6px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                Start date
-              </span>
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={(e) => setField("startDate", e.target.value)}
-                aria-label="Recurring start date"
-                style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontSize: "14px",
-                  color: "var(--text-primary)",
-                }}
-              />
-            </label>
-            <label style={{ display: "grid", gap: "6px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                End date (optional)
-              </span>
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={(e) => setField("endDate", e.target.value)}
-                aria-label="Recurring end date"
-                style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontSize: "14px",
-                  color: "var(--text-primary)",
-                }}
-              />
-            </label>
-            <label style={{ display: "grid", gap: "6px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                Merchant
-              </span>
-              <input
-                type="text"
-                value={form.merchant}
-                onChange={(e) => setField("merchant", e.target.value)}
-                placeholder='e.g. "Hydro Quebec"'
-                aria-label="Recurring merchant"
-                style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontSize: "14px",
-                  color: "var(--text-primary)",
-                }}
-              />
-            </label>
-            <button
-              type="submit"
-              className="press"
-              disabled={saving}
-              style={{
-                padding: "10px 18px",
-                background: "#3b82f6",
-                color: "#000",
-                fontWeight: 700,
-                fontSize: "14px",
-                border: "none",
-                borderRadius: "8px",
-                cursor: saving ? "not-allowed" : "pointer",
-                opacity: saving ? 0.45 : 1,
-              }}
-            >
-              {saving ? "Saving..." : editingRuleId ? "Save changes" : "Save rule"}
-            </button>
-          </div>
-
-          {form.category === "Custom..." && (
-            <input
-              type="text"
-              value={form.customCategory}
-              onChange={(e) => setField("customCategory", e.target.value)}
-              placeholder="Custom category"
-              style={{
-                width: "100%",
-                marginBottom: "10px",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "10px 14px",
-                fontSize: "14px",
-                color: "var(--text-primary)",
-              }}
-            />
-          )}
-
-          <input
-            type="text"
-            value={form.description}
-            onChange={(e) => setField("description", e.target.value)}
-            placeholder="Description (optional)"
-            style={{
-              width: "100%",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "10px 14px",
-              fontSize: "14px",
-              color: "var(--text-primary)",
-            }}
-          />
-          <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "10px" }}>
-            Changes affect future recurring runs only. Transactions already created from this rule
-            stay unchanged.
+            Start date is the first scheduled occurrence. End date is optional and stops future runs
+            after that date.
           </p>
 
-          {error && (
-            <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}>
-              {error}
+          <form onSubmit={handleSave}>
+            {editingRuleId && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  alignItems: "center",
+                  marginBottom: "12px",
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                  Editing:{" "}
+                  <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>
+                    {form.name || "Untitled rule"}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  style={{
+                    padding: "8px 12px",
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--text-secondary)",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel edit
+                </button>
+              </div>
+            )}
+
+            <div style={{ marginBottom: "12px" }}>
+              <label style={{ display: "grid", gap: "6px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Rule name
+                </span>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  placeholder='e.g. "Monthly rent" or "Main payroll"'
+                  aria-label="Recurring rule name"
+                  style={{
+                    width: "100%",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    fontSize: "14px",
+                    color: "var(--text-primary)",
+                  }}
+                />
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: "10px",
+                marginBottom: "10px",
+              }}
+            >
+              <select
+                value={form.accountId}
+                onChange={(e) => setField("accountId", e.target.value)}
+                aria-label="Recurring account"
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option value="">Choose account</option>
+                {recurringAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.nickname ?? account.ownerName}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={form.type}
+                onChange={(e) => {
+                  const nextType = e.target.value as RecurringTransactionType;
+                  setForm((previous) => ({
+                    ...previous,
+                    type: nextType,
+                    category: nextType === "DEPOSIT" ? "Salary" : "Rent",
+                    customCategory: "",
+                  }));
+                }}
+                aria-label="Recurring transaction type"
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option value="WITHDRAWAL">Withdrawal</option>
+                <option value="DEPOSIT">Deposit</option>
+              </select>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={form.amount}
+                onChange={(e) => setField("amount", e.target.value)}
+                placeholder="Amount"
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  color: "var(--text-primary)",
+                }}
+              />
+              <select
+                value={form.frequency}
+                onChange={(e) => setField("frequency", e.target.value as RecurringFrequency)}
+                aria-label="Recurring frequency"
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <option value="WEEKLY">Weekly</option>
+                <option value="BIWEEKLY">Biweekly</option>
+                <option value="MONTHLY">Monthly</option>
+              </select>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "10px",
+                marginBottom: "10px",
+              }}
+            >
+              <select
+                value={form.category}
+                onChange={(e) => setField("category", e.target.value)}
+                aria-label="Recurring category"
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {recurringCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <label style={{ display: "grid", gap: "6px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Start date
+                </span>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => setField("startDate", e.target.value)}
+                  aria-label="Recurring start date"
+                  style={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    fontSize: "14px",
+                    color: "var(--text-primary)",
+                  }}
+                />
+              </label>
+              <label style={{ display: "grid", gap: "6px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  End date (optional)
+                </span>
+                <input
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => setField("endDate", e.target.value)}
+                  aria-label="Recurring end date"
+                  style={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    fontSize: "14px",
+                    color: "var(--text-primary)",
+                  }}
+                />
+              </label>
+              <label style={{ display: "grid", gap: "6px" }}>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Merchant
+                </span>
+                <input
+                  type="text"
+                  value={form.merchant}
+                  onChange={(e) => setField("merchant", e.target.value)}
+                  placeholder='e.g. "Hydro Quebec"'
+                  aria-label="Recurring merchant"
+                  style={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "8px",
+                    padding: "10px 14px",
+                    fontSize: "14px",
+                    color: "var(--text-primary)",
+                  }}
+                />
+              </label>
+              <button
+                type="submit"
+                className="press"
+                disabled={saving}
+                style={{
+                  padding: "10px 18px",
+                  background: "#3b82f6",
+                  color: "#000",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.45 : 1,
+                }}
+              >
+                {saving ? "Saving..." : editingRuleId ? "Save changes" : "Save rule"}
+              </button>
+            </div>
+
+            {form.category === "Custom..." && (
+              <input
+                type="text"
+                value={form.customCategory}
+                onChange={(e) => setField("customCategory", e.target.value)}
+                placeholder="Custom category"
+                style={{
+                  width: "100%",
+                  marginBottom: "10px",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontSize: "14px",
+                  color: "var(--text-primary)",
+                }}
+              />
+            )}
+
+            <input
+              type="text"
+              value={form.description}
+              onChange={(e) => setField("description", e.target.value)}
+              placeholder="Description (optional)"
+              style={{
+                width: "100%",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                padding: "10px 14px",
+                fontSize: "14px",
+                color: "var(--text-primary)",
+              }}
+            />
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "10px" }}>
+              Changes affect future recurring runs only. Transactions already created from this rule
+              stay unchanged.
             </p>
-          )}
-        </form>
+
+            {error && (
+              <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}>
+                {error}
+              </p>
+            )}
+          </form>
+        </CollapsibleFormSection>
 
         {rules.length === 0 ? (
           <EmptyState
