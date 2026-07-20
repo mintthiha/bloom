@@ -220,7 +220,9 @@ async function updateAccountBalance(accountId: string, balance: number) {
 
 /** Adds a monthly recurring salary rule so the recurring view is populated. */
 async function seedRecurring(userId: string, accountId: string) {
-  const nextRunAt = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1, 12));
+  const nextRunAt = new Date(
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1, 12)
+  );
   const startDate = atMonth(MONTHS_OF_HISTORY - 1, 1);
   await prisma.$executeRaw`
     INSERT INTO "RecurringTransaction" ("id", "userId", "accountId", "name", "type", "amount", "category", "merchant", "description", "frequency", "startDate", "nextRunAt", "active", "createdAt", "updatedAt")
@@ -278,7 +280,9 @@ async function main() {
   console.log(
     `Done. Accounts: 4, budgets: ${BUDGETS.length} (3 with rollover), ${MONTHS_OF_HISTORY} months of transactions.`
   );
-  console.log(`Chequing: $${chequing.toFixed(2)}, Savings: $${savings.toFixed(2)}, TFSA: $15000.00`);
+  console.log(
+    `Chequing: $${chequing.toFixed(2)}, Savings: $${savings.toFixed(2)}, TFSA: $15000.00`
+  );
 }
 
 main()

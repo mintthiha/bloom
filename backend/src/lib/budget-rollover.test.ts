@@ -8,7 +8,12 @@ describe("budget-rollover", () => {
   });
 
   it("enumerates inclusive month ranges across a year boundary", () => {
-    expect(enumerateMonths("2026-11", "2027-02")).toEqual(["2026-11", "2026-12", "2027-01", "2027-02"]);
+    expect(enumerateMonths("2026-11", "2027-02")).toEqual([
+      "2026-11",
+      "2026-12",
+      "2027-01",
+      "2027-02",
+    ]);
     expect(enumerateMonths("2026-05", "2026-05")).toEqual(["2026-05"]);
     expect(enumerateMonths("2026-05", "2026-04")).toEqual([]);
   });

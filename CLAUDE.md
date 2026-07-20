@@ -82,20 +82,26 @@ Do not define state inside a child if a sibling or parent also needs to read or 
 
 ## Post-Implementation Checklist
 
-After every implementation, run all three of the following and fix any failures before reporting the task complete:
+After every implementation, run the full checklist below and fix any failures before reporting the task complete. These mirror the GitHub CI jobs (`.github/workflows`) exactly — CI runs typecheck + lint + format:check + test for **both** frontend and backend, so all of them must be run locally. The suite uses Vitest, so `npm test` runs once and exits (do **not** pass Jest-only flags like `--watchAll`).
 
 ```bash
-# 1. Frontend formatting
-cd frontend && npm run format:check
+# Frontend (mirrors the "Frontend (typecheck + test)" CI job)
+cd frontend
+npx tsc --noEmit
+npm run lint
+npm run format:check
+npm test
 
-# 2. Frontend tests
-cd frontend && npm test -- --watchAll=false
-
-# 3. Backend tests
-cd backend && npm test -- --watchAll=false
+# Backend (mirrors the "Backend (typecheck + test)" CI job)
+cd backend
+npx prisma generate
+npx tsc --noEmit
+npm run lint
+npm run format:check
+npm test
 ```
 
-If `format:check` fails, run `npx prettier --write src` from the `frontend/` directory to auto-fix, then re-verify.
+If `format:check` fails in either package, run `npx prettier --write src` from that package's directory to auto-fix, then re-verify.
 
 ## Implementation Summary
 

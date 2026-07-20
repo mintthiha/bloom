@@ -293,7 +293,12 @@ describe("budgetService", () => {
       amount: 120,
     });
 
-    expect(result).toEqual({ fromBudgetId: "from", toBudgetId: "to", month: "2026-07", amount: 120 });
+    expect(result).toEqual({
+      fromBudgetId: "from",
+      toBudgetId: "to",
+      month: "2026-07",
+      amount: 120,
+    });
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(6);
   });
 

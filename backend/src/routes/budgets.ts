@@ -101,7 +101,9 @@ router.post("/move", async (req: Request, res: Response, next: NextFunction) => 
     const toBudgetId = requireString(body.toBudgetId, "toBudgetId");
     const amount = requirePositiveNumber(body.amount, "amount");
     const month = optionalString(body.month, "month");
-    res.json(await budgetService.moveBudgetMoney(uid(req), { fromBudgetId, toBudgetId, month, amount }));
+    res.json(
+      await budgetService.moveBudgetMoney(uid(req), { fromBudgetId, toBudgetId, month, amount })
+    );
   } catch (err) {
     next(err);
   }

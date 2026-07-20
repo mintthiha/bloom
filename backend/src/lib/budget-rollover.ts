@@ -68,13 +68,24 @@ export function computeRolloverForMonth(params: {
     const adjustment = adjustmentFor(targetMonth);
     const spent = spentFor(targetMonth);
     const available = limit + adjustment;
-    return { month: targetMonth, limit, carryIn: 0, adjustment, available, spent, carryOut: available - spent };
+    return {
+      month: targetMonth,
+      limit,
+      carryIn: 0,
+      adjustment,
+      available,
+      spent,
+      carryOut: available - spent,
+    };
   }
 
   const knownMonths = [...spendingByMonth.keys(), ...overridesByMonth.keys(), targetMonth].filter(
     (month) => month <= targetMonth
   );
-  const startMonth = knownMonths.reduce((earliest, month) => (month < earliest ? month : earliest), targetMonth);
+  const startMonth = knownMonths.reduce(
+    (earliest, month) => (month < earliest ? month : earliest),
+    targetMonth
+  );
 
   let carryIn = 0;
   let result: RolloverMonth | null = null;
