@@ -16,6 +16,14 @@ const cardBase: CSSProperties = {
   padding: "24px",
 };
 
+/** Dashed, flat-fill placeholder that mirrors the action-card ("Manage Accounts") treatment. */
+const actionCardBase: CSSProperties = {
+  background: "transparent",
+  border: "1px dashed var(--border-hover)",
+  borderRadius: "14px",
+  padding: "24px",
+};
+
 /** Skeleton for the six stat tiles at the top of the dashboard. */
 function StatsRowSkeleton() {
   return (
@@ -400,33 +408,65 @@ function NetWorthHistorySkeleton() {
   );
 }
 
-/** Skeleton for the Account Balances chart and Open New Account form cards. */
+/** Skeleton for the Account Balances chart, the Manage Accounts divider, and the two dashed action cards. */
 function AccountPanelsSkeleton({ dashboardColumns }: { dashboardColumns: string }) {
   const { visibleCards } = useDashboardVisibility();
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: dashboardColumns,
-        gap: "20px",
-        alignItems: "start",
-        marginBottom: "32px",
-      }}
-    >
+    <>
       {visibleCards.has("account-balances") && (
-        <div style={cardBase}>
-          <Skeleton style={{ height: "11px", width: "130px", marginBottom: "20px" }} />
-          <Skeleton style={{ height: "180px", borderRadius: "8px" }} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: dashboardColumns,
+            gap: "20px",
+            alignItems: "start",
+            marginBottom: "32px",
+          }}
+        >
+          <div style={cardBase}>
+            <Skeleton style={{ height: "11px", width: "130px", marginBottom: "20px" }} />
+            <Skeleton style={{ height: "180px", borderRadius: "8px" }} />
+          </div>
         </div>
       )}
-      <div style={cardBase}>
-        <Skeleton style={{ height: "11px", width: "120px", marginBottom: "8px" }} />
-        <Skeleton style={{ height: "22px", width: "60%", marginBottom: "20px" }} />
-        <Skeleton style={{ height: "38px", borderRadius: "8px", marginBottom: "10px" }} />
-        <Skeleton style={{ height: "38px", borderRadius: "8px", marginBottom: "14px" }} />
-        <Skeleton style={{ height: "34px", width: "45%", borderRadius: "8px" }} />
+
+      {/* Manage Accounts divider */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          marginTop: "40px",
+          marginBottom: "18px",
+        }}
+      >
+        <Skeleton style={{ height: "13px", width: "130px" }} />
+        <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
       </div>
-    </div>
+
+      {/* Two dashed action-card placeholders (Open New Account + Link Bank Account) */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: dashboardColumns,
+          gap: "20px",
+          alignItems: "start",
+          marginBottom: "32px",
+        }}
+      >
+        {[1, 2].map((i) => (
+          <div key={i} style={actionCardBase}>
+            <Skeleton
+              style={{ width: "36px", height: "36px", borderRadius: "10px", marginBottom: "12px" }}
+            />
+            <Skeleton style={{ height: "11px", width: "45%", marginBottom: "10px" }} />
+            <Skeleton style={{ height: "18px", width: "65%", marginBottom: "8px" }} />
+            <Skeleton style={{ height: "12px", width: "85%", marginBottom: "6px" }} />
+            <Skeleton style={{ height: "12px", width: "70%" }} />
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

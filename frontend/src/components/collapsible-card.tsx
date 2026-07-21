@@ -14,6 +14,12 @@ type CollapsibleCardProps = {
   defaultCollapsed?: boolean;
   style?: CSSProperties;
   className?: string;
+  // "data" (default) renders a filled tile for read-only insights; "action" renders a dashed,
+  // flat-fill tile so account-management actions read as a distinct class from the data cards.
+  variant?: "data" | "action";
+  // Optional leading glyph, shown as a tinted chip above the eyebrow. Used by action cards to
+  // signal their affordance (add / link) at a glance.
+  icon?: ReactNode;
 };
 
 /** Uniform height every card snaps to while collapsed so the dashboard grid reads as an even set of tiles. */
@@ -67,7 +73,10 @@ export function CollapsibleCard({
   defaultCollapsed = false,
   style,
   className,
+  variant = "data",
+  icon,
 }: CollapsibleCardProps) {
+  const isAction = variant === "action";
   const { allCollapsed } = useDashboardVisibility();
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed || allCollapsed);
   const isFirstRender = useRef(true);
@@ -90,8 +99,10 @@ export function CollapsibleCard({
       className={["lift", className].filter(Boolean).join(" ")}
       style={{
         position: "relative",
-        background: "var(--snapshot-gradient)",
-        border: "1px solid var(--border)",
+        // Action cards drop the filled gradient for a flat, dashed "add-slot" treatment so they
+        // read as a separate class from the data tiles above them.
+        background: isAction ? "transparent" : "var(--snapshot-gradient)",
+        border: isAction ? "1px dashed var(--border-hover)" : "1px solid var(--border)",
         borderRadius: "14px",
         padding: "24px",
         // While collapsed, every card locks to one height so the grid reads as an even set of tiles.
@@ -120,6 +131,25 @@ export function CollapsibleCard({
         }}
       >
         <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+          {icon && (
+            <span
+              aria-hidden="true"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "#3b82f614",
+                border: "1px solid #3b82f633",
+                color: "#3b82f6",
+                marginBottom: "12px",
+              }}
+            >
+              {icon}
+            </span>
+          )}
           <p
             style={{
               fontSize: "13px",

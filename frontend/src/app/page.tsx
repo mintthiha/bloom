@@ -624,6 +624,31 @@ function Home() {
           {/* Customizable cards — drag any card by its handle to reorder; the order persists per user. */}
           <DraggableCardGrid cards={reorderableCards} columns={dashboardColumns} />
 
+          {/* Labeled boundary that separates the account-management actions from the data cards above. */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              marginTop: "40px",
+              marginBottom: "18px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "13px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--text-secondary)",
+                flexShrink: 0,
+              }}
+            >
+              Manage Accounts
+            </p>
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+          </div>
+
           {/* Open New Account + Link Bank Account (utility cards, not reorderable) */}
           <div
             id="open-account-section"
