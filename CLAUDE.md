@@ -36,7 +36,9 @@ Before building a custom UI component, check whether shadcn/ui or the existing s
 - **Dialogs / confirms** → use shadcn `AlertDialog` before writing a custom modal.
 - **Delete actions** → every delete must go through two steps: (1) an `AlertDialog` asking "Are you sure?" with the item name in the description, and (2) a `toast.success("X deleted")` after the deletion completes. Never delete immediately on button click.
 - **Create actions** → always call `toast.success("X created")` (or equivalent) immediately after a successful creation so the user gets visual confirmation. Sonner's `toast.success` renders green by default — use it as-is.
-- **Other UI primitives** (buttons, inputs, selects, etc.) → check `src/components/ui/` for an existing shadcn component before writing raw HTML with inline styles.
+- **Create/delete always toast** → any action that creates or deletes something must fire a `toast` on success (and `toast.error` on failure). This is non-negotiable — a create or delete that lands silently is a bug.
+- **Buttons must have a hover state** → every interactive button needs a CSS `:hover` effect. Inline styles cannot express `:hover`, so add or reuse a class in `globals.css` (e.g. `.press`, `.budget-action-pill`, `.budget-delete-button`) rather than relying on inline styles alone. Pair it with a matching `:active` response, and add any transform to the `@media (prefers-reduced-motion: reduce)` guard.
+- **Other UI primitives** (inputs, selects, etc.) → check `src/components/ui/` for an existing shadcn component before writing raw HTML with inline styles.
 
 Shared, non-route-specific components (e.g. `BackToHome`) belong in `src/components/`, not inside a route's `_components/` folder.
 

@@ -86,15 +86,12 @@ export function MoveBudgetMoneyDialog({ sourceBudget, budgets, onChanged }: Prop
       <button
         type="button"
         onClick={() => setOpen(true)}
+        className="budget-action-pill"
         style={{
           padding: "6px 12px",
           fontSize: "12px",
           fontWeight: 600,
-          borderRadius: "999px",
           cursor: "pointer",
-          border: "1px solid var(--border)",
-          background: "transparent",
-          color: "var(--text-secondary)",
         }}
       >
         Move money

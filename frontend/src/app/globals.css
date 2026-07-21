@@ -356,6 +356,41 @@ body {
 }
 
 /*
+ * Budget action pills (Move money, Rollover toggle). Neutral at rest; hover lights
+ * the border and label with the accent and lays a faint tint, and press dips. The
+ * rollover toggle adds `is-on` for its enabled state, which reads accent even at rest
+ * and deepens its tint on hover.
+ */
+.budget-action-pill {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.budget-action-pill:not(:disabled):hover {
+  border-color: #3b82f666;
+  color: #3b82f6;
+  background: #3b82f614;
+}
+.budget-action-pill.is-on {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #3b82f61a;
+}
+.budget-action-pill.is-on:not(:disabled):hover {
+  border-color: #3b82f6;
+  background: #3b82f62e;
+}
+.budget-action-pill:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/*
  * Budget card. In multi-column layouts it's hard to tell which budget you're
  * pointing at, so hover lifts the card and lights its border with the accent to
  * mark the one you're about to choose.
@@ -386,6 +421,7 @@ body {
   .reset-button:active,
   .reset-button:hover .reset-button-icon,
   .budget-delete-button:not(:disabled):active,
+  .budget-action-pill:not(:disabled):active,
   .budget-card:hover {
     transform: none;
   }

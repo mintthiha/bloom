@@ -41,16 +41,13 @@ export function BudgetRolloverToggle({ budget, onChanged }: Props) {
           ? "Unspent money rolls into next month"
           : "Enable to roll unspent money forward"
       }
+      className={`budget-action-pill${budget.rolloverEnabled ? " is-on" : ""}`}
       style={{
         padding: "6px 12px",
         fontSize: "12px",
         fontWeight: 600,
-        borderRadius: "999px",
         cursor: saving ? "not-allowed" : "pointer",
         opacity: saving ? 0.5 : 1,
-        border: `1px solid ${budget.rolloverEnabled ? "#3b82f6" : "var(--border)"}`,
-        background: budget.rolloverEnabled ? "#3b82f61a" : "transparent",
-        color: budget.rolloverEnabled ? "#3b82f6" : "var(--text-secondary)",
       }}
     >
       {budget.rolloverEnabled ? "Rollover on" : "Rollover off"}
