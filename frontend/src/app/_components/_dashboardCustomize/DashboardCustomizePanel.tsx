@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Columns3, Rows3, RotateCcw } from "lucide-react";
+import { Columns2, Columns3, Rows3, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -131,6 +131,45 @@ function CardToggleRow({ cardId, lockedHint }: { cardId: CardId; lockedHint?: st
         <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} disabled={isLocked} />
       }
     />
+  );
+}
+
+/** One layout-density option button; highlights in accent blue when it matches the active view. */
+function DensityButton({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="nav-item"
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "6px",
+        minHeight: "40px",
+        borderRadius: "10px",
+        border: active ? "1px solid #3b82f666" : "1px solid var(--border)",
+        background: active ? "#3b82f61a" : "var(--surface-1)",
+        color: active ? "#3b82f6" : "var(--text-secondary)",
+        fontSize: "12px",
+        fontWeight: 600,
+        cursor: "pointer",
+      }}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
@@ -299,53 +338,25 @@ export function DashboardCustomizePanel() {
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "10px" }}>
               How many columns cards use on wide screens
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <button
-                type="button"
-                className="nav-item"
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+              <DensityButton
+                icon={<Rows3 size={15} />}
+                label="Single"
+                active={view === "single"}
                 onClick={() => setView("single")}
-                aria-pressed={view === "single"}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "40px",
-                  borderRadius: "10px",
-                  border: view === "single" ? "1px solid #3b82f666" : "1px solid var(--border)",
-                  background: view === "single" ? "#3b82f61a" : "var(--surface-1)",
-                  color: view === "single" ? "#3b82f6" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                <Rows3 size={15} />
-                Single
-              </button>
-              <button
-                type="button"
-                className="nav-item"
+              />
+              <DensityButton
+                icon={<Columns2 size={15} />}
+                label="Double"
+                active={view === "double"}
                 onClick={() => setView("double")}
-                aria-pressed={view === "double"}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  minHeight: "40px",
-                  borderRadius: "10px",
-                  border: view === "double" ? "1px solid #3b82f666" : "1px solid var(--border)",
-                  background: view === "double" ? "#3b82f61a" : "var(--surface-1)",
-                  color: view === "double" ? "#3b82f6" : "var(--text-secondary)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                <Columns3 size={15} />
-                Triple
-              </button>
+              />
+              <DensityButton
+                icon={<Columns3 size={15} />}
+                label="Triple"
+                active={view === "triple"}
+                onClick={() => setView("triple")}
+              />
             </div>
           </div>
           {isDashboard && (

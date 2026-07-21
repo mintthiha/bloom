@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type DashboardView = "single" | "double";
+type DashboardView = "single" | "double" | "triple";
 
 type DashboardViewContextValue = {
   view: DashboardView;
@@ -13,16 +13,16 @@ type DashboardViewContextValue = {
 const STORAGE_KEY = "bloom_dashboard_view";
 
 const DashboardViewContext = createContext<DashboardViewContextValue>({
-  view: "double",
+  view: "triple",
   setView: () => {},
 });
 
 export function DashboardViewProvider({ children }: { children: React.ReactNode }) {
-  const [view, setView] = useState<DashboardView>("double");
+  const [view, setView] = useState<DashboardView>("triple");
 
   useEffect(() => {
     const storedView = window.localStorage.getItem(STORAGE_KEY);
-    if (storedView === "single" || storedView === "double") {
+    if (storedView === "single" || storedView === "double" || storedView === "triple") {
       setView(storedView);
     }
   }, []);

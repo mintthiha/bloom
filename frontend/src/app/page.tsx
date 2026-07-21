@@ -76,7 +76,11 @@ function Home() {
   );
 
   const dashboardColumns =
-    effectiveView === "single" ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))";
+    effectiveView === "single"
+      ? "1fr"
+      : effectiveView === "double"
+        ? "repeat(2, minmax(0, 1fr))"
+        : "repeat(auto-fit, minmax(340px, 1fr))";
   const twoColumnGrid = effectiveView === "single" ? "1fr" : "repeat(auto-fit, minmax(480px, 1fr))";
 
   /** Keeps the date range fresh whenever the preset changes (e.g., "this-month" recalculates daily). */

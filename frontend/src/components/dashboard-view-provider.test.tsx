@@ -31,14 +31,14 @@ describe("DashboardViewProvider", () => {
     vi.mocked(useIsMobile).mockReturnValue(false);
   });
 
-  it("defaults to the double-column dashboard view", () => {
+  it("defaults to the triple-column dashboard view", () => {
     render(
       <DashboardViewProvider>
         <DashboardViewProbe />
       </DashboardViewProvider>
     );
 
-    expect(screen.getByTestId("dashboard-view")).toHaveTextContent("double");
+    expect(screen.getByTestId("dashboard-view")).toHaveTextContent("triple");
   });
 
   it("loads a previously saved dashboard view from localStorage", async () => {
@@ -75,17 +75,17 @@ describe("useDashboardView — mobile-aware effectiveView", () => {
     vi.mocked(useIsMobile).mockReturnValue(false);
   });
 
-  it("returns double as effectiveView on desktop when stored view is double", () => {
+  it("returns the default triple view as effectiveView on desktop", () => {
     render(
       <DashboardViewProvider>
         <DashboardViewProbe />
       </DashboardViewProvider>
     );
 
-    expect(screen.getByTestId("effective-view")).toHaveTextContent("double");
+    expect(screen.getByTestId("effective-view")).toHaveTextContent("triple");
   });
 
-  it("collapses effectiveView to single on mobile regardless of stored double preference", () => {
+  it("collapses effectiveView to single on mobile regardless of the desktop preference", () => {
     vi.mocked(useIsMobile).mockReturnValue(true);
 
     render(
@@ -95,7 +95,7 @@ describe("useDashboardView — mobile-aware effectiveView", () => {
     );
 
     expect(screen.getByTestId("effective-view")).toHaveTextContent("single");
-    expect(screen.getByTestId("dashboard-view")).toHaveTextContent("double");
+    expect(screen.getByTestId("dashboard-view")).toHaveTextContent("triple");
   });
 
   it("preserves the stored double preference while mobile collapses layout", async () => {

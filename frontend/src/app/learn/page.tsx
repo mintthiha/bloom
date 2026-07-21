@@ -15,7 +15,7 @@ import { CARDS } from "./_components/_cardsSection/LearningCards";
 
 export default function LearnPage() {
   const { effectiveView } = useDashboardView();
-  const isDouble = effectiveView === "double";
+  const isDouble = effectiveView !== "single";
 
   /**
    * Read the stored layout synchronously so the skeleton uses the correct column count

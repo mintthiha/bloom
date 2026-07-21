@@ -27,7 +27,7 @@ const REGISTERED_ACCOUNT_TYPES = new Set(["TFSA", "RRSP", "FHSA"]);
 export default function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { effectiveView } = useDashboardView();
-  const isDoubleColumn = effectiveView === "double";
+  const isDoubleColumn = effectiveView !== "single";
   const pageWidth = isDoubleColumn ? "1200px" : "720px";
   const summaryColumns = isDoubleColumn ? "minmax(0, 1.15fr) minmax(320px, 0.85fr)" : "1fr";
   const detailColumns = isDoubleColumn ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "1fr";
