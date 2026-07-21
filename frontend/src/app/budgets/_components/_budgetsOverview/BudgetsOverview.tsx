@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, Budget, MonthlySummary } from "@/lib/api";
 import { BudgetsManager } from "@/components/BudgetsManager";
+import { useHiddenBudgetIds } from "@/hooks/use-hidden-budget-ids";
 
 /** Full-page budgets overview: loads all budgets and this month's summary, then renders the manager. */
 export function BudgetsOverview() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const { hiddenBudgetIds, toggleBudgetVisibility } = useHiddenBudgetIds();
 
   /** Loads budgets and the monthly summary in parallel; the summary feeds the category picker. */
   const loadData = useCallback(async () => {
@@ -56,7 +58,13 @@ export function BudgetsOverview() {
           ))}
         </div>
       ) : (
-        <BudgetsManager budgets={budgets} monthlySummary={monthlySummary} onChanged={loadData} />
+        <BudgetsManager
+          budgets={budgets}
+          monthlySummary={monthlySummary}
+          onChanged={loadData}
+          hiddenBudgetIds={hiddenBudgetIds}
+          onToggleBudgetVisibility={toggleBudgetVisibility}
+        />
       )}
     </>
   );

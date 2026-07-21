@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { PiggyBank } from "lucide-react";
 import { api, Budget, MonthlySummary } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { BudgetCard } from "@/components/BudgetCard";
+import { SelectableBudgetRow } from "@/components/SelectableBudgetRow";
 import { RolloverInfoDialog } from "@/components/RolloverInfoDialog";
 import {
   AlertDialog,
@@ -33,6 +35,10 @@ type Props = {
   budgets: Budget[];
   monthlySummary: MonthlySummary | null;
   onChanged: () => Promise<void>;
+  // Ids the user has hidden from the dashboard card. The dashboard passes this to filter its list;
+  // the /budgets page passes it plus onToggleBudgetVisibility to render the selection checkboxes.
+  hiddenBudgetIds?: Set<string>;
+  onToggleBudgetVisibility?: (id: string) => void;
 };
 
 /** Builds a sorted, deduplicated list of selectable budget categories. */
@@ -56,7 +62,13 @@ function buildKnownCategories(budgets: Budget[], monthlySummary: MonthlySummary 
  * progress bars, and delete. Shared by the dashboard's BudgetsCard and the /budgets page;
  * the parent owns the data and passes budgets, monthlySummary, and an onChanged refresh.
  */
-export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
+export function BudgetsManager({
+  budgets,
+  monthlySummary,
+  onChanged,
+  hiddenBudgetIds,
+  onToggleBudgetVisibility,
+}: Props) {
   const [budgetCategory, setBudgetCategory] = useState("Groceries");
   const [customBudgetCategory, setCustomBudgetCategory] = useState("");
   const [budgetAmount, setBudgetAmount] = useState("");
@@ -67,6 +79,37 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
 
   const knownBudgetCategories = buildKnownCategories(budgets, monthlySummary);
   const pendingDeleteBudget = budgets.find((budget) => budget.id === pendingDeleteId) ?? null;
+
+  // Manage mode (the /budgets page) shows every budget with a "show on dashboard" checkbox.
+  // Otherwise (the dashboard card) the hidden ids simply filter the list down to the chosen budgets.
+  const isManageMode = Boolean(onToggleBudgetVisibility);
+  const budgetsToRender =
+    !isManageMode && hiddenBudgetIds
+      ? budgets.filter((budget) => !hiddenBudgetIds.has(budget.id))
+      : budgets;
+  const hiddenBudgetCount = hiddenBudgetIds
+    ? budgets.filter((budget) => hiddenBudgetIds.has(budget.id)).length
+    : 0;
+
+  // Left-side note above the list: a how-to on the /budgets page, or a link back to it from the
+  // dashboard when some budgets are hidden. Null when there is nothing to say (so the row right-aligns).
+  const listHint = isManageMode ? (
+    <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+      Checked budgets appear on your dashboard Budgets card.
+    </p>
+  ) : hiddenBudgetCount > 0 ? (
+    <Link
+      href="/budgets"
+      style={{
+        fontSize: "12px",
+        fontWeight: 600,
+        color: "var(--text-secondary)",
+        textDecoration: "none",
+      }}
+    >
+      {hiddenBudgetCount} hidden · manage on Budgets page →
+    </Link>
+  ) : null;
 
   /** Validates and saves a budget category limit via the API. */
   async function handleSaveBudget(e: React.FormEvent) {
@@ -222,19 +265,55 @@ export function BudgetsManager({ budgets, monthlySummary, onChanged }: Props) {
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: listHint ? "space-between" : "flex-end",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            {listHint}
             <RolloverInfoDialog />
           </div>
-          {budgets.map((budget) => (
-            <BudgetCard
-              key={budget.id}
-              budget={budget}
-              budgets={budgets}
-              deletingBudgetId={deletingBudgetId}
-              onRequestDelete={setPendingDeleteId}
-              onChanged={onChanged}
-            />
-          ))}
+
+          {!isManageMode && budgetsToRender.length === 0 ? (
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+              All budgets are hidden from this card. Choose which to show on the{" "}
+              <Link href="/budgets" style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
+                Budgets page
+              </Link>
+              .
+            </p>
+          ) : (
+            budgetsToRender.map((budget) => {
+              const budgetCard = (
+                <BudgetCard
+                  budget={budget}
+                  budgets={budgets}
+                  deletingBudgetId={deletingBudgetId}
+                  onRequestDelete={setPendingDeleteId}
+                  onChanged={onChanged}
+                />
+              );
+
+              if (!isManageMode) {
+                return <div key={budget.id}>{budgetCard}</div>;
+              }
+
+              return (
+                <SelectableBudgetRow
+                  key={budget.id}
+                  budget={budget}
+                  shownOnDashboard={!(hiddenBudgetIds?.has(budget.id) ?? false)}
+                  onToggle={() => onToggleBudgetVisibility?.(budget.id)}
+                >
+                  {budgetCard}
+                </SelectableBudgetRow>
+              );
+            })
+          )}
         </div>
       )}
 
