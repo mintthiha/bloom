@@ -55,7 +55,8 @@ function CollapseChevron({ isCollapsed }: { isCollapsed: boolean }) {
 /**
  * Reusable dashboard card with a collapsible content area.
  * Animates via the grid-template-rows trick — no max-height hack needed.
- * headerRight renders beside the chevron and stays visible when collapsed.
+ * The collapse chevron is pinned to the top-right corner; headerRight flows in the header row
+ * (wrapping to its own line in narrow cards) and stays visible when collapsed.
  */
 export function CollapsibleCard({
   eyebrow,
@@ -81,10 +82,14 @@ export function CollapsibleCard({
     setIsCollapsed(allCollapsed);
   }, [allCollapsed]);
 
+  const headerRightContent =
+    typeof headerRight === "function" ? headerRight(isCollapsed) : headerRight;
+
   return (
     <div
       className={["lift", className].filter(Boolean).join(" ")}
       style={{
+        position: "relative",
         background: "var(--snapshot-gradient)",
         border: "1px solid var(--border)",
         borderRadius: "14px",
@@ -100,16 +105,21 @@ export function CollapsibleCard({
         style={{
           display: "flex",
           flexDirection: isMobile ? "column" : "row",
+          // On desktop, let the header wrap so the right-hand controls drop onto their own line
+          // in a narrow card instead of crushing the title column to a few pixels wide.
+          flexWrap: isMobile ? undefined : "wrap",
           justifyContent: isMobile ? "flex-start" : "space-between",
           gap: isMobile ? "8px" : "16px",
           alignItems: isMobile ? "stretch" : "flex-start",
+          // Reserve room for the absolutely-positioned chevron so header content never slides under it.
+          paddingRight: "32px",
           // While collapsed on desktop, cap the header to the tile's inner height (minus the 24px
           // top+bottom padding) so long text clips above the bottom padding instead of touching the edge.
           maxHeight: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT - 48}px` : undefined,
           overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <p
             style={{
               fontSize: "13px",
@@ -148,36 +158,43 @@ export function CollapsibleCard({
           )}
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexShrink: 0,
-            paddingTop: isMobile ? "0" : "2px",
-            justifyContent: isMobile ? "flex-end" : undefined,
-          }}
-        >
-          {typeof headerRight === "function" ? headerRight(isCollapsed) : headerRight}
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            aria-label={isCollapsed ? "Expand section" : "Collapse section"}
+        {headerRightContent && (
+          <div
             style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              padding: "4px",
               display: "flex",
               alignItems: "center",
-              borderRadius: "6px",
+              gap: "8px",
+              flexShrink: 0,
+              paddingTop: isMobile ? "0" : "2px",
+              justifyContent: isMobile ? "flex-end" : undefined,
             }}
           >
-            <CollapseChevron isCollapsed={isCollapsed} />
-          </button>
-        </div>
+            {headerRightContent}
+          </div>
+        )}
       </div>
+
+      {/* Pinned to the card's top-right corner so it never rides along when the header wraps. */}
+      <button
+        type="button"
+        onClick={() => setIsCollapsed((prev) => !prev)}
+        aria-label={isCollapsed ? "Expand section" : "Collapse section"}
+        style={{
+          position: "absolute",
+          top: "24px",
+          right: "24px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          color: "var(--text-muted)",
+          padding: "4px",
+          display: "flex",
+          alignItems: "center",
+          borderRadius: "6px",
+        }}
+      >
+        <CollapseChevron isCollapsed={isCollapsed} />
+      </button>
 
       <div
         style={{
