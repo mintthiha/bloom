@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Columns2, Rows3, RotateCcw } from "lucide-react";
+import { Columns3, Rows3, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -343,8 +343,8 @@ export function DashboardCustomizePanel() {
                   cursor: "pointer",
                 }}
               >
-                <Columns2 size={15} />
-                Double
+                <Columns3 size={15} />
+                Triple
               </button>
             </div>
           </div>
