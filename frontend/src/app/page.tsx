@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -28,7 +29,6 @@ import { getCachedFirstName, setCachedFirstName, getGreeting } from "@/lib/profi
 import { AnimatedCurrency } from "@/components/animated-currency";
 import { AnimatedCount } from "@/components/animated-count";
 import { FlashOnChange } from "@/components/flash-on-change";
-import { DraggableAccountList } from "./_components/_accountList/DraggableAccountList";
 import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
 import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot";
 import { BudgetsCard } from "./_components/_budgets/BudgetsCard";
@@ -59,7 +59,6 @@ function Home() {
   const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newAccountId, setNewAccountId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
@@ -647,6 +646,31 @@ function Home() {
               Manage Accounts
             </p>
             <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+            <Link
+              href="/accounts"
+              className="press"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#3b82f6",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              View all accounts
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </Link>
           </div>
 
           {/* Open New Account + Link Bank Account (utility cards, not reorderable) */}
@@ -661,43 +685,14 @@ function Home() {
             }}
           >
             <OpenAccountCard
-              onCreated={async (createdId) => {
+              onCreated={async () => {
                 await loadAccounts();
-                setNewAccountId(createdId);
               }}
             />
             <LinkBankAccountCard onLinked={loadAccounts} />
           </div>
         </div>
       )}
-
-      {/* Account list */}
-      <div className="fade-up fade-up-3">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "14px",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "16px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "var(--text-primary)",
-            }}
-          >
-            Accounts
-          </p>
-          <span className="num" style={{ fontSize: "16px", color: "var(--text-primary)" }}>
-            {accounts.length}
-          </span>
-        </div>
-        <DraggableAccountList accounts={accounts} loading={loading} newAccountId={newAccountId} />
-      </div>
     </div>
   );
 }

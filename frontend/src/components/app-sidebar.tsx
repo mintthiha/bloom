@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { BookOpen, LayoutDashboard, Receipt, Target, Wallet, type LucideIcon } from "lucide-react";
+import {
+  BookOpen,
+  Landmark,
+  LayoutDashboard,
+  Receipt,
+  Target,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,6 +24,7 @@ import {
 /** Primary navigation destinations, in sidebar order. */
 const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/accounts", label: "Accounts", icon: Landmark },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/budgets", label: "Budgets", icon: Wallet },
   { href: "/goals", label: "Goals", icon: Target },

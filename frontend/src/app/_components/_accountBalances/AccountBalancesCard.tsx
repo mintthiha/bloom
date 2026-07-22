@@ -1,9 +1,13 @@
 "use client";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Account } from "@/lib/api";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
+import { toSignedBalance, accountDisplayName } from "@/lib/account-view";
+import { readPinnedAccountIds } from "@/lib/account-preferences";
 
 type Props = {
   accounts: Account[];
@@ -12,12 +16,10 @@ type Props = {
 const POSITIVE_COLOR = "#22c55e";
 const NEGATIVE_COLOR = "#ef4444";
 
-/** Credit balances are stored as positive amounts owed; sign them negative so totals and bars mirror the dashboard's net-worth math. */
-function toSignedBalance(account: Account): number {
-  return account.accountType === "CREDIT" ? -account.balance : account.balance;
-}
+// How many top accounts to show when the user hasn't pinned any of their own.
+const FALLBACK_COUNT = 3;
 
-/** Header pill showing the combined total, kept visible while the card is collapsed — mirrors the Safe to Spend badge. */
+/** Header pill showing the combined total of the shown accounts, kept visible while the card is collapsed. */
 function TotalBadge({ total }: { total: number }) {
   const color = total >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR;
   return (
@@ -39,18 +41,63 @@ function TotalBadge({ total }: { total: number }) {
   );
 }
 
-/** Account balances list card — one ranked row per account with a proportional magnitude bar; click navigates to the account page. */
+/** Link to the full Accounts page, shown in the card header next to the total. */
+function ViewAllLink() {
+  return (
+    <Link
+      href="/accounts"
+      className="press"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        fontSize: "12px",
+        fontWeight: 600,
+        color: "#3b82f6",
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+      }}
+    >
+      View all
+      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+      </svg>
+    </Link>
+  );
+}
+
+/**
+ * Compact balances card for the dashboard — shows the accounts the user pinned on the Accounts page,
+ * falling back to their top accounts by balance when nothing is pinned. Click a row to open the account.
+ */
 export function AccountBalancesCard({ accounts }: Props) {
   const router = useRouter();
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
 
-  const rows = accounts
-    .map((account) => ({
-      id: account.id,
-      name: account.nickname ?? account.ownerName,
-      type: account.accountType,
-      balance: toSignedBalance(account),
-    }))
-    .sort((first, second) => second.balance - first.balance);
+  /** Load the pinned selection after mount to keep the initial render hydration-safe. */
+  useEffect(() => {
+    setPinnedIds(readPinnedAccountIds());
+  }, []);
+
+  const { rows, isPinnedView } = useMemo(() => {
+    const pinnedSet = new Set(pinnedIds);
+    const pinned = accounts.filter((account) => pinnedSet.has(account.id));
+    const source =
+      pinned.length > 0
+        ? pinned
+        : [...accounts]
+            .sort((first, second) => toSignedBalance(second) - toSignedBalance(first))
+            .slice(0, FALLBACK_COUNT);
+    const ranked = source
+      .map((account) => ({
+        id: account.id,
+        name: accountDisplayName(account),
+        type: account.accountType,
+        balance: toSignedBalance(account),
+      }))
+      .sort((first, second) => second.balance - first.balance);
+    return { rows: ranked, isPinnedView: pinned.length > 0 };
+  }, [accounts, pinnedIds]);
 
   const total = rows.reduce((sum, row) => sum + row.balance, 0);
   // Scale every bar against the largest magnitude so a near-zero or negative account still reads at a glance.
@@ -60,9 +107,18 @@ export function AccountBalancesCard({ accounts }: Props) {
     <CollapsibleCard
       eyebrow="Account Balances"
       title="Balances at a glance"
-      description="Every account ranked by balance, with credit shown as what you owe."
+      description={
+        isPinnedView
+          ? "The accounts you pinned, with credit shown as what you owe."
+          : "Your top accounts by balance, You can pin the ones you want on the Accounts page. By default, the top 3 accounts are shown."
+      }
       className="fade-up fade-up-1"
-      headerRight={<TotalBadge total={total} />}
+      headerRight={
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <TotalBadge total={total} />
+          <ViewAllLink />
+        </div>
+      }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {rows.map((row) => {

@@ -98,10 +98,11 @@ export const CARD_METADATA: Record<
       "Your assets minus debts plotted month over month so you can watch the long-term trend.",
   },
   "account-balances": {
-    label: "Account Balances Chart",
-    description: "Visual breakdown of balances across accounts",
-    howItWorks: "A bar chart comparing balances across every account at a glance.",
-    // The chart compares accounts, so it only renders (and can only be enabled) with 2+ accounts.
+    label: "Account Balances",
+    description: "Your pinned accounts, ranked at a glance",
+    howItWorks:
+      "Shows the accounts you pin on the Accounts page — or your top accounts by balance until you pin any — each with a proportional bar.",
+    // Falls back to a top-few ranking, so it only renders (and can only be enabled) with 2+ accounts.
     requiresAccounts: 2,
   },
 };
