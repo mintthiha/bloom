@@ -20,6 +20,7 @@ import { BackToHome } from "@/components/BackToHome";
 import { EmptyState } from "@/components/EmptyState";
 import { AccountFilters } from "./_components/_filters/AccountFilters";
 import { SortControl } from "./_components/_filters/SortControl";
+import { AccountsTreemap } from "./_components/_chart/AccountsTreemap";
 import { AccountsTable } from "./_components/_list/AccountsTable";
 
 // Reuse the dashboard's manual-order key so a user's existing drag order carries over to this page.
@@ -219,6 +220,8 @@ export default function AccountsPage() {
             />
             <SortControl value={sortKey} onChange={setSortKey} />
           </div>
+
+          {!loading && <AccountsTreemap accounts={visibleAccounts} />}
 
           <AccountsTable
             accounts={visibleAccounts}

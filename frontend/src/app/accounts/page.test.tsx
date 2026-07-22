@@ -33,6 +33,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 /** Builds an Account with defaults so each test overrides only the fields it needs. */
 function makeAccount(overrides: Partial<Account> = {}): Account {
   return {
@@ -100,7 +104,8 @@ describe("accounts page", () => {
   it("hides an account and offers to reveal it again", async () => {
     render(<AccountsPage />);
     await screen.findByText("Cash Accounts");
-    expect(screen.getByText("Main")).toBeInTheDocument();
+    // "Main" appears in both the treemap and the list, so it starts with at least one match.
+    expect(screen.getAllByText("Main").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getAllByLabelText("Hide account")[0]);
 
