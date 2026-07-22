@@ -7,6 +7,7 @@ import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
 import { toSignedBalance, accountDisplayName, ACCOUNT_GROUPS } from "@/lib/account-view";
 import { computeTreemapLayout } from "@/lib/treemap-layout";
+import { CollapsibleCard } from "@/components/collapsible-card";
 
 interface AccountsTreemapProps {
   accounts: Account[];
@@ -71,73 +72,41 @@ export function AccountsTreemap({ accounts }: AccountsTreemapProps) {
 
   if (tiles.length === 0) return null;
 
-  return (
-    <div
-      style={{
-        background: "var(--surface-1)",
-        border: "1px solid var(--border)",
-        borderRadius: "14px",
-        padding: "18px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          gap: "12px",
-          flexWrap: "wrap",
-          marginBottom: "14px",
-        }}
-      >
-        <div>
-          <p
+  // Group-color legend, shown in the card header and kept visible while the card is collapsed.
+  const legend = (
+    <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+      {ACCOUNT_GROUPS.map((group) => {
+        const groupColor = ACCOUNT_TYPE_META[group.types[0]].color;
+        const active = group.types.some((type) => presentTypes.has(type));
+        return (
+          <span
+            key={group.id}
             style={{
-              fontSize: "13px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#3b82f6",
-              marginBottom: "4px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "12px",
+              color: active ? "var(--text-secondary)" : "var(--text-muted)",
+              opacity: active ? 1 : 0.5,
             }}
           >
-            Balance Map
-          </p>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-            Each tile is an account, sized by balance and colored by type.
-          </p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
-          {ACCOUNT_GROUPS.map((group) => {
-            const groupColor = ACCOUNT_TYPE_META[group.types[0]].color;
-            const active = group.types.some((type) => presentTypes.has(type));
-            return (
-              <span
-                key={group.id}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "12px",
-                  color: active ? "var(--text-secondary)" : "var(--text-muted)",
-                  opacity: active ? 1 : 0.5,
-                }}
-              >
-                <span
-                  style={{
-                    width: "9px",
-                    height: "9px",
-                    borderRadius: "3px",
-                    background: groupColor,
-                  }}
-                />
-                {group.title.replace(" Accounts", "")}
-              </span>
-            );
-          })}
-        </div>
-      </div>
+            <span
+              style={{ width: "9px", height: "9px", borderRadius: "3px", background: groupColor }}
+            />
+            {group.title.replace(" Accounts", "")}
+          </span>
+        );
+      })}
+    </div>
+  );
 
+  return (
+    <CollapsibleCard
+      eyebrow="Balance Map"
+      title="Balances by account"
+      description="Each tile is an account, sized by balance and colored by type."
+      headerRight={legend}
+    >
       <div ref={containerRef} style={{ width: "100%" }}>
         <svg
           width={width}
@@ -238,6 +207,6 @@ export function AccountsTreemap({ accounts }: AccountsTreemapProps) {
           })}
         </svg>
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }

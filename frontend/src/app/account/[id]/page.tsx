@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, use, useMemo } from "react";
 import Link from "next/link";
 import { api, Account, DateRangeQuery, Profile, Transaction } from "@/lib/api";
 import { BackToHome } from "@/components/BackToHome";
+import { BackToAccounts } from "@/components/BackToAccounts";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { AccountCard } from "./_components/_accountCard/AccountCard";
 import { NicknameEditor } from "./_components/_accountActions/NicknameEditor";
@@ -229,7 +230,10 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         onError={(msg) => toast.error(msg)}
       />
 
-      <BackToHome />
+      <div style={{ display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
+        <BackToHome />
+        <BackToAccounts />
+      </div>
 
       <div
         style={{
