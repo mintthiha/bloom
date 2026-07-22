@@ -1,6 +1,6 @@
 # Bloom
 
-Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, multi-account tracking, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, actionable financial insights, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, and an AI-powered Canadian financial education assistant.
+Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, a guided onboarding checklist, multi-account tracking, external bank linking via Plaid, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, a financial health score, a safe-to-spend allowance, actionable financial insights, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, a customizable dashboard, and an AI-powered Canadian financial education assistant.
 
 ## Tech Stack
 
@@ -17,6 +17,7 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Lucide React
 - NextAuth v5 beta
 - Anthropic SDK (`@anthropic-ai/sdk`)
+- Plaid Link (`react-plaid-link`)
 - Vitest
 - Testing Library
 - jsdom
@@ -28,6 +29,8 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - TypeScript
 - Prisma ORM
 - PostgreSQL
+- Plaid Node SDK (`plaid`)
+- Pino / pino-http logging
 - Vitest
 - Supertest
 
@@ -38,7 +41,9 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 ## Project Structure
 
 - `frontend/` — Next.js app, auth integration, dashboard UI, profile onboarding, and account pages
-- `backend/` — Express API, Prisma schema, account/profile/budget/recurring services, and backend tests
+- `backend/` — Express API, Prisma schema, account/profile/budget/recurring/plaid services, and backend tests
+
+The browser never calls the backend directly: the frontend calls its own `/api/*` routes, and `next.config.ts` rewrites those to the backend server-side. Every proxied request carries a shared `INTERNAL_API_SECRET` that the backend's internal-auth middleware verifies, so the API is only ever reached server-to-server (no CORS layer). The backend also exposes an unauthenticated `GET /health` endpoint that checks Postgres connectivity.
 
 ## Core Features
 
@@ -49,6 +54,14 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - First-time user onboarding flow
 - Prisma-backed user profile
 - Unique Bloom username validation
+
+### Onboarding Checklist
+
+- Guided getting-started checklist shown on the dashboard for new users
+- Six steps: set up profile, add first account, add first transaction, set up a budget, create a savings goal, and explore the Learn page
+- Completion state derived live from real dashboard data (accounts, budgets, goals, monthly summary) plus localStorage flags — no separate tracking table
+- Each incomplete step links to the relevant section or page (same-page anchor scroll or route navigation)
+- Dismissible, and auto-hides once all steps are complete; derivation logic lives in `onboarding-steps.ts` and is unit-tested
 
 ### Profile Management
 
@@ -72,6 +85,16 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Account deletion
 - Dashboard grouping by account type
 
+### External Bank Linking (Plaid)
+
+- "Link Bank Account" dashboard card connects an external institution through Plaid Link
+- Fetches a link token on mount so the Plaid modal opens instantly
+- On success, exchanges the public token, syncs the linked accounts and recent transactions into Bloom, and refreshes the dashboard
+- Confirms with a toast reporting how many accounts were linked and from which institution
+- Runs against the Plaid **sandbox** by default (`PLAID_ENV`)
+- Gracefully degrades: the card disables itself with an explanatory message when `PLAID_CLIENT_ID` / `PLAID_SECRET` are not configured, and the backend Plaid client is lazily initialized so the API still boots without credentials
+- CSV/manual import remains the primary path for entering transactions; Plaid linking is complementary
+
 ### Transactions
 
 - Deposits
@@ -79,6 +102,7 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Transfers between accounts
 - Transaction categories
 - Optional merchant names on deposits, withdrawals, and recurring-generated entries
+- Dedicated all-accounts transactions page (`/transactions`) in addition to per-account history
 - Transaction history filtering by:
   - type
   - category (including an explicit "Uncategorized" option for transactions with no category)
@@ -154,6 +178,7 @@ Proactive, non-blocking warnings that surface before and after a potentially pro
 ### Budgeting And Analytics
 
 - Monthly category budgets
+- Optional per-budget rollover (envelope-style carry-forward): unspent room carries into the next month, and an overspent envelope carries its deficit forward; toggleable per budget, with per-month limit overrides and manual adjustments
 - Budget usage, remaining amount, and over-budget state
 - Budget detail pages with:
   - daily spending chart
@@ -193,6 +218,28 @@ Proactive, non-blocking warnings that surface before and after a potentially pro
 - Warning count badge in the card header
 - Empty state when no action items exist
 
+### Financial Health Score
+
+- Single 0–100 score with an A–F letter grade and descriptive label (Excellent / Good / Fair / Needs Work / Critical)
+- Computed from five weighted sub-scores, each worth up to 20 points:
+  - **Savings Rate** — percentage of income saved this period
+  - **Budget Adherence** — share of monthly budgets kept within their limits
+  - **Debt Ratio** — credit card balance relative to total cash assets
+  - **Emergency Coverage** — months of expenses covered by liquid savings (chequing + savings)
+  - **Net Worth Trend** — month-over-month direction of net worth
+- Each sub-score carries a plain-language status line and, when relevant, an actionable tip
+- Derived synchronously from existing dashboard data (accounts, budgets, monthly summary, net worth history) — no extra API calls
+- All scoring logic lives in `frontend/src/lib/financial-health-score.ts` and is fully unit-tested
+
+### Safe to Spend
+
+- Shows how much a user can freely spend for the rest of the current month
+- Formula: liquid cash on hand (chequing + savings), plus recurring income still expected before month-end, minus recurring bills still due before month-end
+- Per-day allowance across the remaining days of the month (today included)
+- Transparent breakdown: available cash, expected income, upcoming bills, and an itemized list of the individual bill occurrences behind the total
+- Expands active recurring rules forward across weekly, biweekly, and monthly frequencies, ignoring lapsed/overdue occurrences so the figure only reflects money still scheduled to move
+- Pure logic in `frontend/src/lib/safe-to-spend.ts` with an injectable reference date for deterministic tests; fully unit-tested
+
 ### Net Worth Tracking
 
 - Monthly net worth snapshots recorded automatically on each dashboard load
@@ -221,12 +268,15 @@ Proactive, non-blocking warnings that surface before and after a potentially pro
 
 ### Dashboard UX
 
-- Single-column and double-column dashboard layouts
+- Configurable dashboard layout — stacked single-column, two-column, or three-column (see Dashboard Customization)
 - Shared layout toggle across dashboard, account pages, and the Learn page
 - Click-through navigation from dashboard summary cards and account cards
 - Time-based greeting — "Good morning / afternoon / evening, [name]" — with first name cached in localStorage to eliminate the flash between page load and profile fetch
 - Full-page skeleton loading screens: all dashboard sections render animated placeholder shapes while data is fetching, preventing layout shift
 - Every major dashboard section is independently collapsible:
+  - Onboarding Checklist
+  - Financial Health Score
+  - Safe to Spend
   - Monthly Snapshot
   - Budgets
   - 50/30/20 Budget Rule
@@ -236,12 +286,22 @@ Proactive, non-blocking warnings that surface before and after a potentially pro
   - Net Worth History
   - Account Balances
   - Open New Account
+  - Link Bank Account
   - Savings Goals widget
 - Collapse state is local to each card — collapsing one card never affects siblings
 - Smooth height animation using the CSS `grid-template-rows: 0fr / 1fr` technique
 - Card headers and action buttons (e.g. "Apply due") remain visible when collapsed
 - Chevron indicator rotates to reflect expanded/collapsed state
 - Account list drag-to-reorder within each account type group, persisted to localStorage
+
+### Dashboard Customization
+
+- Customize panel (slide-out sheet) for tailoring the home dashboard
+- Layout options: two-column, three-column, and stacked single-column views, shared across the dashboard, account pages, and the Learn page
+- Show/hide toggles for individual dashboard cards, so users can hide sections they don't use
+- Drag-to-reorder the dashboard card grid, with order persisted per user
+- Reset control to restore the default layout, visibility, and onboarding state
+- Per-card explainer callouts describe what each section does
 
 ### Date And Time Handling
 
@@ -267,6 +327,12 @@ The homepage is structured around a component-per-section pattern, keeping `page
 | `DraggableAccountList` | `app/_components/_accountList/` |
 | `InsightsCard` | `app/_components/_insights/` |
 | `BudgetRuleCard` | `app/_components/_budgetRule/` |
+| `FinancialHealthScoreCard` | `app/_components/_financialHealth/` |
+| `SafeToSpendCard` | `app/_components/_safeToSpend/` |
+| `OnboardingChecklist` | `app/_components/_onboardingChecklist/` |
+| `LinkBankAccountCard` | `app/_components/_linkAccount/` |
+| `DashboardCustomizePanel` | `app/_components/_dashboardCustomize/` |
+| `DraggableCardGrid` | `app/_components/_dashboardCards/` |
 | `DashboardSkeleton` | `app/_components/_dashboardSkeleton/` |
 | `CollapsibleCard` | `src/components/collapsible-card.tsx` |
 
@@ -285,10 +351,14 @@ The homepage is structured around a component-per-section pattern, keeping `page
 - Account grouping coverage
 - Contribution room calculation coverage (`contribution-room.test.ts`) — TFSA lifetime room, net contribution netting, same-type transfer exclusion, year filtering, FHSA constants
 - Over-contribution warning logic coverage (`over-contribution.test.ts`) — red/amber/none severity for TFSA, RRSP, and FHSA; boundary cases; FHSA dual-limit tie-breaking; overage amounts in messages
+- Financial health score coverage (`financial-health-score.test.ts`) — all five sub-scores, their thresholds, and letter-grade boundaries
+- Safe-to-spend coverage (`safe-to-spend.test.ts`) — recurring occurrence expansion, month-end window, and per-day allowance with an injected reference date
+- Onboarding step derivation coverage (`onboarding-steps.test.ts`) — completion state and links per step
 
 ### Backend Coverage
 
 - Service tests for account, profile, and budget logic
+- Budget rollover carry-forward math coverage (`budget-rollover.test.ts`) — month-chain walking, disabled-rollover collapse, and negative carry-out
 - Route tests for account and budget endpoints
 - Service and route tests for recurring transaction rules
 - Validation coverage for profile updates plus transaction and merchant input sanitization
@@ -304,4 +374,7 @@ npx prisma migrate dev
 
 - The app now depends on timezone-aware database timestamps for correct local-time display and filtering.
 - The frontend proxy expects the backend API to be running on `http://localhost:3001` unless `NEXT_PUBLIC_API_URL` is set.
-- The Learn page AI chat requires an `ANTHROPIC_API_KEY` set in `frontend/.env.local`.
+- The frontend and backend must share the same `INTERNAL_API_SECRET`; the Next.js proxy injects it and the backend's internal-auth middleware verifies it on every `/api/*` request.
+- The Learn page AI chat requires an `ANTHROPIC_API_KEY` set in `frontend/.env.local`, and uses the `claude-opus-4-6` model.
+- Plaid bank linking is optional. Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` (defaults to `sandbox`) in `backend/.env`; the Plaid client initializes lazily, so the API runs fine when they are absent and the Link card disables itself.
+- See `.env.example` (frontend) and `backend/.env.example` for the full list of required and optional environment variables.
