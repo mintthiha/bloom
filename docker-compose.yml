@@ -5,8 +5,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: bloom
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,23 +13,38 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/bloom
+      PORT: 3001
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
+      PLAID_SECRET: ${PLAID_SECRET}
+      PLAID_ENV: ${PLAID_ENV}
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      # host.docker.internal reaches the backend running on the host machine
-      NEXT_PUBLIC_API_URL: http://host.docker.internal:3001
+      NEXT_PUBLIC_API_URL: http://backend:3001
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID}
       AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET}
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: phi4-mini
     ports:
       - "3000:3000"
     depends_on:
-      db:
-        condition: service_healthy
+      - backend
 
 volumes:
   postgres_data:

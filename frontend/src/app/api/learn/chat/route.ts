@@ -1,37 +1,20 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const SYSTEM_PROMPT = `You are Bloom's financial education assistant, helping Canadians understand personal finance concepts. You are knowledgeable, friendly, and concise. Focus on Canadian-specific information (TFSA, RRSP, FHSA, CRA, etc.) but also cover universal personal finance fundamentals.
 
 Keep answers focused and practical. When discussing account types, mention key limits and rules relevant to Canadians. Avoid giving specific investment advice — instead, educate on concepts and direct users to speak with a financial advisor for personalized guidance.
 
 Respond in plain text (no markdown formatting). Keep responses under 300 words unless the user asks for a detailed explanation.`;
 
-/** Maximum number of requests allowed per IP within the rate limit window. */
 const RATE_LIMIT_MAX = 10;
-
-/** Rate limit window duration in milliseconds (1 hour). */
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-
-/** In-memory store mapping IP addresses to their recent request timestamps. */
 const rateLimitStore = new Map<string, number[]>();
 
-/**
- * Checks whether the given IP has exceeded the rate limit.
- * Returns true if the request should be blocked, false if it is allowed.
- */
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW_MS;
   const recentTimestamps = (rateLimitStore.get(ip) ?? []).filter(
     (timestamp) => timestamp > windowStart
   );
-
-  if (recentTimestamps.length >= RATE_LIMIT_MAX) {
-    return true;
-  }
-
+  if (recentTimestamps.length >= RATE_LIMIT_MAX) return true;
   recentTimestamps.push(now);
   rateLimitStore.set(ip, recentTimestamps);
   return false;
@@ -48,8 +31,7 @@ export async function POST(req: Request) {
     });
   }
 
-  let messages: Anthropic.MessageParam[];
-
+  let messages: { role: string; content: string }[];
   try {
     const body = await req.json();
     messages = body.messages;
@@ -60,21 +42,39 @@ export async function POST(req: Request) {
     return new Response("Invalid request body", { status: 400 });
   }
 
-  const stream = client.messages.stream({
-    model: "claude-opus-4-6",
-    max_tokens: 1024,
-    thinking: { type: "adaptive" },
-    system: SYSTEM_PROMPT,
-    messages,
+  const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
+  const ollamaModel = process.env.OLLAMA_MODEL || "phi4-mini";
+
+  const ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: ollamaModel,
+      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+      stream: true,
+    }),
   });
 
   const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const reader = ollamaResponse.body!.getReader();
+
   const readable = new ReadableStream({
     async start(controller) {
+      let buffer = "";
       try {
-        for await (const event of stream) {
-          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-            controller.enqueue(encoder.encode(event.delta.text));
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const parsed = JSON.parse(line);
+            if (parsed.message?.content) {
+              controller.enqueue(encoder.encode(parsed.message.content));
+            }
           }
         }
       } finally {
