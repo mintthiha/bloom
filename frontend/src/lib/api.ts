@@ -228,6 +228,36 @@ export type ApplyRecurringResult = {
   }>;
 };
 
+export type SubscriptionCadence = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUAL";
+
+/** Where a surfaced subscription came from: detected history, a known rule, or both agreeing. */
+export type SubscriptionSource = "detected" | "rule" | "both";
+
+export type SubscriptionPriceChange = {
+  from: number;
+  to: number;
+  pct: number;
+};
+
+export type Subscription = {
+  merchant: string;
+  cadence: SubscriptionCadence;
+  currentPrice: number;
+  monthlyCost: number;
+  occurrences: number;
+  lastChargedAt: string | null;
+  nextExpectedAt: string | null;
+  source: SubscriptionSource;
+  priceChange: SubscriptionPriceChange | null;
+};
+
+export type SubscriptionSummary = {
+  monthlyTotal: number;
+  annualTotal: number;
+  count: number;
+  subscriptions: Subscription[];
+};
+
 export type TransactionQuery = DateRangeQuery & {
   type?: Transaction["type"];
   category?: string;
@@ -337,6 +367,7 @@ export const api = {
       { method: "POST", body: JSON.stringify(input) }
     ),
   deleteBudget: (id: string) => request<void>(`/budgets/${id}`, { method: "DELETE" }),
+  getSubscriptions: () => request<SubscriptionSummary>("/subscriptions"),
   listSavingsGoals: () => request<SavingsGoal[]>("/savings-goals"),
   createSavingsGoal: (input: { accountId: string; name: string; targetAmount: number }) =>
     request<SavingsGoal>("/savings-goals", { method: "POST", body: JSON.stringify(input) }),
