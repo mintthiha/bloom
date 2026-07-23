@@ -53,7 +53,7 @@ export function ChatSection({
             width: "8px",
             height: "8px",
             borderRadius: "50%",
-            background: "#3b82f6",
+            background: "#22c55e",
             flexShrink: 0,
           }}
         />
@@ -65,22 +65,8 @@ export function ChatSection({
             marginLeft: "4px",
           }}
         >
-          Powered by Claude
+          Self-hosted
         </span>
-      </div>
-
-      {/* Demo notice */}
-      <div
-        style={{
-          padding: "8px 24px",
-          background: "var(--surface-2)",
-          borderBottom: "1px solid var(--border)",
-          fontSize: "12px",
-          color: "var(--text-muted)",
-          textAlign: "center",
-        }}
-      >
-        AI model currently unavailable — this feature is disabled in the demo.
       </div>
 
       {/* Messages */}
@@ -120,8 +106,8 @@ export function ChatSection({
                 maxWidth: "75%",
                 padding: "10px 14px",
                 borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                background: msg.role === "user" ? "#3b82f622" : "var(--surface-2)",
-                border: msg.role === "user" ? "1px solid #3b82f644" : "1px solid var(--border)",
+                background: msg.role === "user" ? "#f59e0b22" : "var(--surface-2)",
+                border: msg.role === "user" ? "1px solid #f59e0b44" : "1px solid var(--border)",
                 fontSize: "13px",
                 lineHeight: 1.6,
                 color: "var(--text-primary)",
@@ -155,8 +141,8 @@ export function ChatSection({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={1}
-          disabled={streaming || true}
-          placeholder="AI unavailable in demo…"
+          disabled={streaming}
+          placeholder="Ask a question…"
           style={{
             flex: 1,
             resize: "none",
@@ -168,21 +154,21 @@ export function ChatSection({
             color: "var(--text-primary)",
             lineHeight: 1.5,
             fontFamily: "inherit",
-            opacity: 0.5,
+            opacity: streaming ? 0.5 : 1,
           }}
         />
         <button
           type="button"
           onClick={sendMessage}
-          disabled={true}
+          disabled={streaming || !input.trim()}
           style={{
             width: "38px",
             height: "38px",
             borderRadius: "10px",
             border: "none",
-            background: "var(--surface-3)",
-            color: "var(--text-muted)",
-            cursor: "not-allowed",
+            background: streaming || !input.trim() ? "var(--surface-3)" : "#f59e0b",
+            color: streaming || !input.trim() ? "var(--text-muted)" : "white",
+            cursor: streaming || !input.trim() ? "not-allowed" : "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
