@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ChatSection } from "./_components/_aiChat/ChatSection";
 import { LearningCards } from "./_components/_cardsSection/LearningCards";
@@ -55,7 +55,7 @@ export default function LearnPage() {
     input,
     setInput,
     streaming,
-    bottomRef,
+    messagesContainerRef,
     textareaRef,
     sendMessage,
     handleKeyDown,
@@ -70,12 +70,6 @@ export default function LearnPage() {
   useEffect(() => {
     setLearnPageExplored();
   }, []);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
 
   return (
     <div
@@ -123,7 +117,7 @@ export default function LearnPage() {
               messages={messages}
               isDouble={isDouble}
               streaming={streaming}
-              bottomRef={bottomRef}
+              messagesContainerRef={messagesContainerRef}
               textAreaRef={textareaRef}
               input={input}
               setInput={setInput}
@@ -150,7 +144,7 @@ export default function LearnPage() {
             messages={messages}
             isDouble={isDouble}
             streaming={streaming}
-            bottomRef={bottomRef}
+            messagesContainerRef={messagesContainerRef}
             textAreaRef={textareaRef}
             input={input}
             setInput={setInput}

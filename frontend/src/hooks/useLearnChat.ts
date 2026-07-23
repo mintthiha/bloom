@@ -7,12 +7,21 @@ export function useLearnChat() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  /**
+   * Follows the streamed reply by scrolling the messages container itself — not the
+   * window — so the page never jumps. Only auto-scrolls when the user is already near
+   * the bottom, so scrolling up to re-read an earlier answer isn't fought mid-stream.
+   */
   useEffect(() => {
-    if (messages.length > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 120) {
+      container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
 
@@ -85,7 +94,7 @@ export function useLearnChat() {
     input,
     setInput,
     streaming,
-    bottomRef,
+    messagesContainerRef,
     textareaRef,
     sendMessage,
     handleKeyDown,

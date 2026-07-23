@@ -6,7 +6,7 @@ type ChatSectionProps = {
   messages: Message[];
   isDouble: boolean;
   streaming: boolean;
-  bottomRef: React.RefObject<HTMLDivElement | null>;
+  messagesContainerRef: React.RefObject<HTMLDivElement | null>;
   textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
@@ -20,7 +20,7 @@ export function ChatSection({
   messages,
   isDouble,
   streaming,
-  bottomRef,
+  messagesContainerRef,
   textAreaRef,
   input,
   setInput,
@@ -71,6 +71,7 @@ export function ChatSection({
 
       {/* Messages */}
       <div
+        ref={messagesContainerRef}
         style={{
           minHeight: "220px",
           maxHeight: isDouble ? "560px" : "420px",
@@ -122,7 +123,6 @@ export function ChatSection({
             </div>
           </div>
         ))}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
