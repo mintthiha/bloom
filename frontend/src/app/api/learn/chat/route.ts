@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   }
 
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-  const ollamaModel = process.env.OLLAMA_MODEL || "phi4-mini";
+  const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
 
   // Personalize the system prompt with the user's own Bloom data when available; on any failure,
   // fall back to the generic prompt so the chat still works.
@@ -74,6 +74,16 @@ export async function POST(req: Request) {
       model: ollamaModel,
       messages: [{ role: "system", content: systemPrompt }, ...messages],
       stream: true,
+      // Keep the model resident between requests so it isn't reloaded from disk each time;
+      // overridable via OLLAMA_KEEP_ALIVE (e.g. "-1" to keep it loaded indefinitely).
+      keep_alive: process.env.OLLAMA_KEEP_ALIVE || "30m",
+      options: {
+        // Steady, factual answers over creative ones for financial guidance.
+        temperature: 0.4,
+        // Enlarge the context window so the prepended financial snapshot isn't truncated
+        // by Ollama's 2048-token default.
+        num_ctx: 4096,
+      },
     }),
   });
 

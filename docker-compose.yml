@@ -40,7 +40,7 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       OLLAMA_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: phi4-mini
+      OLLAMA_MODEL: qwen2.5:7b
     ports:
       - "3000:3000"
     depends_on:

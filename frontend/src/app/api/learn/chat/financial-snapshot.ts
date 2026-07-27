@@ -59,12 +59,14 @@ async function fetchRegisteredTransactions(
   return byType;
 }
 
-/**
- * Pulls the signed-in user's financial data from the backend in parallel and assembles the
- * snapshot the context builder consumes. Every section is best-effort: a failed fetch becomes an
- * empty/null value rather than throwing.
- */
-export async function fetchFinancialSnapshot(userId: string): Promise<FinancialSnapshot> {
+/** How long a fetched snapshot is reused before the backend is queried again, per user. */
+const SNAPSHOT_CACHE_TTL_MS = 30_000;
+
+/** Most-recent snapshot per user, so follow-up questions in a session skip the backend round-trips. */
+const snapshotCache = new Map<string, { snapshot: FinancialSnapshot; expiresAt: number }>();
+
+/** Fetches every section from the backend in parallel and assembles the snapshot. */
+async function buildSnapshotFromBackend(userId: string): Promise<FinancialSnapshot> {
   const [
     accounts,
     monthlySummary,
@@ -95,4 +97,19 @@ export async function fetchFinancialSnapshot(userId: string): Promise<FinancialS
     profile: profile ?? null,
     registeredTransactions: await fetchRegisteredTransactions(accountList, userId),
   };
+}
+
+/**
+ * Returns the signed-in user's financial snapshot, served from a short-lived in-memory cache when
+ * fresh so repeated questions in a session don't re-hit the backend. Every underlying fetch is
+ * best-effort: a failed section becomes an empty/null value rather than throwing.
+ */
+export async function fetchFinancialSnapshot(userId: string): Promise<FinancialSnapshot> {
+  const cached = snapshotCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.snapshot;
+  }
+  const snapshot = await buildSnapshotFromBackend(userId);
+  snapshotCache.set(userId, { snapshot, expiresAt: Date.now() + SNAPSHOT_CACHE_TTL_MS });
+  return snapshot;
 }
