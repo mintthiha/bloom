@@ -441,7 +441,12 @@ body {
   .reset-button:hover .reset-button-icon,
   .budget-delete-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
-  .budget-card:hover {
+  .budget-card:hover,
+  .chat-suggestion:hover,
+  .chat-suggestion:active,
+  .chat-send:not(:disabled):hover,
+  .chat-send:not(:disabled):active,
+  .chat-danger:active {
     transform: none;
   }
 }
@@ -582,15 +587,55 @@ body::before {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-/* Clickable starter-prompt chips shown in the empty chat. */
+/* Clickable starter-prompt chips shown in the empty chat: slide toward the amber accent on hover. */
 .chat-suggestion {
   transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.18s ease;
 }
 .chat-suggestion:hover {
   background: var(--surface-3);
-  border-color: var(--text-muted);
+  border-color: #f59e0b;
+  transform: translateX(4px);
+  box-shadow: -3px 0 0 0 #f59e0b;
+}
+.chat-suggestion:active {
+  transform: translateX(2px) scale(0.99);
+}
+
+/* Amber send button: lift + glow on hover, only while enabled. */
+.chat-send {
+  transition:
+    transform 0.14s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.18s ease,
+    filter 0.15s ease;
+}
+.chat-send:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 6px 16px -4px #f59e0baa;
+}
+.chat-send:not(:disabled):active {
+  transform: translateY(0) scale(0.94);
+}
+
+/* Stop and clear buttons share a red-tinted "destructive/interrupt" hover. */
+.chat-danger {
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chat-danger:hover {
+  background: #ef444422;
+  border-color: #ef444466;
+  color: #ef4444;
+}
+.chat-danger:active {
+  transform: scale(0.95);
 }
 
 /* Markdown rendering inside assistant chat bubbles — tames default element margins so the

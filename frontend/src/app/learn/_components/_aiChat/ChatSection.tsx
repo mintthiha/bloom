@@ -82,7 +82,7 @@ export function ChatSection({
         {messages.length > 0 && (
           <button
             type="button"
-            className="press"
+            className="chat-danger"
             onClick={onClear}
             title="Clear conversation"
             style={{
@@ -223,7 +223,7 @@ export function ChatSection({
         {streaming ? (
           <button
             type="button"
-            className="press"
+            className="chat-danger"
             onClick={onStop}
             title="Stop generating"
             style={{
@@ -245,7 +245,7 @@ export function ChatSection({
         ) : (
           <button
             type="button"
-            className="press"
+            className="chat-send"
             onClick={() => sendMessage()}
             disabled={!input.trim()}
             title="Send"
