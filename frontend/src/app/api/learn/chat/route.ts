@@ -1,3 +1,7 @@
+import { auth } from "@/auth";
+import { buildFinancialContext } from "./financial-context";
+import { fetchFinancialSnapshot } from "./financial-snapshot";
+
 const SYSTEM_PROMPT = `You are Bloom's financial education assistant, helping Canadians understand personal finance concepts. You are knowledgeable, friendly, and concise. Focus on Canadian-specific information (TFSA, RRSP, FHSA, CRA, etc.) but also cover universal personal finance fundamentals.
 
 Keep answers focused and practical. When discussing account types, mention key limits and rules relevant to Canadians. Avoid giving specific investment advice — instead, educate on concepts and direct users to speak with a financial advisor for personalized guidance.
@@ -21,6 +25,11 @@ function isRateLimited(ip: string): boolean {
 }
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const forwardedFor = req.headers.get("x-forwarded-for");
   const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
 
@@ -45,12 +54,25 @@ export async function POST(req: Request) {
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
   const ollamaModel = process.env.OLLAMA_MODEL || "phi4-mini";
 
+  // Personalize the system prompt with the user's own Bloom data when available; on any failure,
+  // fall back to the generic prompt so the chat still works.
+  let systemPrompt = SYSTEM_PROMPT;
+  try {
+    const snapshot = await fetchFinancialSnapshot(session.user.id);
+    const financialContext = buildFinancialContext(snapshot);
+    if (financialContext) {
+      systemPrompt = `${SYSTEM_PROMPT}\n\n${financialContext}`;
+    }
+  } catch {
+    // Keep the generic prompt.
+  }
+
   const ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: ollamaModel,
-      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+      messages: [{ role: "system", content: systemPrompt }, ...messages],
       stream: true,
     }),
   });
