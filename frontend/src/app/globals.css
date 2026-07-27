@@ -581,3 +581,72 @@ body::before {
 .scrollbar-fade.scrollbar-visible {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
+
+/* Clickable starter-prompt chips shown in the empty chat. */
+.chat-suggestion {
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.chat-suggestion:hover {
+  background: var(--surface-3);
+  border-color: var(--text-muted);
+}
+
+/* Markdown rendering inside assistant chat bubbles — tames default element margins so the
+   rendered content matches the tight, 13px/1.6 bubble typography. */
+.chat-markdown > :first-child {
+  margin-top: 0;
+}
+.chat-markdown > :last-child {
+  margin-bottom: 0;
+}
+.chat-markdown p {
+  margin: 0 0 8px;
+}
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.chat-markdown li {
+  margin: 2px 0;
+}
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 12px 0 6px;
+}
+.chat-markdown a {
+  color: #f59e0b;
+  text-decoration: underline;
+}
+.chat-markdown code {
+  background: var(--surface-3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.chat-markdown pre {
+  background: var(--surface-3);
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0 0 8px;
+}
+.chat-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.chat-markdown table {
+  border-collapse: collapse;
+  margin: 0 0 8px;
+}
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+}

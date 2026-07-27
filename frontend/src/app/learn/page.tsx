@@ -59,6 +59,8 @@ export default function LearnPage() {
     textareaRef,
     sendMessage,
     handleKeyDown,
+    stopGeneration,
+    clearConversation,
   } = useLearnChat();
 
   useEffect(() => {
@@ -123,6 +125,8 @@ export default function LearnPage() {
               setInput={setInput}
               sendMessage={sendMessage}
               handleKeyDown={handleKeyDown}
+              onStop={stopGeneration}
+              onClear={clearConversation}
             />
           </div>
         </div>
@@ -150,6 +154,8 @@ export default function LearnPage() {
             setInput={setInput}
             sendMessage={sendMessage}
             handleKeyDown={handleKeyDown}
+            onStop={stopGeneration}
+            onClear={clearConversation}
           />
         </>
       )}

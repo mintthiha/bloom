@@ -1,20 +1,30 @@
 "use client";
 
-import { Send } from "lucide-react";
+import { Send, Square, Trash2 } from "lucide-react";
+import type { ChatMessage } from "./chat-storage";
+import { MarkdownMessage } from "./MarkdownMessage";
 
 type ChatSectionProps = {
-  messages: Message[];
+  messages: ChatMessage[];
   isDouble: boolean;
   streaming: boolean;
   messagesContainerRef: React.RefObject<HTMLDivElement | null>;
   textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
-  sendMessage: () => void;
+  sendMessage: (overrideText?: string) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onStop: () => void;
+  onClear: () => void;
 };
 
-type Message = { role: "user" | "assistant"; content: string };
+/** Starter questions shown in the empty chat; the personalized ones exercise the user's own data. */
+const SUGGESTED_PROMPTS = [
+  "How am I doing on my budget this month?",
+  "How much TFSA room do I have left?",
+  "What's my net worth right now?",
+  "What's the difference between a TFSA and an RRSP?",
+];
 
 export function ChatSection({
   messages,
@@ -26,6 +36,8 @@ export function ChatSection({
   setInput,
   sendMessage,
   handleKeyDown,
+  onStop,
+  onClear,
 }: ChatSectionProps) {
   return (
     <div
@@ -67,6 +79,30 @@ export function ChatSection({
         >
           Self-hosted
         </span>
+        {messages.length > 0 && (
+          <button
+            type="button"
+            className="press"
+            onClick={onClear}
+            title="Clear conversation"
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              background: "transparent",
+              border: "1px solid var(--border)",
+              borderRadius: "8px",
+              padding: "5px 9px",
+              fontSize: "12px",
+              color: "var(--text-secondary)",
+              cursor: "pointer",
+            }}
+          >
+            <Trash2 size={13} />
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -83,15 +119,38 @@ export function ChatSection({
         }}
       >
         {messages.length === 0 && (
-          <div
-            style={{
-              color: "var(--text-muted)",
-              fontSize: "13px",
-              margin: "auto",
-              textAlign: "center",
-            }}
-          >
-            Ask me anything about TFSAs, RRSPs, credit cards, budgeting, or investing in Canada.
+          <div style={{ margin: "auto", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div
+              style={{
+                color: "var(--text-muted)",
+                fontSize: "13px",
+                textAlign: "center",
+              }}
+            >
+              Ask me anything about your money, or try one of these:
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {SUGGESTED_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className="chat-suggestion"
+                  onClick={() => sendMessage(prompt)}
+                  style={{
+                    textAlign: "left",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "10px",
+                    padding: "9px 12px",
+                    fontSize: "13px",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -112,14 +171,18 @@ export function ChatSection({
                 fontSize: "13px",
                 lineHeight: 1.6,
                 color: "var(--text-primary)",
-                whiteSpace: "pre-wrap",
+                whiteSpace: msg.role === "user" ? "pre-wrap" : "normal",
               }}
             >
-              {msg.content}
-              {msg.role === "assistant" &&
-                streaming &&
-                i === messages.length - 1 &&
-                msg.content === "" && <span style={{ color: "var(--text-muted)" }}>Thinking…</span>}
+              {msg.role === "assistant" ? (
+                msg.content ? (
+                  <MarkdownMessage content={msg.content} />
+                ) : (
+                  <span style={{ color: "var(--text-muted)" }}>Thinking…</span>
+                )
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
@@ -157,27 +220,52 @@ export function ChatSection({
             opacity: streaming ? 0.5 : 1,
           }}
         />
-        <button
-          type="button"
-          onClick={sendMessage}
-          disabled={streaming || !input.trim()}
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "10px",
-            border: "none",
-            background: streaming || !input.trim() ? "var(--surface-3)" : "#f59e0b",
-            color: streaming || !input.trim() ? "var(--text-muted)" : "white",
-            cursor: streaming || !input.trim() ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            transition: "background 0.15s",
-          }}
-        >
-          <Send size={15} />
-        </button>
+        {streaming ? (
+          <button
+            type="button"
+            className="press"
+            onClick={onStop}
+            title="Stop generating"
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
+              border: "1px solid var(--border)",
+              background: "var(--surface-3)",
+              color: "var(--text-primary)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Square size={13} fill="currentColor" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="press"
+            onClick={() => sendMessage()}
+            disabled={!input.trim()}
+            title="Send"
+            style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "10px",
+              border: "none",
+              background: input.trim() ? "#f59e0b" : "var(--surface-3)",
+              color: input.trim() ? "white" : "var(--text-muted)",
+              cursor: input.trim() ? "pointer" : "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Send size={15} />
+          </button>
+        )}
       </div>
     </div>
   );

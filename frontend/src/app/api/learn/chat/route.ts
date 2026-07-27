@@ -6,7 +6,7 @@ const SYSTEM_PROMPT = `You are Bloom's financial education assistant, helping Ca
 
 Keep answers focused and practical. When discussing account types, mention key limits and rules relevant to Canadians. Avoid giving specific investment advice — instead, educate on concepts and direct users to speak with a financial advisor for personalized guidance.
 
-Respond in plain text (no markdown formatting). Keep responses under 300 words unless the user asks for a detailed explanation.`;
+Format answers with simple markdown when it aids clarity — short paragraphs, bold for key figures, and bullet lists for multiple points. Keep responses under 300 words unless the user asks for a detailed explanation.`;
 
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
