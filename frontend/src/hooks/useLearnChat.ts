@@ -44,7 +44,22 @@ export function useLearnChat() {
         body: JSON.stringify({ messages: newMessages }),
       });
 
-      if (!res.ok || !res.body) throw new Error("Request failed");
+      if (!res.ok || !res.body) {
+        // Surface the server's own message (e.g. the 503 when Ollama is down) instead of a generic one.
+        const serverMessage = (await res.text().catch(() => "")).trim();
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last && last.role === "assistant") {
+            updated[updated.length - 1] = {
+              ...last,
+              content: serverMessage || "Sorry, something went wrong. Please try again.",
+            };
+          }
+          return updated;
+        });
+        return;
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
