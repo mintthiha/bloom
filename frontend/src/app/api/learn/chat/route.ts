@@ -1,10 +1,13 @@
 import { auth } from "@/auth";
+import { buildCanadianTaxFacts } from "./canadian-tax-facts";
 import { buildFinancialContext } from "./financial-context";
 import { fetchFinancialSnapshot } from "./financial-snapshot";
 
 const SYSTEM_PROMPT = `You are Bloom's financial education assistant, helping Canadians understand personal finance concepts. You are knowledgeable, friendly, and concise. Focus on Canadian-specific information (TFSA, RRSP, FHSA, CRA, etc.) but also cover universal personal finance fundamentals.
 
 Keep answers focused and practical. When discussing account types, mention key limits and rules relevant to Canadians. Avoid giving specific investment advice — instead, educate on concepts and direct users to speak with a financial advisor for personalized guidance.
+
+For any Canadian contribution limit or tax figure, use only the authoritative numbers provided in this prompt — never state a limit from memory. If a specific figure isn't provided, say you're not certain rather than guessing.
 
 Format answers with simple markdown when it aids clarity — short paragraphs, bold for key figures, and bullet lists for multiple points. Keep responses under 300 words unless the user asks for a detailed explanation.`;
 
@@ -62,17 +65,17 @@ export async function POST(req: Request) {
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
   const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
 
-  // Personalize the system prompt with the user's own Bloom data when available; on any failure,
-  // fall back to the generic prompt so the chat still works.
-  let systemPrompt = SYSTEM_PROMPT;
+  // Always ground the model with Bloom's authoritative Canadian limits so it can't guess them.
+  let systemPrompt = `${SYSTEM_PROMPT}\n\n${buildCanadianTaxFacts()}`;
+  // Personalize with the user's own Bloom data when available; on any failure, keep going without it.
   try {
     const snapshot = await fetchFinancialSnapshot(session.user.id);
     const financialContext = buildFinancialContext(snapshot);
     if (financialContext) {
-      systemPrompt = `${SYSTEM_PROMPT}\n\n${financialContext}`;
+      systemPrompt = `${systemPrompt}\n\n${financialContext}`;
     }
   } catch {
-    // Keep the generic prompt.
+    // Keep the prompt without personalization.
   }
 
   // Guard the upstream call: a connect timeout while waiting for the first response, then an idle
@@ -94,8 +97,9 @@ export async function POST(req: Request) {
         // overridable via OLLAMA_KEEP_ALIVE (e.g. "-1" to keep it loaded indefinitely).
         keep_alive: process.env.OLLAMA_KEEP_ALIVE || "30m",
         options: {
-          // Steady, factual answers over creative ones for financial guidance.
-          temperature: 0.4,
+          // Low temperature keeps answers factual and anchored to the provided figures, minimizing
+          // hallucinated numbers and off-topic drift — accuracy matters more than variety here.
+          temperature: 0.2,
           // Enlarge the context window so the prepended financial snapshot isn't truncated
           // by Ollama's 2048-token default.
           num_ctx: 4096,

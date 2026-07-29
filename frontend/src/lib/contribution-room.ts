@@ -22,6 +22,11 @@ const TFSA_ANNUAL_LIMITS: Record<number, number> = {
   2026: 7000,
 };
 
+/** The CRA TFSA annual contribution dollar limit for a given year, or null if not on record. */
+export function getTfsaAnnualLimit(year: number): number | null {
+  return TFSA_ANNUAL_LIMITS[year] ?? null;
+}
+
 /** CRA fixed annual FHSA contribution limit. */
 export const FHSA_ANNUAL_LIMIT = 8000;
 
