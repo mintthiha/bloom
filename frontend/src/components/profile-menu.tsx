@@ -17,7 +17,13 @@ export function ProfileMenu() {
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  /** Resets the image-error state when the avatar URL changes so a new source can retry loading. */
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [session?.user?.image]);
 
   /**
    * Loads the current user's saved profile so the menu reflects Prisma data
@@ -79,7 +85,7 @@ export function ProfileMenu() {
 
   const displayName = [firstName, lastName].filter(Boolean).join(" ") || "Your profile";
   const displayHandle = username ? `@${username}` : (session.user.email ?? "");
-  const avatarFallback = (displayName[0] ?? "B").toUpperCase();
+  const showAvatarImage = Boolean(session.user.image) && !avatarFailed;
 
   return (
     <div ref={containerRef} style={{ position: "relative", flexShrink: 0 }}>
@@ -100,12 +106,13 @@ export function ProfileMenu() {
           borderRadius: "999px",
         }}
       >
-        {session.user.image ? (
+        {showAvatarImage ? (
           <img
-            src={session.user.image}
+            src={session.user.image ?? undefined}
             alt={displayName}
             width={32}
             height={32}
+            onError={() => setAvatarFailed(true)}
             style={{
               borderRadius: "999px",
               display: "block",
@@ -114,7 +121,6 @@ export function ProfileMenu() {
           />
         ) : (
           <div
-            className="num"
             style={{
               width: "32px",
               height: "32px",
@@ -125,11 +131,9 @@ export function ProfileMenu() {
               background: "#3b82f622",
               border: isOpen ? "1px solid #3b82f6" : "1px solid #3b82f644",
               color: "#3b82f6",
-              fontSize: "12px",
-              fontWeight: 700,
             }}
           >
-            {avatarFallback}
+            <User size={16} />
           </div>
         )}
       </button>
