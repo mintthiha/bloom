@@ -3,6 +3,7 @@
 import { Send, Square, Trash2 } from "lucide-react";
 import type { ChatMessage } from "./chat-storage";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 
 type ChatSectionProps = {
   messages: ChatMessage[];
@@ -178,7 +179,7 @@ export function ChatSection({
                 msg.content ? (
                   <MarkdownMessage content={msg.content} />
                 ) : (
-                  <span style={{ color: "var(--text-muted)" }}>Thinking…</span>
+                  <ThinkingIndicator />
                 )
               ) : (
                 msg.content
