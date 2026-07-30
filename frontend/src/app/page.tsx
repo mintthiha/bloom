@@ -34,6 +34,7 @@ import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot"
 import { BudgetsCard } from "./_components/_budgets/BudgetsCard";
 import { RecurringTransactionsCard } from "./_components/_recurringTransactions/RecurringTransactionsCard";
 import { RecurringCalendar } from "./_components/_recurringCalendar/RecurringCalendar";
+import { NotificationBell } from "./_components/_notifications/NotificationBell";
 import { NetWorthHistory } from "./_components/_netWorthHistory/NetWorthHistory";
 import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalancesCard";
 import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
@@ -512,6 +513,7 @@ function Home() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <NotificationBell />
             <DateRangeControls value={dateRange} onChange={setDateRange} />
           </div>
         </div>

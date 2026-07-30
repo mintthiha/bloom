@@ -70,8 +70,32 @@ export type Profile = {
   tfsaBirthYear: number | null;
   tfsaRoomUsedElsewhere: number | null;
   rrspContributionRoom: number | null;
+  billRemindersEnabled: boolean;
+  billReminderLeadDays: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type NotificationKind = "BILL_REMINDER";
+export type NotificationStatus = "UNREAD" | "READ" | "DISMISSED";
+
+/** A single in-app notification (currently only bill reminders). */
+export type AppNotification = {
+  id: string;
+  kind: NotificationKind;
+  recurringTransactionId: string | null;
+  title: string;
+  body: string;
+  dueDate: string | null;
+  status: NotificationStatus;
+  createdAt: string;
+  readAt: string | null;
+};
+
+/** Notification list envelope returned by the notifications endpoint. */
+export type NotificationListResult = {
+  notifications: AppNotification[];
+  unreadCount: number;
 };
 
 export type NetWorthSnapshot = {
@@ -483,4 +507,18 @@ export const api = {
     tfsaRoomUsedElsewhere?: number | null;
     rrspContributionRoom?: number | null;
   }) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
+  updateReminderPreferences: (input: {
+    billRemindersEnabled?: boolean;
+    billReminderLeadDays?: number;
+  }) =>
+    request<Profile>("/profile/reminder-preferences", {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  listNotifications: () => request<NotificationListResult>("/notifications"),
+  markNotificationRead: (id: string) =>
+    request<AppNotification>(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllNotificationsRead: () =>
+    request<{ updated: number }>("/notifications/read-all", { method: "POST" }),
+  dismissNotification: (id: string) => request<void>(`/notifications/${id}`, { method: "DELETE" }),
 };

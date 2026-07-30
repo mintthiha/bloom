@@ -64,6 +64,8 @@ model Profile {
   tfsaBirthYear           Int?
   tfsaRoomUsedElsewhere   Decimal? @db.Decimal(19, 4)
   rrspContributionRoom    Decimal? @db.Decimal(19, 4)
+  billRemindersEnabled    Boolean  @default(true)
+  billReminderLeadDays    Int      @default(3)
   createdAt               DateTime @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @db.Timestamptz(3)
 }
@@ -180,6 +182,25 @@ model RecurringTransaction {
   updatedAt   DateTime                 @updatedAt @db.Timestamptz(3)
 
   account     Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  notifications Notification[]
 
   @@index([userId, active, nextRunAt])
+}
+
+model Notification {
+  id                     String    @id @default(cuid())
+  userId                 String
+  kind                   String
+  recurringTransactionId String?
+  title                  String
+  body                   String
+  dueDate                DateTime? @db.Date
+  status                 String    @default("UNREAD")
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  readAt                 DateTime? @db.Timestamptz(3)
+
+  recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, recurringTransactionId, dueDate], name: "Notification_dedupe_key")
+  @@index([userId, status])
 }

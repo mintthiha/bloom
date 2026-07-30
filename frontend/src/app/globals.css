@@ -747,3 +747,54 @@ body::before {
   padding: 4px 8px;
   text-align: left;
 }
+
+/* Notification center — bell trigger, row, and dismiss button feedback.
+   Inline styles can't hold :hover, so hover/active live here. */
+.notification-bell {
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.notification-bell:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+.notification-bell:active {
+  transform: scale(0.96);
+}
+
+.notification-item {
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.notification-item:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-3);
+}
+
+.notification-dismiss {
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.notification-dismiss:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+.notification-dismiss:active {
+  transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-bell,
+  .notification-dismiss {
+    transition: none;
+  }
+  .notification-bell:active,
+  .notification-dismiss:active {
+    transform: none;
+  }
+}

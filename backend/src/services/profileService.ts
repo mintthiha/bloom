@@ -11,6 +11,11 @@ type ProfileInput = {
   rrspContributionRoom?: number | null;
 };
 
+type ReminderPreferenceInput = {
+  billRemindersEnabled?: boolean;
+  billReminderLeadDays?: number;
+};
+
 type ProfileRecord = {
   userId: string;
   firstName: string;
@@ -20,9 +25,22 @@ type ProfileRecord = {
   tfsaBirthYear: number | null;
   tfsaRoomUsedElsewhere: string | null;
   rrspContributionRoom: string | null;
+  billRemindersEnabled: boolean;
+  billReminderLeadDays: number;
   createdAt: Date;
   updatedAt: Date;
 };
+
+/** Converts a raw profile row (Decimal strings) to API-safe numeric values. */
+function normalizeProfile(row: ProfileRecord) {
+  return {
+    ...row,
+    tfsaRoomUsedElsewhere:
+      row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
+    rrspContributionRoom:
+      row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
+  };
+}
 
 /**
  * Retrieves the profile row for a user id.
@@ -34,6 +52,8 @@ export async function getProfile(userId: string) {
            "tfsaBirthYear",
            "tfsaRoomUsedElsewhere",
            "rrspContributionRoom",
+           "billRemindersEnabled",
+           "billReminderLeadDays",
            "createdAt", "updatedAt"
     FROM "Profile"
     WHERE "userId" = ${userId}
@@ -41,13 +61,7 @@ export async function getProfile(userId: string) {
   `;
   const row = rows[0];
   if (!row) return null;
-  return {
-    ...row,
-    tfsaRoomUsedElsewhere:
-      row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
-    rrspContributionRoom:
-      row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
-  };
+  return normalizeProfile(row);
 }
 
 /**
@@ -152,15 +166,55 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "tfsaBirthYear",
               "tfsaRoomUsedElsewhere",
               "rrspContributionRoom",
+              "billRemindersEnabled",
+              "billReminderLeadDays",
               "createdAt", "updatedAt"
   `;
 
-  const row = rows[0];
-  return {
-    ...row,
-    tfsaRoomUsedElsewhere:
-      row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
-    rrspContributionRoom:
-      row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
-  };
+  return normalizeProfile(rows[0]);
+}
+
+const MAX_REMINDER_LEAD_DAYS = 30;
+
+/**
+ * Updates the current user's reminder preferences. Omitted fields are left
+ * unchanged. Requires an existing profile.
+ */
+export async function updateReminderPreferences(userId: string, input: ReminderPreferenceInput) {
+  if (input.billReminderLeadDays !== undefined) {
+    if (
+      !Number.isInteger(input.billReminderLeadDays) ||
+      input.billReminderLeadDays < 0 ||
+      input.billReminderLeadDays > MAX_REMINDER_LEAD_DAYS
+    ) {
+      throw new AppError(
+        400,
+        `billReminderLeadDays must be an integer between 0 and ${MAX_REMINDER_LEAD_DAYS}`
+      );
+    }
+  }
+
+  const enabled = input.billRemindersEnabled ?? null;
+  const leadDays = input.billReminderLeadDays ?? null;
+
+  const rows = await prisma.$queryRaw<ProfileRecord[]>`
+    UPDATE "Profile"
+    SET "billRemindersEnabled" = COALESCE(${enabled}::boolean, "billRemindersEnabled"),
+        "billReminderLeadDays" = COALESCE(${leadDays}::int, "billReminderLeadDays"),
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "userId" = ${userId}
+    RETURNING "userId", "firstName", "lastName", "username", "email",
+              "tfsaBirthYear",
+              "tfsaRoomUsedElsewhere",
+              "rrspContributionRoom",
+              "billRemindersEnabled",
+              "billReminderLeadDays",
+              "createdAt", "updatedAt"
+  `;
+
+  if (!rows[0]) {
+    throw new AppError(404, "Profile not found");
+  }
+
+  return normalizeProfile(rows[0]);
 }

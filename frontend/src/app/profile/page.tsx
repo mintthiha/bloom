@@ -1,6 +1,7 @@
 "use client";
 
 import { ProfileFormPanel } from "@/components/profile-form-panel";
+import { ReminderSettings } from "./_components/_reminderSettings/ReminderSettings";
 
 export default function ProfilePage() {
   return (
@@ -25,6 +26,7 @@ export default function ProfilePage() {
         description="Update the personal information stored for your Bloom account."
         submitLabel="Save profile"
       />
+      <ReminderSettings />
     </div>
   );
 }

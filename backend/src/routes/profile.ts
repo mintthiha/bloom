@@ -108,4 +108,35 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+/**
+ * Updates only the current user's bill-reminder preferences.
+ * Both fields are optional; omitted fields keep their current value.
+ */
+router.patch("/reminder-preferences", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    let billRemindersEnabled: boolean | undefined;
+    if (body.billRemindersEnabled !== undefined) {
+      if (typeof body.billRemindersEnabled !== "boolean") {
+        throw new AppError(400, "billRemindersEnabled must be a boolean");
+      }
+      billRemindersEnabled = body.billRemindersEnabled;
+    }
+    const billReminderLeadDays = parseOptionalInt(
+      body.billReminderLeadDays,
+      "billReminderLeadDays",
+      0,
+      30
+    );
+    res.json(
+      await profileService.updateReminderPreferences(uid(req), {
+        billRemindersEnabled,
+        billReminderLeadDays: billReminderLeadDays ?? undefined,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
