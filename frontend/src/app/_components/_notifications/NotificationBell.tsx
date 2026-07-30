@@ -139,25 +139,26 @@ export function NotificationBell() {
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
+          side="right"
           style={{
-            width: "min(420px, 100vw)",
-            maxWidth: "100vw",
-            background: "var(--surface-1)",
-            color: "var(--text-primary)",
+            overflowY: "auto",
+            background: "var(--sidebar)",
             borderLeft: "1px solid var(--border)",
-            boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.35)",
           }}
         >
-          <SheetHeader>
+          <SheetHeader style={{ padding: "28px 24px 16px" }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: "12px",
+                marginRight: "28px",
               }}
             >
-              <SheetTitle>Notifications</SheetTitle>
+              <SheetTitle style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.4px" }}>
+                Notifications
+              </SheetTitle>
               {hasUnread && (
                 <button
                   type="button"
@@ -171,25 +172,26 @@ export function NotificationBell() {
                     fontWeight: 600,
                     cursor: "pointer",
                     padding: "2px 4px",
-                    marginRight: "28px",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   Mark all read
                 </button>
               )}
             </div>
-            <SheetDescription>Upcoming and overdue bill reminders.</SheetDescription>
+            <SheetDescription
+              style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}
+            >
+              Upcoming and overdue bill reminders.
+            </SheetDescription>
           </SheetHeader>
 
           <div
             style={{
-              flex: 1,
-              minHeight: 0,
               display: "flex",
               flexDirection: "column",
               gap: "8px",
-              padding: "0 16px 16px",
-              overflowY: "auto",
+              padding: "0 24px 24px",
             }}
           >
             {loading ? (
