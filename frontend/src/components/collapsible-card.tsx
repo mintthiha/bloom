@@ -12,6 +12,8 @@ type CollapsibleCardProps = {
   headerRight?: ReactNode | ((isCollapsed: boolean) => ReactNode);
   children: ReactNode;
   defaultCollapsed?: boolean;
+  /** When true, forces the card open regardless of its current collapsed state. */
+  forceExpanded?: boolean;
   style?: CSSProperties;
   className?: string;
   // "data" (default) renders a filled tile for read-only insights; "action" renders a dashed,
@@ -71,6 +73,7 @@ export function CollapsibleCard({
   headerRight,
   children,
   defaultCollapsed = false,
+  forceExpanded = false,
   style,
   className,
   variant = "data",
@@ -90,6 +93,11 @@ export function CollapsibleCard({
     }
     setIsCollapsed(allCollapsed);
   }, [allCollapsed]);
+
+  /** Opens the card whenever an external caller signals that new content needs to be visible. */
+  useEffect(() => {
+    if (forceExpanded) setIsCollapsed(false);
+  }, [forceExpanded]);
 
   const headerRightContent =
     typeof headerRight === "function" ? headerRight(isCollapsed) : headerRight;

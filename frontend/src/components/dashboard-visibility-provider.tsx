@@ -33,7 +33,12 @@ export const ALL_CARD_IDS: CardId[] = [
  * Cards shown to a brand-new user — a lean starter set that avoids first-run overwhelm.
  * The rest stay off until the user opts in from the Customize panel.
  */
-export const DEFAULT_VISIBLE_CARDS: CardId[] = ["safe-to-spend", "monthly-snapshot", "budgets"];
+export const DEFAULT_VISIBLE_CARDS: CardId[] = [
+  "safe-to-spend",
+  "monthly-snapshot",
+  "budgets",
+  "account-balances",
+];
 
 export const CARD_METADATA: Record<
   CardId,
@@ -146,6 +151,7 @@ const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue
 /**
  * Reads the persisted visible-card set from localStorage. New users (no stored preference) get the
  * lean starter set rather than every card at once. Called after mount to keep SSR hydration-safe.
+ * Adds account-balances to any existing stored set that predates it becoming a default.
  */
 function readStoredVisibility(): Set<CardId> {
   if (typeof window === "undefined") return new Set(DEFAULT_VISIBLE_CARDS);
@@ -153,7 +159,11 @@ function readStoredVisibility(): Set<CardId> {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (!stored) return new Set(DEFAULT_VISIBLE_CARDS);
     const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed)) return new Set(parsed as CardId[]);
+    if (Array.isArray(parsed)) {
+      const result = new Set(parsed as CardId[]);
+      if (!result.has("account-balances")) result.add("account-balances");
+      return result;
+    }
   } catch {}
   return new Set(DEFAULT_VISIBLE_CARDS);
 }

@@ -7,10 +7,16 @@ import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
 import { toSignedBalance, accountDisplayName } from "@/lib/account-view";
-import { readPinnedAccountIds } from "@/lib/account-preferences";
+import {
+  readPinnedAccountIds,
+  writePinnedAccountIds,
+  readHiddenAccountIds,
+} from "@/lib/account-preferences";
 
 type Props = {
   accounts: Account[];
+  /** Id of the most recently created account — always shown and highlighted with a glow. */
+  newlyCreatedId?: string;
 };
 
 const POSITIVE_COLOR = "#22c55e";
@@ -70,24 +76,47 @@ function ViewAllLink() {
  * Compact balances card for the dashboard — shows the accounts the user pinned on the Accounts page,
  * falling back to their top accounts by balance when nothing is pinned. Click a row to open the account.
  */
-export function AccountBalancesCard({ accounts }: Props) {
+export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
   const router = useRouter();
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
 
-  /** Load the pinned selection after mount to keep the initial render hydration-safe. */
+  /** Load persisted preferences after mount to keep the initial render hydration-safe. */
   useEffect(() => {
     setPinnedIds(readPinnedAccountIds());
+    setHiddenIds(readHiddenAccountIds());
   }, []);
 
+  /** Auto-pins a newly created account so it persists on the dashboard after a refresh. */
+  useEffect(() => {
+    if (!newlyCreatedId) return;
+    setPinnedIds((previous) => {
+      if (previous.includes(newlyCreatedId)) return previous;
+      const next = [...previous, newlyCreatedId];
+      writePinnedAccountIds(next);
+      return next;
+    });
+  }, [newlyCreatedId]);
+
   const { rows, isPinnedView } = useMemo(() => {
+    const hiddenSet = new Set(hiddenIds);
+    const visibleAccounts = accounts.filter((account) => !hiddenSet.has(account.id));
+
     const pinnedSet = new Set(pinnedIds);
-    const pinned = accounts.filter((account) => pinnedSet.has(account.id));
-    const source =
+    const pinned = visibleAccounts.filter((account) => pinnedSet.has(account.id));
+    let source =
       pinned.length > 0
         ? pinned
-        : [...accounts]
+        : [...visibleAccounts]
             .sort((first, second) => toSignedBalance(second) - toSignedBalance(first))
             .slice(0, FALLBACK_COUNT);
+
+    // Always surface the newly created account even if it didn't make the top N.
+    if (newlyCreatedId && !source.find((account) => account.id === newlyCreatedId)) {
+      const newAccount = accounts.find((account) => account.id === newlyCreatedId);
+      if (newAccount) source = [...source, newAccount];
+    }
+
     const ranked = source
       .map((account) => ({
         id: account.id,
@@ -97,7 +126,7 @@ export function AccountBalancesCard({ accounts }: Props) {
       }))
       .sort((first, second) => second.balance - first.balance);
     return { rows: ranked, isPinnedView: pinned.length > 0 };
-  }, [accounts, pinnedIds]);
+  }, [accounts, pinnedIds, hiddenIds, newlyCreatedId]);
 
   const total = rows.reduce((sum, row) => sum + row.balance, 0);
   // Scale every bar against the largest magnitude so a near-zero or negative account still reads at a glance.
@@ -107,10 +136,11 @@ export function AccountBalancesCard({ accounts }: Props) {
     <CollapsibleCard
       eyebrow="Account Balances"
       title="Balances at a glance"
+      forceExpanded={!!newlyCreatedId}
       description={
         isPinnedView
-          ? "The accounts you pinned, with credit shown as what you owe."
-          : "Your top accounts by balance, You can pin the ones you want on the Accounts page. By default, the top 3 accounts are shown."
+          ? "Your pinned accounts, with credit shown as what you owe. Newly created accounts are pinned here automatically — unpin them from the Accounts page."
+          : "By default, your top 3 accounts by balance. New accounts are pinned here automatically. Hidden accounts won't appear. Manage pins and visibility from the Accounts page."
       }
       className="fade-up fade-up-1"
       headerRight={
@@ -129,7 +159,7 @@ export function AccountBalancesCard({ accounts }: Props) {
             <button
               key={row.id}
               type="button"
-              className="balance-row"
+              className={`balance-row${row.id === newlyCreatedId ? " new-account-glow" : ""}`}
               onClick={() => router.push(`/account/${row.id}`)}
               style={{
                 display: "block",

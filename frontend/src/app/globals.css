@@ -531,9 +531,29 @@ body {
   animation: flashAmber 0.5s ease-out both;
 }
 
+@keyframes newAccountGlow {
+  0% {
+    background: rgba(59, 130, 246, 0.13);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5) inset;
+  }
+  60% {
+    background: rgba(59, 130, 246, 0.06);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15) inset;
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 0px transparent inset;
+  }
+}
+.new-account-glow {
+  animation: newAccountGlow 2.5s ease-out both;
+  border-radius: 10px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fade-up,
   .flash-amber,
+  .new-account-glow,
   .content-fade-in,
   .login-glow {
     animation: none;

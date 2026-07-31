@@ -42,7 +42,6 @@ export function OpenAccountCard({ onCreated }: Props) {
       setNickname("");
       await onCreated(newAccount.id);
       toast.success("Account opened");
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {

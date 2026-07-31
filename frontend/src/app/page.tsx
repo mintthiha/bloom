@@ -59,6 +59,7 @@ function Home() {
   const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newlyCreatedAccountId, setNewlyCreatedAccountId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
@@ -156,6 +157,17 @@ function Home() {
   useEffect(() => {
     loadAccounts();
   }, [loadAccounts]);
+
+  /** Scrolls to the account balances card after a new account is created so the glow is visible. */
+  useEffect(() => {
+    if (!newlyCreatedAccountId) return;
+    const scrollTimer = setTimeout(() => {
+      document
+        .getElementById("account-balances-anchor")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => clearTimeout(scrollTimer);
+  }, [newlyCreatedAccountId]);
 
   /** Seeds the greeting name instantly from localStorage to avoid a flash on load. */
   useEffect(() => {
@@ -461,10 +473,16 @@ function Home() {
   if (netWorthHistory.length > 0 && visibleCards.has("net-worth")) {
     reorderableCards.push({ id: "net-worth", node: <NetWorthHistory history={netWorthHistory} /> });
   }
-  if (accounts.length > 1 && visibleCards.has("account-balances")) {
+  if (accounts.length > 0 && visibleCards.has("account-balances")) {
     reorderableCards.push({
       id: "account-balances",
-      node: <AccountBalancesCard accounts={accounts} />,
+      anchorId: "account-balances-anchor",
+      node: (
+        <AccountBalancesCard
+          accounts={accounts}
+          newlyCreatedId={newlyCreatedAccountId ?? undefined}
+        />
+      ),
     });
   }
 
@@ -685,7 +703,8 @@ function Home() {
             }}
           >
             <OpenAccountCard
-              onCreated={async () => {
+              onCreated={async (newAccountId: string) => {
+                setNewlyCreatedAccountId(newAccountId);
                 await loadAccounts();
               }}
             />
