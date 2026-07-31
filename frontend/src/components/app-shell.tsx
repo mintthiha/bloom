@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { AmbientOrb } from "@/components/ambient-orb";
 import { DashboardCustomizePanel } from "@/app/_components/_dashboardCustomize/DashboardCustomizePanel";
+import { NotificationBell } from "@/app/_components/_notifications/NotificationBell";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
 /** Routes that render standalone, without the sidebar/header/footer app chrome. */
@@ -68,6 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               gap: "8px",
             }}
           >
+            <NotificationBell />
             <DashboardCustomizePanel />
             <ThemeToggle />
             <ProfileMenu />

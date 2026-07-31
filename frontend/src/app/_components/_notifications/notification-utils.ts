@@ -1,8 +1,18 @@
+import { AppNotification, NotificationKind } from "@/lib/api";
 import { formatLocalDate } from "@/lib/date-range";
 
 export type ReminderUrgency = "overdue" | "due-soon" | "upcoming";
 
 const DUE_SOON_THRESHOLD_DAYS = 7;
+
+/** Accent color per notification kind; bill reminders recolor by urgency instead. */
+export const KIND_ACCENT: Record<NotificationKind, string> = {
+  BILL_REMINDER: "#3b82f6",
+  LOW_BALANCE: "#f59e0b",
+  BUDGET_OVERSPEND: "#f87171",
+  GOAL_REACHED: "#22c55e",
+  SUBSCRIPTION_PRICE: "#f59e0b",
+};
 
 /** Returns whole days from `today` to `dueDate` (both YYYY-MM-DD); negative when overdue. */
 export function daysUntil(dueDate: string, today: string = formatLocalDate(new Date())): number {
@@ -40,4 +50,40 @@ export function formatDueLabel(
   if (diff === -1) return "1 day overdue";
   if (diff > 1) return `Due in ${diff} days`;
   return `${Math.abs(diff)} days overdue`;
+}
+
+export type NotificationGroup = { label: string; items: AppNotification[] };
+
+const GROUP_ORDER = ["Overdue", "Due soon", "Upcoming", "Alerts"] as const;
+
+/**
+ * Buckets notifications into ordered sections: dated items by urgency
+ * (Overdue / Due soon / Upcoming) and dateless items under "Alerts".
+ * Empty sections are omitted. Order within a section is preserved from input.
+ */
+export function groupNotifications(
+  notifications: AppNotification[],
+  today: string = formatLocalDate(new Date())
+): NotificationGroup[] {
+  const buckets: Record<string, AppNotification[]> = {
+    Overdue: [],
+    "Due soon": [],
+    Upcoming: [],
+    Alerts: [],
+  };
+
+  for (const notification of notifications) {
+    if (!notification.dueDate) {
+      buckets["Alerts"].push(notification);
+      continue;
+    }
+    const urgency = classifyReminderUrgency(notification.dueDate, today);
+    if (urgency === "overdue") buckets["Overdue"].push(notification);
+    else if (urgency === "due-soon") buckets["Due soon"].push(notification);
+    else buckets["Upcoming"].push(notification);
+  }
+
+  return GROUP_ORDER.map((label) => ({ label, items: buckets[label] })).filter(
+    (group) => group.items.length > 0
+  );
 }

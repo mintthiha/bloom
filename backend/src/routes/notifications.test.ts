@@ -5,7 +5,7 @@ import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
-    generateBillReminders: vi.fn(),
+    generateNotifications: vi.fn(),
     listNotifications: vi.fn(),
     markNotificationRead: vi.fn(),
     markAllNotificationsRead: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock("../services/reminderService", () => serviceMock);
 
 describe("notification routes", () => {
   beforeEach(() => {
-    serviceMock.generateBillReminders.mockReset();
+    serviceMock.generateNotifications.mockReset();
     serviceMock.listNotifications.mockReset();
     serviceMock.markNotificationRead.mockReset();
     serviceMock.markAllNotificationsRead.mockReset();
@@ -33,8 +33,8 @@ describe("notification routes", () => {
     expect(response.body).toEqual({ error: "Unauthorized" });
   });
 
-  it("generates reminders then returns the notification list", async () => {
-    serviceMock.generateBillReminders.mockResolvedValue({ createdCount: 2 });
+  it("generates notifications then returns the notification list", async () => {
+    serviceMock.generateNotifications.mockResolvedValue({ createdCount: 2 });
     serviceMock.listNotifications.mockResolvedValue({
       notifications: [{ id: "n1" }],
       unreadCount: 1,
@@ -47,7 +47,7 @@ describe("notification routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ notifications: [{ id: "n1" }], unreadCount: 1 });
-    expect(serviceMock.generateBillReminders).toHaveBeenCalledWith("user-1");
+    expect(serviceMock.generateNotifications).toHaveBeenCalledWith("user-1");
     expect(serviceMock.listNotifications).toHaveBeenCalledWith("user-1");
   });
 

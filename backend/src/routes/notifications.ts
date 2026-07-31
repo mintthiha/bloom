@@ -21,7 +21,7 @@ function uid(req: Request): string {
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = uid(req);
-    await reminderService.generateBillReminders(userId);
+    await reminderService.generateNotifications(userId);
     res.json(await reminderService.listNotifications(userId));
   } catch (err) {
     next(err);

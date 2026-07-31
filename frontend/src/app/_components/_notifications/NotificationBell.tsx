@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api, AppNotification } from "@/lib/api";
 import {
@@ -11,6 +12,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { NotificationItem } from "./NotificationItem";
+import { groupNotifications } from "./notification-utils";
+
+/** How often the badge silently refreshes while the app is open. */
+const POLL_INTERVAL_MS = 60_000;
 
 /** Bell button with unread badge that opens a side panel of bill reminders. */
 export function NotificationBell() {
@@ -18,6 +23,7 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   /** Fetches the latest notifications (which regenerates due reminders server-side). */
   const loadNotifications = useCallback(async () => {
@@ -32,17 +38,42 @@ export function NotificationBell() {
     }
   }, []);
 
-  /** Loads on mount and whenever recurring rules change (which can create new reminders). */
+  /**
+   * Keeps the badge live: loads on mount, polls on an interval, refreshes when
+   * the tab regains focus, and reacts to recurring-rule changes.
+   */
   useEffect(() => {
     loadNotifications();
+
+    const interval = setInterval(loadNotifications, POLL_INTERVAL_MS);
+    const refreshOnFocus = () => {
+      if (document.visibilityState === "visible") loadNotifications();
+    };
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
     window.addEventListener("recurring-changed", loadNotifications);
-    return () => window.removeEventListener("recurring-changed", loadNotifications);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnFocus);
+      window.removeEventListener("recurring-changed", loadNotifications);
+    };
   }, [loadNotifications]);
 
-  /** Refreshes reminders whenever the panel is opened so newly-due bills appear immediately. */
+  /** Refreshes reminders whenever the panel is opened so newly-due items appear immediately. */
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (next) loadNotifications();
+  }
+
+  /** Marks a notification read, then navigates to its linked page and closes the panel. */
+  function handleActivateLink(notification: AppNotification) {
+    if (notification.status === "UNREAD") handleMarkRead(notification.id);
+    if (notification.linkHref) {
+      setOpen(false);
+      router.push(notification.linkHref);
+    }
   }
 
   /** Marks one notification read, updating the badge optimistically. */
@@ -101,16 +132,17 @@ export function NotificationBell() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: "40px",
-          height: "40px",
-          borderRadius: "10px",
+          width: "32px",
+          height: "32px",
+          borderRadius: "8px",
           border: "1px solid var(--border)",
-          background: "var(--surface-1)",
+          background: "transparent",
           color: "var(--text-secondary)",
           cursor: "pointer",
+          flexShrink: 0,
         }}
       >
-        <Bell size={17} />
+        <Bell size={15} />
         {hasUnread && (
           <span
             className="num"
@@ -182,7 +214,7 @@ export function NotificationBell() {
             <SheetDescription
               style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}
             >
-              Upcoming and overdue bill reminders.
+              Bill reminders and account alerts.
             </SheetDescription>
           </SheetHeader>
 
@@ -190,7 +222,7 @@ export function NotificationBell() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
+              gap: "18px",
               padding: "0 24px 24px",
             }}
           >
@@ -208,17 +240,35 @@ export function NotificationBell() {
                 <Bell size={22} style={{ opacity: 0.5, marginBottom: "8px" }} />
                 <p>You&apos;re all caught up.</p>
                 <p style={{ fontSize: "12px", marginTop: "4px" }}>
-                  Bill reminders appear here as due dates approach.
+                  Reminders and alerts appear here as they come up.
                 </p>
               </div>
             ) : (
-              notifications.map((notification) => (
-                <NotificationItem
-                  key={notification.id}
-                  notification={notification}
-                  onMarkRead={handleMarkRead}
-                  onDismiss={handleDismiss}
-                />
+              groupNotifications(notifications).map((group) => (
+                <div
+                  key={group.label}
+                  style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                >
+                  <p
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {group.label}
+                  </p>
+                  {group.items.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                      onActivate={handleActivateLink}
+                      onDismiss={handleDismiss}
+                    />
+                  ))}
+                </div>
               ))
             )}
           </div>

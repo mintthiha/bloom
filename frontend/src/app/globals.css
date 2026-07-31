@@ -758,7 +758,7 @@ body::before {
 }
 .notification-bell:hover {
   border-color: var(--border-hover);
-  background: var(--surface-2);
+  color: var(--text-primary);
 }
 .notification-bell:active {
   transform: scale(0.96);

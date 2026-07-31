@@ -76,10 +76,15 @@ export type Profile = {
   updatedAt: string;
 };
 
-export type NotificationKind = "BILL_REMINDER";
+export type NotificationKind =
+  | "BILL_REMINDER"
+  | "LOW_BALANCE"
+  | "BUDGET_OVERSPEND"
+  | "GOAL_REACHED"
+  | "SUBSCRIPTION_PRICE";
 export type NotificationStatus = "UNREAD" | "READ" | "DISMISSED";
 
-/** A single in-app notification (currently only bill reminders). */
+/** A single in-app notification (bill reminders and account alerts). */
 export type AppNotification = {
   id: string;
   kind: NotificationKind;
@@ -87,6 +92,7 @@ export type AppNotification = {
   title: string;
   body: string;
   dueDate: string | null;
+  linkHref: string | null;
   status: NotificationStatus;
   createdAt: string;
   readAt: string | null;

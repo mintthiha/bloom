@@ -191,16 +191,18 @@ model Notification {
   id                     String    @id @default(cuid())
   userId                 String
   kind                   String
+  dedupeKey              String
   recurringTransactionId String?
   title                  String
   body                   String
   dueDate                DateTime? @db.Date
+  linkHref               String?
   status                 String    @default("UNREAD")
   createdAt              DateTime  @default(now()) @db.Timestamptz(3)
   readAt                 DateTime? @db.Timestamptz(3)
 
   recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, kind, recurringTransactionId, dueDate], name: "Notification_dedupe_key")
+  @@unique([userId, dedupeKey])
   @@index([userId, status])
 }

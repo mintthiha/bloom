@@ -1,7 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { classifyReminderUrgency, daysUntil, formatDueLabel } from "./notification-utils";
+import { AppNotification } from "@/lib/api";
+import {
+  classifyReminderUrgency,
+  daysUntil,
+  formatDueLabel,
+  groupNotifications,
+} from "./notification-utils";
 
 const TODAY = "2026-07-28";
+
+/** Builds a notification with sensible defaults for grouping tests. */
+function makeNotification(overrides: Partial<AppNotification> = {}): AppNotification {
+  return {
+    id: "n",
+    kind: "BILL_REMINDER",
+    recurringTransactionId: null,
+    title: "Title",
+    body: "Body",
+    dueDate: null,
+    linkHref: null,
+    status: "UNREAD",
+    createdAt: "2026-07-28T00:00:00.000Z",
+    readAt: null,
+    ...overrides,
+  };
+}
 
 describe("daysUntil", () => {
   it("returns 0 for today and positive/negative for future/past", () => {
@@ -41,5 +64,41 @@ describe("formatDueLabel", () => {
 
   it("returns an empty string when there is no due date", () => {
     expect(formatDueLabel(null, TODAY)).toBe("");
+  });
+});
+
+describe("groupNotifications", () => {
+  it("buckets by urgency and dateless alerts, in order, omitting empty sections", () => {
+    const groups = groupNotifications(
+      [
+        makeNotification({ id: "upcoming", dueDate: "2026-08-20" }),
+        makeNotification({ id: "alert", kind: "LOW_BALANCE", dueDate: null }),
+        makeNotification({ id: "overdue", dueDate: "2026-07-27" }),
+        makeNotification({ id: "due-soon", dueDate: "2026-07-30" }),
+      ],
+      TODAY
+    );
+
+    expect(groups.map((group) => group.label)).toEqual([
+      "Overdue",
+      "Due soon",
+      "Upcoming",
+      "Alerts",
+    ]);
+    expect(groups.map((group) => group.items[0].id)).toEqual([
+      "overdue",
+      "due-soon",
+      "upcoming",
+      "alert",
+    ]);
+  });
+
+  it("omits sections with no items", () => {
+    const groups = groupNotifications(
+      [makeNotification({ id: "a", kind: "GOAL_REACHED", dueDate: null })],
+      TODAY
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBe("Alerts");
   });
 });
