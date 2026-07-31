@@ -135,6 +135,12 @@
   padding: 0;
 }
 
+html {
+  /* Always reserve the scrollbar gutter so opening a modal Sheet (which locks
+     scroll and hides the scrollbar) doesn't reflow the layout to the right. */
+  scrollbar-gutter: stable;
+}
+
 body {
   background-color: var(--surface-0);
   color: var(--text-primary);
