@@ -536,6 +536,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ merchant, category }),
     }),
+  updateCategorizationRule: (id: string, merchant: string, category: string) =>
+    request<AutoCategorizationRule>(`/categorization-rules/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ merchant, category }),
+    }),
   deleteCategorizationRule: (id: string) =>
     request<void>(`/categorization-rules/${id}`, { method: "DELETE" }),
   suggestCategories: (merchants: string[]) =>

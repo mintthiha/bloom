@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
 
@@ -29,6 +30,32 @@ export async function upsertRule(
     update: { category },
     create: { userId, merchant, category },
   });
+}
+
+/**
+ * Updates the merchant name and/or category of a rule by id.
+ * Throws 404 if the rule does not belong to the user, or 409 if the new merchant name
+ * conflicts with another existing rule for the same user.
+ */
+export async function updateRule(
+  userId: string,
+  id: string,
+  merchant: string,
+  category: string
+): Promise<CategorizationRule> {
+  const existing = await prisma.autoCategorizationRule.findFirst({ where: { id, userId } });
+  if (!existing) throw new AppError(404, "Rule not found");
+  try {
+    return await prisma.autoCategorizationRule.update({
+      where: { id },
+      data: { merchant, category },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new AppError(409, `A rule for "${merchant}" already exists`);
+    }
+    throw err;
+  }
 }
 
 /** Deletes a rule by id, throwing 404 if the rule does not belong to the user. */

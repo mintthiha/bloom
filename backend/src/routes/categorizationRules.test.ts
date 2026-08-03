@@ -7,6 +7,7 @@ const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
     listRules: vi.fn(),
     upsertRule: vi.fn(),
+    updateRule: vi.fn(),
     deleteRule: vi.fn(),
   },
 }));
@@ -26,6 +27,7 @@ describe("categorization rule routes", () => {
   beforeEach(() => {
     serviceMock.listRules.mockReset();
     serviceMock.upsertRule.mockReset();
+    serviceMock.updateRule.mockReset();
     serviceMock.deleteRule.mockReset();
   });
 
@@ -85,6 +87,48 @@ describe("categorization rule routes", () => {
 
     expect(response.status).toBe(400);
     expect(serviceMock.upsertRule).not.toHaveBeenCalled();
+  });
+
+  it("updates a rule's merchant and category", async () => {
+    const updated = { ...RULE, merchant: "Metro", category: "Groceries" };
+    serviceMock.updateRule.mockResolvedValue(updated);
+
+    const response = await request(app)
+      .patch("/api/categorization-rules/rule-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ merchant: "Metro", category: "Groceries" });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.updateRule).toHaveBeenCalledWith("user-1", "rule-1", "Metro", "Groceries");
+    expect(response.body).toMatchObject({ merchant: "Metro", category: "Groceries" });
+  });
+
+  it("rejects a PATCH payload missing merchant", async () => {
+    const response = await request(app)
+      .patch("/api/categorization-rules/rule-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ category: "Groceries" });
+
+    expect(response.status).toBe(400);
+    expect(serviceMock.updateRule).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when PATCH conflicts with an existing merchant", async () => {
+    const { AppError } = await import("../middleware/errorHandler");
+    serviceMock.updateRule.mockRejectedValue(
+      new AppError(409, 'A rule for "Metro" already exists')
+    );
+
+    const response = await request(app)
+      .patch("/api/categorization-rules/rule-1")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ merchant: "Metro", category: "Groceries" });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({ error: 'A rule for "Metro" already exists' });
   });
 
   it("deletes a rule and returns 204", async () => {

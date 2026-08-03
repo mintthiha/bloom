@@ -379,6 +379,30 @@ body {
 }
 
 /*
+ * Rule edit button. Neutral at rest; hover reveals intent with a blue accent border,
+ * tint, and label shift, and press gives a tactile dip.
+ */
+.rule-edit-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.rule-edit-button:not(:disabled):hover {
+  border-color: #3b82f666;
+  color: #3b82f6;
+  background: #3b82f614;
+}
+.rule-edit-button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/*
  * Budget action pills (Move money, Rollover toggle). Neutral at rest; hover lights
  * the border and label with the accent and lays a faint tint, and press dips. The
  * rollover toggle adds `is-on` for its enabled state, which reads accent even at rest
@@ -446,6 +470,7 @@ body {
   .reset-button:active,
   .reset-button:hover .reset-button-icon,
   .budget-delete-button:not(:disabled):active,
+  .rule-edit-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
   .budget-card:hover,
   .chat-suggestion:hover,

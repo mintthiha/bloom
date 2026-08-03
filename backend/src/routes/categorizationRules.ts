@@ -36,6 +36,25 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+/** Updates the merchant and/or category of a rule by id. */
+router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const merchant = requireString(body.merchant, "merchant", { max: 100 });
+    const category = requireString(body.category, "category", { max: 50 });
+    res.json(
+      await categorizationRuleService.updateRule(
+        uid(req),
+        req.params["id"] as string,
+        merchant,
+        category
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
 /** Deletes one categorization rule by id. */
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
