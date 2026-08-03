@@ -41,8 +41,14 @@ interface DraggableCardGridProps {
  * arms the drag, so the cards themselves stay fully clickable and their content stays selectable.
  */
 export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
-  const { cardOrder, reorderCard, pendingExplainCardIds, dismissExplainedCard, glowingCards, dismissCardGlow } =
-    useDashboardVisibility();
+  const {
+    cardOrder,
+    reorderCard,
+    pendingExplainCardIds,
+    dismissExplainedCard,
+    glowingCards,
+    dismissCardGlow,
+  } = useDashboardVisibility();
   const [grabbedId, setGrabbedId] = useState<CardId | null>(null);
   const [draggingId, setDraggingId] = useState<CardId | null>(null);
   const [dragOverId, setDragOverId] = useState<CardId | null>(null);
