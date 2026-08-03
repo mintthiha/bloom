@@ -13,6 +13,7 @@ import { AmbientOrb } from "@/components/ambient-orb";
 import { DashboardCustomizePanel } from "@/app/_components/_dashboardCustomize/DashboardCustomizePanel";
 import { NotificationBell } from "@/app/_components/_notifications/NotificationBell";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /** Routes that render standalone, without the sidebar/header/footer app chrome. */
 const CHROMELESS_ROUTES = new Set(["/login"]);
@@ -21,6 +22,7 @@ const CHROMELESS_ROUTES = new Set(["/login"]);
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { orbsEnabled } = useDashboardVisibility();
+  const isMobile = useIsMobile();
 
   if (CHROMELESS_ROUTES.has(pathname)) {
     return <>{children}</>;
@@ -45,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             padding: "0 24px",
             height: "56px",
             display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
+            gridTemplateColumns: isMobile ? "auto 1fr" : "1fr auto 1fr",
             alignItems: "center",
             gap: "16px",
             position: "sticky",
@@ -58,17 +60,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
             <SidebarTrigger />
           </div>
-          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-            <HeaderSearch />
-          </div>
+          {!isMobile && (
+            <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+              <HeaderSearch />
+            </div>
+          )}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "8px",
+              justifyContent: isMobile ? "space-between" : "flex-end",
+              gap: isMobile ? "4px" : "8px",
             }}
           >
+            {isMobile && <HeaderSearch />}
             <NotificationBell />
             <DashboardCustomizePanel />
             <ThemeToggle />

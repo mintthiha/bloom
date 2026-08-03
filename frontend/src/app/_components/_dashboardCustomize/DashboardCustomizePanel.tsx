@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Columns2, Columns3, Rows3, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { useDashboardView } from "@/components/dashboard-view-provider";
@@ -186,6 +187,7 @@ export function DashboardCustomizePanel() {
   } = useDashboardVisibility();
   const { view, setView } = useDashboardView();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
   // Card visibility, collapse-all, and the onboarding checklist only apply to the dashboard.
   const isDashboard = pathname === "/";
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
@@ -255,19 +257,24 @@ export function DashboardCustomizePanel() {
         render={
           <button
             type="button"
+            aria-label="Customize"
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "6px",
               background: "var(--surface-1)",
               border: "1px solid var(--border)",
               borderRadius: "8px",
-              padding: "6px 12px",
+              padding: isMobile ? "6px" : "6px 12px",
+              width: isMobile ? "32px" : undefined,
+              height: isMobile ? "32px" : undefined,
               cursor: "pointer",
               fontSize: "12px",
               fontWeight: 600,
               color: "var(--text-secondary)",
               transition: "border-color 0.15s, color 0.15s",
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "var(--border-hover)";
@@ -295,8 +302,8 @@ export function DashboardCustomizePanel() {
           <rect x="3" y="14" width="7" height="7" />
           <rect x="14" y="14" width="7" height="7" />
         </svg>
-        Customize
-        {isDashboard && hiddenCount > 0 && (
+        {!isMobile && "Customize"}
+        {!isMobile && isDashboard && hiddenCount > 0 && (
           <span
             style={{
               fontSize: "10px",
