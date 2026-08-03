@@ -143,7 +143,7 @@ export async function listTransactions(
   return {
     rows: rows.map((row) => ({
       ...row,
-      amount: typeof row.amount === "string" ? parseFloat(row.amount) : row.amount,
+      amount: Number(row.amount),
     })),
     total,
     page,

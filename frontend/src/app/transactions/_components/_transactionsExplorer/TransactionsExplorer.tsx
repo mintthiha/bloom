@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { TransactionFilterBar } from "./TransactionFilterBar";
 import { TransactionsTable } from "./TransactionsTable";
+import { ExportCsvButton } from "./ExportCsvButton";
 
 const PAGE_SIZE = 25;
 
@@ -135,6 +136,9 @@ export function TransactionsExplorer() {
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
+  const exportStart = from && to ? dateInputToIso(from) : undefined;
+  const exportEnd = from && to ? endDateInputToIso(to) : undefined;
+
   return (
     <div>
       <TransactionFilterBar
@@ -155,14 +159,32 @@ export function TransactionsExplorer() {
         onClear={handleClear}
       />
 
-      {/* Result count */}
-      <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "12px" }}>
-        {loading
-          ? "Loading transactions…"
-          : total === 0
-            ? "No transactions"
-            : `Showing ${rangeStart}–${rangeEnd} of ${total} transaction${total === 1 ? "" : "s"}`}
-      </p>
+      {/* Result count + export */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "12px",
+        }}
+      >
+        <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+          {loading
+            ? "Loading transactions…"
+            : total === 0
+              ? "No transactions"
+              : `Showing ${rangeStart}–${rangeEnd} of ${total} transaction${total === 1 ? "" : "s"}`}
+        </p>
+        <ExportCsvButton
+          total={total}
+          accountId={accountId}
+          type={type}
+          search={search}
+          sort={sort}
+          start={exportStart}
+          end={exportEnd}
+        />
+      </div>
 
       <TransactionsTable
         rows={result?.rows ?? []}
