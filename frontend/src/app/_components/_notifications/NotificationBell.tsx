@@ -173,6 +173,7 @@ export function NotificationBell() {
         <SheetContent
           side="right"
           style={{
+            width: "min(65vw, 22rem)",
             overflowY: "auto",
             background: "var(--sidebar)",
             borderLeft: "1px solid var(--border)",

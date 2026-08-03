@@ -140,11 +140,13 @@ export function TransactionHistory({
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
           marginBottom: "18px",
+          flexWrap: "wrap",
+          gap: "8px",
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <p
             style={{
               fontSize: "11px",
@@ -166,7 +168,7 @@ export function TransactionHistory({
             Times shown in {timeZone}.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
           <span className="num" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
             {txns.length} records
           </span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { api, Account, AutoCategorizationRule, Profile, Transaction } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, ACCOUNT_TYPE_META } from "@/lib/constants/account";
@@ -41,6 +42,7 @@ export function NewTransactionForm({
   transactionsForType,
   sameTypeAccountIds,
 }: NewTransactionFormProps) {
+  const isMobile = useIsMobile();
   const [op, setOp] = useState<Op>("deposit");
   const [amount, setAmount] = useState("");
   const [toId, setToId] = useState("");
@@ -243,7 +245,7 @@ export function NewTransactionForm({
           padding: "4px",
           borderRadius: "10px",
           marginBottom: "18px",
-          width: "fit-content",
+          width: isMobile ? "100%" : "fit-content",
         }}
       >
         {(["deposit", "withdraw", "transfer", "import"] as Op[]).map((o) => (
@@ -257,7 +259,8 @@ export function NewTransactionForm({
               setDescription("");
             }}
             style={{
-              padding: "8px 18px",
+              flex: isMobile ? 1 : undefined,
+              padding: isMobile ? "8px 10px" : "8px 18px",
               borderRadius: "7px",
               border: "none",
               cursor: "pointer",
