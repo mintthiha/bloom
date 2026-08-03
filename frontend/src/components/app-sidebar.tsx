@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Receipt,
   RefreshCw,
+  Sparkles,
   Target,
   Wallet,
   type LucideIcon,
@@ -31,6 +32,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/budgets", label: "Budgets", icon: Wallet },
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/learn", label: "Learn", icon: BookOpen },
+  { href: "/auto-categorize", label: "Auto-categorize", icon: Sparkles },
 ];
 
 export function AppSidebar() {

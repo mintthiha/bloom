@@ -538,6 +538,11 @@ export const api = {
     }),
   deleteCategorizationRule: (id: string) =>
     request<void>(`/categorization-rules/${id}`, { method: "DELETE" }),
+  suggestCategories: (merchants: string[]) =>
+    request<{ suggestions: { merchant: string; category: string }[] }>("/auto-categorize/suggest", {
+      method: "POST",
+      body: JSON.stringify({ merchants }),
+    }),
   listNotifications: () => request<NotificationListResult>("/notifications"),
   markNotificationRead: (id: string) =>
     request<AppNotification>(`/notifications/${id}/read`, { method: "PATCH" }),

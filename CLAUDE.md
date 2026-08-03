@@ -158,9 +158,16 @@ At the end of every feature implementation, provide a short summary in this form
 **Files touched:**
 - `path/to/file.tsx` — what was added or removed
 
+**How to try it:**
+1. Step-by-step instructions for exercising the new feature in the running app — navigation path, what to click, what to enter, what to expect.
+
 **Example:**
 ```
 Files touched:
 - frontend/src/app/account/[id]/_components/_accountTransactions/DeleteTransaction.tsx — created; AlertDialog + delete handler
 - frontend/src/app/account/[id]/page.tsx — removed handleDeleteTransaction, AlertDialog import; wired <DeleteTransaction> props
+
+How to try it:
+1. Open any account page → find a transaction in the list → click the trash icon.
+2. Confirm the AlertDialog that appears — the transaction should disappear and a "Transaction deleted" toast should show.
 ```
