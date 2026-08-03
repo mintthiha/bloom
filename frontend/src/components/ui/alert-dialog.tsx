@@ -55,7 +55,7 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">)
   return (
     <div
       data-slot="alert-dialog-header"
-      className={cn("flex flex-col gap-3 text-left", className)}
+      className={cn("flex flex-col gap-4 text-left", className)}
       {...props}
     />
   );
@@ -88,7 +88,7 @@ function AlertDialogDescription({ className, ...props }: DialogPrimitive.Descrip
   return (
     <DialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn("text-sm leading-6 text-[var(--text-secondary)]", className)}
+      className={cn("text-sm leading-6 opacity-70", className)}
       {...props}
     />
   );
