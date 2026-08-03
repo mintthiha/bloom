@@ -41,7 +41,7 @@ interface DraggableCardGridProps {
  * arms the drag, so the cards themselves stay fully clickable and their content stays selectable.
  */
 export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
-  const { cardOrder, reorderCard, pendingExplainCardIds, dismissExplainedCard } =
+  const { cardOrder, reorderCard, pendingExplainCardIds, dismissExplainedCard, glowingCards, dismissCardGlow } =
     useDashboardVisibility();
   const [grabbedId, setGrabbedId] = useState<CardId | null>(null);
   const [draggingId, setDraggingId] = useState<CardId | null>(null);
@@ -83,6 +83,7 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
         const isDragging = draggingId === card.id;
         const isDragOver = dragOverId === card.id && draggingId !== null && draggingId !== card.id;
         const isExplaining = pendingExplainCardIds.has(card.id);
+        const isGlowing = glowingCards.has(card.id);
 
         return (
           <div
@@ -92,8 +93,11 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               if (element) cardWrapperRefs.current.set(card.id, element);
               else cardWrapperRefs.current.delete(card.id);
             }}
-            className="card-drag-slot"
+            className={isGlowing ? "card-drag-slot card-reenabled-glow" : "card-drag-slot"}
             draggable={grabbedId === card.id}
+            onMouseEnter={() => {
+              if (isGlowing) dismissCardGlow(card.id);
+            }}
             onDragStart={(event) => {
               event.dataTransfer.effectAllowed = "move";
               setDraggingId(card.id);
@@ -125,7 +129,7 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               opacity: isDragging ? 0.4 : 1,
               outline: isDragOver ? "2px dashed #3b82f699" : "2px dashed transparent",
               outlineOffset: "5px",
-              transition: "opacity 0.15s ease, outline-color 0.15s ease",
+              transition: "opacity 0.15s ease, outline-color 0.15s ease, box-shadow 0.5s ease",
             }}
           >
             {/* Grip handle — floats above the card's top edge and is the only drag initiator. */}

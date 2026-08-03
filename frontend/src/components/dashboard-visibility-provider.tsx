@@ -117,6 +117,7 @@ const COLLAPSE_STORAGE_KEY = "bloom_dashboard_cards_collapsed";
 const ORBS_STORAGE_KEY = "bloom_dashboard_orbs_enabled";
 const CARD_ORDER_STORAGE_KEY = "bloom_dashboard_card_order";
 const EXPLAINED_STORAGE_KEY = "bloom_dashboard_explained_cards";
+const GLOW_STORAGE_KEY = "bloom_dashboard_reenabled_glow";
 
 type DashboardVisibilityContextValue = {
   visibleCards: Set<CardId>;
@@ -132,6 +133,10 @@ type DashboardVisibilityContextValue = {
   pendingExplainCardIds: Set<CardId>;
   /** Dismisses one card's explainer and remembers it so that card never explains again. */
   dismissExplainedCard: (cardId: CardId) => void;
+  /** Cards that were re-enabled (not for the first time) and are showing a glow until hovered. */
+  glowingCards: Set<CardId>;
+  /** Clears the re-enable glow for one card and persists the change. */
+  dismissCardGlow: (cardId: CardId) => void;
 };
 
 const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue>({
@@ -146,6 +151,8 @@ const DashboardVisibilityContext = createContext<DashboardVisibilityContextValue
   reorderCard: () => {},
   pendingExplainCardIds: new Set(),
   dismissExplainedCard: () => {},
+  glowingCards: new Set(),
+  dismissCardGlow: () => {},
 });
 
 /**
@@ -173,6 +180,18 @@ function readStoredExplained(): Set<CardId> {
   if (typeof window === "undefined") return new Set();
   try {
     const stored = window.localStorage.getItem(EXPLAINED_STORAGE_KEY);
+    if (!stored) return new Set();
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(parsed)) return new Set(parsed as CardId[]);
+  } catch {}
+  return new Set();
+}
+
+/** Reads the set of re-enabled cards that still have their hover-dismissible glow showing. */
+function readStoredGlowing(): Set<CardId> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const stored = window.localStorage.getItem(GLOW_STORAGE_KEY);
     if (!stored) return new Set();
     const parsed = JSON.parse(stored);
     if (Array.isArray(parsed)) return new Set(parsed as CardId[]);
@@ -221,6 +240,7 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
   const [cardOrder, setCardOrder] = useState<CardId[]>(() => [...ALL_CARD_IDS]);
   const [explainedCards, setExplainedCards] = useState<Set<CardId>>(() => new Set());
   const [pendingExplainCardIds, setPendingExplainCardIds] = useState<Set<CardId>>(() => new Set());
+  const [glowingCards, setGlowingCards] = useState<Set<CardId>>(() => new Set());
 
   // Hydrate persisted preferences after mount. Reading localStorage during the initial render
   // would make the server markup (defaults) and the client markup (stored values) diverge and
@@ -231,6 +251,7 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
     setOrbsEnabledState(readStoredOrbsEnabled());
     setCardOrder(readStoredCardOrder());
     setExplainedCards(readStoredExplained());
+    setGlowingCards(readStoredGlowing());
   }, []);
 
   /**
@@ -251,6 +272,13 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
             nextPending.add(cardId);
             return nextPending;
           });
+        } else {
+          setGlowingCards((prevGlowing) => {
+            const nextGlowing = new Set(prevGlowing);
+            nextGlowing.add(cardId);
+            window.localStorage.setItem(GLOW_STORAGE_KEY, JSON.stringify([...nextGlowing]));
+            return nextGlowing;
+          });
         }
       }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
@@ -270,6 +298,17 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
       const next = new Set(prev);
       next.add(cardId);
       window.localStorage.setItem(EXPLAINED_STORAGE_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  /** Clears the re-enable glow for one card and persists the removal. */
+  function dismissCardGlow(cardId: CardId) {
+    setGlowingCards((prev) => {
+      if (!prev.has(cardId)) return prev;
+      const next = new Set(prev);
+      next.delete(cardId);
+      window.localStorage.setItem(GLOW_STORAGE_KEY, JSON.stringify([...next]));
       return next;
     });
   }
@@ -321,8 +360,10 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
       reorderCard,
       pendingExplainCardIds,
       dismissExplainedCard,
+      glowingCards,
+      dismissCardGlow,
     }),
-    [visibleCards, allCollapsed, orbsEnabled, cardOrder, pendingExplainCardIds]
+    [visibleCards, allCollapsed, orbsEnabled, cardOrder, pendingExplainCardIds, glowingCards]
   );
 
   return (
