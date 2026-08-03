@@ -288,6 +288,15 @@ export type SubscriptionSummary = {
   subscriptions: Subscription[];
 };
 
+export type AutoCategorizationRule = {
+  id: string;
+  userId: string;
+  merchant: string;
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TransactionQuery = DateRangeQuery & {
   type?: Transaction["type"];
   category?: string;
@@ -521,6 +530,14 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(input),
     }),
+  listCategorizationRules: () => request<AutoCategorizationRule[]>("/categorization-rules"),
+  upsertCategorizationRule: (merchant: string, category: string) =>
+    request<AutoCategorizationRule>("/categorization-rules", {
+      method: "PUT",
+      body: JSON.stringify({ merchant, category }),
+    }),
+  deleteCategorizationRule: (id: string) =>
+    request<void>(`/categorization-rules/${id}`, { method: "DELETE" }),
   listNotifications: () => request<NotificationListResult>("/notifications"),
   markNotificationRead: (id: string) =>
     request<AppNotification>(`/notifications/${id}/read`, { method: "PATCH" }),

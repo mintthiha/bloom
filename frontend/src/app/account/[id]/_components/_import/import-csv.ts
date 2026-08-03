@@ -177,6 +177,24 @@ export function lookupMerchantCategory(merchantName: string): string | undefined
 }
 
 /**
+ * Overrides the category on each row where the merchant matches a user-defined rule.
+ * User rules take priority over the built-in merchant→category map.
+ * The ruleMap is keyed by lowercase merchant name.
+ */
+export function applyCategorizationRules(
+  rows: CsvRow[],
+  ruleMap: Record<string, string>
+): CsvRow[] {
+  if (Object.keys(ruleMap).length === 0) return rows;
+  return rows.map((row) => {
+    if (!row.merchant) return row;
+    const matchedCategory = ruleMap[row.merchant.toLowerCase()];
+    if (matchedCategory) return { ...row, category: matchedCategory };
+    return row;
+  });
+}
+
+/**
  * Maps a display type string (deposit, withdrawal, charge, payment, credit, debit)
  * to the API's DEPOSIT | WITHDRAWAL enum value.
  *

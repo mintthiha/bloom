@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api, Account, Profile, Transaction } from "@/lib/api";
+import { api, Account, AutoCategorizationRule, Profile, Transaction } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
@@ -49,6 +49,15 @@ export function NewTransactionForm({
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+  const [categorizationRules, setCategorizationRules] = useState<AutoCategorizationRule[]>([]);
+
+  /** Loads the user's auto-categorization rules once on mount. */
+  useEffect(() => {
+    api
+      .listCategorizationRules()
+      .then(setCategorizationRules)
+      .catch(() => {});
+  }, []);
 
   const currentYear = new Date().getFullYear();
   const isRegisteredType = REGISTERED_ACCOUNT_TYPES.has(account.accountType);
@@ -94,6 +103,20 @@ export function NewTransactionForm({
   }
 
   const overContributionWarning = computeOverContributionWarning();
+
+  /**
+   * Updates the merchant field and auto-fills the category when a user rule matches
+   * and the user has not already selected a category.
+   */
+  function handleMerchantChange(value: string) {
+    setMerchant(value);
+    if (!category) {
+      const matched = categorizationRules.find(
+        (r) => r.merchant.toLowerCase() === value.toLowerCase()
+      );
+      if (matched) setCategory(matched.category);
+    }
+  }
 
   /** Submits a deposit, withdrawal, or transfer based on the selected op. */
   async function handleSubmit(e: React.FormEvent) {
@@ -263,6 +286,7 @@ export function NewTransactionForm({
             setOp("deposit");
           }}
           onError={(msg) => toast.error(msg)}
+          categorizationRules={categorizationRules}
         />
       )}
 
@@ -430,7 +454,7 @@ export function NewTransactionForm({
               <input
                 type="text"
                 value={merchant}
-                onChange={(e) => setMerchant(e.target.value)}
+                onChange={(e) => handleMerchantChange(e.target.value)}
                 placeholder="Merchant (optional)"
                 style={inputStyle}
               />

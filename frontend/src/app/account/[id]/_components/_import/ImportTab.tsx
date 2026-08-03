@@ -1,7 +1,13 @@
 "use client";
 import { useState } from "react";
-import { api } from "@/lib/api";
-import { CsvRow, CSV_TEMPLATE, parseCsvText, resolveApiType } from "./import-csv";
+import { api, AutoCategorizationRule } from "@/lib/api";
+import {
+  CsvRow,
+  CSV_TEMPLATE,
+  parseCsvText,
+  resolveApiType,
+  applyCategorizationRules,
+} from "./import-csv";
 
 const PAGE_SIZE = 10;
 
@@ -28,9 +34,10 @@ type ImportTabProps = {
   accountId: string;
   onSuccess: (imported: number) => void;
   onError: (message: string) => void;
+  categorizationRules: AutoCategorizationRule[];
 };
 
-export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
+export function ImportTab({ accountId, onSuccess, onError, categorizationRules }: ImportTabProps) {
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
@@ -49,12 +56,16 @@ export function ImportTab({ accountId, onSuccess, onError }: ImportTabProps) {
     reader.onload = (e) => {
       const text = e.target?.result as string;
       try {
-        const rows = parseCsvText(text);
-        if (rows.length === 0) {
+        const parsed = parseCsvText(text);
+        if (parsed.length === 0) {
           setCsvParseError("No data rows found in file.");
           return;
         }
-        setCsvRows(rows);
+        const ruleMap: Record<string, string> = {};
+        for (const rule of categorizationRules) {
+          ruleMap[rule.merchant.toLowerCase()] = rule.category;
+        }
+        setCsvRows(applyCategorizationRules(parsed, ruleMap));
       } catch {
         setCsvParseError("Failed to parse CSV.");
       }

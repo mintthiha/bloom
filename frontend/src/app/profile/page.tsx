@@ -2,6 +2,7 @@
 
 import { ProfileFormPanel } from "@/components/profile-form-panel";
 import { ReminderSettings } from "./_components/_reminderSettings/ReminderSettings";
+import { CategorizationRulesManager } from "./_components/_categorizationRules/CategorizationRulesManager";
 
 export default function ProfilePage() {
   return (
@@ -27,6 +28,7 @@ export default function ProfilePage() {
         submitLabel="Save profile"
       />
       <ReminderSettings />
+      <CategorizationRulesManager />
     </div>
   );
 }
