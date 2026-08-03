@@ -19,6 +19,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
   const [suggestions, setSuggestions] = useState<AiSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addingMerchant, setAddingMerchant] = useState<string | null>(null);
+  const [isAddingAll, setIsAddingAll] = useState(false);
 
   /** Parses the textarea input into a deduplicated list of non-empty merchant names. */
   function parseMerchants(): string[] {
@@ -49,6 +50,26 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  /** Saves all current suggestions as rules in parallel and notifies the parent once. */
+  async function handleAddAll() {
+    if (suggestions.length === 0) return;
+    setIsAddingAll(true);
+    const results = await Promise.allSettled(
+      suggestions.map((s) => api.upsertCategorizationRule(s.merchant, s.category))
+    );
+    const savedCount = results.filter((r) => r.status === "fulfilled").length;
+    const failedCount = results.length - savedCount;
+    if (savedCount > 0) {
+      setSuggestions([]);
+      onRuleAdded();
+      toast.success(`${savedCount} rule${savedCount !== 1 ? "s" : ""} saved`);
+    }
+    if (failedCount > 0) {
+      toast.error(`${failedCount} rule${failedCount !== 1 ? "s" : ""} couldn't be saved`);
+    }
+    setIsAddingAll(false);
   }
 
   /** Saves a suggested merchant → category pair as a rule and notifies the parent. */
@@ -173,18 +194,47 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
 
       {suggestions.length > 0 && (
         <div style={{ marginTop: "24px" }}>
-          <p
+          <div
             style={{
-              fontSize: "11px",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               marginBottom: "12px",
             }}
           >
-            Suggestions
-          </p>
+            <p
+              style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--text-secondary)",
+                margin: 0,
+              }}
+            >
+              Suggestions
+            </p>
+            <button
+              type="button"
+              className="press"
+              onClick={handleAddAll}
+              disabled={isAddingAll || addingMerchant !== null}
+              style={{
+                padding: "5px 12px",
+                background: "#22c55e1a",
+                color: "#22c55e",
+                border: "1px solid #22c55e44",
+                borderRadius: "6px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: isAddingAll || addingMerchant !== null ? "not-allowed" : "pointer",
+                opacity: isAddingAll || addingMerchant !== null ? 0.5 : 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isAddingAll ? "Saving…" : "Add all"}
+            </button>
+          </div>
           <ul
             style={{
               listStyle: "none",
@@ -240,7 +290,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
                     type="button"
                     className="press"
                     onClick={() => handleAddRule(suggestion)}
-                    disabled={isAdding || addingMerchant !== null}
+                    disabled={isAdding || addingMerchant !== null || isAddingAll}
                     style={{
                       padding: "5px 12px",
                       background: isAdding ? "var(--surface-2)" : "#22c55e1a",
@@ -249,8 +299,11 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
                       borderRadius: "6px",
                       fontSize: "12px",
                       fontWeight: 700,
-                      cursor: isAdding || addingMerchant !== null ? "not-allowed" : "pointer",
-                      opacity: isAdding || addingMerchant !== null ? 0.5 : 1,
+                      cursor:
+                        isAdding || addingMerchant !== null || isAddingAll
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity: isAdding || addingMerchant !== null || isAddingAll ? 0.5 : 1,
                       flexShrink: 0,
                       whiteSpace: "nowrap",
                     }}
