@@ -1,5 +1,8 @@
 # Bloom
 
+[![CI](https://github.com/mintthiha/bloom/actions/workflows/ci.yml/badge.svg)](https://github.com/mintthiha/bloom/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/mintthiha/bloom/branch/main/graph/badge.svg)](https://codecov.io/gh/mintthiha/bloom)
+
 Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, a guided onboarding checklist, multi-account tracking, external bank linking via Plaid, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, a financial health score, a safe-to-spend allowance, actionable financial insights, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, a customizable dashboard, and an AI-powered Canadian financial education assistant.
 
 ## Tech Stack

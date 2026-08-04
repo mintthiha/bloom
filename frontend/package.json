@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "start": "next start",
     "lint": "eslint src",
     "format:check": "prettier --check src"
@@ -38,6 +39,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",

@@ -15,6 +15,11 @@ backend/dist/
 frontend/.next/
 *.tsbuildinfo
 
+# Test coverage
+coverage/
+backend/coverage/
+frontend/coverage/
+
 # Prisma generated client
 backend/node_modules/.prisma/
 
