@@ -90,6 +90,7 @@ export function AppSidebar() {
       >
         <Link
           href="/"
+          aria-label="Bloom home"
           style={{
             display: "flex",
             alignItems: "center",

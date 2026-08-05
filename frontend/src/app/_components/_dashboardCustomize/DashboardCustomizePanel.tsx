@@ -311,7 +311,8 @@ export function DashboardCustomizePanel() {
               padding: "1px 5px",
               borderRadius: "999px",
               background: "#3b82f622",
-              color: "#3b82f6",
+              /* blue-400 (not blue-500 #3b82f6) to clear WCAG AA on the faint same-hue tint at 10px */
+              color: "#60a5fa",
               border: "1px solid #3b82f644",
             }}
           >

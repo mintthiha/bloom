@@ -64,7 +64,9 @@
   --border-hover: #2d3854;
   --text-primary: #eef1f7;
   --text-secondary: #8b93a7;
-  --text-muted: #6f7688;
+  /* #808898 clears WCAG AA on the lightest surface muted text sits on (--surface-2 #141b2b, 4.8:1);
+     the previous #6f7688/#767d90 fell short there (4.35/4.18:1). */
+  --text-muted: #808898;
   --header-bg: rgba(6, 10, 20, 0.85);
   --chart-grid: rgba(150, 180, 255, 0.06);
   --chart-cursor: rgba(150, 180, 255, 0.05);

@@ -389,6 +389,18 @@ Bloom targets **WCAG 2.1 AA**. Concrete measures in place:
 - **Contrast.** Theme tokens are chosen for AA contrast (body text ≥ 4.5:1, large/bold ≥ 3:1) in both the default dark theme and light mode.
 - **Live regions.** Route-transition loading state exposes `role="status"`; create/delete actions surface `sonner` toasts.
 
+### Automated enforcement
+
+The claims above are not aspirational — a **Playwright + [`axe-core`](https://github.com/dequelabs/axe-core)** suite (`frontend/e2e/a11y.spec.ts`) scans the login page and the main authenticated pages (dashboard, transactions, budgets, goals, profile) against the WCAG 2.0/2.1 A and AA rule sets and fails CI on any serious or critical violation. It reaches authenticated pages by minting a NextAuth session cookie in `global-setup.ts` (no change to production auth) and stubbing `/api/bloom/*` at the browser layer, so it needs no backend or database. Run it locally with:
+
+```bash
+cd frontend
+npx playwright install chromium   # first time only
+npm run test:e2e
+```
+
+> This gate paid for itself on day one: it caught the muted-text token failing AA (4.35:1) on the darkest surface, which was then fixed to 4.8:1.
+
 ## Testing
 
 ### Frontend Coverage

@@ -20,6 +20,12 @@ coverage/
 backend/coverage/
 frontend/coverage/
 
+# Playwright
+frontend/e2e/.auth/
+frontend/playwright-report/
+frontend/test-results/
+frontend/playwright/.cache/
+
 # Prisma generated client
 backend/node_modules/.prisma/
 
