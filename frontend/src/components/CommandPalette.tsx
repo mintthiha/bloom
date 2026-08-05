@@ -184,6 +184,7 @@ export function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search transactions…"
+            aria-label="Search transactions"
             style={{
               flex: 1,
               background: "transparent",

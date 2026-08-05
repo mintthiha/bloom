@@ -145,8 +145,11 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
           style={{ display: "flex", flexDirection: "column", gap: "16px" }}
         >
           <div>
-            <label style={labelStyle}>Goal name</label>
+            <label htmlFor="goal-name" style={labelStyle}>
+              Goal name
+            </label>
             <input
+              id="goal-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -157,8 +160,11 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
           </div>
 
           <div>
-            <label style={labelStyle}>Account</label>
+            <label htmlFor="goal-account" style={labelStyle}>
+              Account
+            </label>
             <select
+              id="goal-account"
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
               style={{ ...inputStyle, borderRadius: "10px", cursor: "pointer", appearance: "none" }}
@@ -172,8 +178,11 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
           </div>
 
           <div>
-            <label style={labelStyle}>Target amount</label>
+            <label htmlFor="goal-target-amount" style={labelStyle}>
+              Target amount
+            </label>
             <input
+              id="goal-target-amount"
               type="number"
               value={targetAmountInput}
               onChange={(e) => setTargetAmountInput(e.target.value)}

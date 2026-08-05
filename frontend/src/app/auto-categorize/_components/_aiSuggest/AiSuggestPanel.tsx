@@ -123,6 +123,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
         value={merchantInput}
         onChange={(e) => setMerchantInput(e.target.value)}
         placeholder={"Loblaws\nNetflix\nShell"}
+        aria-label="Merchants to categorize, one per line"
         disabled={isLoading}
         rows={5}
         style={{

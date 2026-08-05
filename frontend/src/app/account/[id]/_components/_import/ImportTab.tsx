@@ -329,6 +329,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                             autoFocus
                             value={editValue}
                             list="import-category-options"
+                            aria-label="Edit category"
                             onChange={(e) => setEditValue(e.target.value)}
                             onBlur={commitEdit}
                             onKeyDown={(e) => {
@@ -366,6 +367,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                           <input
                             autoFocus
                             value={editValue}
+                            aria-label="Edit merchant"
                             onChange={(e) => setEditValue(e.target.value)}
                             onBlur={commitEdit}
                             onKeyDown={(e) => {

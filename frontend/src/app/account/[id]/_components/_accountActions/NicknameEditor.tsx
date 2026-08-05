@@ -103,6 +103,7 @@ export function NicknameEditor({ accountId, nickname, onUpdated, onError }: Nick
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Optional nickname"
+            aria-label="Account nickname"
             style={{ ...inputStyle, flex: "1 1 220px" }}
           />
           <button

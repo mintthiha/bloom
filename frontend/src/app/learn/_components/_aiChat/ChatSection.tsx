@@ -207,6 +207,7 @@ export function ChatSection({
           rows={1}
           disabled={streaming}
           placeholder="Ask a question…"
+          aria-label="Ask a financial question"
           style={{
             flex: 1,
             resize: "none",

@@ -192,8 +192,11 @@ export function ProfileFormPanel({
         >
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
-              <label style={sectionLabelStyle}>First Name</label>
+              <label htmlFor="profile-first-name" style={sectionLabelStyle}>
+                First Name
+              </label>
               <input
+                id="profile-first-name"
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -203,8 +206,11 @@ export function ProfileFormPanel({
             </div>
 
             <div>
-              <label style={sectionLabelStyle}>Last Name</label>
+              <label htmlFor="profile-last-name" style={sectionLabelStyle}>
+                Last Name
+              </label>
               <input
+                id="profile-last-name"
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -215,8 +221,11 @@ export function ProfileFormPanel({
           </div>
 
           <div>
-            <label style={sectionLabelStyle}>Username</label>
+            <label htmlFor="profile-username" style={sectionLabelStyle}>
+              Username
+            </label>
             <input
+              id="profile-username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -230,8 +239,11 @@ export function ProfileFormPanel({
           </div>
 
           <div>
-            <label style={sectionLabelStyle}>Email</label>
+            <label htmlFor="profile-email" style={sectionLabelStyle}>
+              Email
+            </label>
             <input
+              id="profile-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -263,8 +275,11 @@ export function ProfileFormPanel({
             </p>
 
             <div>
-              <label style={sectionLabelStyle}>Year of Birth</label>
+              <label htmlFor="profile-birth-year" style={sectionLabelStyle}>
+                Year of Birth
+              </label>
               <input
+                id="profile-birth-year"
                 type="number"
                 value={tfsaBirthYear}
                 onChange={(e) => setTfsaBirthYear(e.target.value)}
@@ -277,8 +292,11 @@ export function ProfileFormPanel({
             </div>
 
             <div>
-              <label style={sectionLabelStyle}>TFSA Room Used Elsewhere</label>
+              <label htmlFor="profile-tfsa-room-used" style={sectionLabelStyle}>
+                TFSA Room Used Elsewhere
+              </label>
               <input
+                id="profile-tfsa-room-used"
                 type="number"
                 value={tfsaRoomUsedElsewhere}
                 onChange={(e) => setTfsaRoomUsedElsewhere(e.target.value)}
@@ -291,10 +309,11 @@ export function ProfileFormPanel({
             </div>
 
             <div>
-              <label style={sectionLabelStyle}>
+              <label htmlFor="profile-rrsp-room" style={sectionLabelStyle}>
                 RRSP Deduction Limit (from CRA Notice of Assessment)
               </label>
               <input
+                id="profile-rrsp-room"
                 type="number"
                 value={rrspContributionRoom}
                 onChange={(e) => setRrspContributionRoom(e.target.value)}

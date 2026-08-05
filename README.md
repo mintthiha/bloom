@@ -46,7 +46,41 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - `frontend/` — Next.js app, auth integration, dashboard UI, profile onboarding, and account pages
 - `backend/` — Express API, Prisma schema, account/profile/budget/recurring/plaid services, and backend tests
 
-The browser never calls the backend directly: the frontend calls its own `/api/*` routes, and `next.config.ts` rewrites those to the backend server-side. Every proxied request carries a shared `INTERNAL_API_SECRET` that the backend's internal-auth middleware verifies, so the API is only ever reached server-to-server (no CORS layer). The backend also exposes an unauthenticated `GET /health` endpoint that checks Postgres connectivity.
+The browser never calls the backend directly. The client API layer (`src/lib/api.ts`) targets same-origin `/api/bloom/*` routes, which are served by a Next.js **Route Handler** (`app/api/bloom/[...path]/route.ts`). That handler authenticates the NextAuth session server-side, then forwards the request to the Express API, injecting an `X-User-Id` (derived from the session — never from the client) and a shared `X-Internal-Secret` header. The backend's `requireInternalSecret` middleware rejects any request missing that secret, so the API is only ever reachable server-to-server (no CORS layer) and a client cannot spoof `X-User-Id` by hitting the backend directly. `/api/auth/*` is handled by NextAuth in the frontend, and the backend exposes an unauthenticated `GET /health` endpoint that checks Postgres connectivity.
+
+```mermaid
+flowchart LR
+    User(("User"))
+
+    subgraph browser["Browser"]
+        UI["React 19 client<br/>lib/api.ts"]
+    end
+
+    subgraph frontend["Next.js — frontend service"]
+        NA["NextAuth<br/>/api/auth/*"]
+        PROXY["Route Handler<br/>/api/bloom/[...path]"]
+    end
+
+    subgraph backend["Express — backend service"]
+        SEC["requireInternalSecret"]
+        API["routes → services → SQL"]
+    end
+
+    DB[("PostgreSQL")]
+    GOOG["Google OAuth"]
+    PLAID["Plaid"]
+    AI["AI assistant (LLM)"]
+
+    User --> UI
+    UI -->|"fetch /api/bloom/*"| PROXY
+    UI -->|"sign in"| NA
+    NA <-->|"OAuth"| GOOG
+    PROXY -->|"adds X-User-Id +<br/>X-Internal-Secret (server-side)"| SEC
+    SEC -->|"verifies secret"| API
+    API --> DB
+    API -.->|"bank linking"| PLAID
+    UI -.->|"/api/learn chat"| AI
+```
 
 ## Core Features
 
@@ -344,6 +378,16 @@ The homepage is structured around a component-per-section pattern, keeping `page
 `InsightsCard` consumes a rule engine (`_insights/insights.ts`) that evaluates all dashboard data synchronously — no extra API calls.
 
 `BudgetRuleCard` fetches a category-breakdown endpoint (`GET /api/accounts/summary/category-breakdown`) that groups spending by `(category, account)` for the selected date range.
+
+## Accessibility
+
+Bloom targets **WCAG 2.1 AA**. Concrete measures in place:
+
+- **Accessible names on every control.** Each form field is programmatically labelled — either an associated `<label htmlFor>` or an `aria-label` for inline/repeating and search inputs — so screen readers announce a name, not just a placeholder. Icon-only buttons (theme toggle, search, row actions) carry `aria-label`s, and decorative icons are marked `aria-hidden`.
+- **Keyboard navigable.** The UI is built on native semantic elements and Radix-backed shadcn/ui primitives (`AlertDialog`, `Tooltip`), so focus management, `Esc`-to-close, and tab order come from the platform rather than custom handlers.
+- **Reduced motion respected.** Every transform/scale interaction (`.press`, `.lift`, `.balance-row`, spinners, entrance animations) is gated behind `@media (prefers-reduced-motion: reduce)`.
+- **Contrast.** Theme tokens are chosen for AA contrast (body text ≥ 4.5:1, large/bold ≥ 3:1) in both the default dark theme and light mode.
+- **Live regions.** Route-transition loading state exposes `role="status"`; create/delete actions surface `sonner` toasts.
 
 ## Testing
 

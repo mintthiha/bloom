@@ -50,6 +50,7 @@ export function AccountFilters({
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search accounts…"
+          aria-label="Search accounts"
           style={{
             width: "100%",
             height: "40px",

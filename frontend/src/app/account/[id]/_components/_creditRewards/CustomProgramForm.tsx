@@ -258,6 +258,7 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
                 value={row.category}
                 onChange={(event) => updateRow(row.rowId, "category", event.target.value)}
                 placeholder="Category"
+                aria-label="Reward category"
                 style={{ ...inputStyle, flex: 1, padding: "8px 12px", fontSize: "13px" }}
               />
               <input
@@ -267,6 +268,7 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
                 min="0"
                 step="0.1"
                 placeholder={rewardType === "cashback" ? "%" : "×"}
+                aria-label={rewardType === "cashback" ? "Cashback rate (%)" : "Points multiplier"}
                 style={{ ...inputStyle, width: "72px", padding: "8px 12px", fontSize: "13px" }}
               />
               <button

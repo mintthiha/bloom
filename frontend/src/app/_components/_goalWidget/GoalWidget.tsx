@@ -84,6 +84,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
         {goals.length > 1 && (
           <select
+            aria-label="Pinned savings goal"
             value={selectedGoal.id}
             onChange={(e) => handleSelectGoal(e.target.value)}
             style={{
