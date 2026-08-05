@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -171,13 +171,15 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
             }}
           >
             <div
-              style={{
-                width: `${selectedGoal.percentageReached}%`,
-                height: "100%",
-                background: progressColor,
-                borderRadius: "999px",
-                transition: "width 0.3s ease",
-              }}
+              className="goal-progress-fill"
+              style={
+                {
+                  width: "100%",
+                  height: "100%",
+                  background: progressColor,
+                  "--goal-progress": selectedGoal.percentageReached / 100,
+                } as CSSProperties
+              }
             />
           </div>
           <span

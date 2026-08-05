@@ -883,3 +883,20 @@ body::before {
     animation: none;
   }
 }
+
+/*
+ * Savings-goal progress fill. Animates via `transform: scaleX` (composited on the GPU)
+ * rather than `width` (which forces layout reflow every frame). The fill sits at full width
+ * and is scaled from the left; the track's `overflow: hidden` + rounded corners clip the shape.
+ * The scale ratio (0–1) is passed in as the `--goal-progress` custom property.
+ */
+.goal-progress-fill {
+  transform-origin: left;
+  transform: scaleX(var(--goal-progress, 0));
+  transition: transform 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .goal-progress-fill {
+    transition: none;
+  }
+}
