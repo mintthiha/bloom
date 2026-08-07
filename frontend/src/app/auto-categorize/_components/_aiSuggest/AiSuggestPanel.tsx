@@ -33,7 +33,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
     ].slice(0, 20);
   }
 
-  /** Sends the merchant list to Claude and populates the suggestions list. */
+  /** Sends the merchant list to the AI categorizer and populates the suggestions list. */
   async function handleSuggest() {
     const merchants = parseMerchants();
     if (merchants.length === 0) return;

@@ -3,7 +3,9 @@
 [![CI](https://github.com/mintthiha/bloom/actions/workflows/ci.yml/badge.svg)](https://github.com/mintthiha/bloom/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/mintthiha/bloom/branch/main/graph/badge.svg)](https://codecov.io/gh/mintthiha/bloom)
 
-Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, a guided onboarding checklist, multi-account tracking, external bank linking via Plaid, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, a financial health score, a safe-to-spend allowance, actionable financial insights, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, a customizable dashboard, and an AI-powered Canadian financial education assistant.
+**Live demo:** [mintbloom.duckdns.org](https://mintbloom.duckdns.org/)
+
+Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, a guided onboarding checklist, multi-account tracking, external bank linking via Plaid, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, subscription auto-detection, bill-reminder notifications, AI-assisted transaction auto-categorization, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, a financial health score, a safe-to-spend allowance, actionable financial insights, a credit card rewards estimator, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, a customizable dashboard, and a locally-hosted AI Canadian financial education assistant.
 
 ## Tech Stack
 
@@ -19,7 +21,6 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 - Sonner
 - Lucide React
 - NextAuth v5 beta
-- Anthropic SDK (`@anthropic-ai/sdk`)
 - Plaid Link (`react-plaid-link`)
 - Vitest
 - Testing Library
@@ -40,6 +41,11 @@ Bloom is a full-stack personal finance demo app built for Canadians learning to 
 ### Authentication
 
 - Google OAuth via NextAuth
+
+### AI
+
+- Self-hosted [Ollama](https://ollama.com/) running the `qwen2.5:7b` model, called over its REST API (`/api/chat`) — no third-party AI provider or API key
+- Streaming responses for the Learn assistant; structured JSON output (`format: "json"`) for merchant auto-categorization
 
 ## Project Structure
 
@@ -69,7 +75,7 @@ flowchart LR
     DB[("PostgreSQL")]
     GOOG["Google OAuth"]
     PLAID["Plaid"]
-    AI["AI assistant (LLM)"]
+    AI["Ollama (qwen2.5:7b)<br/>local LLM"]
 
     User --> UI
     UI -->|"fetch /api/bloom/*"| PROXY
@@ -157,6 +163,15 @@ flowchart LR
   - Automatically resets transaction history filter to all-time after import
   - Backfills net worth snapshots for each imported month using month-end balances
 
+### AI Auto-Categorization
+
+A dedicated `/auto-categorize` page pairs an AI suggester with a persistent rule store:
+
+- **AI Suggest panel** — paste or newline/comma-separate up to 20 merchant names and the app asks the local Ollama model to assign each one a category from Bloom's approved list. The backend forces structured JSON output (`format: "json"`) and validates every suggestion against the allowed categories server-side, dropping anything off-list.
+- **Categorization rules** — accept a suggestion (individually or all at once) to save it as a merchant → category rule. Rules are unique per user + merchant (upsert), manageable in a paginated list with inline edit and confirm-to-delete.
+- **Rules are applied automatically** during CSV import and manual transaction entry: a matching merchant pre-fills its saved category, so categorization only has to happen once per merchant.
+- Merchant input is trimmed, deduplicated, and length-capped; the endpoint returns a clean 503 when the AI service is unavailable.
+
 ### Registered Account Contribution Room
 
 Each TFSA, RRSP, and FHSA account detail page shows a contribution room panel below the account card:
@@ -211,6 +226,32 @@ Proactive, non-blocking warnings that surface before and after a potentially pro
 - Overdue and due-soon entries show status badges
 - Empty state when no active recurring rules exist
 - Respects optional end dates on recurring rules
+
+### Subscription Detection
+
+A dedicated `/subscriptions` page surfaces recurring charges without the user having to tag anything:
+
+- Scans the last 12 months of withdrawal history, groups charges by merchant, and infers a billing **cadence** (weekly, biweekly, monthly, quarterly, or annual) from the spacing between charges
+- Requires a minimum number of occurrences and a stable price band before flagging a merchant as a subscription, so variable spend (e.g. groceries) is not mistaken for one
+- Merges detected subscriptions with the user's active withdrawal recurring rules; each surfaced item is tagged by source — `detected`, `rule`, or `both` (agreeing)
+- **Price-change detection** — reports a percentage step change between a subscription's two most recent distinct amounts, so silent price hikes are visible
+- Headline totals: normalized **monthly** and projected **annual** cost across all subscriptions
+- All detection logic is pure and unit-tested (`backend/src/lib/subscription-detection.ts`) with no database access
+
+### Notifications And Bill Reminders
+
+A notification bell in the app header (with an unread badge) opens a side panel of proactive alerts:
+
+- **Generated on read** — hitting the notifications endpoint regenerates due alerts, so reminders stay fresh without a background scheduler; the badge also polls periodically and refreshes when the tab regains focus
+- Alert sources:
+  - **Bill reminders** — upcoming withdrawal recurring rules whose next occurrence falls within the user's configurable lead window (or is already overdue)
+  - **Low balance** — a chequing/savings balance at or below the threshold
+  - **Over-budget** — a category budget over its limit for the current month
+  - **Goal reached** — fires once when a savings goal hits 100%
+  - **Subscription price increase** — a detected subscription's price stepped up
+- Per-notification **dedupe keys** prevent the same alert from being recreated; dismissed notifications are not regenerated
+- Mark a single notification read, mark all read, or dismiss; unread count drives the badge
+- User-controlled preferences on the profile: **enable/disable bill reminders** (`billRemindersEnabled`) and set the **reminder lead time** (`billReminderLeadDays`)
 
 ### Budgeting And Analytics
 
@@ -295,12 +336,26 @@ Proactive, non-blocking warnings that surface before and after a potentially pro
 - Full goals management page: create, edit, and delete goals
 - "Goal reached!" indicator when balance meets or exceeds target
 
+### Credit Card Rewards Estimator
+
+Credit account detail pages include a rewards estimator that projects points or cashback from actual spending:
+
+- Maps categorized charges in the current date range to a card program's per-category earn rates and renders the result as a horizontal bar chart
+- Ships with built-in card programs and supports **custom programs** — define your own per-category rates and reward type (points or cashback), persisted in localStorage
+- Handles both `points` and `cashback` reward types, formatting axis ticks and totals accordingly
+- Shows a total and an empty state prompting the user to add transactions when there are no charges in view
+- Estimation math is isolated and unit-tested (`credit-rewards-math.ts`)
+
 ### Learn
 
 - Static Canadian financial content cards covering TFSA, RRSP, FHSA, credit card basics, budgeting, and net worth
 - Expandable card layout — each card is collapsed by default and expands inline
-- AI chat assistant powered by Claude (claude-opus-4-6) with adaptive thinking and streaming responses
-- System prompt scoped to Canadian personal finance
+- AI chat assistant powered by a self-hosted Ollama model (`qwen2.5:7b`) with streaming responses; low temperature and an enlarged context window (`num_ctx`) keep answers factual and prevent the prepended context from being truncated
+- **Grounded, not guessing** — the system prompt injects Bloom's authoritative Canadian contribution limits and tax figures (`canadian-tax-facts.ts`) and instructs the model never to state a limit from memory
+- **Personalized** — when available, the user's own Bloom financial snapshot (`financial-snapshot.ts` / `financial-context.ts`) is added to the prompt so answers reflect their accounts and situation; the chat degrades gracefully to a generic (but still grounded) assistant if the snapshot can't be loaded
+- Resilient upstream handling: a connect timeout plus a mid-stream idle watchdog abort a stalled generation, and the endpoint returns a clean 503 (surfaced in the chat) when Ollama is unreachable
+- Per-user hourly rate limit on the chat endpoint
+- Conversation persists across reloads via localStorage; supports stopping an in-progress generation while keeping partial text
 - Single/double layout toggle applies to the Learn page — double view shows cards and chat side by side
 
 ### Dashboard UX
@@ -413,6 +468,8 @@ npm run test:e2e
 - Financial health score coverage (`financial-health-score.test.ts`) — all five sub-scores, their thresholds, and letter-grade boundaries
 - Safe-to-spend coverage (`safe-to-spend.test.ts`) — recurring occurrence expansion, month-end window, and per-day allowance with an injected reference date
 - Onboarding step derivation coverage (`onboarding-steps.test.ts`) — completion state and links per step
+- Credit rewards math coverage (`credit-rewards-math.test.ts`) — per-category points/cashback and program totals
+- Categorization rules manager and notification grouping/utility coverage
 
 ### Backend Coverage
 
@@ -420,7 +477,18 @@ npm run test:e2e
 - Budget rollover carry-forward math coverage (`budget-rollover.test.ts`) — month-chain walking, disabled-rollover collapse, and negative carry-out
 - Route tests for account and budget endpoints
 - Service and route tests for recurring transaction rules
+- Subscription-detection coverage (`subscription-detection.test.ts`) — cadence inference, occurrence/price-stability thresholds, rule merging, and price-change reporting
+- Route and service coverage for notifications/reminders, subscriptions, categorization rules, and AI auto-categorize (including allowed-category validation and AI-unavailable handling)
 - Validation coverage for profile updates plus transaction and merchant input sanitization
+
+## Deployment
+
+The app is currently self-hosted and live at **[mintbloom.duckdns.org](https://mintbloom.duckdns.org/)**.
+
+- `docker-compose.yml` builds and runs the three services — Postgres, the Express backend, and the Next.js frontend.
+- The AI features call an Ollama server running on the host; the compose file wires the frontend to it via `host.docker.internal` and sets `OLLAMA_MODEL`.
+- Provide the required secrets (`INTERNAL_API_SECRET`, `AUTH_*`, and optional `PLAID_*`) via a root `.env` file; the production Google OAuth client must whitelist the deployed callback URL and `AUTH_URL` must match the deployed origin exactly.
+- Database migrations are applied with `prisma migrate deploy` (never `migrate dev`) in deployed environments.
 
 ## Development Notes
 
@@ -434,6 +502,7 @@ npx prisma migrate dev
 - The app now depends on timezone-aware database timestamps for correct local-time display and filtering.
 - The frontend proxy expects the backend API to be running on `http://localhost:3001` unless `NEXT_PUBLIC_API_URL` is set.
 - The frontend and backend must share the same `INTERNAL_API_SECRET`; the Next.js proxy injects it and the backend's internal-auth middleware verifies it on every `/api/*` request.
-- The Learn page AI chat requires an `ANTHROPIC_API_KEY` set in `frontend/.env.local`, and uses the `claude-opus-4-6` model.
+- The AI features (Learn chat and auto-categorization) call a self-hosted [Ollama](https://ollama.com/) server. Configure `OLLAMA_URL` (defaults to `http://localhost:11434`) and `OLLAMA_MODEL` (defaults to `qwen2.5:7b`); the Learn chat also honors `OLLAMA_KEEP_ALIVE` (defaults to `30m`) to keep the model resident between requests. Pull the model first with `ollama pull qwen2.5:7b`. When Ollama is unreachable the AI endpoints fail cleanly (503) and the rest of the app is unaffected. No third-party AI API key is required.
+  - Under Docker Compose, the frontend reaches the host's Ollama via `http://host.docker.internal:11434` (already wired in `docker-compose.yml`).
 - Plaid bank linking is optional. Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` (defaults to `sandbox`) in `backend/.env`; the Plaid client initializes lazily, so the API runs fine when they are absent and the Link card disables itself.
 - See `.env.example` (frontend) and `backend/.env.example` for the full list of required and optional environment variables.

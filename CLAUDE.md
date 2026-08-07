@@ -7,7 +7,7 @@ Bloom is a beginner-focused Canadian personal finance app. Read this whole file 
 - **Frontend:** Next.js 15 (App Router) + React 19 + TypeScript. Styling is **inline `style={{}}` objects** plus Tailwind utility classes and a shared `globals.css`. shadcn/ui provides primitives.
 - **Backend:** Express 5 + TypeScript. Data access is **Prisma with raw/hand-written SQL** (not the Prisma query builder for most reads). PostgreSQL.
 - **Auth:** NextAuth v5, Google OAuth. Reads the `AUTH_`-prefixed env vars (`AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_URL`). Middleware protects routes.
-- **Deployment:** Render — separate frontend and backend services plus a managed Postgres.
+- **Deployment:** Self-hosted via Docker Compose (`docker-compose.yml`) — Postgres, the Express backend, and the Next.js frontend, live at https://mintbloom.duckdns.org/. The AI features call an Ollama server running on the host (reached from the frontend container via `host.docker.internal`).
 - **Primary data path:** the CSV/bank **import** feature is the main way transactions enter Bloom; Plaid (sandbox) is secondary.
 
 ## Architecture (facts you can't infer from the file tree)
