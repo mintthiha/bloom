@@ -17,6 +17,10 @@ vi.mock("@/lib/api", async () => {
   };
 });
 
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+
+import { toast } from "sonner";
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -42,6 +46,7 @@ describe("FreezeButton", () => {
     await waitFor(() => expect(onToggled).toHaveBeenCalledTimes(1));
     expect(apiMock.freeze).toHaveBeenCalledWith("a-1");
     expect(apiMock.unfreeze).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith("Account frozen");
   });
 
   it("calls unfreeze when the account is frozen", async () => {
@@ -54,6 +59,7 @@ describe("FreezeButton", () => {
     await waitFor(() => expect(onToggled).toHaveBeenCalledTimes(1));
     expect(apiMock.unfreeze).toHaveBeenCalledWith("a-1");
     expect(apiMock.freeze).not.toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith("Account unfrozen");
   });
 
   it("disables the button while the toggle is in flight", async () => {
@@ -68,5 +74,28 @@ describe("FreezeButton", () => {
 
     resolveFreeze({});
     await waitFor(() => expect(screen.getByRole("button")).not.toBeDisabled());
+  });
+
+  it("shows an error toast and does not notify the parent when the toggle fails", async () => {
+    apiMock.freeze.mockRejectedValue(new Error("Account is locked"));
+    const onToggled = vi.fn();
+    render(<FreezeButton accountId="a-1" frozen={false} onToggled={onToggled} />);
+
+    fireEvent.click(screen.getByRole("button"));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Account is locked"));
+    expect(onToggled).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    // Button re-enables via the finally block so the user can retry.
+    await waitFor(() => expect(screen.getByRole("button")).not.toBeDisabled());
+  });
+
+  it("falls back to a generic message for a non-Error rejection", async () => {
+    apiMock.unfreeze.mockRejectedValue("network blip");
+    render(<FreezeButton accountId="a-1" frozen={true} onToggled={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button"));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to update account"));
   });
 });

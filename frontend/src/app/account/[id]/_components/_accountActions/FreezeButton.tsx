@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 type FreezeButtonProps = {
@@ -11,13 +12,16 @@ type FreezeButtonProps = {
 export function FreezeButton({ accountId, frozen, onToggled }: FreezeButtonProps) {
   const [freezing, setFreezing] = useState(false);
 
-  /** Toggles the frozen state of the account, then notifies the parent to refresh. */
+  /** Toggles the frozen state of the account, notifies the parent to refresh, and toasts the outcome. */
   async function handleToggle() {
     setFreezing(true);
     try {
       if (frozen) await api.unfreeze(accountId);
       else await api.freeze(accountId);
       onToggled();
+      toast.success(frozen ? "Account unfrozen" : "Account frozen");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update account");
     } finally {
       setFreezing(false);
     }
