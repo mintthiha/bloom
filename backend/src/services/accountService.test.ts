@@ -1,24 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountType } from "@prisma/client";
+import { AccountType, TransactionType } from "@prisma/client";
 import {
   listAccounts,
   createAccount,
   getAccount,
   updateNickname,
   getMonthlySummary,
+  getCategoryBreakdown,
+  getMonthlyTrends,
+  getNetWorthHistory,
+  recordNetWorthSnapshot,
   deposit,
   withdraw,
   transfer,
+  getTransactions,
+  updateTransaction,
+  deleteTransaction,
   freezeAccount,
   unfreezeAccount,
   deleteAccount,
+  importTransactions,
 } from "./accountService";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     $queryRaw: vi.fn(),
     $transaction: vi.fn(),
-    account: { update: vi.fn(), delete: vi.fn() },
+    account: { update: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
     transaction: { deleteMany: vi.fn(), update: vi.fn() },
   },
 }));
@@ -92,6 +100,10 @@ beforeEach(() => {
     if (typeof arg === "function") {
       return (arg as (tx: unknown) => unknown)({
         account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: {
+          delete: vi.fn().mockResolvedValue({}),
+          update: vi.fn().mockResolvedValue({}),
+        },
         $queryRaw: prismaMock.$queryRaw,
       });
     }
@@ -334,5 +346,286 @@ describe("deleteAccount", () => {
     await expect(deleteAccount("u-1", "a-1")).resolves.toBeUndefined();
     expect(prismaMock.transaction.deleteMany).toHaveBeenCalled();
     expect(prismaMock.account.delete).toHaveBeenCalledWith({ where: { id: "a-1" } });
+  });
+});
+
+describe("getTransactions", () => {
+  it("throws 404 when the account does not exist", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(getTransactions("u-1", "a-1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("returns all transactions normalized when no filters are applied", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ amount: "75.00", balanceAfter: "175.00" })]);
+    const txns = await getTransactions("u-1", "a-1");
+    expect(txns).toHaveLength(1);
+    expect(txns[0].amount).toBe(75);
+    expect(txns[0].balanceAfter).toBe(175);
+  });
+
+  it("filters by transaction type", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([
+        makeTxnRow({ id: "t-1", type: "DEPOSIT" }),
+        makeTxnRow({ id: "t-2", type: "WITHDRAWAL" }),
+      ]);
+    const txns = await getTransactions("u-1", "a-1", { type: TransactionType.WITHDRAWAL });
+    expect(txns).toHaveLength(1);
+    expect(txns[0].id).toBe("t-2");
+  });
+
+  it("filters by a specific category", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([
+        makeTxnRow({ id: "t-1", category: "Groceries" }),
+        makeTxnRow({ id: "t-2", category: "Dining" }),
+      ]);
+    const txns = await getTransactions("u-1", "a-1", { category: "Groceries" });
+    expect(txns).toHaveLength(1);
+    expect(txns[0].id).toBe("t-1");
+  });
+
+  it("filters 'Uncategorized' to transactions with a null category", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([
+        makeTxnRow({ id: "t-1", category: null }),
+        makeTxnRow({ id: "t-2", category: "Groceries" }),
+      ]);
+    const txns = await getTransactions("u-1", "a-1", { category: "Uncategorized" });
+    expect(txns).toHaveLength(1);
+    expect(txns[0].id).toBe("t-1");
+  });
+
+  it("filters by search text case-insensitively against description", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([
+        makeTxnRow({ id: "t-1", description: "Coffee Shop Run", merchant: null }),
+        makeTxnRow({ id: "t-2", description: "Grocery Store", merchant: null }),
+      ]);
+    const txns = await getTransactions("u-1", "a-1", { search: "coffee" });
+    expect(txns).toHaveLength(1);
+    expect(txns[0].id).toBe("t-1");
+  });
+
+  it("filters by search text against merchant name", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([
+        makeTxnRow({ id: "t-1", description: null, merchant: "Starbucks" }),
+        makeTxnRow({ id: "t-2", description: null, merchant: "Walmart" }),
+      ]);
+    const txns = await getTransactions("u-1", "a-1", { search: "starbucks" });
+    expect(txns).toHaveLength(1);
+    expect(txns[0].id).toBe("t-1");
+  });
+
+  it("excludes transactions outside the requested date range", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([
+        makeTxnRow({ id: "t-1", effectiveAt: new Date("2026-03-15T00:00:00.000Z") }),
+        makeTxnRow({ id: "t-2", effectiveAt: new Date("2026-04-15T00:00:00.000Z") }),
+      ]);
+    const txns = await getTransactions("u-1", "a-1", {
+      start: new Date("2026-03-01T00:00:00.000Z"),
+      end: new Date("2026-04-01T00:00:00.000Z"),
+    });
+    expect(txns).toHaveLength(1);
+    expect(txns[0].id).toBe("t-1");
+  });
+});
+
+describe("updateTransaction", () => {
+  it("throws 400 when the amount is zero or negative", async () => {
+    await expect(updateTransaction("u-1", "a-1", "t-1", { amount: 0 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
+    await expect(updateTransaction("u-1", "a-1", "t-1", { amount: -10 })).rejects.toMatchObject({
+      statusCode: 400,
+    });
+  });
+
+  it("throws 404 when the transaction does not belong to the account", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([]);
+    await expect(updateTransaction("u-1", "a-1", "t-99", { amount: 50 })).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("updates a deposit and returns the refreshed account", async () => {
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: { update: vi.fn().mockResolvedValue({}) },
+      })
+    );
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "DEPOSIT" })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "75.00" })]);
+    const account = await updateTransaction("u-1", "a-1", "t-1", { amount: 75 });
+    expect(account.balance).toBe(75);
+    expect(prismaMock.$transaction).toHaveBeenCalled();
+  });
+});
+
+describe("deleteTransaction", () => {
+  it("throws 404 when the transaction does not belong to the account", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([]);
+    await expect(deleteTransaction("u-1", "a-1", "t-99")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("deletes a non-transfer transaction and replays balances", async () => {
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: { delete: vi.fn().mockResolvedValue({}) },
+      })
+    );
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "DEPOSIT" })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "50.00" })]);
+    const account = await deleteTransaction("u-1", "a-1", "t-1");
+    expect(account.balance).toBe(50);
+    expect(prismaMock.$transaction).toHaveBeenCalled();
+  });
+});
+
+describe("getCategoryBreakdown", () => {
+  it("coerces spending to numbers and returns category rows", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        category: "Groceries",
+        accountId: "a-1",
+        accountOwnerName: "Test User",
+        accountNickname: null,
+        spending: "120.50",
+      },
+    ]);
+    const rows = await getCategoryBreakdown("u-1");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].spending).toBe(120.5);
+    expect(typeof rows[0].spending).toBe("number");
+  });
+
+  it("returns an empty array when there are no spending rows", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    expect(await getCategoryBreakdown("u-1")).toEqual([]);
+  });
+});
+
+describe("getMonthlyTrends", () => {
+  it("formats months as YYYY-MM and computes net cash flow", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      { month: new Date("2026-03-01T00:00:00.000Z"), income: "1000", spending: "400" },
+      { month: new Date("2026-04-01T00:00:00.000Z"), income: "1200", spending: "350" },
+    ]);
+    const rows = await getMonthlyTrends("u-1", 6);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].month).toBe("2026-03");
+    expect(rows[0].net).toBe(600);
+    expect(rows[1].month).toBe("2026-04");
+    expect(rows[1].net).toBe(850);
+  });
+
+  it("returns an empty array when there are no rows", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    expect(await getMonthlyTrends("u-1")).toEqual([]);
+  });
+});
+
+describe("getNetWorthHistory", () => {
+  it("returns rows oldest-first (reversed from DESC DB order)", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      { id: "s-2", month: "2026-02", netWorth: "8000", totalAssets: "8000", totalDebt: "0" },
+      { id: "s-1", month: "2026-01", netWorth: "7000", totalAssets: "7000", totalDebt: "0" },
+    ]);
+    const rows = await getNetWorthHistory("u-1", 12);
+    expect(rows[0].month).toBe("2026-01");
+    expect(rows[1].month).toBe("2026-02");
+  });
+
+  it("coerces monetary values to numbers", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        id: "s-1",
+        month: "2026-01",
+        netWorth: "5000.50",
+        totalAssets: "6000",
+        totalDebt: "999.50",
+      },
+    ]);
+    const [row] = await getNetWorthHistory("u-1");
+    expect(row.netWorth).toBe(5000.5);
+    expect(row.totalAssets).toBe(6000);
+    expect(row.totalDebt).toBe(999.5);
+  });
+});
+
+describe("recordNetWorthSnapshot", () => {
+  it("calculates net worth from non-credit assets minus credit debt", async () => {
+    prismaMock.account.findMany.mockResolvedValueOnce([
+      { accountType: "CHEQUING", balance: { toNumber: () => 3000 } },
+      { accountType: "SAVINGS", balance: { toNumber: () => 2000 } },
+      { accountType: "CREDIT", balance: { toNumber: () => 500 } },
+    ]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "snap-1" }]);
+    const snap = await recordNetWorthSnapshot("u-1");
+    expect(snap.totalAssets).toBe(5000);
+    expect(snap.totalDebt).toBe(500);
+    expect(snap.netWorth).toBe(4500);
+    expect(snap.id).toBe("snap-1");
+  });
+});
+
+describe("importTransactions", () => {
+  it("throws 403 when the account is frozen", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow({ frozen: true })]);
+    await expect(
+      importTransactions("u-1", "a-1", [{ type: "DEPOSIT", amount: 100, effectiveAt: new Date() }])
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns imported: 0 without touching the DB when rows is empty", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]);
+    const result = await importTransactions("u-1", "a-1", []);
+    expect(result.imported).toBe(0);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("runs the transaction and returns the correct row count", async () => {
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: { update: vi.fn().mockResolvedValue({}) },
+      })
+    );
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "100.00" })]);
+    const result = await importTransactions("u-1", "a-1", [
+      { type: "DEPOSIT", amount: 100, effectiveAt: new Date() },
+    ]);
+    expect(result.imported).toBe(1);
+    expect(result.account.balance).toBe(100);
   });
 });
