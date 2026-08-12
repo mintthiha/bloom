@@ -263,3 +263,147 @@ describe("recurringTransactionService", () => {
     expect(result.failures[0]).toMatchObject({ message: "Insufficient funds" });
   });
 });
+
+/** Builds a minimal RecurringTransactionRecord fixture. */
+function makeRuleRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "rule-1",
+    userId: "user-1",
+    accountId: "account-1",
+    name: "Rent",
+    type: "WITHDRAWAL",
+    amount: "1200",
+    category: "Rent",
+    merchant: null,
+    description: null,
+    frequency: "MONTHLY",
+    startDate: new Date("2026-04-01T00:00:00.000Z"),
+    endDate: null,
+    nextRunAt: new Date("2026-05-01T00:00:00.000Z"),
+    lastRunAt: new Date("2026-04-01T00:00:00.000Z"),
+    active: true,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    accountOwnerName: "Jane Doe",
+    accountNickname: null,
+    accountType: "CHEQUING",
+    ...overrides,
+  };
+}
+
+describe("createRecurringTransaction — input validation", () => {
+  it("throws 400 when amount is zero", async () => {
+    const { createRecurringTransaction } = await import("./recurringTransactionService");
+
+    await expect(
+      createRecurringTransaction("user-1", {
+        accountId: "account-1",
+        name: "Rent",
+        type: "WITHDRAWAL",
+        amount: 0,
+        frequency: "MONTHLY",
+        startDate: new Date("2026-05-01T00:00:00.000Z"),
+      })
+    ).rejects.toMatchObject({ statusCode: 400, message: "amount must be positive" });
+  });
+
+  it("throws 400 when amount is negative", async () => {
+    const { createRecurringTransaction } = await import("./recurringTransactionService");
+
+    await expect(
+      createRecurringTransaction("user-1", {
+        accountId: "account-1",
+        name: "Rent",
+        type: "WITHDRAWAL",
+        amount: -50,
+        frequency: "MONTHLY",
+        startDate: new Date("2026-05-01T00:00:00.000Z"),
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("throws 400 when name is blank", async () => {
+    const { createRecurringTransaction } = await import("./recurringTransactionService");
+
+    await expect(
+      createRecurringTransaction("user-1", {
+        accountId: "account-1",
+        name: "   ",
+        type: "WITHDRAWAL",
+        amount: 100,
+        frequency: "MONTHLY",
+        startDate: new Date("2026-05-01T00:00:00.000Z"),
+      })
+    ).rejects.toMatchObject({ statusCode: 400, message: "name is required" });
+  });
+});
+
+describe("deleteRecurringTransaction", () => {
+  it("throws 404 when the rule does not exist", async () => {
+    const { deleteRecurringTransaction } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(deleteRecurringTransaction("user-1", "missing")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("deletes the rule when it exists and resolves without error", async () => {
+    const { deleteRecurringTransaction } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeRuleRow()]) // selectRecurringTransactionById
+      .mockResolvedValueOnce([]); // DELETE
+
+    await expect(deleteRecurringTransaction("user-1", "rule-1")).resolves.toBeUndefined();
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("setRecurringTransactionActive", () => {
+  it("throws 404 when the rule does not exist", async () => {
+    const { setRecurringTransactionActive } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(setRecurringTransactionActive("user-1", "missing", false)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("returns the updated rule on success", async () => {
+    const { setRecurringTransactionActive } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeRuleRow()]) // selectRecurringTransactionById
+      .mockResolvedValueOnce([makeRuleRow({ active: false, amount: "1200" })]); // UPDATE RETURNING
+
+    const result = await setRecurringTransactionActive("user-1", "rule-1", false);
+
+    expect(result.active).toBe(false);
+    expect(result.amount).toBe(1200);
+  });
+});
+
+describe("applyDueRecurringTransactions — endDate deactivation", () => {
+  it("deactivates a rule whose nextRunAt has already passed endDate without applying it", async () => {
+    const { applyDueRecurringTransactions } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        makeRuleRow({
+          endDate: new Date("2026-03-31T00:00:00.000Z"),
+          nextRunAt: new Date("2026-04-01T00:00:00.000Z"),
+          lastRunAt: new Date("2026-03-01T00:00:00.000Z"),
+        }),
+      ])
+      .mockResolvedValueOnce([]); // UPDATE to set active = false
+
+    const result = await applyDueRecurringTransactions(
+      "user-1",
+      new Date("2026-04-19T00:00:00.000Z")
+    );
+
+    expect(result.appliedCount).toBe(0);
+    expect(result.failedCount).toBe(0);
+    expect(accountServiceMock.deposit).not.toHaveBeenCalled();
+    expect(accountServiceMock.withdraw).not.toHaveBeenCalled();
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+});

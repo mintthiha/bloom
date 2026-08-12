@@ -341,4 +341,118 @@ describe("budgetService", () => {
       })
     ).rejects.toMatchObject({ statusCode: 400 });
   });
+
+  it("rejects when category name exceeds 50 characters", async () => {
+    const { upsertBudget } = await import("./budgetService");
+
+    await expect(
+      upsertBudget("user-1", { category: "A".repeat(51), monthlyLimit: 100 })
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Category must be at most 50 characters",
+    });
+  });
+
+  it("returns an empty array when the user has no budgets", async () => {
+    const { listBudgets } = await import("./budgetService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([]) // budgets
+      .mockResolvedValueOnce([]) // spending rows
+      .mockResolvedValueOnce([]); // period rows
+
+    const result = await listBudgets("user-1", { now: new Date("2026-04-08T00:00:00.000Z") });
+
+    expect(result).toEqual([]);
+  });
+
+  it("returns 0 percentageUsed when the envelope has zero available", async () => {
+    const { listBudgets } = await import("./budgetService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          id: "budget-1",
+          userId: "user-1",
+          category: "Misc",
+          monthlyLimit: 0,
+          rolloverEnabled: false,
+          createdAt: new Date("2026-04-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([{ budgetId: "budget-1", month: "2026-04", total: 50 }])
+      .mockResolvedValueOnce([]);
+
+    const result = await listBudgets("user-1", { now: new Date("2026-04-08T00:00:00.000Z") });
+
+    expect(result[0].percentageUsed).toBe(0);
+  });
+
+  it("deletes a budget and resolves without error", async () => {
+    const { deleteBudget } = await import("./budgetService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "budget-1" }]);
+
+    await expect(deleteBudget("user-1", "budget-1")).resolves.toBeUndefined();
+  });
+
+  it("throws 404 when deleting a budget that does not exist", async () => {
+    const { deleteBudget } = await import("./budgetService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(deleteBudget("user-1", "missing")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("toggles rollover and returns the updated budget record", async () => {
+    const { setRolloverEnabled } = await import("./budgetService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        id: "budget-1",
+        userId: "user-1",
+        category: "Groceries",
+        monthlyLimit: "300",
+        rolloverEnabled: true,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-08T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await setRolloverEnabled("user-1", "budget-1", true);
+
+    expect(result.rolloverEnabled).toBe(true);
+    expect(result.monthlyLimit).toBe(300);
+  });
+
+  it("rejects moveBudgetMoney with a non-positive amount", async () => {
+    const { moveBudgetMoney } = await import("./budgetService");
+
+    await expect(
+      moveBudgetMoney("user-1", {
+        fromBudgetId: "from",
+        toBudgetId: "to",
+        month: "2026-07",
+        amount: 0,
+      })
+    ).rejects.toMatchObject({ statusCode: 400, message: "Amount must be a positive number" });
+
+    await expect(
+      moveBudgetMoney("user-1", {
+        fromBudgetId: "from",
+        toBudgetId: "to",
+        month: "2026-07",
+        amount: -50,
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects moveBudgetMoney with an invalid month format", async () => {
+    const { moveBudgetMoney } = await import("./budgetService");
+
+    await expect(
+      moveBudgetMoney("user-1", {
+        fromBudgetId: "from",
+        toBudgetId: "to",
+        month: "2026-4",
+        amount: 10,
+      })
+    ).rejects.toMatchObject({ statusCode: 400, message: "month must be in YYYY-MM format" });
+  });
 });

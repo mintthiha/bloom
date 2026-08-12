@@ -267,6 +267,11 @@ describe("withdraw", () => {
     expect(account.balance).toBe(70);
     expect(txn.amount).toBe(30);
   });
+
+  it("throws 404 when the account does not exist", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(withdraw("u-1", "a-1", 10)).rejects.toMatchObject({ statusCode: 404 });
+  });
 });
 
 describe("transfer", () => {
@@ -308,6 +313,36 @@ describe("transfer", () => {
       .mockResolvedValueOnce([makeAccountRow({ id: "a-1", balance: "100.00" })])
       .mockResolvedValueOnce([makeAccountRow({ id: "a-2", frozen: true })]);
     await expect(transfer("u-1", "a-1", "a-2", 10)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("transfers funds and returns the updated source account with both transaction legs", async () => {
+    const outgoing = makeTxnRow({
+      id: "t-out",
+      type: "TRANSFER_OUT",
+      amount: "25.00",
+      balanceAfter: "75.00",
+      fromAccountId: "a-1",
+      toAccountId: "a-2",
+    });
+    const incoming = makeTxnRow({
+      id: "t-in",
+      type: "TRANSFER_IN",
+      amount: "25.00",
+      balanceAfter: "125.00",
+      fromAccountId: "a-1",
+      toAccountId: "a-2",
+    });
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow({ id: "a-1", balance: "100.00" })]) // source
+      .mockResolvedValueOnce([makeAccountRow({ id: "a-2", balance: "100.00" })]) // destination
+      .mockResolvedValueOnce([outgoing]) // TRANSFER_OUT insert
+      .mockResolvedValueOnce([incoming]) // TRANSFER_IN insert
+      .mockResolvedValueOnce([makeAccountRow({ id: "a-1", balance: "75.00" })]); // final getAccount
+    const [account, outTxn, inTxn] = await transfer("u-1", "a-1", "a-2", 25);
+    expect(account.balance).toBe(75);
+    expect(outTxn.type).toBe("TRANSFER_OUT");
+    expect(inTxn.type).toBe("TRANSFER_IN");
+    expect(outTxn.amount).toBe(25);
   });
 });
 
