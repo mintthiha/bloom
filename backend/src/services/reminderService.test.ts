@@ -280,4 +280,29 @@ describe("reminderService", () => {
 
     expect(result).toEqual({ createdCount: 1 });
   });
+
+  it("marks all unread notifications read and returns the updated count", async () => {
+    const { markAllNotificationsRead } = await import("./reminderService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-1" }, { id: "notif-2" }]);
+
+    const result = await markAllNotificationsRead("user-1");
+
+    expect(result).toEqual({ updated: 2 });
+  });
+
+  it("returns updated 0 when no unread notifications exist", async () => {
+    const { markAllNotificationsRead } = await import("./reminderService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    const result = await markAllNotificationsRead("user-1");
+
+    expect(result).toEqual({ updated: 0 });
+  });
+
+  it("resolves when dismissing a notification that exists", async () => {
+    const { dismissNotification } = await import("./reminderService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-1" }]);
+
+    await expect(dismissNotification("user-1", "notif-1")).resolves.toBeUndefined();
+  });
 });

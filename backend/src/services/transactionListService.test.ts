@@ -137,4 +137,21 @@ describe("listTransactions", () => {
 
     expect(result.page).toBe(1);
   });
+
+  it("falls back to total 0 when the count query returns no rows", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const result = await listTransactions("u-1");
+
+    expect(result.total).toBe(0);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("accepts each non-default sort key without throwing", async () => {
+    for (const sort of ["date_asc", "amount_desc", "amount_asc"] as const) {
+      mockQuery([], 0);
+      const result = await listTransactions("u-1", { sort });
+      expect(result.rows).toEqual([]);
+    }
+  });
 });

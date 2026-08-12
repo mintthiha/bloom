@@ -222,3 +222,162 @@ describe("profileService", () => {
     });
   });
 });
+
+describe("getProfile", () => {
+  it("returns null when the user has no profile", async () => {
+    const { getProfile } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    const result = await getProfile("user-1");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns the normalized profile when one exists", async () => {
+    const { getProfile } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: null,
+        tfsaRoomUsedElsewhere: null,
+        rrspContributionRoom: null,
+        billRemindersEnabled: true,
+        billReminderLeadDays: 3,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await getProfile("user-1");
+
+    expect(result).toMatchObject({
+      userId: "user-1",
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      billRemindersEnabled: true,
+      billReminderLeadDays: 3,
+    });
+  });
+
+  it("coerces Decimal string fields to numbers in the returned profile", async () => {
+    const { getProfile } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: 1990,
+        tfsaRoomUsedElsewhere: "5000.00",
+        rrspContributionRoom: "14000.50",
+        billRemindersEnabled: false,
+        billReminderLeadDays: 3,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await getProfile("user-1");
+
+    expect(typeof result!.tfsaRoomUsedElsewhere).toBe("number");
+    expect(result!.tfsaRoomUsedElsewhere).toBe(5000);
+    expect(typeof result!.rrspContributionRoom).toBe("number");
+    expect(result!.rrspContributionRoom).toBe(14000.5);
+  });
+});
+
+describe("updateReminderPreferences", () => {
+  it("rejects a non-integer billReminderLeadDays", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { billReminderLeadDays: 1.5 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects billReminderLeadDays exceeding 30", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { billReminderLeadDays: 31 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects negative billReminderLeadDays", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { billReminderLeadDays: -1 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("throws 404 when the profile does not exist", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(
+      updateReminderPreferences("user-1", { billRemindersEnabled: true })
+    ).rejects.toMatchObject({ statusCode: 404, message: "Profile not found" });
+  });
+
+  it("updates reminder preferences and returns the updated profile", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: null,
+        tfsaRoomUsedElsewhere: null,
+        rrspContributionRoom: null,
+        billRemindersEnabled: true,
+        billReminderLeadDays: 5,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-08T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await updateReminderPreferences("user-1", {
+      billRemindersEnabled: true,
+      billReminderLeadDays: 5,
+    });
+
+    expect(result).toMatchObject({
+      billRemindersEnabled: true,
+      billReminderLeadDays: 5,
+    });
+  });
+
+  it("accepts billReminderLeadDays of 0 (no lead)", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: "user-1",
+        firstName: "Jane",
+        lastName: "Doe",
+        username: "janedoe",
+        email: "jane@example.com",
+        tfsaBirthYear: null,
+        tfsaRoomUsedElsewhere: null,
+        rrspContributionRoom: null,
+        billRemindersEnabled: false,
+        billReminderLeadDays: 0,
+        createdAt: new Date("2026-04-04T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-08T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await updateReminderPreferences("user-1", { billReminderLeadDays: 0 });
+
+    expect(result.billReminderLeadDays).toBe(0);
+  });
+});
