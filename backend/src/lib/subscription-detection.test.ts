@@ -223,3 +223,79 @@ describe("detectSubscriptions — totals and ordering", () => {
     expect(summary).toEqual({ monthlyTotal: 0, annualTotal: 0, count: 0, subscriptions: [] });
   });
 });
+
+describe("detectSubscriptions — additional cadences", () => {
+  it("detects a biweekly subscription", () => {
+    const charges: SubscriptionCharge[] = [
+      charge("2026-01-01T00:00:00Z", 7.99, "Gym"),
+      charge("2026-01-15T00:00:00Z", 7.99, "Gym"),
+      charge("2026-01-29T00:00:00Z", 7.99, "Gym"),
+    ];
+
+    const summary = detectSubscriptions(charges, []);
+
+    expect(summary.subscriptions[0].cadence).toBe("BIWEEKLY");
+    // 7.99 * (26/12) ≈ 17.31
+    expect(summary.subscriptions[0].monthlyCost).toBe(17.31);
+  });
+
+  it("detects a quarterly subscription", () => {
+    const charges: SubscriptionCharge[] = [
+      charge("2025-04-01T00:00:00Z", 30, "Cloud Storage"),
+      charge("2025-07-01T00:00:00Z", 30, "Cloud Storage"),
+      charge("2025-10-01T00:00:00Z", 30, "Cloud Storage"),
+    ];
+
+    const summary = detectSubscriptions(charges, []);
+
+    expect(summary.subscriptions[0].cadence).toBe("QUARTERLY");
+    // 30 * (1/3) = 10
+    expect(summary.subscriptions[0].monthlyCost).toBe(10);
+  });
+});
+
+describe("detectSubscriptions — price change threshold", () => {
+  it("does not flag a sub-1% amount change as a price increase", () => {
+    const charges: SubscriptionCharge[] = [
+      charge("2026-01-05T00:00:00Z", 10.0),
+      charge("2026-02-05T00:00:00Z", 10.0),
+      charge("2026-03-05T00:00:00Z", 10.09),
+    ];
+
+    const summary = detectSubscriptions(charges, []);
+
+    expect(summary.subscriptions[0].priceChange).toBeNull();
+  });
+});
+
+describe("detectSubscriptions — rule-sourced cadences", () => {
+  it("surfaces a BIWEEKLY rule with the correct monthly cost", () => {
+    const rule: SubscriptionRule = {
+      merchant: "Gym",
+      name: "Gym membership",
+      amount: 7.99,
+      frequency: "BIWEEKLY",
+    };
+
+    const summary = detectSubscriptions([], [rule]);
+
+    expect(summary.subscriptions[0].cadence).toBe("BIWEEKLY");
+    expect(summary.subscriptions[0].monthlyCost).toBe(17.31);
+    expect(summary.subscriptions[0].source).toBe("rule");
+  });
+
+  it("surfaces a WEEKLY rule with the correct monthly cost", () => {
+    const rule: SubscriptionRule = {
+      merchant: "Coffee Club",
+      name: "Weekly coffee delivery",
+      amount: 5,
+      frequency: "WEEKLY",
+    };
+
+    const summary = detectSubscriptions([], [rule]);
+
+    expect(summary.subscriptions[0].cadence).toBe("WEEKLY");
+    expect(summary.subscriptions[0].monthlyCost).toBe(21.67);
+    expect(summary.subscriptions[0].source).toBe("rule");
+  });
+});

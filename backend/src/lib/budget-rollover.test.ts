@@ -78,3 +78,33 @@ describe("budget-rollover", () => {
     expect(result).toMatchObject({ limit: 250, adjustment: -30, available: 220, carryOut: 180 });
   });
 });
+
+it("uses the template limit when there is no prior history", () => {
+  const result = computeRolloverForMonth({
+    targetMonth: "2026-07",
+    rolloverEnabled: true,
+    templateLimit: 300,
+    spendingByMonth: new Map(),
+    overridesByMonth: new Map(),
+  });
+
+  expect(result).toMatchObject({ limit: 300, carryIn: 0, available: 300 });
+});
+
+it("propagates a manual adjustment through the rollover chain into later months", () => {
+  // Jun gets a +50 cash injection; Jul should carry that forward
+  const result = computeRolloverForMonth({
+    targetMonth: "2026-07",
+    rolloverEnabled: true,
+    templateLimit: 100,
+    spendingByMonth: new Map([
+      ["2026-06", 100],
+      ["2026-07", 0],
+    ]),
+    overridesByMonth: new Map([["2026-06", { limitOverride: null, adjustment: 50 }]]),
+  });
+
+  // Jun: limit 100, adjustment +50 → available 150, spent 100 → carryOut 50
+  // Jul: carryIn 50, limit 100 → available 150
+  expect(result).toMatchObject({ carryIn: 50, available: 150, adjustment: 0 });
+});
