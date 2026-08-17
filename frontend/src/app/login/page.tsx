@@ -115,10 +115,61 @@ export default function LoginPage() {
 
   const [credentialEmail, setCredentialEmail] = useState("");
   const [credentialPassword, setCredentialPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [credentialError, setCredentialError] = useState<string | null>(null);
   const [isCredentialSubmitting, setIsCredentialSubmitting] = useState(false);
+  const [isSavedSigningIn, setIsSavedSigningIn] = useState(false);
+  const [savedAccount, setSavedAccount] = useState<{ token: string; email: string } | null>(null);
 
-  /** Signs in with email and password, displaying an inline error on failure. */
+  /** Reads any saved account from localStorage on mount. */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("bloom_saved_account");
+      if (raw) setSavedAccount(JSON.parse(raw));
+    } catch {
+      localStorage.removeItem("bloom_saved_account");
+    }
+  }, []);
+
+  /** Signs in using the saved remember-me token without requiring a password. */
+  async function handleSavedSignIn() {
+    if (!savedAccount) return;
+    setCredentialError(null);
+    setIsSavedSigningIn(true);
+    try {
+      const result = await signIn("credentials", {
+        rememberToken: savedAccount.token,
+        callbackUrl: "/",
+        redirect: false,
+      });
+      if (result?.error) {
+        localStorage.removeItem("bloom_saved_account");
+        setSavedAccount(null);
+        setCredentialError("Your saved sign-in has expired. Please sign in again.");
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch {
+      setCredentialError("Something went wrong. Please try again.");
+    } finally {
+      setIsSavedSigningIn(false);
+    }
+  }
+
+  /** Clears the saved account and revokes the token server-side. */
+  async function handleForgetSavedAccount() {
+    if (!savedAccount) return;
+    const token = savedAccount.token;
+    localStorage.removeItem("bloom_saved_account");
+    setSavedAccount(null);
+    fetch("/api/remember-revoke", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }).catch(() => {});
+  }
+
+  /** Signs in with email and password, issuing a remember-me token when the checkbox is checked. */
   async function handleCredentialSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCredentialError(null);
@@ -132,9 +183,23 @@ export default function LoginPage() {
       });
       if (result?.error) {
         setCredentialError("Invalid email or password. Please try again.");
-      } else if (result?.url) {
-        window.location.href = result.url;
+        return;
       }
+      if (rememberMe) {
+        const res = await fetch("/api/remember-issue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: credentialEmail, password: credentialPassword }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem(
+            "bloom_saved_account",
+            JSON.stringify({ token: data.token, email: credentialEmail })
+          );
+        }
+      }
+      if (result?.url) window.location.href = result.url;
     } catch {
       setCredentialError("Something went wrong. Please try again.");
     } finally {
@@ -589,6 +654,90 @@ export default function LoginPage() {
             Secure sign-in with Google. New here? Signing in creates your account automatically.
           </p>
 
+          {/* Saved account — shown when a remember-me token exists */}
+          {savedAccount && (
+            <div className="fade-up" style={{ marginTop: "16px", animationDelay: "0.33s" }}>
+              <button
+                type="button"
+                disabled={isSavedSigningIn}
+                onClick={handleSavedSignIn}
+                className="press"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  padding: "12px 14px",
+                  background: "var(--surface-1, var(--surface-0))",
+                  border: "1px solid var(--border)",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: isSavedSigningIn ? "not-allowed" : "pointer",
+                  opacity: isSavedSigningIn ? 0.7 : 1,
+                  color: "inherit",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      background: "#3b82f620",
+                      border: "1px solid #3b82f640",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#3b82f6",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {savedAccount.email[0].toUpperCase()}
+                  </span>
+                  <span>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600 }}>
+                      Continue as
+                    </span>
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "12px",
+                        color: "var(--text-secondary)",
+                        fontWeight: 400,
+                      }}
+                    >
+                      {savedAccount.email}
+                    </span>
+                  </span>
+                </span>
+                <span style={{ color: "var(--text-muted)", fontSize: "18px", lineHeight: 1 }}>
+                  →
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={handleForgetSavedAccount}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "6px 2px",
+                  fontSize: "12px",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                Not you?
+              </button>
+            </div>
+          )}
+
           {/* Divider */}
           <div
             className="fade-up"
@@ -658,6 +807,26 @@ export default function LoginPage() {
                 boxSizing: "border-box",
               }}
             />
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ width: "14px", height: "14px", accentColor: "#3b82f6", cursor: "pointer" }}
+              />
+              Remember me for 30 days
+            </label>
+
             {credentialError && (
               <p
                 style={{

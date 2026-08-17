@@ -33,6 +33,7 @@ const PER_USER_STORAGE_KEYS = [
   "bloom_onboarding_all_steps_complete",
   "bloom_onboarding_learn_explored",
   "bloom-custom-reward-programs",
+  "bloom_saved_account",
 ];
 
 /**

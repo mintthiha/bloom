@@ -17,17 +17,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberToken: { label: "Remember-me token", type: "text" },
       },
-      /** Verifies email/password against the backend and returns the user on success. */
+      /** Verifies credentials (email+password or a remember-me token) and returns the user on success. */
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        const secret = process.env.INTERNAL_API_SECRET ?? "";
+        const headers = { "Content-Type": "application/json", "X-Internal-Secret": secret };
+
         try {
+          // Remember-me token path — no password needed.
+          if (credentials?.rememberToken) {
+            const res = await fetch(`${BACKEND}/api/credentials-auth/remember/verify`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ token: credentials.rememberToken }),
+            });
+            if (!res.ok) return null;
+            const user = await res.json();
+            const localPart = (user.email as string).split("@")[0];
+            return { id: user.id, email: user.email, name: localPart };
+          }
+
+          // Email + password path.
+          if (!credentials?.email || !credentials?.password) return null;
           const res = await fetch(`${BACKEND}/api/credentials-auth/verify`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Internal-Secret": process.env.INTERNAL_API_SECRET ?? "",
-            },
+            headers,
             body: JSON.stringify({ email: credentials.email, password: credentials.password }),
           });
           if (!res.ok) return null;

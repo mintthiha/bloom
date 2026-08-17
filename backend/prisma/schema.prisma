@@ -219,8 +219,23 @@ model AutoCategorizationRule {
 }
 
 model CredentialUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  id             String          @id @default(cuid())
+  email          String          @unique
+  passwordHash   String
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  rememberTokens RememberToken[]
+}
+
+// "Remember me" login: an opaque, revocable token exchanged for a session without
+// re-entering a password. Only the sha256 hash is stored, so a leaked database row
+// can't be replayed as a token, and it never lets a user recover their password.
+model RememberToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  user      CredentialUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
