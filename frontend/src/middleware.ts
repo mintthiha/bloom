@@ -1,14 +1,16 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+const AUTH_PAGES = new Set(["/login", "/register"]);
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
-  const isLoginPage = req.nextUrl.pathname === "/login";
+  const isAuthPage = AUTH_PAGES.has(req.nextUrl.pathname);
 
-  if (!isLoggedIn && !isLoginPage) {
+  if (!isLoggedIn && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
-  if (isLoggedIn && isLoginPage) {
+  if (isLoggedIn && isAuthPage) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 });

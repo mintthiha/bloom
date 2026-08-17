@@ -459,6 +459,45 @@ body {
   transform: translateY(-2px);
 }
 
+/*
+ * Login/register page — text inputs. Border brightens on hover; on focus a blue
+ * ring replaces the global outline so it matches the rest of the design system.
+ * The inline `outline: none` on these inputs is intentional — this class owns focus.
+ */
+.login-input {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.18s ease;
+}
+.login-input:hover {
+  border-color: var(--border-hover);
+}
+.login-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+/*
+ * Login page — Google button. Adds a border lift and a soft drop-shadow on hover
+ * alongside the brightness shift from `.press`, and dips on click.
+ */
+.login-google-button {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.15s ease;
+}
+.login-google-button:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.14);
+}
+.login-google-button:active {
+  transform: scale(0.97);
+  filter: brightness(0.97);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .press:hover,
   .press:active,
@@ -475,6 +514,7 @@ body {
   .rule-edit-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
   .budget-card:hover,
+  .login-google-button:active,
   .chat-suggestion:hover,
   .chat-suggestion:active,
   .chat-send:not(:disabled):hover,

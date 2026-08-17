@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { Check } from "lucide-react";
 
 const GLOW_INFLUENCE_RADIUS = 200; // cursor distance at which repulsion kicks in — smaller = get closer first
@@ -111,6 +112,35 @@ export default function LoginPage() {
   const cursorRef = useRef({ x: 0, y: 0, active: false });
   // Orbs stay invisible until the physics effect places them at their random spawn, so no flash.
   const [started, setStarted] = useState(false);
+
+  const [credentialEmail, setCredentialEmail] = useState("");
+  const [credentialPassword, setCredentialPassword] = useState("");
+  const [credentialError, setCredentialError] = useState<string | null>(null);
+  const [isCredentialSubmitting, setIsCredentialSubmitting] = useState(false);
+
+  /** Signs in with email and password, displaying an inline error on failure. */
+  async function handleCredentialSignIn(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCredentialError(null);
+    setIsCredentialSubmitting(true);
+    try {
+      const result = await signIn("credentials", {
+        email: credentialEmail,
+        password: credentialPassword,
+        callbackUrl: "/",
+        redirect: false,
+      });
+      if (result?.error) {
+        setCredentialError("Invalid email or password. Please try again.");
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch {
+      setCredentialError("Something went wrong. Please try again.");
+    } finally {
+      setIsCredentialSubmitting(false);
+    }
+  }
 
   /** Records the cursor position within the panel so the physics loop can repel the orbs. */
   function handlePanelMouseMove(event: React.MouseEvent<HTMLDivElement>) {
@@ -523,7 +553,7 @@ export default function LoginPage() {
           <div className="fade-up" style={{ animationDelay: "0.26s" }}>
             <button
               type="button"
-              className="press"
+              className="login-google-button"
               onClick={() => signIn("google", { callbackUrl: "/" })}
               style={{
                 width: "100%",
@@ -551,12 +581,135 @@ export default function LoginPage() {
             style={{
               fontSize: "12px",
               color: "var(--text-muted)",
-              marginTop: "16px",
+              marginTop: "12px",
               lineHeight: 1.5,
               animationDelay: "0.33s",
             }}
           >
             Secure sign-in with Google. New here? Signing in creates your account automatically.
+          </p>
+
+          {/* Divider */}
+          <div
+            className="fade-up"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              margin: "20px 0",
+              animationDelay: "0.38s",
+            }}
+          >
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>
+              or
+            </span>
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+          </div>
+
+          {/* Email/password form */}
+          <form
+            className="fade-up"
+            onSubmit={handleCredentialSignIn}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              animationDelay: "0.43s",
+            }}
+          >
+            <input
+              type="email"
+              autoComplete="email"
+              required
+              value={credentialEmail}
+              onChange={(e) => setCredentialEmail(e.target.value)}
+              placeholder="Email"
+              className="login-input"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                background: "var(--surface-1, var(--surface-0))",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                fontSize: "14px",
+                color: "inherit",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={credentialPassword}
+              onChange={(e) => setCredentialPassword(e.target.value)}
+              placeholder="Password"
+              className="login-input"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                background: "var(--surface-1, var(--surface-0))",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                fontSize: "14px",
+                color: "inherit",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            {credentialError && (
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#f87171",
+                  padding: "8px 12px",
+                  background: "#f8717110",
+                  border: "1px solid #f8717130",
+                  borderRadius: "8px",
+                }}
+              >
+                {credentialError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={isCredentialSubmitting}
+              className="press"
+              style={{
+                width: "100%",
+                padding: "11px 20px",
+                background: "var(--surface-0)",
+                color: "inherit",
+                border: "1px solid var(--border)",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: isCredentialSubmitting ? "not-allowed" : "pointer",
+                opacity: isCredentialSubmitting ? 0.7 : 1,
+              }}
+            >
+              {isCredentialSubmitting ? "Signing in…" : "Sign in with email"}
+            </button>
+          </form>
+
+          <p
+            className="fade-up"
+            style={{
+              fontSize: "13px",
+              color: "var(--text-muted)",
+              marginTop: "16px",
+              textAlign: "center",
+              animationDelay: "0.48s",
+            }}
+          >
+            No account?{" "}
+            <Link
+              href="/register"
+              style={{ color: "#3b82f6", fontWeight: 600, textDecoration: "none" }}
+            >
+              Create one
+            </Link>
           </p>
         </div>
       </div>
