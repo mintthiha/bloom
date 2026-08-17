@@ -40,6 +40,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  session: { strategy: "jwt" as const },
+  pages: { signIn: "/login" },
   callbacks: {
     jwt({ token, account, profile }) {
       if (account && profile) {
