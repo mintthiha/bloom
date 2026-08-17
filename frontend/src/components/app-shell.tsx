@@ -16,7 +16,7 @@ import { useDashboardVisibility } from "@/components/dashboard-visibility-provid
 import { useIsMobile } from "@/hooks/use-mobile";
 
 /** Routes that render standalone, without the sidebar/header/footer app chrome. */
-const CHROMELESS_ROUTES = new Set(["/login"]);
+const CHROMELESS_ROUTES = new Set(["/login", "/register"]);
 
 /** Wraps the app in its sidebar/header/footer shell, except on standalone routes like /login. */
 export function AppShell({ children }: { children: ReactNode }) {

@@ -71,7 +71,8 @@ export default function RegisterPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: "100vh",
+        height: "100vh",
+        overflow: "hidden",
         padding: "32px",
         background: "var(--surface-0)",
       }}
