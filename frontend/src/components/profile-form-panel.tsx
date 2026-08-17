@@ -15,8 +15,8 @@ type ProfileFormPanelProps = {
 };
 
 /**
- * Splits the Google display name into first and last name defaults so the
- * profile form can be prefilled before the user has saved Prisma data.
+ * Splits a display name (Google full name or email local part) into first/last
+ * name defaults so the profile form can be prefilled before the user has saved data.
  */
 function getSessionNameParts(name: string | null | undefined) {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -24,6 +24,19 @@ function getSessionNameParts(name: string | null | undefined) {
     firstName: parts[0] ?? "",
     lastName: parts.slice(1).join(" "),
   };
+}
+
+/**
+ * Derives a valid username suggestion from the local part of an email address.
+ * Lowercases and replaces any character outside [a-z0-9_] with an underscore,
+ * then trims to the 20-character username max.
+ */
+function deriveUsernameFromEmail(email: string | null | undefined): string {
+  const local = (email ?? "").split("@")[0];
+  return local
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "_")
+    .slice(0, 20);
 }
 
 export function ProfileFormPanel({
@@ -70,7 +83,7 @@ export function ProfileFormPanel({
         const sessionName = getSessionNameParts(session?.user?.name);
         setFirstName(profile?.firstName ?? sessionName.firstName);
         setLastName(profile?.lastName ?? sessionName.lastName);
-        setUsername(profile?.username ?? "");
+        setUsername(profile?.username ?? deriveUsernameFromEmail(session?.user?.email));
         setEmail(profile?.email ?? session?.user?.email ?? "");
         setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
         setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");

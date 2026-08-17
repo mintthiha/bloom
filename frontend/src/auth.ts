@@ -32,7 +32,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
           if (!res.ok) return null;
           const user = await res.json();
-          return { id: user.id, email: user.email, name: user.email };
+          const localPart = (user.email as string).split("@")[0];
+          return { id: user.id, email: user.email, name: localPart };
         } catch {
           return null;
         }
