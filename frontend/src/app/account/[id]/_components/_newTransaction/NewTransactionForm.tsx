@@ -106,6 +106,14 @@ export function NewTransactionForm({
 
   const overContributionWarning = computeOverContributionWarning();
 
+  const enteredAmount = parseFloat(amount);
+  /** True when a withdrawal would exceed the current balance on a non-credit account. */
+  const wouldOverdraw =
+    op === "withdraw" &&
+    account.accountType !== "CREDIT" &&
+    !isNaN(enteredAmount) &&
+    enteredAmount > account.balance;
+
   /**
    * Updates the merchant field and auto-fills the category when a user rule matches
    * and the user has not already selected a category.
@@ -356,7 +364,7 @@ export function NewTransactionForm({
             <button
               type="submit"
               className="press"
-              disabled={submitting || (op === "transfer" && transferTargets.length === 0)}
+              disabled={submitting || (op === "transfer" && transferTargets.length === 0) || wouldOverdraw}
               style={{
                 padding: "10px 24px",
                 background: "#3b82f6",
@@ -366,11 +374,13 @@ export function NewTransactionForm({
                 border: "none",
                 borderRadius: "8px",
                 cursor:
-                  submitting || (op === "transfer" && transferTargets.length === 0)
+                  submitting || (op === "transfer" && transferTargets.length === 0) || wouldOverdraw
                     ? "not-allowed"
                     : "pointer",
                 opacity:
-                  submitting || (op === "transfer" && transferTargets.length === 0) ? 0.45 : 1,
+                  submitting || (op === "transfer" && transferTargets.length === 0) || wouldOverdraw
+                    ? 0.45
+                    : 1,
                 transition: "opacity 0.15s",
                 whiteSpace: "nowrap",
               }}
@@ -384,6 +394,12 @@ export function NewTransactionForm({
                     : op.charAt(0).toUpperCase() + op.slice(1)}
             </button>
           </div>
+
+          {wouldOverdraw && (
+            <p style={{ fontSize: "12px", color: "#ef4444", margin: 0 }}>
+              Insufficient funds — balance is ${account.balance.toFixed(2)}.
+            </p>
+          )}
 
           {overContributionWarning && overContributionWarning.severity !== "none" && (
             <div
