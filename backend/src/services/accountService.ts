@@ -12,6 +12,10 @@ type AccountRecord = {
   accountType: AccountType;
   balance: string;
   frozen: boolean;
+  isLinked: boolean;
+  plaidAccountId: string | null;
+  plaidItemId: string | null;
+  institutionName: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -65,7 +69,7 @@ function normalizeTransaction(row: TransactionRecord) {
 
 async function selectAccountByUserId(userId: string, id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "id" = ${id} AND "userId" = ${userId}
     LIMIT 1
@@ -439,7 +443,7 @@ export async function getNetWorthHistory(userId: string, months: number = 12) {
  */
 export async function listAccounts(userId: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "userId" = ${userId}
     ORDER BY "createdAt" DESC

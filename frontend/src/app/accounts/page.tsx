@@ -22,6 +22,7 @@ import { AccountFilters } from "./_components/_filters/AccountFilters";
 import { SortControl } from "./_components/_filters/SortControl";
 import { AccountsTreemap } from "./_components/_chart/AccountsTreemap";
 import { AccountsTable } from "./_components/_list/AccountsTable";
+import { RefreshLinkedAccountsButton } from "./_components/RefreshLinkedAccountsButton";
 
 // Reuse the dashboard's manual-order key so a user's existing drag order carries over to this page.
 const ORDER_KEY = "bloom-account-order";
@@ -162,26 +163,29 @@ export default function AccountsPage() {
               Filter, sort, and pin the accounts you want front and center on your dashboard.
             </p>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <p
-              style={{
-                fontSize: "11px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--text-secondary)",
-                marginBottom: "6px",
-              }}
-            >
-              Net Shown
-            </p>
-            <p className="num" style={{ fontSize: "24px", fontWeight: 600, color: totalColor }}>
-              {formatCurrency(netTotal)}
-            </p>
-            <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
-              {visibleAccounts.length} of {accounts.length} account
-              {accounts.length !== 1 ? "s" : ""}
-            </p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px" }}>
+            <div style={{ textAlign: "right" }}>
+              <p
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--text-secondary)",
+                  marginBottom: "6px",
+                }}
+              >
+                Net Shown
+              </p>
+              <p className="num" style={{ fontSize: "24px", fontWeight: 600, color: totalColor }}>
+                {formatCurrency(netTotal)}
+              </p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                {visibleAccounts.length} of {accounts.length} account
+                {accounts.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <RefreshLinkedAccountsButton accounts={accounts} onRefreshed={loadAccounts} />
           </div>
         </div>
       </div>
