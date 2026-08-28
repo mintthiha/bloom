@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api, AutoCategorizationRule } from "@/lib/api";
+
 import {
   CsvRow,
   CSV_TEMPLATE,
@@ -41,19 +42,48 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [isAiEnriching, setIsAiEnriching] = useState(false);
+  const [aiEnrichError, setAiEnrichError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  /** Parses the selected file into rows and resets pagination and editing state. */
+  /**
+   * Sends all uncategorized merchants in a single AI request and applies the returned
+   * suggestions to the rows. A single call is fastest when Ollama runs on one CPU instance.
+   */
+  async function enrichRowsWithAi(rows: CsvRow[]): Promise<CsvRow[]> {
+    const uncategorizedMerchants = [
+      ...new Set(
+        rows.filter((r) => !r.error && r.merchant && !r.category).map((r) => r.merchant as string)
+      ),
+    ].slice(0, 20);
+    if (uncategorizedMerchants.length === 0) return rows;
+
+    const result = await api.suggestCategories(uncategorizedMerchants);
+    const suggestionMap: Record<string, string> = {};
+    for (const suggestion of result.suggestions) {
+      suggestionMap[suggestion.merchant] = suggestion.category;
+    }
+
+    return rows.map((row) => {
+      if (!row.merchant || row.category) return row;
+      const suggested = suggestionMap[row.merchant];
+      if (!suggested) return row;
+      return { ...row, category: suggested, aiSuggestedCategory: true };
+    });
+  }
+
+  /** Parses the selected file into rows, applies local rules, then enriches with AI for missing categories. */
   function handleCsvFile(file: File | null) {
     setCsvRows([]);
     setCsvParseError(null);
+    setAiEnrichError(false);
     setCurrentPage(1);
     setEditingCell(null);
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target?.result as string;
       try {
         const parsed = parseCsvText(text);
@@ -65,7 +95,17 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
         for (const rule of categorizationRules) {
           ruleMap[rule.merchant.toLowerCase()] = rule.category;
         }
-        setCsvRows(applyCategorizationRules(parsed, ruleMap));
+        const withRules = applyCategorizationRules(parsed, ruleMap);
+        setCsvRows(withRules);
+        setIsAiEnriching(true);
+        try {
+          const enriched = await enrichRowsWithAi(withRules);
+          setCsvRows(enriched);
+        } catch {
+          setAiEnrichError(true);
+        } finally {
+          setIsAiEnriching(false);
+        }
       } catch {
         setCsvParseError("Failed to parse CSV.");
       }
@@ -102,13 +142,17 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
     setEditValue(currentValue);
   }
 
-  /** Saves the edited value back into the row and closes the editor. */
+  /** Saves the edited value back into the row and clears any AI-suggestion marker on the field. */
   function commitEdit() {
     if (!editingCell) return;
     setCsvRows((prev) =>
       prev.map((row, i) =>
         i === editingCell.index
-          ? { ...row, [editingCell.field]: editValue.trim() || undefined }
+          ? {
+              ...row,
+              [editingCell.field]: editValue.trim() || undefined,
+              ...(editingCell.field === "category" ? { aiSuggestedCategory: false } : {}),
+            }
           : row
       )
     );
@@ -211,12 +255,22 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
               marginBottom: "10px",
             }}
           >
-            <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+            <span
+              style={{
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               {csvRows.length} row{csvRows.length !== 1 ? "s" : ""} parsed
-              {errorCount > 0 && (
-                <span style={{ color: "#f87171", marginLeft: "8px" }}>
-                  {errorCount} with errors
-                </span>
+              {errorCount > 0 && <span style={{ color: "#f87171" }}>{errorCount} with errors</span>}
+              {isAiEnriching && (
+                <span style={{ color: "#8b5cf6", fontWeight: 600 }}>✦ AI suggesting…</span>
+              )}
+              {!isAiEnriching && aiEnrichError && (
+                <span style={{ color: "#f87171" }}>AI suggestions unavailable</span>
               )}
             </span>
             {validCount > 0 && (
@@ -344,8 +398,23 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                               color: row.category ? "var(--text-secondary)" : "var(--text-muted)",
                               borderBottom: "1px dashed var(--border)",
                               paddingBottom: "1px",
+                              ...(row.aiSuggestedCategory
+                                ? {
+                                    background: "rgba(139, 92, 246, 0.1)",
+                                    borderRadius: "3px",
+                                    padding: "1px 5px",
+                                    borderBottom: "none",
+                                  }
+                                : {}),
                             }}
                           >
+                            {row.aiSuggestedCategory && (
+                              <span
+                                style={{ color: "#8b5cf6", marginRight: "3px", fontSize: "10px" }}
+                              >
+                                ✦
+                              </span>
+                            )}
                             {row.category ?? "—"}
                           </span>
                         )}

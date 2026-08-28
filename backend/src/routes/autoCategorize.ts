@@ -65,11 +65,16 @@ router.post("/suggest", async (req: Request, res: Response, next: NextFunction) 
 
     const systemPrompt = `You are a financial categorization assistant for a Canadian personal finance app called Bloom. Given merchant names, assign each one the most fitting category from the approved list. Return a JSON object with this exact shape: {"suggestions":[{"merchant":"...","category":"..."}]}. The category must be exactly one value from: ${categoryList}. Include every merchant from the input. Return only the JSON — no explanation, no markdown.`;
 
+    const OLLAMA_TIMEOUT_MS = 35_000;
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), OLLAMA_TIMEOUT_MS);
+
     let ollamaResponse: globalThis.Response;
     try {
       ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: abortController.signal,
         body: JSON.stringify({
           model: ollamaModel,
           messages: [
@@ -83,6 +88,8 @@ router.post("/suggest", async (req: Request, res: Response, next: NextFunction) 
       });
     } catch {
       throw new AppError(503, "AI service unavailable");
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (!ollamaResponse.ok) {

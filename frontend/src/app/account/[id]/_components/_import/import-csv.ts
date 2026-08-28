@@ -5,6 +5,8 @@ export type CsvRow = {
   description?: string;
   merchant?: string;
   category?: string;
+  /** True when the category was filled in by AI rather than from the CSV or local rules. */
+  aiSuggestedCategory?: boolean;
   error?: string;
 };
 
