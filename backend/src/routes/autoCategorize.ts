@@ -131,4 +131,119 @@ router.post("/suggest", async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
+/**
+ * Streams AI category suggestions as SSE events, emitting one {merchant, category} event
+ * per merchant as the model generates each line, rather than waiting for the full response.
+ */
+router.post("/suggest-stream", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.headers["x-user-id"] as string | undefined;
+    if (!userId) throw new AppError(401, "Unauthorized");
+
+    const body = requireObject(req.body);
+    const merchants = parseMerchantsFromBody(body);
+
+    const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
+    const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
+    const categoryList = ALLOWED_CATEGORIES.join(", ");
+    const merchantList = merchants.map((m) => `"${m}"`).join(", ");
+
+    const systemPrompt = `You are a financial categorization assistant for a Canadian personal finance app called Bloom. Given merchant names, assign each one the most fitting category. Output ONLY one JSON object per line with this exact shape: {"merchant":"...","category":"..."}. No wrapper array, no markdown, no explanation. The category must be exactly one value from: ${categoryList}. Include every merchant from the input.`;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    let ollamaResponse: globalThis.Response;
+    try {
+      ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: ollamaModel,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Categorize these merchants: [${merchantList}]` },
+          ],
+          stream: true,
+          options: { temperature: 0.1 },
+        }),
+      });
+    } catch {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: "AI service unavailable" })}\n\n`);
+      res.end();
+      return;
+    }
+
+    if (!ollamaResponse.ok || !ollamaResponse.body) {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: "AI service unavailable" })}\n\n`);
+      res.end();
+      return;
+    }
+
+    /** Validates and emits a parsed suggestion line as an SSE event. */
+    function tryEmitSuggestion(line: string): void {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("{")) return;
+      try {
+        const suggestion = JSON.parse(trimmed) as { merchant?: unknown; category?: unknown };
+        if (
+          typeof suggestion.merchant === "string" &&
+          typeof suggestion.category === "string" &&
+          ALLOWED_CATEGORIES.includes(suggestion.category)
+        ) {
+          res.write(
+            `data: ${JSON.stringify({ merchant: suggestion.merchant, category: suggestion.category })}\n\n`
+          );
+        }
+      } catch {
+        // incomplete or malformed line — skip
+      }
+    }
+
+    const reader = ollamaResponse.body.getReader();
+    const decoder = new TextDecoder();
+    let ollamaBuffer = "";
+    let modelOutput = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      ollamaBuffer += decoder.decode(value, { stream: true });
+      const ollamaLines = ollamaBuffer.split("\n");
+      ollamaBuffer = ollamaLines.pop() ?? "";
+
+      for (const ollamaLine of ollamaLines) {
+        if (!ollamaLine.trim()) continue;
+        let chunk: { message?: { content?: string }; done?: boolean };
+        try {
+          chunk = JSON.parse(ollamaLine) as { message?: { content?: string }; done?: boolean };
+        } catch {
+          continue;
+        }
+
+        if (chunk.message?.content) {
+          modelOutput += chunk.message.content;
+          const outputLines = modelOutput.split("\n");
+          modelOutput = outputLines.pop() ?? "";
+          for (const outputLine of outputLines) {
+            tryEmitSuggestion(outputLine);
+          }
+        }
+
+        if (chunk.done) {
+          tryEmitSuggestion(modelOutput);
+        }
+      }
+    }
+
+    res.write("event: done\ndata: {}\n\n");
+    res.end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

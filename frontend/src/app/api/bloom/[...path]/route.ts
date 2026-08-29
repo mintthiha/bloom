@@ -24,6 +24,17 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
   if (res.status === 204) return new NextResponse(null, { status: 204 });
 
+  if (res.headers.get("Content-Type")?.includes("text/event-stream")) {
+    return new NextResponse(res.body, {
+      status: res.status,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
+  }
+
   const data = await res.text();
   return new NextResponse(data, {
     status: res.status,

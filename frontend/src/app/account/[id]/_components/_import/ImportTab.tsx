@@ -49,29 +49,58 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
   const [editValue, setEditValue] = useState("");
 
   /**
-   * Sends all uncategorized merchants in a single AI request and applies the returned
-   * suggestions to the rows. A single call is fastest when Ollama runs on one CPU instance.
+   * Streams AI suggestions from the backend SSE endpoint, updating each row in place
+   * as the model emits a merchant's category rather than waiting for the full response.
    */
-  async function enrichRowsWithAi(rows: CsvRow[]): Promise<CsvRow[]> {
+  async function enrichRowsWithAi(rows: CsvRow[]): Promise<void> {
     const uncategorizedMerchants = [
       ...new Set(
         rows.filter((r) => !r.error && r.merchant && !r.category).map((r) => r.merchant as string)
       ),
     ].slice(0, 20);
-    if (uncategorizedMerchants.length === 0) return rows;
+    if (uncategorizedMerchants.length === 0) return;
 
-    const result = await api.suggestCategories(uncategorizedMerchants);
-    const suggestionMap: Record<string, string> = {};
-    for (const suggestion of result.suggestions) {
-      suggestionMap[suggestion.merchant] = suggestion.category;
-    }
-
-    return rows.map((row) => {
-      if (!row.merchant || row.category) return row;
-      const suggested = suggestionMap[row.merchant];
-      if (!suggested) return row;
-      return { ...row, category: suggested, aiSuggestedCategory: true };
+    const response = await fetch("/api/bloom/auto-categorize/suggest-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ merchants: uncategorizedMerchants }),
     });
+
+    if (!response.ok || !response.body) throw new Error("AI service unavailable");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (line.startsWith("event: error")) throw new Error("AI service unavailable");
+        if (line.startsWith("event: done")) return;
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (!data || data === "{}") continue;
+        try {
+          const suggestion = JSON.parse(data) as { merchant: string; category: string };
+          setCsvRows((prev) =>
+            prev.map((row) => {
+              if (row.merchant === suggestion.merchant && !row.category) {
+                return { ...row, category: suggestion.category, aiSuggestedCategory: true };
+              }
+              return row;
+            })
+          );
+        } catch {
+          // malformed SSE data — skip
+        }
+      }
+    }
   }
 
   /** Parses the selected file into rows, applies local rules, then enriches with AI for missing categories. */
@@ -99,8 +128,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
         setCsvRows(withRules);
         setIsAiEnriching(true);
         try {
-          const enriched = await enrichRowsWithAi(withRules);
-          setCsvRows(enriched);
+          await enrichRowsWithAi(withRules);
         } catch {
           setAiEnrichError(true);
         } finally {
