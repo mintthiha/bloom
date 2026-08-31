@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, AutoCategorizationRule } from "@/lib/api";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
   CsvRow,
@@ -42,17 +44,27 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
   const [isAiEnriching, setIsAiEnriching] = useState(false);
   const [aiEnrichError, setAiEnrichError] = useState(false);
+  const aiAbortRef = useRef<AbortController | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
+
+  /** Toggles AI enrichment and cancels any in-progress stream when disabled. */
+  function handleAiToggle(enabled: boolean) {
+    setAiEnabled(enabled);
+    if (!enabled && isAiEnriching) {
+      aiAbortRef.current?.abort();
+    }
+  }
 
   /**
    * Streams AI suggestions from the backend SSE endpoint, updating each row in place
    * as the model emits a merchant's category rather than waiting for the full response.
    */
-  async function enrichRowsWithAi(rows: CsvRow[]): Promise<void> {
+  async function enrichRowsWithAi(rows: CsvRow[], signal: AbortSignal): Promise<void> {
     const uncategorizedMerchants = [
       ...new Set(
         rows.filter((r) => !r.error && r.merchant && !r.category).map((r) => r.merchant as string)
@@ -64,6 +76,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ merchants: uncategorizedMerchants }),
+      signal,
     });
 
     if (!response.ok || !response.body) throw new Error("AI service unavailable");
@@ -126,13 +139,19 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
         }
         const withRules = applyCategorizationRules(parsed, ruleMap);
         setCsvRows(withRules);
+        if (!aiEnabled) return;
+        const abortController = new AbortController();
+        aiAbortRef.current = abortController;
         setIsAiEnriching(true);
         try {
-          await enrichRowsWithAi(withRules);
-        } catch {
-          setAiEnrichError(true);
+          await enrichRowsWithAi(withRules, abortController.signal);
+        } catch (err) {
+          if (err instanceof Error && err.name !== "AbortError") {
+            setAiEnrichError(true);
+          }
         } finally {
           setIsAiEnriching(false);
+          aiAbortRef.current = null;
         }
       } catch {
         setCsvParseError("Failed to parse CSV.");
@@ -226,6 +245,37 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
         <span className="num">credit</span>, or <span className="num">debit</span>.
       </p>
 
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <Switch id="ai-categorize-toggle" checked={aiEnabled} onCheckedChange={handleAiToggle} />
+        <label
+          htmlFor="ai-categorize-toggle"
+          style={{ fontSize: "13px", color: "var(--text-secondary)", cursor: "pointer" }}
+        >
+          AI category suggestions
+        </label>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              style={{
+                color: "var(--text-muted)",
+                cursor: "help",
+                fontSize: "13px",
+                lineHeight: 1,
+                background: "none",
+                border: "none",
+                padding: 0,
+              }}
+            >
+              ⓘ
+            </TooltipTrigger>
+            <TooltipContent side="right" style={{ maxWidth: "220px", padding: "10px 14px" }}>
+              AI will suggest categories for unrecognized merchants. Turning this off while
+              suggestions are loading will also cancel the generation.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
         <label
           style={{
@@ -302,11 +352,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
               )}
             </span>
             {validCount > 0 && (
-              <span
-                title={
-                  isAiEnriching ? "AI suggested categories are still loading" : undefined
-                }
-              >
+              <span title={isAiEnriching ? "AI suggested categories are still loading" : undefined}>
                 <button
                   className="press"
                   onClick={handleImportCsv}
