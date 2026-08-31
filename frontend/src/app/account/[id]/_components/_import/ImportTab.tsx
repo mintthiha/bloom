@@ -302,26 +302,32 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
               )}
             </span>
             {validCount > 0 && (
-              <button
-                className="press"
-                onClick={handleImportCsv}
-                disabled={csvImporting}
-                style={{
-                  padding: "8px 16px",
-                  background: "#3b82f6",
-                  color: "#000",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  cursor: csvImporting ? "not-allowed" : "pointer",
-                  opacity: csvImporting ? 0.5 : 1,
-                }}
+              <span
+                title={
+                  isAiEnriching ? "AI suggested categories are still loading" : undefined
+                }
               >
-                {csvImporting
-                  ? "Importing..."
-                  : `Import ${validCount} transaction${validCount !== 1 ? "s" : ""}`}
-              </button>
+                <button
+                  className="press"
+                  onClick={handleImportCsv}
+                  disabled={csvImporting || isAiEnriching}
+                  style={{
+                    padding: "8px 16px",
+                    background: "#3b82f6",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: csvImporting || isAiEnriching ? "not-allowed" : "pointer",
+                    opacity: csvImporting || isAiEnriching ? 0.5 : 1,
+                  }}
+                >
+                  {csvImporting
+                    ? "Importing..."
+                    : `Import ${validCount} transaction${validCount !== 1 ? "s" : ""}`}
+                </button>
+              </span>
             )}
           </div>
 
