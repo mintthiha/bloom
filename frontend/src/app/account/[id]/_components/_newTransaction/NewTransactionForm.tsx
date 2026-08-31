@@ -289,7 +289,7 @@ export function NewTransactionForm({
         ))}
       </div>
 
-      {op === "import" && (
+      <div style={{ display: op === "import" ? "block" : "none" }}>
         <ImportTab
           accountId={account.id}
           onSuccess={(imported) => {
@@ -299,7 +299,7 @@ export function NewTransactionForm({
           onError={(msg) => toast.error(msg)}
           categorizationRules={categorizationRules}
         />
-      )}
+      </div>
 
       {op !== "import" && (
         <form

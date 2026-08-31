@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
+import { getAiSuggestionsEnabled, setAiSuggestionsEnabled } from "@/lib/import-preferences";
 import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Columns2, Columns3, Rows3, RotateCcw } from "lucide-react";
@@ -190,11 +191,15 @@ export function DashboardCustomizePanel() {
   const isMobile = useIsMobile();
   // Card visibility, collapse-all, and the onboarding checklist only apply to the dashboard.
   const isDashboard = pathname === "/";
+  const isAccountPage = pathname.startsWith("/account/");
   const hiddenCount = ALL_CARD_IDS.length - visibleCards.size;
   // True when the user has hidden a card or dragged the layout away from its default order.
   const hasCustomLayout =
     hiddenCount > 0 || cardOrder.some((id, index) => id !== ALL_CARD_IDS[index]);
   const [isChecklistHidden, setIsChecklistHidden] = useState(false);
+  const [aiSuggestionsEnabled, setAiSuggestionsEnabledState] = useState(() =>
+    getAiSuggestionsEnabled()
+  );
   const [accountCount, setAccountCount] = useState<number | null>(null);
 
   /** Loads the account count so cards that require a minimum number can be locked until it's met. */
@@ -388,6 +393,23 @@ export function DashboardCustomizePanel() {
               <CardToggle checked={orbsEnabled} onChange={() => setOrbsEnabled(!orbsEnabled)} />
             }
           />
+
+          {isAccountPage && (
+            <SettingRow
+              title="AI category suggestions"
+              description="Suggest categories for unrecognized merchants on import"
+              control={
+                <CardToggle
+                  checked={aiSuggestionsEnabled}
+                  onChange={() => {
+                    const next = !aiSuggestionsEnabled;
+                    setAiSuggestionsEnabledState(next);
+                    setAiSuggestionsEnabled(next);
+                  }}
+                />
+              }
+            />
+          )}
 
           {isDashboard && (
             <>

@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { api, AutoCategorizationRule } from "@/lib/api";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getAiSuggestionsEnabled, setAiSuggestionsEnabled } from "@/lib/import-preferences";
 
 import {
   CsvRow,
@@ -44,7 +45,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
-  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiEnabled, setAiEnabled] = useState(() => getAiSuggestionsEnabled());
   const [isAiEnriching, setIsAiEnriching] = useState(false);
   const [aiEnrichError, setAiEnrichError] = useState(false);
   const aiAbortRef = useRef<AbortController | null>(null);
@@ -52,9 +53,10 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  /** Toggles AI enrichment and cancels any in-progress stream when disabled. */
+  /** Toggles AI enrichment, persists the preference, and cancels any in-progress stream when disabled. */
   function handleAiToggle(enabled: boolean) {
     setAiEnabled(enabled);
+    setAiSuggestionsEnabled(enabled);
     if (!enabled && isAiEnriching) {
       aiAbortRef.current?.abort();
     }
