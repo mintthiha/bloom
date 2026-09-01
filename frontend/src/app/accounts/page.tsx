@@ -163,7 +163,14 @@ export default function AccountsPage() {
               Filter, sort, and pin the accounts you want front and center on your dashboard.
             </p>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "10px" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: "10px",
+            }}
+          >
             <div style={{ textAlign: "right" }}>
               <p
                 style={{

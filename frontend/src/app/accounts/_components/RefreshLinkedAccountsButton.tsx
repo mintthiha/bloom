@@ -22,7 +22,9 @@ export function RefreshLinkedAccountsButton({
 
   const linkedItemIds = [
     ...new Set(
-      accounts.flatMap((account) => (account.isLinked && account.plaidItemId ? [account.plaidItemId] : []))
+      accounts.flatMap((account) =>
+        account.isLinked && account.plaidItemId ? [account.plaidItemId] : []
+      )
     ),
   ];
 

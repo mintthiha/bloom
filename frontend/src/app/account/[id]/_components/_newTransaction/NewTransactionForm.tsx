@@ -364,7 +364,9 @@ export function NewTransactionForm({
             <button
               type="submit"
               className="press"
-              disabled={submitting || (op === "transfer" && transferTargets.length === 0) || wouldOverdraw}
+              disabled={
+                submitting || (op === "transfer" && transferTargets.length === 0) || wouldOverdraw
+              }
               style={{
                 padding: "10px 24px",
                 background: "#3b82f6",
