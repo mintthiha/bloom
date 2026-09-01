@@ -1,5 +1,6 @@
 import express from "express";
 import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
 import pinoHttp from "pino-http";
 import accountsRouter from "./routes/accounts";
 import budgetsRouter from "./routes/budgets";
@@ -20,6 +21,15 @@ import prisma from "./lib/prisma";
 
 const app = express();
 app.use(helmet());
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  })
+);
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
@@ -46,7 +56,17 @@ app.use("/api/transactions", transactionsRouter);
 app.use("/api/plaid", plaidRouter);
 app.use("/api/categorization-rules", categorizationRulesRouter);
 app.use("/api/auto-categorize", autoCategorizeRouter);
-app.use("/api/credentials-auth", credentialsAuthRouter);
+app.use(
+  "/api/credentials-auth",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many login attempts, please try again later." },
+  }),
+  credentialsAuthRouter
+);
 app.use(errorHandler);
 
 export default app;
