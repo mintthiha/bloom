@@ -55,7 +55,17 @@ app.use("/api/subscriptions", subscriptionsRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/plaid", plaidRouter);
 app.use("/api/categorization-rules", categorizationRulesRouter);
-app.use("/api/auto-categorize", autoCategorizeRouter);
+app.use(
+  "/api/auto-categorize",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many AI requests, please try again later." },
+  }),
+  autoCategorizeRouter
+);
 app.use(
   "/api/credentials-auth",
   rateLimit({
