@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import accountsRouter from "./routes/accounts";
 import budgetsRouter from "./routes/budgets";
@@ -18,6 +19,7 @@ import logger from "./lib/logger";
 import prisma from "./lib/prisma";
 
 const app = express();
+app.use(helmet());
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
