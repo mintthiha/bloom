@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
+  Activity,
   BookOpen,
   Landmark,
   LayoutDashboard,
@@ -33,6 +34,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/learn", label: "Learn", icon: BookOpen },
   { href: "/auto-categorize", label: "Auto-categorize", icon: Sparkles },
+  { href: "/activity", label: "Activity", icon: Activity },
 ];
 
 export function AppSidebar() {
