@@ -218,6 +218,17 @@ model AutoCategorizationRule {
   @@unique([userId, merchant])
 }
 
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
 model CredentialUser {
   id             String          @id @default(cuid())
   email          String          @unique

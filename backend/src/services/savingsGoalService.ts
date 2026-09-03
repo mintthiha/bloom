@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
+import { logActivity } from "./activityService";
 
 type SavingsGoalRow = {
   id: string;
@@ -107,6 +108,10 @@ export async function createSavingsGoal(
 
   const goal = await fetchSavingsGoalWithAccount(id);
   if (!goal) throw new AppError(500, "Failed to create savings goal");
+  logActivity(userId, "GOAL_CREATED", `Created savings goal "${goal.name}"`, {
+    goalId: id,
+    targetAmount: input.targetAmount,
+  });
   return goal;
 }
 
@@ -137,15 +142,23 @@ export async function updateSavingsGoal(
 
   const goal = await fetchSavingsGoalWithAccount(goalId);
   if (!goal) throw new AppError(500, "Failed to update savings goal");
+  logActivity(userId, "GOAL_UPDATED", `Updated savings goal "${goal.name}"`, { goalId });
   return goal;
 }
 
 /** Deletes a savings goal. Throws 404 when the goal does not belong to the user. */
 export async function deleteSavingsGoal(userId: string, goalId: string) {
+  const goalBeforeDelete = await fetchSavingsGoalWithAccount(goalId);
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     DELETE FROM "SavingsGoal"
     WHERE "id" = ${goalId} AND "userId" = ${userId}
     RETURNING "id"
   `;
   if (!rows[0]) throw new AppError(404, `Savings goal ${goalId} not found`);
+  logActivity(
+    userId,
+    "GOAL_DELETED",
+    `Deleted savings goal "${goalBeforeDelete?.name ?? goalId}"`,
+    { goalId }
+  );
 }

@@ -328,6 +328,14 @@ export type TransactionListResult = {
   hasMore: boolean;
 };
 
+export type ActivityLogEntry = {
+  id: string;
+  type: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+};
+
 export const api = {
   listAccounts: () => request<Account[]>("/accounts"),
   getMonthlySummary: (query?: DateRangeQuery) =>
@@ -554,4 +562,8 @@ export const api = {
   markAllNotificationsRead: () =>
     request<{ updated: number }>("/notifications/read-all", { method: "POST" }),
   dismissNotification: (id: string) => request<void>(`/notifications/${id}`, { method: "DELETE" }),
+  listActivityLogs: (limit = 50, offset = 0) =>
+    request<{ logs: ActivityLogEntry[]; total: number }>(
+      withQuery("/activity", { limit: String(limit), offset: String(offset) })
+    ),
 };

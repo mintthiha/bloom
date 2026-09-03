@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
+import { logActivity } from "./activityService";
 import {
   computeRolloverForMonth,
   monthKey,
@@ -387,7 +388,24 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
   `;
 
   const row = rows[0]!;
-  return { ...row, monthlyLimit: Number(row.monthlyLimit) };
+  const budget = { ...row, monthlyLimit: Number(row.monthlyLimit) };
+  const isNew = budget.createdAt.getTime() === budget.updatedAt.getTime();
+  if (isNew) {
+    logActivity(
+      userId,
+      "BUDGET_CREATED",
+      `Created $${budget.monthlyLimit.toFixed(0)}/mo budget for ${budget.category}`,
+      { budgetId: budget.id, category: budget.category, monthlyLimit: budget.monthlyLimit }
+    );
+  } else {
+    logActivity(
+      userId,
+      "BUDGET_UPDATED",
+      `Updated budget for ${budget.category} to $${budget.monthlyLimit.toFixed(0)}/mo`,
+      { budgetId: budget.id, category: budget.category, monthlyLimit: budget.monthlyLimit }
+    );
+  }
+  return budget;
 }
 
 /**
@@ -481,13 +499,17 @@ async function applyBudgetAdjustment(
  * Throws 404 when the budget does not exist or does not belong to the user.
  */
 export async function deleteBudget(userId: string, budgetId: string) {
-  const rows = await prisma.$queryRaw<Pick<BudgetRecord, "id">[]>`
+  const rows = await prisma.$queryRaw<Pick<BudgetRecord, "id" | "category">[]>`
     DELETE FROM "CategoryBudget"
     WHERE "id" = ${budgetId} AND "userId" = ${userId}
-    RETURNING "id"
+    RETURNING "id", "category"
   `;
 
   if (!rows[0]) {
     throw new AppError(404, `Budget ${budgetId} not found`);
   }
+  logActivity(userId, "BUDGET_DELETED", `Deleted budget for ${rows[0].category}`, {
+    budgetId,
+    category: rows[0].category,
+  });
 }

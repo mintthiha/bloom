@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
 import prisma from "../lib/prisma";
+import { logActivity } from "./activityService";
 
 type AccountRecord = {
   id: string;
@@ -56,6 +57,11 @@ type TransactionUpdateInput = {
   description?: string;
   effectiveAt?: Date;
 };
+
+/** Returns a short display name for an account, preferring the nickname over the owner name. */
+function accountLabel(ownerName: string, nickname: string | null): string {
+  return nickname ?? ownerName;
+}
 
 /** Converts a raw DB AccountRecord (Decimal balance string) to API-safe format with numeric balance. */
 function normalizeAccount(row: AccountRecord) {
@@ -475,7 +481,14 @@ export async function createAccount(
     VALUES (${id}, ${userId}, ${ownerName.trim()}, ${nickname?.trim() ? nickname.trim() : null}, ${accountType}::"AccountType", 0, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
-  return normalizeAccount(rows[0]);
+  const account = normalizeAccount(rows[0]);
+  logActivity(
+    userId,
+    "ACCOUNT_CREATED",
+    `Created a ${account.accountType} account "${accountLabel(account.ownerName, account.nickname)}"`,
+    { accountId: account.id, accountType: account.accountType }
+  );
+  return account;
 }
 
 /**
@@ -502,7 +515,12 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
     WHERE "id" = ${id} AND "userId" = ${userId}
     RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
-  return normalizeAccount(rows[0]);
+  const account = normalizeAccount(rows[0]);
+  const description = account.nickname
+    ? `Renamed account to "${account.nickname}"`
+    : `Cleared nickname on account "${account.ownerName}"`;
+  logActivity(userId, "ACCOUNT_RENAMED", description, { accountId: account.id });
+  return account;
 }
 
 /**
@@ -538,7 +556,14 @@ export async function deposit(
       toAccountId: id,
     });
   });
-  return [await getAccount(userId, id), transaction] as const;
+  const updatedAccount = await getAccount(userId, id);
+  logActivity(
+    userId,
+    "TRANSACTION_DEPOSIT",
+    `Deposited $${amount.toFixed(2)} to "${accountLabel(rawAccount.ownerName, rawAccount.nickname)}"`,
+    { accountId: id, amount }
+  );
+  return [updatedAccount, transaction] as const;
 }
 
 /**
@@ -577,7 +602,14 @@ export async function withdraw(
       fromAccountId: id,
     });
   });
-  return [await getAccount(userId, id), transaction] as const;
+  const updatedAccount = await getAccount(userId, id);
+  logActivity(
+    userId,
+    "TRANSACTION_WITHDRAWAL",
+    `Withdrew $${amount.toFixed(2)} from "${accountLabel(rawAccount.ownerName, rawAccount.nickname)}"`,
+    { accountId: id, amount }
+  );
+  return [updatedAccount, transaction] as const;
 }
 
 /**
@@ -635,7 +667,14 @@ export async function transfer(
     });
     return [outgoing, incoming] as const;
   });
-  return [await getAccount(userId, fromId), outgoingTransaction, incomingTransaction] as const;
+  const updatedFromAccount = await getAccount(userId, fromId);
+  logActivity(
+    userId,
+    "TRANSACTION_TRANSFER",
+    `Transferred $${amount.toFixed(2)} from "${accountLabel(rawFrom.ownerName, rawFrom.nickname)}" to "${accountLabel(rawTo.ownerName, rawTo.nickname)}"`,
+    { fromAccountId: fromId, toAccountId: toId, amount }
+  );
+  return [updatedFromAccount, outgoingTransaction, incomingTransaction] as const;
 }
 
 /**
@@ -755,7 +794,14 @@ export async function updateTransaction(
       }
     });
 
-    return getAccount(userId, accountId);
+    const updatedAccountAfterTransfer = await getAccount(userId, accountId);
+    logActivity(
+      userId,
+      "TRANSACTION_UPDATED",
+      `Edited a transfer on account "${accountLabel(updatedAccountAfterTransfer.ownerName, updatedAccountAfterTransfer.nickname)}"`,
+      { accountId, transactionId }
+    );
+    return updatedAccountAfterTransfer;
   }
 
   const description = input.description?.trim() ? input.description.trim() : null;
@@ -774,7 +820,14 @@ export async function updateTransaction(
     await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
   });
 
-  return getAccount(userId, accountId);
+  const updatedAccount = await getAccount(userId, accountId);
+  logActivity(
+    userId,
+    "TRANSACTION_UPDATED",
+    `Edited a transaction on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}"`,
+    { accountId, transactionId }
+  );
+  return updatedAccount;
 }
 
 /**
@@ -823,7 +876,14 @@ export async function deleteTransaction(userId: string, accountId: string, trans
       }
     });
 
-    return getAccount(userId, accountId);
+    const accountAfterTransferDelete = await getAccount(userId, accountId);
+    logActivity(
+      userId,
+      "TRANSACTION_DELETED",
+      `Deleted a transfer on "${accountLabel(accountAfterTransferDelete.ownerName, accountAfterTransferDelete.nickname)}"`,
+      { accountId, transactionId }
+    );
+    return accountAfterTransferDelete;
   }
 
   await prisma.$transaction(async (tx) => {
@@ -831,7 +891,14 @@ export async function deleteTransaction(userId: string, accountId: string, trans
     await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
   });
 
-  return getAccount(userId, accountId);
+  const accountAfterDelete = await getAccount(userId, accountId);
+  logActivity(
+    userId,
+    "TRANSACTION_DELETED",
+    `Deleted a transaction on "${accountLabel(accountAfterDelete.ownerName, accountAfterDelete.nickname)}"`,
+    { accountId, transactionId }
+  );
+  return accountAfterDelete;
 }
 
 /**
@@ -844,7 +911,14 @@ export async function freezeAccount(userId: string, id: string) {
     where: { id },
     data: { frozen: true },
   });
-  return getAccount(userId, id);
+  const frozenAccount = await getAccount(userId, id);
+  logActivity(
+    userId,
+    "ACCOUNT_FROZEN",
+    `Froze account "${accountLabel(frozenAccount.ownerName, frozenAccount.nickname)}"`,
+    { accountId: id }
+  );
+  return frozenAccount;
 }
 
 /**
@@ -857,7 +931,14 @@ export async function unfreezeAccount(userId: string, id: string) {
     where: { id },
     data: { frozen: false },
   });
-  return getAccount(userId, id);
+  const unfrozenAccount = await getAccount(userId, id);
+  logActivity(
+    userId,
+    "ACCOUNT_UNFROZEN",
+    `Unfroze account "${accountLabel(unfrozenAccount.ownerName, unfrozenAccount.nickname)}"`,
+    { accountId: id }
+  );
+  return unfrozenAccount;
 }
 
 /**
@@ -866,13 +947,19 @@ export async function unfreezeAccount(userId: string, id: string) {
  * Runs inside a Prisma transaction to ensure atomicity.
  */
 export async function deleteAccount(userId: string, id: string) {
-  await getAccount(userId, id);
+  const accountToDelete = await getAccount(userId, id);
   await prisma.$transaction([
     prisma.transaction.deleteMany({
       where: { OR: [{ fromAccountId: id }, { toAccountId: id }] },
     }),
     prisma.account.delete({ where: { id } }),
   ]);
+  logActivity(
+    userId,
+    "ACCOUNT_DELETED",
+    `Deleted account "${accountLabel(accountToDelete.ownerName, accountToDelete.nickname)}"`,
+    { accountId: id, accountType: accountToDelete.accountType }
+  );
 }
 
 type ImportRow = {
@@ -985,5 +1072,12 @@ export async function importTransactions(userId: string, accountId: string, rows
 
   await backfillNetWorthSnapshots(userId, accountId, account.accountType as AccountType);
 
-  return { imported: rows.length, account: await getAccount(userId, accountId) };
+  const importedAccount = await getAccount(userId, accountId);
+  logActivity(
+    userId,
+    "TRANSACTION_IMPORTED",
+    `Imported ${rows.length} transaction${rows.length === 1 ? "" : "s"} to "${accountLabel(importedAccount.ownerName, importedAccount.nickname)}"`,
+    { accountId, count: rows.length }
+  );
+  return { imported: rows.length, account: importedAccount };
 }

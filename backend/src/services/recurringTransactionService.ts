@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import { deposit, getAccount, withdraw } from "./accountService";
 import prisma from "../lib/prisma";
+import { logActivity } from "./activityService";
 
 export type RecurringTransactionType = "DEPOSIT" | "WITHDRAWAL";
 export type RecurringFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
@@ -256,7 +257,14 @@ export async function createRecurringTransaction(
       ${account.accountType} AS "accountType"
   `;
 
-  return normalizeRecurringTransaction(rows[0]);
+  const recurring = normalizeRecurringTransaction(rows[0]);
+  logActivity(
+    userId,
+    "RECURRING_CREATED",
+    `Created recurring ${input.type.toLowerCase()} "${recurring.name}"`,
+    { recurringId: recurring.id, amount: input.amount, frequency: input.frequency }
+  );
+  return recurring;
 }
 
 /**
@@ -391,6 +399,9 @@ export async function deleteRecurringTransaction(userId: string, id: string) {
     DELETE FROM "RecurringTransaction"
     WHERE "id" = ${id} AND "userId" = ${userId}
   `;
+  logActivity(userId, "RECURRING_DELETED", `Deleted recurring transaction "${existing.name}"`, {
+    recurringId: id,
+  });
 }
 
 /**
