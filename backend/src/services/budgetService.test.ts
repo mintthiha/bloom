@@ -12,6 +12,8 @@ vi.mock("@prisma/client", () => ({
   },
 }));
 
+vi.mock("./activityService", () => ({ logActivity: vi.fn() }));
+
 describe("budgetService", () => {
   beforeEach(() => {
     prismaMock.$queryRaw.mockReset();

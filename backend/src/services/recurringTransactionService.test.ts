@@ -18,6 +18,7 @@ vi.mock("@prisma/client", () => ({
 }));
 
 vi.mock("./accountService", () => accountServiceMock);
+vi.mock("./activityService", () => ({ logActivity: vi.fn() }));
 
 describe("recurringTransactionService", () => {
   beforeEach(() => {

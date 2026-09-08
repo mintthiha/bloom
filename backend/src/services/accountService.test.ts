@@ -31,6 +31,8 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
+vi.mock("./activityService", () => ({ logActivity: vi.fn() }));
+
 // Keep the real Prisma namespace (Prisma.Decimal) and enums; only swap PrismaClient for the mock.
 vi.mock("@prisma/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@prisma/client")>();

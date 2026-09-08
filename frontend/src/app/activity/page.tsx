@@ -69,7 +69,7 @@ export default function ActivityPage() {
           Activity
         </h1>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-          A log of all actions you've taken in Bloom.
+          A log of all actions you&apos;ve taken in Bloom.
         </p>
       </div>
 

@@ -20,6 +20,8 @@ vi.mock("@prisma/client", () => ({
   },
 }));
 
+vi.mock("./activityService", () => ({ logActivity: vi.fn() }));
+
 type SavingsGoalRow = {
   id: string;
   userId: string;
@@ -243,13 +245,17 @@ describe("updateSavingsGoal", () => {
 
 describe("deleteSavingsGoal", () => {
   it("throws AppError 404 when the goal does not belong to the user", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([]); // DELETE RETURNING → no rows
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([]) // fetchSavingsGoalWithAccount → null
+      .mockResolvedValueOnce([]); // DELETE RETURNING → no rows → 404
 
     await expect(deleteSavingsGoal("u-1", "g-99")).rejects.toMatchObject({ statusCode: 404 });
   });
 
   it("resolves without error when the goal is deleted successfully", async () => {
-    prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "g-1" }]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeGoalRow()]) // fetchSavingsGoalWithAccount
+      .mockResolvedValueOnce([{ id: "g-1" }]); // DELETE RETURNING → found
 
     await expect(deleteSavingsGoal("u-1", "g-1")).resolves.toBeUndefined();
   });
