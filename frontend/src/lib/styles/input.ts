@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 /** Shared base style for form text inputs across the app. */
 export const inputStyle: CSSProperties = {
   width: "100%",
+  boxSizing: "border-box",
   background: "var(--surface-2)",
   border: "1px solid var(--border)",
   borderRadius: "8px",

@@ -241,7 +241,7 @@ export function CollapsibleCard({
           transition: "grid-template-rows 0.28s ease",
         }}
       >
-        <div style={{ overflow: "hidden" }}>
+        <div style={{ overflow: isCollapsed ? "hidden" : "visible", minHeight: 0 }}>
           <div
             style={{
               paddingTop: "18px",

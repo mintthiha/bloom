@@ -310,15 +310,8 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
       >
         Add entry
       </p>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 120px 100px auto",
-          gap: "8px",
-          alignItems: "end",
-        }}
-      >
-        <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
           <label
             style={{
               display: "block",
@@ -343,66 +336,68 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
             ))}
           </datalist>
         </div>
-        <div>
-          <label
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 110px auto", gap: "8px", alignItems: "end" }}>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: "11px",
+                color: "var(--text-muted)",
+                marginBottom: "4px",
+              }}
+            >
+              Amount
+            </label>
+            <input
+              style={{ ...inputStyle, fontSize: "13px", padding: "8px 10px" }}
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: "11px",
+                color: "var(--text-muted)",
+                marginBottom: "4px",
+              }}
+            >
+              Type
+            </label>
+            <select
+              style={{ ...inputStyle, fontSize: "13px", padding: "8px 10px" }}
+              value={type}
+              onChange={(e) => setType(e.target.value as ManualEntryType)}
+            >
+              <option value="LIABILITY">Liability</option>
+              <option value="ASSET">Asset</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="press"
+            disabled={isSubmitting}
             style={{
-              display: "block",
-              fontSize: "11px",
-              color: "var(--text-muted)",
-              marginBottom: "4px",
+              background: "#3b82f6",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "8px 14px",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              opacity: isSubmitting ? 0.6 : 1,
+              whiteSpace: "nowrap",
             }}
           >
-            Amount
-          </label>
-          <input
-            style={{ ...inputStyle, fontSize: "13px", padding: "8px 10px" }}
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-          />
+            Add
+          </button>
         </div>
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: "11px",
-              color: "var(--text-muted)",
-              marginBottom: "4px",
-            }}
-          >
-            Type
-          </label>
-          <select
-            style={{ ...inputStyle, fontSize: "13px", padding: "8px 10px" }}
-            value={type}
-            onChange={(e) => setType(e.target.value as ManualEntryType)}
-          >
-            <option value="LIABILITY">Liability</option>
-            <option value="ASSET">Asset</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="press"
-          disabled={isSubmitting}
-          style={{
-            background: "#3b82f6",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            padding: "8px 14px",
-            fontSize: "13px",
-            fontWeight: 700,
-            cursor: "pointer",
-            opacity: isSubmitting ? 0.6 : 1,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Add
-        </button>
       </div>
     </form>
   );
