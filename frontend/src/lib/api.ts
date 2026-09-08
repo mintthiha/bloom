@@ -15,6 +15,7 @@ export type ManualEntry = {
   name: string;
   type: ManualEntryType;
   amount: number;
+  date: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -578,9 +579,13 @@ export const api = {
       withQuery("/activity", { limit: String(limit), offset: String(offset) })
     ),
   listManualEntries: () => request<ManualEntry[]>("/manual-entries"),
-  createManualEntry: (input: { name: string; type: ManualEntryType; amount: number }) =>
-    request<ManualEntry>("/manual-entries", { method: "POST", body: JSON.stringify(input) }),
-  updateManualEntry: (id: string, input: { name: string; amount: number }) =>
+  createManualEntry: (input: {
+    name: string;
+    type: ManualEntryType;
+    amount: number;
+    date: string | null;
+  }) => request<ManualEntry>("/manual-entries", { method: "POST", body: JSON.stringify(input) }),
+  updateManualEntry: (id: string, input: { name: string; amount: number; date: string | null }) =>
     request<ManualEntry>(`/manual-entries/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteManualEntry: (id: string) => request<void>(`/manual-entries/${id}`, { method: "DELETE" }),
 };

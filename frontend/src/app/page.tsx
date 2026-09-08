@@ -483,19 +483,7 @@ function Home() {
   if (visibleCards.has("manual-entries")) {
     reorderableCards.push({
       id: "manual-entries",
-      node: (
-        <ManualEntriesCard
-          entries={manualEntries}
-          onEntriesChange={setManualEntries}
-          onNetWorthRefresh={async () => {
-            const [, nextHistory] = await Promise.all([
-              api.recordNetWorthSnapshot(),
-              api.getNetWorthHistory(12),
-            ]);
-            setNetWorthHistory(nextHistory);
-          }}
-        />
-      ),
+      node: <ManualEntriesCard entries={manualEntries} />,
     });
   }
   if (accounts.length > 0 && visibleCards.has("account-balances")) {

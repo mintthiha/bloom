@@ -13,6 +13,15 @@ function uid(req: Request): string {
   return id;
 }
 
+/** Validates an optional date string (YYYY-MM-DD). Returns null if absent, throws 400 if malformed. */
+function parseOptionalDate(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") throw new AppError(400, "date must be a YYYY-MM-DD string");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+    throw new AppError(400, "date must be a YYYY-MM-DD string");
+  return value;
+}
+
 /** Returns all manual entries (assets + liabilities) for the current user. */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -33,22 +42,24 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     }
     const type = rawType as ManualEntryType;
     const amount = requirePositiveNumber(body.amount, "amount");
+    const date = parseOptionalDate(body.date);
     res
       .status(201)
-      .json(await manualEntryService.createManualEntry(uid(req), { name, type, amount }));
+      .json(await manualEntryService.createManualEntry(uid(req), { name, type, amount, date }));
   } catch (err) {
     next(err);
   }
 });
 
-/** Updates the name and amount of an existing manual entry. */
+/** Updates the name, amount, and date of an existing manual entry. */
 router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const entryId = req.params["id"] as string;
     const body = requireObject(req.body);
     const name = requireString(body.name, "name", { max: 100 });
     const amount = requirePositiveNumber(body.amount, "amount");
-    res.json(await manualEntryService.updateManualEntry(uid(req), entryId, { name, amount }));
+    const date = parseOptionalDate(body.date);
+    res.json(await manualEntryService.updateManualEntry(uid(req), entryId, { name, amount, date }));
   } catch (err) {
     next(err);
   }

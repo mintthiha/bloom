@@ -218,6 +218,7 @@ model ManualEntry {
   name      String
   type      ManualEntryType
   amount    Decimal         @db.Decimal(19, 4)
+  date      DateTime?       @db.Date
   createdAt DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt DateTime        @updatedAt @db.Timestamptz(3)
 
