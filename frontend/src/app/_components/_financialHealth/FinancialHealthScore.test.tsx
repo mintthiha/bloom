@@ -29,6 +29,7 @@ describe("FinancialHealthScore", () => {
         budgets={[]}
         monthlySummary={monthlySummary}
         netWorthHistory={[]}
+        manualEntries={[]}
       />
     );
 
@@ -44,6 +45,7 @@ describe("FinancialHealthScore", () => {
         budgets={[]}
         monthlySummary={monthlySummary}
         netWorthHistory={[]}
+        manualEntries={[]}
       />
     );
 
@@ -57,6 +59,7 @@ describe("FinancialHealthScore", () => {
         budgets={[]}
         monthlySummary={monthlySummary}
         netWorthHistory={[]}
+        manualEntries={[]}
       />
     );
 

@@ -14,6 +14,7 @@ const { apiMock } = vi.hoisted(() => ({
     getMonthlyTrends: vi.fn(),
     recordNetWorthSnapshot: vi.fn(),
     getNetWorthHistory: vi.fn(),
+    listManualEntries: vi.fn(),
   },
 }));
 
@@ -32,6 +33,7 @@ vi.mock("@/lib/api", async () => {
       getMonthlyTrends: apiMock.getMonthlyTrends,
       recordNetWorthSnapshot: apiMock.recordNetWorthSnapshot,
       getNetWorthHistory: apiMock.getNetWorthHistory,
+      listManualEntries: apiMock.listManualEntries,
     },
   };
 });
@@ -87,6 +89,7 @@ describe("home page", () => {
     apiMock.getMonthlyTrends.mockReset();
     apiMock.recordNetWorthSnapshot.mockReset();
     apiMock.getNetWorthHistory.mockReset();
+    apiMock.listManualEntries.mockReset();
     apiMock.listAccounts.mockResolvedValue([]);
     apiMock.getMonthlySummary.mockResolvedValue({
       month: "2026-04",
@@ -102,6 +105,7 @@ describe("home page", () => {
     apiMock.getMonthlyTrends.mockResolvedValue([]);
     apiMock.recordNetWorthSnapshot.mockResolvedValue(undefined);
     apiMock.getNetWorthHistory.mockResolvedValue([]);
+    apiMock.listManualEntries.mockResolvedValue([]);
   });
 
   it("shows onboarding when the user has no saved profile", async () => {

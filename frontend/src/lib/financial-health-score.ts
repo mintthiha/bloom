@@ -1,4 +1,4 @@
-import { Account, Budget, MonthlySummary, NetWorthSnapshot } from "./api";
+import { Account, Budget, ManualEntry, MonthlySummary, NetWorthSnapshot } from "./api";
 import { formatCurrency } from "./format";
 
 export interface SubScore {
@@ -23,6 +23,7 @@ export interface HealthScoreInputs {
   budgets: Budget[];
   monthlySummary: MonthlySummary;
   netWorthHistory: NetWorthSnapshot[];
+  manualEntries: ManualEntry[];
 }
 
 /** Rates the percentage of income saved this period (0–20 pts). */
@@ -152,35 +153,35 @@ function scoreBudgetAdherence(budgets: Budget[]): SubScore {
   };
 }
 
-/** Rates credit card balance relative to total cash assets (0–20 pts). */
-function scoreDebtRatio(cashBalance: number, creditBalance: number): SubScore {
-  if (creditBalance <= 0) {
+/** Rates total debt relative to total assets (0–20 pts). Covers credit cards, loans, and manual liabilities. */
+function scoreDebtRatio(totalAssets: number, totalDebt: number): SubScore {
+  if (totalDebt <= 0) {
     return {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 20,
-      status: "No credit card debt — full marks.",
+      status: "No debt recorded — full marks.",
       tip: null,
     };
   }
-  if (cashBalance <= 0) {
+  if (totalAssets <= 0) {
     return {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 0,
-      status: "Debt exceeds all cash assets. Prioritise paying down credit balances.",
+      status: "Debt exceeds all recorded assets. Prioritise paying down balances.",
       tip: "Paying more than the minimum each month reduces debt faster.",
     };
   }
-  const ratio = creditBalance / cashBalance;
+  const ratio = totalDebt / totalAssets;
   const pct = `${(ratio * 100).toFixed(0)}%`;
   if (ratio < 0.05) {
     return {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 18,
-      status: `Credit balance is ${pct} of cash assets — minimal debt.`,
-      tip: `Paying off the remaining ${formatCurrency(creditBalance)} would earn full marks.`,
+      status: `Total debt is ${pct} of assets — minimal debt.`,
+      tip: `Paying off the remaining ${formatCurrency(totalDebt)} would earn full marks.`,
     };
   }
   if (ratio < 0.15) {
@@ -188,8 +189,8 @@ function scoreDebtRatio(cashBalance: number, creditBalance: number): SubScore {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 14,
-      status: `Credit balance is ${pct} of cash assets — manageable.`,
-      tip: "Reducing this ratio below 5% of cash would improve your score.",
+      status: `Total debt is ${pct} of assets — manageable.`,
+      tip: "Reducing this ratio below 5% of assets would improve your score.",
     };
   }
   if (ratio < 0.3) {
@@ -197,8 +198,8 @@ function scoreDebtRatio(cashBalance: number, creditBalance: number): SubScore {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 10,
-      status: `Credit balance is ${pct} of cash assets — moderate debt.`,
-      tip: "Aim to reduce credit balances before adding to savings.",
+      status: `Total debt is ${pct} of assets — moderate.`,
+      tip: "Aim to reduce debt before adding to savings.",
     };
   }
   if (ratio < 0.5) {
@@ -206,7 +207,7 @@ function scoreDebtRatio(cashBalance: number, creditBalance: number): SubScore {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 5,
-      status: `Credit balance is ${pct} of cash assets — high debt relative to savings.`,
+      status: `Total debt is ${pct} of assets — high relative to what you own.`,
       tip: "High-interest debt costs more than most savings earn. Prioritise repayment.",
     };
   }
@@ -215,15 +216,15 @@ function scoreDebtRatio(cashBalance: number, creditBalance: number): SubScore {
       id: "debt_ratio",
       label: "Debt Ratio",
       score: 2,
-      status: `Credit balance is ${pct} of cash assets — debt is close to your total cash holdings.`,
-      tip: "Focus aggressively on paying down credit card balances.",
+      status: `Total debt is ${pct} of assets — close to your total holdings.`,
+      tip: "Focus aggressively on paying down balances.",
     };
   }
   return {
     id: "debt_ratio",
     label: "Debt Ratio",
     score: 0,
-    status: "Credit balance exceeds total cash assets — net worth is negative.",
+    status: "Total debt exceeds total assets — net worth is negative.",
     tip: "Prioritise debt repayment above all other financial goals.",
   };
 }
@@ -372,13 +373,22 @@ export function computeHealthScore({
   budgets,
   monthlySummary,
   netWorthHistory,
+  manualEntries,
 }: HealthScoreInputs): HealthScore {
-  const cashBalance = accounts
+  const accountAssets = accounts
     .filter((a) => a.accountType !== "CREDIT")
     .reduce((sum, a) => sum + a.balance, 0);
-  const creditBalance = accounts
+  const accountDebt = accounts
     .filter((a) => a.accountType === "CREDIT")
     .reduce((sum, a) => sum + a.balance, 0);
+  const manualAssets = manualEntries
+    .filter((e) => e.type === "ASSET")
+    .reduce((sum, e) => sum + e.amount, 0);
+  const manualLiabilities = manualEntries
+    .filter((e) => e.type === "LIABILITY")
+    .reduce((sum, e) => sum + e.amount, 0);
+  const totalAssets = accountAssets + manualAssets;
+  const totalDebt = accountDebt + manualLiabilities;
   const liquidBalance = accounts
     .filter((a) => a.accountType === "CHEQUING" || a.accountType === "SAVINGS")
     .reduce((sum, a) => sum + a.balance, 0);
@@ -386,7 +396,7 @@ export function computeHealthScore({
   const subScores: SubScore[] = [
     scoreSavingsRate(monthlySummary.income, monthlySummary.netCashFlow),
     scoreBudgetAdherence(budgets),
-    scoreDebtRatio(cashBalance, creditBalance),
+    scoreDebtRatio(totalAssets, totalDebt),
     scoreEmergencyCoverage(liquidBalance, monthlySummary.spending),
     scoreNetWorthTrend(netWorthHistory),
   ];

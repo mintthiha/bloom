@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Account, Budget, MonthlySummary, NetWorthSnapshot } from "@/lib/api";
+import { Account, Budget, ManualEntry, MonthlySummary, NetWorthSnapshot } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { computeHealthScore, SubScore } from "@/lib/financial-health-score";
 
@@ -10,6 +10,7 @@ interface FinancialHealthScoreProps {
   budgets: Budget[];
   monthlySummary: MonthlySummary;
   netWorthHistory: NetWorthSnapshot[];
+  manualEntries: ManualEntry[];
 }
 
 /** Returns the display colour for an overall 0–100 score. */
@@ -344,10 +345,11 @@ export function FinancialHealthScore({
   budgets,
   monthlySummary,
   netWorthHistory,
+  manualEntries,
 }: FinancialHealthScoreProps) {
   const healthScore = useMemo(
-    () => computeHealthScore({ accounts, budgets, monthlySummary, netWorthHistory }),
-    [accounts, budgets, monthlySummary, netWorthHistory]
+    () => computeHealthScore({ accounts, budgets, monthlySummary, netWorthHistory, manualEntries }),
+    [accounts, budgets, monthlySummary, netWorthHistory, manualEntries]
   );
 
   const scoreColor = overallScoreColor(healthScore.total);

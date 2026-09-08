@@ -614,12 +614,15 @@ describe("getNetWorthHistory", () => {
 });
 
 describe("recordNetWorthSnapshot", () => {
-  it("calculates net worth from non-credit assets minus credit debt", async () => {
+  it("calculates net worth from non-credit assets minus credit debt, including zero manual entries", async () => {
     prismaMock.account.findMany.mockResolvedValueOnce([
       { accountType: "CHEQUING", balance: { toNumber: () => 3000 } },
       { accountType: "SAVINGS", balance: { toNumber: () => 2000 } },
       { accountType: "CREDIT", balance: { toNumber: () => 500 } },
     ]);
+    // First $queryRaw call: manual entry totals
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ manualAssets: "0", manualLiabilities: "0" }]);
+    // Second $queryRaw call: the INSERT … RETURNING snapshot id
     prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "snap-1" }]);
     const snap = await recordNetWorthSnapshot("u-1");
     expect(snap.totalAssets).toBe(5000);

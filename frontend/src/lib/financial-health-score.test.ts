@@ -16,6 +16,7 @@ function makeInputs(overrides: Partial<HealthScoreInputs> = {}): HealthScoreInpu
       categories: [],
     },
     netWorthHistory: [],
+    manualEntries: [],
     ...overrides,
   };
 }

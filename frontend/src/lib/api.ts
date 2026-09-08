@@ -7,6 +7,17 @@ export type DateRangeQuery = {
 
 export type RecurringTransactionType = "DEPOSIT" | "WITHDRAWAL";
 export type RecurringFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+export type ManualEntryType = "ASSET" | "LIABILITY";
+
+export type ManualEntry = {
+  id: string;
+  userId: string;
+  name: string;
+  type: ManualEntryType;
+  amount: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
 function withQuery(path: string, query?: Record<string, string | undefined>) {
   const params = new URLSearchParams();
@@ -566,4 +577,10 @@ export const api = {
     request<{ logs: ActivityLogEntry[]; total: number }>(
       withQuery("/activity", { limit: String(limit), offset: String(offset) })
     ),
+  listManualEntries: () => request<ManualEntry[]>("/manual-entries"),
+  createManualEntry: (input: { name: string; type: ManualEntryType; amount: number }) =>
+    request<ManualEntry>("/manual-entries", { method: "POST", body: JSON.stringify(input) }),
+  updateManualEntry: (id: string, input: { name: string; amount: number }) =>
+    request<ManualEntry>(`/manual-entries/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  deleteManualEntry: (id: string) => request<void>(`/manual-entries/${id}`, { method: "DELETE" }),
 };

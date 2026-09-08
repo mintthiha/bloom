@@ -15,6 +15,7 @@ import categorizationRulesRouter from "./routes/categorizationRules";
 import autoCategorizeRouter from "./routes/autoCategorize";
 import credentialsAuthRouter from "./routes/credentialsAuth";
 import activityRouter from "./routes/activity";
+import manualEntriesRouter from "./routes/manualEntries";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireInternalSecret } from "./middleware/internalAuth";
 import logger from "./lib/logger";
@@ -57,6 +58,7 @@ app.use("/api/transactions", transactionsRouter);
 app.use("/api/plaid", plaidRouter);
 app.use("/api/categorization-rules", categorizationRulesRouter);
 app.use("/api/activity", activityRouter);
+app.use("/api/manual-entries", manualEntriesRouter);
 app.use(
   "/api/auto-categorize",
   rateLimit({

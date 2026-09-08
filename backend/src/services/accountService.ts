@@ -389,12 +389,28 @@ export async function getMonthlyTrends(userId: string, months: number = 6) {
  */
 export async function recordNetWorthSnapshot(userId: string) {
   const accounts = await prisma.account.findMany({ where: { userId } });
-  const totalAssets = accounts
+  const accountAssets = accounts
     .filter((a) => a.accountType !== "CREDIT")
     .reduce((sum, a) => sum + a.balance.toNumber(), 0);
-  const totalDebt = accounts
+  const accountDebt = accounts
     .filter((a) => a.accountType === "CREDIT")
     .reduce((sum, a) => sum + a.balance.toNumber(), 0);
+
+  const { manualAssets, manualLiabilities } = await prisma.$queryRaw<
+    { manualAssets: string; manualLiabilities: string }[]
+  >`
+    SELECT
+      COALESCE(SUM(CASE WHEN "type" = 'ASSET'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualAssets",
+      COALESCE(SUM(CASE WHEN "type" = 'LIABILITY'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualLiabilities"
+    FROM "ManualEntry"
+    WHERE "userId" = ${userId}
+  `.then((rows) => ({
+    manualAssets: Number(rows[0]?.manualAssets ?? 0),
+    manualLiabilities: Number(rows[0]?.manualLiabilities ?? 0),
+  }));
+
+  const totalAssets = accountAssets + manualAssets;
+  const totalDebt = accountDebt + manualLiabilities;
   const netWorth = totalAssets - totalDebt;
   const month = new Date().toISOString().slice(0, 7);
 

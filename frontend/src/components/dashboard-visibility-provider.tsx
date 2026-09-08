@@ -13,6 +13,7 @@ export type CardId =
   | "recurring"
   | "calendar"
   | "net-worth"
+  | "manual-entries"
   | "account-balances";
 
 export const ALL_CARD_IDS: CardId[] = [
@@ -26,6 +27,7 @@ export const ALL_CARD_IDS: CardId[] = [
   "recurring",
   "calendar",
   "net-worth",
+  "manual-entries",
   "account-balances",
 ];
 
@@ -102,6 +104,12 @@ export const CARD_METADATA: Record<
     howItWorks:
       "Your assets minus debts plotted month over month so you can watch the long-term trend.",
   },
+  "manual-entries": {
+    label: "Manual Assets & Liabilities",
+    description: "Student loans, mortgages, and other holdings outside Bloom",
+    howItWorks:
+      "Add any asset or liability that isn't a Bloom account — a student loan, mortgage, car loan, or savings at another bank — so your net worth and health score reflect your full financial picture.",
+  },
   "account-balances": {
     label: "Account Balances",
     description: "Your pinned accounts, ranked at a glance",
@@ -169,6 +177,7 @@ function readStoredVisibility(): Set<CardId> {
     if (Array.isArray(parsed)) {
       const result = new Set(parsed as CardId[]);
       if (!result.has("account-balances")) result.add("account-balances");
+      if (!result.has("manual-entries")) result.add("manual-entries");
       return result;
     }
   } catch {}

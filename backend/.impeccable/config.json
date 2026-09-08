@@ -1,0 +1,9 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "C:\\Users\\user\\Documents\\Coding\\bloom\\frontend\\src\\app\\_components\\_financialHealth\\FinancialHealthScore.tsx"
+    ],
+    "ignoreValues": []
+  }
+}

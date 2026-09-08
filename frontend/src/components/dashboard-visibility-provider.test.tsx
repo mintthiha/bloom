@@ -30,11 +30,12 @@ describe("DashboardVisibilityProvider", () => {
     expect(result.current.visibleCards).toEqual(new Set(DEFAULT_VISIBLE_CARDS));
   });
 
-  it("hydrates the stored visibility set and always includes account-balances", () => {
+  it("hydrates the stored visibility set and always includes account-balances and manual-entries", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(["insights"]));
     const { result } = renderProvider();
     expect(result.current.visibleCards.has("insights")).toBe(true);
     expect(result.current.visibleCards.has("account-balances")).toBe(true);
+    expect(result.current.visibleCards.has("manual-entries")).toBe(true);
   });
 
   it("enabling a card for the first time queues its explainer and persists", () => {

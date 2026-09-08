@@ -8,6 +8,7 @@ import {
   Account,
   Budget,
   DateRangeQuery,
+  ManualEntry,
   MonthlyTrend,
   MonthlySummary,
   NetWorthSnapshot,
@@ -35,6 +36,7 @@ import { BudgetsCard } from "./_components/_budgets/BudgetsCard";
 import { RecurringTransactionsCard } from "./_components/_recurringTransactions/RecurringTransactionsCard";
 import { RecurringCalendar } from "./_components/_recurringCalendar/RecurringCalendar";
 import { NetWorthHistory } from "./_components/_netWorthHistory/NetWorthHistory";
+import { ManualEntriesCard } from "./_components/_manualEntries/ManualEntriesCard";
 import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalancesCard";
 import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
 import { InsightsCard } from "./_components/_insights/InsightsCard";
@@ -58,6 +60,7 @@ function Home() {
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([]);
   const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [manualEntries, setManualEntries] = useState<ManualEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [newlyCreatedAccountId, setNewlyCreatedAccountId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -126,6 +129,7 @@ function Home() {
         nextRecurringRules,
         nextTrends,
         nextGoals,
+        nextManualEntries,
       ] = await Promise.all([
         api.listAccounts(),
         api.getMonthlySummary(rangeQuery),
@@ -134,6 +138,7 @@ function Home() {
         api.listRecurringTransactions(),
         api.getMonthlyTrends(6),
         api.listSavingsGoals(),
+        api.listManualEntries(),
       ]);
 
       setAccounts(nextAccounts);
@@ -143,6 +148,7 @@ function Home() {
       setRecurringRules(nextRecurringRules);
       setMonthlyTrends(nextTrends);
       setGoals(nextGoals);
+      setManualEntries(nextManualEntries);
 
       const [, nextHistory] = await Promise.all([
         api.recordNetWorthSnapshot(),
@@ -408,6 +414,7 @@ function Home() {
             budgets={budgets}
             monthlySummary={monthlySummary}
             netWorthHistory={netWorthHistory}
+            manualEntries={manualEntries}
           />
         ),
       });
@@ -472,6 +479,24 @@ function Home() {
   }
   if (netWorthHistory.length > 0 && visibleCards.has("net-worth")) {
     reorderableCards.push({ id: "net-worth", node: <NetWorthHistory history={netWorthHistory} /> });
+  }
+  if (visibleCards.has("manual-entries")) {
+    reorderableCards.push({
+      id: "manual-entries",
+      node: (
+        <ManualEntriesCard
+          entries={manualEntries}
+          onEntriesChange={setManualEntries}
+          onNetWorthRefresh={async () => {
+            const [, nextHistory] = await Promise.all([
+              api.recordNetWorthSnapshot(),
+              api.getNetWorthHistory(12),
+            ]);
+            setNetWorthHistory(nextHistory);
+          }}
+        />
+      ),
+    });
   }
   if (accounts.length > 0 && visibleCards.has("account-balances")) {
     reorderableCards.push({

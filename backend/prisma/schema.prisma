@@ -207,6 +207,23 @@ model Notification {
   @@index([userId, status])
 }
 
+enum ManualEntryType {
+  ASSET
+  LIABILITY
+}
+
+model ManualEntry {
+  id        String          @id @default(cuid())
+  userId    String
+  name      String
+  type      ManualEntryType
+  amount    Decimal         @db.Decimal(19, 4)
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+
+  @@index([userId])
+}
+
 model AutoCategorizationRule {
   id        String   @id @default(cuid())
   userId    String
