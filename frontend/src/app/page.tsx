@@ -391,7 +391,13 @@ function Home() {
   );
   const totalCash = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
   const totalCredit = creditAccounts.reduce((sum, a) => sum + a.balance, 0);
-  const netWorth = totalCash - totalCredit;
+  const manualAssets = manualEntries
+    .filter((e) => e.type === "ASSET")
+    .reduce((sum, e) => sum + e.amount, 0);
+  const manualLiabilities = manualEntries
+    .filter((e) => e.type === "LIABILITY")
+    .reduce((sum, e) => sum + e.amount, 0);
+  const netWorth = totalCash + manualAssets - totalCredit - manualLiabilities;
 
   // Build the reorderable card set in default order; each card carries its own data-availability gate.
   const reorderableCards: DashboardCard[] = [];
