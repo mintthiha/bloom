@@ -203,6 +203,7 @@ export function CollapsibleCard({
               alignItems: "center",
               gap: "8px",
               flexShrink: 0,
+              marginLeft: "auto",
               paddingTop: isMobile ? "0" : "2px",
               justifyContent: isMobile ? "flex-end" : undefined,
             }}

@@ -80,40 +80,47 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
       eyebrow="Manual Entries"
       title="Assets &amp; liabilities outside Bloom"
       description="Student loans, mortgages, vehicles, and other-bank savings included in your net worth."
-      headerRight={
-        entries.length > 0
-          ? (isCollapsed) =>
-              isCollapsed ? undefined : (
-                <div style={{ textAlign: "right" }}>
-                  <p
-                    style={{
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      color: "var(--text-muted)",
-                      marginBottom: "3px",
-                    }}
-                  >
-                    Net manual
-                  </p>
-                  <p
-                    className="num"
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      color: net >= 0 ? "#22c55e" : "#ef4444",
-                    }}
-                  >
-                    {net >= 0 ? "+" : ""}
-                    {formatCurrency(net)}
-                  </p>
-                </div>
-              )
-          : undefined
-      }
       className="fade-up fade-up-3"
     >
+      {entries.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "18px" }}>
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "10px",
+              padding: "10px 20px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "10px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--text-muted)",
+                marginBottom: "6px",
+              }}
+            >
+              Net manual
+            </p>
+            <p
+              className="num"
+              style={{
+                fontSize: "16px",
+                fontWeight: 800,
+                color: net >= 0 ? "#22c55e" : "#ef4444",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {net >= 0 ? "+" : ""}
+              {formatCurrency(net)}
+            </p>
+          </div>
+        </div>
+      )}
+
       {entries.length === 0 ? (
         <div style={{ paddingBottom: "4px" }}>
           <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "14px" }}>
