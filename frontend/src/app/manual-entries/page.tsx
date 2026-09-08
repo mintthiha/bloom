@@ -177,7 +177,7 @@ function EntryRow({
               As of date (optional)
             </label>
             <input
-              style={{ ...inputStyle, fontSize: "13px", padding: "7px 10px" }}
+              style={{ ...inputStyle, fontSize: "13px", padding: "7px 6px 7px 10px" }}
               type="date"
               value={editDate}
               onChange={(e) => setEditDate(e.target.value)}
@@ -410,7 +410,13 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
             ))}
           </datalist>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 140px", gap: "12px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 110px minmax(160px, 1fr)",
+            gap: "12px",
+          }}
+        >
           <div>
             <label
               style={{
@@ -467,7 +473,7 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
               As of date
             </label>
             <input
-              style={{ ...inputStyle, fontSize: "14px" }}
+              style={{ ...inputStyle, fontSize: "14px", paddingRight: "6px" }}
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
