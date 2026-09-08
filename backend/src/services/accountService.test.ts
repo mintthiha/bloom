@@ -620,10 +620,12 @@ describe("recordNetWorthSnapshot", () => {
       { accountType: "SAVINGS", balance: { toNumber: () => 2000 } },
       { accountType: "CREDIT", balance: { toNumber: () => 500 } },
     ]);
-    // First $queryRaw call: manual entry totals
+    // 1: current-month manual totals
     prismaMock.$queryRaw.mockResolvedValueOnce([{ manualAssets: "0", manualLiabilities: "0" }]);
-    // Second $queryRaw call: the INSERT … RETURNING snapshot id
+    // 2: INSERT … RETURNING snapshot id
     prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "snap-1" }]);
+    // 3: historical months query (none)
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
     const snap = await recordNetWorthSnapshot("u-1");
     expect(snap.totalAssets).toBe(5000);
     expect(snap.totalDebt).toBe(500);

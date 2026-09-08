@@ -138,14 +138,16 @@ model PlaidItem {
 }
 
 model NetWorthSnapshot {
-  id          String   @id @default(cuid())
-  userId      String
-  month       String
-  netWorth    Decimal @db.Decimal(19, 4)
-  totalAssets Decimal @db.Decimal(19, 4)
-  totalDebt   Decimal @db.Decimal(19, 4)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  id                String   @id @default(cuid())
+  userId            String
+  month             String
+  netWorth          Decimal  @db.Decimal(19, 4)
+  totalAssets       Decimal  @db.Decimal(19, 4)
+  totalDebt         Decimal  @db.Decimal(19, 4)
+  manualAssets      Decimal  @default(0) @db.Decimal(19, 4)
+  manualLiabilities Decimal  @default(0) @db.Decimal(19, 4)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
 
   @@unique([userId, month])
 }

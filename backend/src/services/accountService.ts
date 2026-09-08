@@ -385,7 +385,44 @@ export async function getMonthlyTrends(userId: string, months: number = 6) {
 }
 
 /**
- * Upserts a net worth snapshot for the current month based on live account balances.
+ * Returns manual entry totals (assets + liabilities) for a given snapshot month.
+ * When includeUndated is true, entries without a date are included (used for the current month).
+ * Historical months only include entries with an explicit date on or before the last day of that month.
+ */
+async function computeManualTotalsForMonth(
+  userId: string,
+  month: string,
+  includeUndated: boolean
+): Promise<{ manualAssets: number; manualLiabilities: number }> {
+  const firstDay = `${month}-01`;
+  const rows = includeUndated
+    ? await prisma.$queryRaw<{ manualAssets: string; manualLiabilities: string }[]>`
+        SELECT
+          COALESCE(SUM(CASE WHEN "type" = 'ASSET'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualAssets",
+          COALESCE(SUM(CASE WHEN "type" = 'LIABILITY'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualLiabilities"
+        FROM "ManualEntry"
+        WHERE "userId" = ${userId}
+          AND ("date" IS NULL OR "date" <= (${firstDay}::date + INTERVAL '1 month' - INTERVAL '1 day'))
+      `
+    : await prisma.$queryRaw<{ manualAssets: string; manualLiabilities: string }[]>`
+        SELECT
+          COALESCE(SUM(CASE WHEN "type" = 'ASSET'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualAssets",
+          COALESCE(SUM(CASE WHEN "type" = 'LIABILITY'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualLiabilities"
+        FROM "ManualEntry"
+        WHERE "userId" = ${userId}
+          AND "date" IS NOT NULL
+          AND "date" <= (${firstDay}::date + INTERVAL '1 month' - INTERVAL '1 day')
+      `;
+  return {
+    manualAssets: Number(rows[0]?.manualAssets ?? 0),
+    manualLiabilities: Number(rows[0]?.manualLiabilities ?? 0),
+  };
+}
+
+/**
+ * Upserts a net worth snapshot for the current month, then retroactively updates
+ * all existing historical snapshots to reflect manual entries whose date falls in or before each month.
+ * This ensures a July-dated student loan appears on the July chart point, not just the current month.
  */
 export async function recordNetWorthSnapshot(userId: string) {
   const accounts = await prisma.account.findMany({ where: { userId } });
@@ -396,37 +433,62 @@ export async function recordNetWorthSnapshot(userId: string) {
     .filter((a) => a.accountType === "CREDIT")
     .reduce((sum, a) => sum + a.balance.toNumber(), 0);
 
-  const { manualAssets, manualLiabilities } = await prisma.$queryRaw<
-    { manualAssets: string; manualLiabilities: string }[]
-  >`
-    SELECT
-      COALESCE(SUM(CASE WHEN "type" = 'ASSET'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualAssets",
-      COALESCE(SUM(CASE WHEN "type" = 'LIABILITY'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualLiabilities"
-    FROM "ManualEntry"
-    WHERE "userId" = ${userId}
-  `.then((rows) => ({
-    manualAssets: Number(rows[0]?.manualAssets ?? 0),
-    manualLiabilities: Number(rows[0]?.manualLiabilities ?? 0),
-  }));
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const { manualAssets, manualLiabilities } = await computeManualTotalsForMonth(
+    userId,
+    currentMonth,
+    true
+  );
 
   const totalAssets = accountAssets + manualAssets;
   const totalDebt = accountDebt + manualLiabilities;
   const netWorth = totalAssets - totalDebt;
-  const month = new Date().toISOString().slice(0, 7);
 
   const rows = await prisma.$queryRaw<{ id: string }[]>`
-    INSERT INTO "NetWorthSnapshot" ("id", "userId", "month", "netWorth", "totalAssets", "totalDebt", "createdAt", "updatedAt")
-    VALUES (${randomUUID()}, ${userId}, ${month}, ${netWorth}, ${totalAssets}, ${totalDebt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO "NetWorthSnapshot" (
+      "id", "userId", "month", "netWorth", "totalAssets", "totalDebt",
+      "manualAssets", "manualLiabilities", "createdAt", "updatedAt"
+    )
+    VALUES (
+      ${randomUUID()}, ${userId}, ${currentMonth}, ${netWorth}, ${totalAssets}, ${totalDebt},
+      ${manualAssets}, ${manualLiabilities}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
     ON CONFLICT ("userId", "month")
     DO UPDATE SET
-      "netWorth" = EXCLUDED."netWorth",
-      "totalAssets" = EXCLUDED."totalAssets",
-      "totalDebt" = EXCLUDED."totalDebt",
-      "updatedAt" = CURRENT_TIMESTAMP
+      "netWorth"          = EXCLUDED."netWorth",
+      "totalAssets"       = EXCLUDED."totalAssets",
+      "totalDebt"         = EXCLUDED."totalDebt",
+      "manualAssets"      = EXCLUDED."manualAssets",
+      "manualLiabilities" = EXCLUDED."manualLiabilities",
+      "updatedAt"         = CURRENT_TIMESTAMP
     RETURNING "id"
   `;
 
-  return { month, netWorth, totalAssets, totalDebt, id: rows[0]!.id };
+  // Retroactively patch all historical snapshots so dated manual entries appear in the right months.
+  // We recompute only the manual portion; the account-derived portion is preserved by adjusting the delta.
+  const historicalMonths = await prisma.$queryRaw<{ month: string }[]>`
+    SELECT "month" FROM "NetWorthSnapshot"
+    WHERE "userId" = ${userId} AND "month" < ${currentMonth}
+    ORDER BY "month" ASC
+  `;
+
+  for (const { month } of historicalMonths) {
+    const hist = await computeManualTotalsForMonth(userId, month, false);
+    await prisma.$queryRaw`
+      UPDATE "NetWorthSnapshot"
+      SET
+        "totalAssets"       = "totalAssets" - "manualAssets" + ${hist.manualAssets},
+        "totalDebt"         = "totalDebt" - "manualLiabilities" + ${hist.manualLiabilities},
+        "netWorth"          = "netWorth" - "manualAssets" + ${hist.manualAssets}
+                                        + "manualLiabilities" - ${hist.manualLiabilities},
+        "manualAssets"      = ${hist.manualAssets},
+        "manualLiabilities" = ${hist.manualLiabilities},
+        "updatedAt"         = CURRENT_TIMESTAMP
+      WHERE "userId" = ${userId} AND "month" = ${month}
+    `;
+  }
+
+  return { month: currentMonth, netWorth, totalAssets, totalDebt, id: rows[0]!.id };
 }
 
 /**
