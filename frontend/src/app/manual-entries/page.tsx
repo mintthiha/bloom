@@ -6,16 +6,7 @@ import { api, ManualEntry, ManualEntryType } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { BackToHome } from "@/components/BackToHome";
 import { inputStyle } from "@/lib/styles/input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 
 const ENTRY_TYPE_LABELS: Record<ManualEntryType, string> = {
   ASSET: "Asset",
@@ -48,13 +39,17 @@ function formatDate(date: string | null): string {
   });
 }
 
-/** Row for an existing manual entry with inline edit and AlertDialog delete. */
+/** Row for an existing manual entry with checkbox, inline edit, and AlertDialog delete. */
 function EntryRow({
   entry,
+  isSelected,
+  onToggleSelect,
   onUpdated,
   onDeleted,
 }: {
   entry: ManualEntry;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
   onUpdated: (updated: ManualEntry) => void;
   onDeleted: (id: string) => void;
 }) {
@@ -240,6 +235,14 @@ function EntryRow({
           gap: "12px",
         }}
       >
+        {/* Checkbox */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelect(entry.id)}
+          style={{ width: "15px", height: "15px", flexShrink: 0, cursor: "pointer", accentColor }}
+        />
+
         <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
           <span
             style={{
@@ -267,59 +270,116 @@ function EntryRow({
             <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatDate(entry.date)}</p>
           </div>
         </div>
+
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
           <span className="num" style={{ fontSize: "15px", fontWeight: 700, color: accentColor }}>
             {formatCurrency(entry.amount)}
           </span>
-          <button
-            className="press"
-            onClick={() => setIsEditing(true)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-muted)",
-              fontSize: "13px",
-              padding: "4px 8px",
-            }}
-          >
+          <button className="entry-action-edit" onClick={() => setIsEditing(true)}>
             Edit
           </button>
-          <button
-            className="press"
-            onClick={() => setShowDeleteDialog(true)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#ef4444",
-              fontSize: "13px",
-              padding: "4px 8px",
-            }}
-          >
+          <button className="entry-action-delete" onClick={() => setShowDeleteDialog(true)}>
             Delete
           </button>
         </div>
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete &ldquo;{entry.name}&rdquo;?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This {ENTRY_TYPE_LABELS[entry.type].toLowerCase()} ({formatCurrency(entry.amount)})
-              will be removed from your net worth and health score calculations.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} disabled={isSubmitting}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title={`Delete "${entry.name}"?`}
+        description={`This ${ENTRY_TYPE_LABELS[entry.type].toLowerCase()} (${formatCurrency(entry.amount)}) will be removed from your net worth and health score calculations.`}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isSubmitting}
+      />
     </>
+  );
+}
+
+/** Section block (Liabilities or Assets) with a select-all checkbox in the header. */
+function EntrySection({
+  label,
+  accentColor,
+  total,
+  entries,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
+  onUpdated,
+  onDeleted,
+}: {
+  label: string;
+  accentColor: string;
+  total: number;
+  entries: ManualEntry[];
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onSelectAll: (ids: string[], select: boolean) => void;
+  onUpdated: (updated: ManualEntry) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const allSelected = entries.length > 0 && entries.every((e) => selectedIds.has(e.id));
+  const someSelected = entries.some((e) => selectedIds.has(e.id));
+
+  return (
+    <div
+      style={{
+        background: "var(--surface-1)",
+        border: "1px solid var(--border)",
+        borderRadius: "14px",
+        padding: "20px 24px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "4px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someSelected && !allSelected;
+            }}
+            onChange={() =>
+              onSelectAll(
+                entries.map((e) => e.id),
+                !allSelected
+              )
+            }
+            style={{ width: "15px", height: "15px", cursor: "pointer", accentColor }}
+          />
+          <p
+            style={{
+              fontSize: "12px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: accentColor,
+            }}
+          >
+            {label}
+          </p>
+        </div>
+        <span className="num" style={{ fontSize: "14px", fontWeight: 700, color: accentColor }}>
+          {formatCurrency(total)}
+        </span>
+      </div>
+      {entries.map((e) => (
+        <EntryRow
+          key={e.id}
+          entry={e}
+          isSelected={selectedIds.has(e.id)}
+          onToggleSelect={onToggleSelect}
+          onUpdated={onUpdated}
+          onDeleted={onDeleted}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -541,6 +601,9 @@ function StatChip({ label, value, color }: { label: string; value: number; color
 export default function ManualEntriesPage() {
   const [entries, setEntries] = useState<ManualEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   /** Loads all manual entries and triggers a net worth snapshot on mount. */
   useEffect(() => {
@@ -549,6 +612,42 @@ export default function ManualEntriesPage() {
       .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load entries"))
       .finally(() => setIsLoading(false));
   }, []);
+
+  /** Toggles a single entry's selection. */
+  function handleToggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  /** Selects or deselects a whole section of entries. */
+  function handleSelectAll(ids: string[], select: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) select ? next.add(id) : next.delete(id);
+      return next;
+    });
+  }
+
+  /** Deletes all selected entries and refreshes the net worth snapshot. */
+  async function handleBulkDelete() {
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all([...selectedIds].map((id) => api.deleteManualEntry(id)));
+      const count = selectedIds.size;
+      setEntries((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+      setSelectedIds(new Set());
+      setShowBulkDeleteDialog(false);
+      toast.success(`${count} ${count === 1 ? "entry" : "entries"} deleted`);
+      await api.recordNetWorthSnapshot().catch(() => {});
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete entries");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }
 
   /** Adds a created entry to the list and refreshes the net worth snapshot. */
   async function handleEntryCreated(created: ManualEntry) {
@@ -562,9 +661,14 @@ export default function ManualEntriesPage() {
     await api.recordNetWorthSnapshot().catch(() => {});
   }
 
-  /** Removes a deleted entry from the list and refreshes the net worth snapshot. */
+  /** Removes a deleted entry from the list, clears its selection, and refreshes the net worth snapshot. */
   async function handleEntryDeleted(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     await api.recordNetWorthSnapshot().catch(() => {});
   }
 
@@ -574,14 +678,10 @@ export default function ManualEntriesPage() {
   const totalLiabilities = liabilities.reduce((sum, e) => sum + e.amount, 0);
   const net = totalAssets - totalLiabilities;
 
+  const selectedEntries = entries.filter((e) => selectedIds.has(e.id));
+
   return (
-    <div
-      style={{
-        maxWidth: "720px",
-        margin: "0 auto",
-        padding: "48px 24px",
-      }}
-    >
+    <div style={{ maxWidth: "720px", margin: "0 auto", padding: "48px 24px" }}>
       <BackToHome />
 
       <div style={{ marginBottom: "32px" }}>
@@ -630,6 +730,60 @@ export default function ManualEntriesPage() {
         <AddEntryForm onCreated={handleEntryCreated} />
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#3b82f614",
+            border: "1px solid #3b82f633",
+            borderRadius: "10px",
+            padding: "12px 16px",
+            marginBottom: "16px",
+          }}
+        >
+          <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b82f6" }}>
+            {selectedIds.size} {selectedIds.size === 1 ? "entry" : "entries"} selected
+          </span>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              className="press"
+              onClick={() => setSelectedIds(new Set())}
+              style={{
+                background: "none",
+                border: "1px solid var(--border)",
+                borderRadius: "7px",
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+              }}
+            >
+              Clear
+            </button>
+            <button
+              className="press"
+              onClick={() => setShowBulkDeleteDialog(true)}
+              style={{
+                background: "#ef444420",
+                border: "1px solid #ef444440",
+                borderRadius: "7px",
+                padding: "6px 14px",
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#ef4444",
+                cursor: "pointer",
+              }}
+            >
+              Delete {selectedIds.size}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Entries list */}
       {isLoading ? (
         <p style={{ fontSize: "14px", color: "var(--text-muted)" }}>Loading…</p>
@@ -650,98 +804,44 @@ export default function ManualEntriesPage() {
           className="fade-up fade-up-2"
         >
           {liabilities.length > 0 && (
-            <div
-              style={{
-                background: "var(--surface-1)",
-                border: "1px solid var(--border)",
-                borderRadius: "14px",
-                padding: "20px 24px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                  marginBottom: "4px",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#ef4444",
-                  }}
-                >
-                  Liabilities
-                </p>
-                <span
-                  className="num"
-                  style={{ fontSize: "14px", fontWeight: 700, color: "#ef4444" }}
-                >
-                  {formatCurrency(totalLiabilities)}
-                </span>
-              </div>
-              {liabilities.map((e) => (
-                <EntryRow
-                  key={e.id}
-                  entry={e}
-                  onUpdated={handleEntryUpdated}
-                  onDeleted={handleEntryDeleted}
-                />
-              ))}
-            </div>
+            <EntrySection
+              label="Liabilities"
+              accentColor="#ef4444"
+              total={totalLiabilities}
+              entries={liabilities}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onSelectAll={handleSelectAll}
+              onUpdated={handleEntryUpdated}
+              onDeleted={handleEntryDeleted}
+            />
           )}
-
           {assets.length > 0 && (
-            <div
-              style={{
-                background: "var(--surface-1)",
-                border: "1px solid var(--border)",
-                borderRadius: "14px",
-                padding: "20px 24px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                  marginBottom: "4px",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#22c55e",
-                  }}
-                >
-                  Assets
-                </p>
-                <span
-                  className="num"
-                  style={{ fontSize: "14px", fontWeight: 700, color: "#22c55e" }}
-                >
-                  {formatCurrency(totalAssets)}
-                </span>
-              </div>
-              {assets.map((e) => (
-                <EntryRow
-                  key={e.id}
-                  entry={e}
-                  onUpdated={handleEntryUpdated}
-                  onDeleted={handleEntryDeleted}
-                />
-              ))}
-            </div>
+            <EntrySection
+              label="Assets"
+              accentColor="#22c55e"
+              total={totalAssets}
+              entries={assets}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onSelectAll={handleSelectAll}
+              onUpdated={handleEntryUpdated}
+              onDeleted={handleEntryDeleted}
+            />
           )}
         </div>
       )}
+
+      {/* Bulk delete confirmation */}
+      <ConfirmDeleteDialog
+        open={showBulkDeleteDialog}
+        onOpenChange={setShowBulkDeleteDialog}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? "entry" : "entries"}?`}
+        description={`${selectedEntries.map((e) => e.name).join(", ")} will be permanently removed from your net worth and health score calculations.`}
+        onConfirm={handleBulkDelete}
+        isDeleting={isBulkDeleting}
+        confirmLabel={`Delete ${selectedIds.size}`}
+      />
     </div>
   );
 }

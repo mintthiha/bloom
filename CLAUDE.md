@@ -92,14 +92,15 @@ Do not define state inside a child if a sibling or parent also needs to read or 
 
 Before building a custom UI component, check whether shadcn/ui (`src/components/ui/`) or the shared component library already provides it. Check for an existing shadcn input/select/dialog before writing raw HTML with inline styles.
 
-- **Dialogs / confirms** → use shadcn `AlertDialog` before writing a custom modal.
-- **Shared, non-route components** (e.g. `BackToHome`) → live in `src/components/`, not inside a route's `_components/` folder.
+- **Delete confirms** → always use `ConfirmDeleteDialog` from `src/components/ConfirmDeleteDialog.tsx`. Never construct a raw `AlertDialog` for a delete — `ConfirmDeleteDialog` has the correct internal padding and consistent styling. Pass `title`, `description`, `onConfirm`, `isDeleting`, and optionally `confirmLabel`.
+- **Other dialogs / confirms** → use shadcn `AlertDialog` before writing a custom modal.
+- **Shared, non-route components** (e.g. `BackToHome`, `ConfirmDeleteDialog`) → live in `src/components/`, not inside a route's `_components/` folder.
 - **Cards** → use the `CollapsibleCard` primitive rather than rebuilding a card shell.
 
 ## Interaction rules (non-negotiable)
 
 - **Every create or delete must fire a toast.** Use `toast` from `sonner` — `toast.success(...)` on success, `toast.error(...)` on failure. Call it directly in the component that performs the action. Never use inline `opError` / `opSuccess` state for user feedback. A create or delete that lands silently is a bug.
-- **Deletes are always two steps:** (1) a shadcn `AlertDialog` confirm with the item name in the description, then (2) `toast.success("X deleted")` after it completes. Never delete immediately on click.
+- **Deletes are always two steps:** (1) a `ConfirmDeleteDialog` confirm with the item name in the title and amount/detail in the description, then (2) `toast.success("X deleted")` after it completes. Never delete immediately on click. Never use a raw `AlertDialog` for a delete confirmation.
 - **Creates confirm on success:** `toast.success("X created")` immediately after a successful creation.
 
 ## Styling

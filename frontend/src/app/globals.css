@@ -498,6 +498,52 @@ body {
   filter: brightness(0.97);
 }
 
+/*
+ * Manual entry row action buttons — Edit fades from muted to primary with a
+ * surface tint; Delete reveals a red tint on hover.
+ */
+.entry-action-edit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: inherit;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.entry-action-edit:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+.entry-action-edit:active {
+  transform: scale(0.95);
+}
+
+.entry-action-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ef4444;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.entry-action-delete:hover {
+  background: #ef444420;
+}
+.entry-action-delete:active {
+  transform: scale(0.95);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .press:hover,
   .press:active,
@@ -519,7 +565,9 @@ body {
   .chat-suggestion:active,
   .chat-send:not(:disabled):hover,
   .chat-send:not(:disabled):active,
-  .chat-danger:active {
+  .chat-danger:active,
+  .entry-action-edit:active,
+  .entry-action-delete:active {
     transform: none;
   }
 }
