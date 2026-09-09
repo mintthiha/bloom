@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma";
 import logger from "../lib/logger";
 
@@ -40,6 +41,44 @@ export type ActivityLogEntry = {
   createdAt: Date;
 };
 
+/** Coarse groupings the activity list can filter by; each maps to a `TYPE_` prefix. */
+export type ActivityGroup =
+  | "ACCOUNT"
+  | "TRANSACTION"
+  | "GOAL"
+  | "BUDGET"
+  | "RECURRING"
+  | "MANUAL_ENTRY";
+
+/** Sort orders the activity list accepts, mapped to a whitelisted ORDER BY clause. */
+export type ActivitySortKey = "date_desc" | "date_asc";
+
+/** Filters and paging options for {@link listActivityLogs}. */
+export type ActivityLogFilters = {
+  search?: string;
+  group?: ActivityGroup;
+  start?: Date;
+  end?: Date;
+  sort?: ActivitySortKey;
+  limit?: number;
+  offset?: number;
+};
+
+/** Paginated response: the current page of entries plus the total count for the active filter. */
+export type ActivityLogListResult = {
+  logs: ActivityLogEntry[];
+  total: number;
+};
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
+
+/** Maps each sort key to a safe, static ORDER BY fragment (never interpolates user input). */
+const ORDER_BY_BY_SORT: Record<ActivitySortKey, Prisma.Sql> = {
+  date_desc: Prisma.sql`"createdAt" DESC`,
+  date_asc: Prisma.sql`"createdAt" ASC`,
+};
+
 /** Appends an activity log entry for the user. Fire-and-forget — never blocks the caller. */
 export function logActivity(
   userId: string,
@@ -55,23 +94,46 @@ export function logActivity(
   `.catch((err: unknown) => logger.error({ err }, "Failed to write activity log"));
 }
 
-/** Returns paginated activity log entries for a user, newest first. */
+/**
+ * Returns a paginated page of activity log entries for a user, with optional filtering by
+ * coarse group, free-text search over the description, and a created-at date range.
+ */
 export async function listActivityLogs(
   userId: string,
-  limit: number,
-  offset: number
-): Promise<{ logs: ActivityLogEntry[]; total: number }> {
+  filters: ActivityLogFilters = {}
+): Promise<ActivityLogListResult> {
+  const limit = Math.min(Math.max(1, Math.floor(filters.limit ?? DEFAULT_LIMIT)), MAX_LIMIT);
+  const offset = Math.max(0, Math.floor(filters.offset ?? 0));
+  const sort = filters.sort ?? "date_desc";
+
+  const conditions: Prisma.Sql[] = [Prisma.sql`"userId" = ${userId}`];
+
+  if (filters.group) {
+    // Escaped underscore so the group prefix is matched literally, then any suffix.
+    conditions.push(Prisma.sql`"type" LIKE ${`${filters.group}\\_%`}`);
+  }
+  const search = filters.search?.trim().toLowerCase();
+  if (search) {
+    conditions.push(Prisma.sql`LOWER("description") LIKE ${`%${search}%`}`);
+  }
+  if (filters.start && filters.end) {
+    conditions.push(Prisma.sql`"createdAt" >= ${filters.start}`);
+    conditions.push(Prisma.sql`"createdAt" < ${filters.end}`);
+  }
+
+  const where = Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
+
   const [rows, countRows] = await Promise.all([
-    prisma.$queryRaw<ActivityLogEntry[]>`
+    prisma.$queryRaw<ActivityLogEntry[]>(Prisma.sql`
       SELECT "id", "type", "description", "metadata", "createdAt"
       FROM "ActivityLog"
-      WHERE "userId" = ${userId}
-      ORDER BY "createdAt" DESC
+      ${where}
+      ORDER BY ${ORDER_BY_BY_SORT[sort]}
       LIMIT ${limit} OFFSET ${offset}
-    `,
-    prisma.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*) AS count FROM "ActivityLog" WHERE "userId" = ${userId}
-    `,
+    `),
+    prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
+      SELECT COUNT(*) AS count FROM "ActivityLog" ${where}
+    `),
   ]);
   return { logs: rows, total: Number(countRows[0]?.count ?? 0) };
 }

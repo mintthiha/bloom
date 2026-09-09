@@ -348,6 +348,34 @@ export type ActivityLogEntry = {
   createdAt: string;
 };
 
+/** Coarse groupings the activity list can filter by. */
+export type ActivityGroupKey =
+  | "ACCOUNT"
+  | "TRANSACTION"
+  | "GOAL"
+  | "BUDGET"
+  | "RECURRING"
+  | "MANUAL_ENTRY";
+
+/** Sort orders the activity list accepts. */
+export type ActivitySortKey = "date_desc" | "date_asc";
+
+export type ActivityLogResult = {
+  logs: ActivityLogEntry[];
+  total: number;
+};
+
+/** Filters, sort, and paging accepted by {@link api.listActivityLogs}. */
+export type ActivityLogQuery = {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  group?: ActivityGroupKey;
+  sort?: ActivitySortKey;
+  start?: string;
+  end?: string;
+};
+
 export const api = {
   listAccounts: () => request<Account[]>("/accounts"),
   getMonthlySummary: (query?: DateRangeQuery) =>
@@ -584,9 +612,17 @@ export const api = {
   markAllNotificationsRead: () =>
     request<{ updated: number }>("/notifications/read-all", { method: "POST" }),
   dismissNotification: (id: string) => request<void>(`/notifications/${id}`, { method: "DELETE" }),
-  listActivityLogs: (limit = 50, offset = 0) =>
-    request<{ logs: ActivityLogEntry[]; total: number }>(
-      withQuery("/activity", { limit: String(limit), offset: String(offset) })
+  listActivityLogs: (query: ActivityLogQuery = {}) =>
+    request<ActivityLogResult>(
+      withQuery("/activity", {
+        limit: query.limit != null ? String(query.limit) : undefined,
+        offset: query.offset != null ? String(query.offset) : undefined,
+        search: query.search || undefined,
+        group: query.group || undefined,
+        sort: query.sort || undefined,
+        start: query.start || undefined,
+        end: query.end || undefined,
+      })
     ),
   listManualEntries: () => request<ManualEntry[]>("/manual-entries"),
   createManualEntry: (input: {

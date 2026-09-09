@@ -1,13 +1,31 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { AppError } from "../middleware/errorHandler";
+import { parseDateRangeQuery } from "../lib/date-range";
 import * as activityService from "../services/activityService";
+import { ActivityGroup, ActivitySortKey } from "../services/activityService";
 
 const router = Router();
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
-/** Returns paginated activity logs for the authenticated user, newest first. */
+/** Groups the ?group= query parameter is allowed to take. */
+const VALID_GROUPS: ActivityGroup[] = [
+  "ACCOUNT",
+  "TRANSACTION",
+  "GOAL",
+  "BUDGET",
+  "RECURRING",
+  "MANUAL_ENTRY",
+];
+
+/** Sort keys the ?sort= query parameter is allowed to take. */
+const VALID_SORT_KEYS: ActivitySortKey[] = ["date_desc", "date_asc"];
+
+/**
+ * GET /api/activity?limit=&offset=&search=&group=&sort=&start=&end=
+ * Returns a paginated, filterable page of activity logs for the authenticated user.
+ */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.headers["x-user-id"] as string | undefined;
@@ -19,7 +37,29 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     );
     const offset = Math.max(parseInt(String(req.query["offset"] ?? 0), 10) || 0, 0);
 
-    res.json(await activityService.listActivityLogs(userId, limit, offset));
+    const groupParam = req.query.group as string | undefined;
+    if (groupParam && !VALID_GROUPS.includes(groupParam as ActivityGroup)) {
+      throw new AppError(400, "group must be one of: " + VALID_GROUPS.join(", "));
+    }
+
+    const sortParam = req.query.sort as string | undefined;
+    if (sortParam && !VALID_SORT_KEYS.includes(sortParam as ActivitySortKey)) {
+      throw new AppError(400, "sort must be one of: " + VALID_SORT_KEYS.join(", "));
+    }
+
+    const dateRange = parseDateRangeQuery({ start: req.query.start, end: req.query.end });
+
+    res.json(
+      await activityService.listActivityLogs(userId, {
+        limit,
+        offset,
+        search: (req.query.search as string | undefined) || undefined,
+        group: groupParam ? (groupParam as ActivityGroup) : undefined,
+        sort: sortParam ? (sortParam as ActivitySortKey) : undefined,
+        start: dateRange?.start,
+        end: dateRange?.end,
+      })
+    );
   } catch (err) {
     next(err);
   }
