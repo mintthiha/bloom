@@ -12,6 +12,9 @@ const { serviceMock } = vi.hoisted(() => ({
     getTransactions: vi.fn(),
     updateTransaction: vi.fn(),
     deleteTransaction: vi.fn(),
+    restoreTransaction: vi.fn(),
+    deleteAccount: vi.fn(),
+    restoreAccount: vi.fn(),
   },
 }));
 
@@ -26,6 +29,9 @@ describe("account routes", () => {
     serviceMock.getTransactions.mockReset();
     serviceMock.updateTransaction.mockReset();
     serviceMock.deleteTransaction.mockReset();
+    serviceMock.restoreTransaction.mockReset();
+    serviceMock.deleteAccount.mockReset();
+    serviceMock.restoreAccount.mockReset();
   });
 
   it("returns 401 for monthly summary when x-user-id is missing", async () => {
@@ -241,5 +247,29 @@ describe("account routes", () => {
 
     expect(response.status).toBe(204);
     expect(serviceMock.deleteTransaction).toHaveBeenCalledWith("user-1", "account-1", "txn-1");
+  });
+
+  it("passes transaction restores through to the service and returns the account", async () => {
+    serviceMock.restoreTransaction.mockResolvedValue({ id: "account-1", balance: 100 });
+
+    const response = await request(app)
+      .post("/api/accounts/account-1/transactions/txn-1/restore")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.restoreTransaction).toHaveBeenCalledWith("user-1", "account-1", "txn-1");
+  });
+
+  it("passes account restores through to the service", async () => {
+    serviceMock.restoreAccount.mockResolvedValue({ id: "account-1", balance: 0 });
+
+    const response = await request(app)
+      .post("/api/accounts/account-1/restore")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.restoreAccount).toHaveBeenCalledWith("user-1", "account-1");
   });
 });

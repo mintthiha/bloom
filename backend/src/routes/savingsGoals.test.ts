@@ -9,6 +9,7 @@ const { serviceMock } = vi.hoisted(() => ({
     createSavingsGoal: vi.fn(),
     updateSavingsGoal: vi.fn(),
     deleteSavingsGoal: vi.fn(),
+    restoreSavingsGoal: vi.fn(),
   },
 }));
 
@@ -39,6 +40,7 @@ describe("savings goal routes", () => {
     serviceMock.createSavingsGoal.mockReset();
     serviceMock.updateSavingsGoal.mockReset();
     serviceMock.deleteSavingsGoal.mockReset();
+    serviceMock.restoreSavingsGoal.mockReset();
   });
 
   // -------------------------------------------------------------------------
@@ -223,6 +225,33 @@ describe("savings goal routes", () => {
 
       expect(response.status).toBe(204);
       expect(serviceMock.deleteSavingsGoal).toHaveBeenCalledWith("u-1", "g-1");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /api/savings-goals/:id/restore
+  // -------------------------------------------------------------------------
+
+  describe("POST /api/savings-goals/:id/restore", () => {
+    it("returns 401 when x-user-id header is missing", async () => {
+      const response = await request(app)
+        .post("/api/savings-goals/g-1/restore")
+        .set("X-Internal-Secret", INTERNAL_SECRET);
+
+      expect(response.status).toBe(401);
+    });
+
+    it("returns 200 with the restored goal", async () => {
+      serviceMock.restoreSavingsGoal.mockResolvedValue(GOAL_FIXTURE);
+
+      const response = await request(app)
+        .post("/api/savings-goals/g-1/restore")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(GOAL_FIXTURE);
+      expect(serviceMock.restoreSavingsGoal).toHaveBeenCalledWith("u-1", "g-1");
     });
   });
 });

@@ -405,6 +405,8 @@ export const api = {
     }),
   deleteRecurringTransaction: (id: string) =>
     request<void>(`/recurring/${id}`, { method: "DELETE" }),
+  restoreRecurringTransaction: (id: string) =>
+    request<RecurringTransaction>(`/recurring/${id}/restore`, { method: "POST" }),
   saveBudget: (category: string, monthlyLimit: number) =>
     request<Budget>("/budgets", {
       method: "PUT",
@@ -426,6 +428,7 @@ export const api = {
       { method: "POST", body: JSON.stringify(input) }
     ),
   deleteBudget: (id: string) => request<void>(`/budgets/${id}`, { method: "DELETE" }),
+  restoreBudget: (id: string) => request<Budget>(`/budgets/${id}/restore`, { method: "POST" }),
   getSubscriptions: () => request<SubscriptionSummary>("/subscriptions"),
   listSavingsGoals: () => request<SavingsGoal[]>("/savings-goals"),
   createSavingsGoal: (input: { accountId: string; name: string; targetAmount: number }) =>
@@ -435,6 +438,8 @@ export const api = {
     input: { accountId: string; name: string; targetAmount: number }
   ) => request<SavingsGoal>(`/savings-goals/${id}`, { method: "PUT", body: JSON.stringify(input) }),
   deleteSavingsGoal: (id: string) => request<void>(`/savings-goals/${id}`, { method: "DELETE" }),
+  restoreSavingsGoal: (id: string) =>
+    request<SavingsGoal>(`/savings-goals/${id}/restore`, { method: "POST" }),
   createAccount: (ownerName: string, accountType: AccountType, nickname?: string) =>
     request<Account>("/accounts", {
       method: "POST",
@@ -497,6 +502,8 @@ export const api = {
     }),
   deleteTransaction: (id: string, transactionId: string) =>
     request<void>(`/accounts/${id}/transactions/${transactionId}`, { method: "DELETE" }),
+  restoreTransaction: (id: string, transactionId: string) =>
+    request<Account>(`/accounts/${id}/transactions/${transactionId}/restore`, { method: "POST" }),
   freeze: (id: string) => request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) => request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
   updateNickname: (id: string, nickname?: string) =>
@@ -505,6 +512,7 @@ export const api = {
       body: JSON.stringify({ nickname }),
     }),
   deleteAccount: (id: string) => request<void>(`/accounts/${id}`, { method: "DELETE" }),
+  restoreAccount: (id: string) => request<Account>(`/accounts/${id}/restore`, { method: "POST" }),
   importCsv: (
     id: string,
     rows: Array<{
@@ -563,6 +571,8 @@ export const api = {
     }),
   deleteCategorizationRule: (id: string) =>
     request<void>(`/categorization-rules/${id}`, { method: "DELETE" }),
+  restoreCategorizationRule: (id: string) =>
+    request<AutoCategorizationRule>(`/categorization-rules/${id}/restore`, { method: "POST" }),
   suggestCategories: (merchants: string[]) =>
     request<{ suggestions: { merchant: string; category: string }[] }>("/auto-categorize/suggest", {
       method: "POST",
@@ -588,4 +598,6 @@ export const api = {
   updateManualEntry: (id: string, input: { name: string; amount: number; date: string | null }) =>
     request<ManualEntry>(`/manual-entries/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteManualEntry: (id: string) => request<void>(`/manual-entries/${id}`, { method: "DELETE" }),
+  restoreManualEntry: (id: string) =>
+    request<void>(`/manual-entries/${id}/restore`, { method: "POST" }),
 };

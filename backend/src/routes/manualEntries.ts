@@ -84,7 +84,7 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-/** Deletes a manual entry. */
+/** Soft-deletes a manual entry (recoverable via the restore endpoint). */
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const entryId = req.params["id"] as string;
@@ -94,6 +94,24 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
       userId,
       "MANUAL_ENTRY_DELETED",
       `Removed ${type === "ASSET" ? "asset" : "liability"} "${name}"`,
+      { entryId, type }
+    );
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Restores a previously soft-deleted manual entry (the "Undo" action after a delete). */
+router.post("/:id/restore", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const entryId = req.params["id"] as string;
+    const userId = uid(req);
+    const { name, type } = await manualEntryService.restoreManualEntry(userId, entryId);
+    logActivity(
+      userId,
+      "MANUAL_ENTRY_RESTORED",
+      `Restored ${type === "ASSET" ? "asset" : "liability"} "${name}"`,
       { entryId, type }
     );
     res.status(204).end();

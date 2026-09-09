@@ -131,7 +131,7 @@ async function getBudgetRecord(userId: string, budgetId: string) {
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
     SELECT "id", "userId", "category", "monthlyLimit", "rolloverEnabled", "createdAt", "updatedAt"
     FROM "CategoryBudget"
-    WHERE "id" = ${budgetId} AND "userId" = ${userId}
+    WHERE "id" = ${budgetId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     LIMIT 1
   `;
 
@@ -165,6 +165,8 @@ async function loadBudgetRolloverInputs(
       (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
     )
     WHERE a."userId" = ${userId}
+      AND a."deletedAt" IS NULL
+      AND t."deletedAt" IS NULL
       AND COALESCE(t."category", 'Uncategorized') = ${category}
       AND t."effectiveAt" < ${endBoundary}
     GROUP BY DATE_TRUNC('month', t."effectiveAt" AT TIME ZONE 'UTC')
@@ -196,7 +198,7 @@ export async function listBudgets(
   const budgets = await prisma.$queryRaw<BudgetRecord[]>`
     SELECT "id", "userId", "category", "monthlyLimit", "rolloverEnabled", "createdAt", "updatedAt"
     FROM "CategoryBudget"
-    WHERE "userId" = ${userId}
+    WHERE "userId" = ${userId} AND "deletedAt" IS NULL
     ORDER BY "category" ASC
   `;
   const spendingRows = await prisma.$queryRaw<MonthlySpendingRow[]>`
@@ -215,6 +217,9 @@ export async function listBudgets(
       AND COALESCE(t."category", 'Uncategorized') = b."category"
       AND t."effectiveAt" < ${endBoundary}
     WHERE b."userId" = ${userId}
+      AND b."deletedAt" IS NULL
+      AND a."deletedAt" IS NULL
+      AND t."deletedAt" IS NULL
     GROUP BY b."id", DATE_TRUNC('month', t."effectiveAt" AT TIME ZONE 'UTC')
   `;
   const periodRows = await prisma.$queryRaw<PeriodRow[]>`
@@ -267,6 +272,8 @@ export async function getBudgetActivity(
       (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
     )
     WHERE a."userId" = ${userId}
+      AND a."deletedAt" IS NULL
+      AND t."deletedAt" IS NULL
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}
@@ -281,6 +288,8 @@ export async function getBudgetActivity(
       (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
     )
     WHERE a."userId" = ${userId}
+      AND a."deletedAt" IS NULL
+      AND t."deletedAt" IS NULL
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}
@@ -300,6 +309,8 @@ export async function getBudgetActivity(
       (t."toAccountId" = a."id" AND t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType")
     )
     WHERE a."userId" = ${userId}
+      AND a."deletedAt" IS NULL
+      AND t."deletedAt" IS NULL
       AND COALESCE(t."category", 'Uncategorized') = ${budget.category}
       AND t."effectiveAt" >= ${start}
       AND t."effectiveAt" < ${end}
@@ -380,7 +391,7 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
     INSERT INTO "CategoryBudget" ("id", "userId", "category", "monthlyLimit", "createdAt", "updatedAt")
     VALUES (${id}, ${userId}, ${category}, ${monthlyLimit}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    ON CONFLICT ("userId", "category")
+    ON CONFLICT ("userId", "category") WHERE "deletedAt" IS NULL
     DO UPDATE SET
       "monthlyLimit" = EXCLUDED."monthlyLimit",
       "updatedAt" = CURRENT_TIMESTAMP
@@ -416,7 +427,7 @@ export async function setRolloverEnabled(userId: string, budgetId: string, enabl
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
     UPDATE "CategoryBudget"
     SET "rolloverEnabled" = ${enabled}, "updatedAt" = CURRENT_TIMESTAMP
-    WHERE "id" = ${budgetId} AND "userId" = ${userId}
+    WHERE "id" = ${budgetId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     RETURNING "id", "userId", "category", "monthlyLimit", "rolloverEnabled", "createdAt", "updatedAt"
   `;
 
@@ -495,13 +506,15 @@ async function applyBudgetAdjustment(
 }
 
 /**
- * Deletes a saved budget for the current user.
- * Throws 404 when the budget does not exist or does not belong to the user.
+ * Soft-deletes a saved budget for the current user (recoverable via restoreBudget).
+ * Its BudgetPeriod rows are left intact and simply become unreachable while the
+ * parent is hidden. Throws 404 when the budget does not exist or is already deleted.
  */
 export async function deleteBudget(userId: string, budgetId: string) {
   const rows = await prisma.$queryRaw<Pick<BudgetRecord, "id" | "category">[]>`
-    DELETE FROM "CategoryBudget"
-    WHERE "id" = ${budgetId} AND "userId" = ${userId}
+    UPDATE "CategoryBudget"
+    SET "deletedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${budgetId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     RETURNING "id", "category"
   `;
 
@@ -512,4 +525,41 @@ export async function deleteBudget(userId: string, budgetId: string) {
     budgetId,
     category: rows[0].category,
   });
+}
+
+/**
+ * Restores a soft-deleted budget (the "Undo" action after a delete).
+ * Throws 404 if the budget does not exist or is not currently deleted, or 409 if a
+ * live budget for the same category was created during the undo window.
+ */
+export async function restoreBudget(userId: string, budgetId: string) {
+  const deleted = await prisma.$queryRaw<Pick<BudgetRecord, "id" | "category">[]>`
+    SELECT "id", "category" FROM "CategoryBudget"
+    WHERE "id" = ${budgetId} AND "userId" = ${userId} AND "deletedAt" IS NOT NULL
+    LIMIT 1
+  `;
+  if (!deleted[0]) {
+    throw new AppError(404, `Budget ${budgetId} not found`);
+  }
+
+  const clash = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT "id" FROM "CategoryBudget"
+    WHERE "userId" = ${userId} AND "category" = ${deleted[0].category} AND "deletedAt" IS NULL
+    LIMIT 1
+  `;
+  if (clash[0]) {
+    throw new AppError(409, `A budget for ${deleted[0].category} already exists`);
+  }
+
+  const rows = await prisma.$queryRaw<BudgetRecord[]>`
+    UPDATE "CategoryBudget"
+    SET "deletedAt" = NULL
+    WHERE "id" = ${budgetId} AND "userId" = ${userId}
+    RETURNING "id", "userId", "category", "monthlyLimit", "rolloverEnabled", "createdAt", "updatedAt"
+  `;
+  logActivity(userId, "BUDGET_RESTORED", `Restored budget for ${deleted[0].category}`, {
+    budgetId,
+    category: deleted[0].category,
+  });
+  return { ...rows[0]!, monthlyLimit: Number(rows[0]!.monthlyLimit) };
 }

@@ -13,12 +13,17 @@ export function DeleteAccount({ accountId, displayName }: DeleteAccountProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  /** Deletes the account and redirects to the home page with the account name in the query string. */
+  /**
+   * Soft-deletes the account and redirects home, passing the name and id so the
+   * dashboard can offer a 5-second "Undo" toast.
+   */
   async function handleDelete() {
     setDeleting(true);
     try {
       await api.deleteAccount(accountId);
-      router.push(`/?deleted=${encodeURIComponent(displayName)}`);
+      router.push(
+        `/?deleted=${encodeURIComponent(displayName)}&deletedId=${encodeURIComponent(accountId)}`
+      );
     } catch {
       setDeleting(false);
       setConfirmDelete(false);

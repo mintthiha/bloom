@@ -110,12 +110,23 @@ router.post("/move", async (req: Request, res: Response, next: NextFunction) => 
 });
 
 /**
- * Deletes one saved budget by id for the current user.
+ * Soft-deletes one saved budget by id (recoverable via the restore endpoint).
  */
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     await budgetService.deleteBudget(uid(req), req.params["id"] as string);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Restores a previously soft-deleted budget (the "Undo" action after a delete).
+ */
+router.post("/:id/restore", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await budgetService.restoreBudget(uid(req), req.params["id"] as string));
   } catch (err) {
     next(err);
   }

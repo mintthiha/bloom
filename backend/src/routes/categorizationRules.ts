@@ -55,11 +55,20 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-/** Deletes one categorization rule by id. */
+/** Soft-deletes one categorization rule by id (recoverable via the restore endpoint). */
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     await categorizationRuleService.deleteRule(uid(req), req.params["id"] as string);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Restores a previously soft-deleted categorization rule (the "Undo" action after a delete). */
+router.post("/:id/restore", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await categorizationRuleService.restoreRule(uid(req), req.params["id"] as string));
   } catch (err) {
     next(err);
   }

@@ -223,11 +223,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         onDeletingChange={setDeletingTransactionId}
         editingTransactionId={editingTransactionId}
         onCancelEditing={cancelEditingTransaction}
-        onDeleted={async () => {
-          toast.success("Transaction deleted");
-          await refresh();
-        }}
-        onError={(msg) => toast.error(msg)}
+        onChange={refresh}
       />
 
       <div style={{ display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>

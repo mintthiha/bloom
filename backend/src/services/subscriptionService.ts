@@ -26,6 +26,8 @@ export async function getSubscriptionSummary(userId: string): Promise<Subscripti
     FROM "Transaction" t
     INNER JOIN "Account" a ON a.id = t."fromAccountId"
     WHERE a."userId" = ${userId}
+      AND t."deletedAt" IS NULL
+      AND a."deletedAt" IS NULL
       AND t.type = 'WITHDRAWAL'
       AND t.merchant IS NOT NULL
       AND t.merchant <> ''

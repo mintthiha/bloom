@@ -77,7 +77,7 @@ async function selectAccountByUserId(userId: string, id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
     FROM "Account"
-    WHERE "id" = ${id} AND "userId" = ${userId}
+    WHERE "id" = ${id} AND "userId" = ${userId} AND "deletedAt" IS NULL
     LIMIT 1
   `;
   return rows[0] ?? null;
@@ -99,6 +99,7 @@ async function selectTransactionByAccount(
     WHERE t."id" = ${transactionId}
       AND a."id" = ${accountId}
       AND a."userId" = ${userId}
+      AND t."deletedAt" IS NULL
     LIMIT 1
   `;
   return rows[0] ?? null;
@@ -111,6 +112,7 @@ async function selectTransactionsByTransferGroup(userId: string, transferGroupId
     LEFT JOIN "Account" fa ON fa."id" = t."fromAccountId"
     LEFT JOIN "Account" ta ON ta."id" = t."toAccountId"
     WHERE t."transferGroupId" = ${transferGroupId}
+      AND t."deletedAt" IS NULL
       AND (fa."userId" = ${userId} OR ta."userId" = ${userId})
     ORDER BY t."createdAt" ASC, t."id" ASC
   `;
@@ -123,10 +125,12 @@ async function listTransactionsForBalanceReplay(
   return client.$queryRaw<TransactionRecord[]>`
     SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
-    WHERE
-      ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
-      OR
-      ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+    WHERE "deletedAt" IS NULL
+      AND (
+        ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+        OR
+        ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+      )
     ORDER BY "effectiveAt" ASC, "createdAt" ASC, "id" ASC
   `;
 }
@@ -227,6 +231,8 @@ export async function getMonthlySummary(
         FROM "Transaction" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
+          AND a."deletedAt" IS NULL
+          AND t."deletedAt" IS NULL
           AND t."effectiveAt" >= ${dateRange.start}
           AND t."effectiveAt" < ${dateRange.end}
           AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
@@ -245,6 +251,8 @@ export async function getMonthlySummary(
         FROM "Transaction" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
+          AND a."deletedAt" IS NULL
+          AND t."deletedAt" IS NULL
           AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
         GROUP BY COALESCE(t."category", 'Uncategorized')
         ORDER BY "spending" DESC, "income" DESC
@@ -299,6 +307,8 @@ export async function getCategoryBreakdown(userId: string, input?: { start?: Dat
         FROM "Transaction" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
+          AND a."deletedAt" IS NULL
+          AND t."deletedAt" IS NULL
           AND t."effectiveAt" >= ${dateRange.start}
           AND t."effectiveAt" <  ${dateRange.end}
           AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
@@ -324,6 +334,8 @@ export async function getCategoryBreakdown(userId: string, input?: { start?: Dat
         FROM "Transaction" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
+          AND a."deletedAt" IS NULL
+          AND t."deletedAt" IS NULL
           AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
         GROUP BY COALESCE(t."category", 'Uncategorized'), a."id", a."ownerName", a."nickname"
         HAVING SUM(CASE
@@ -366,6 +378,8 @@ export async function getMonthlyTrends(userId: string, months: number = 6) {
     FROM "Transaction" t
     JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
     WHERE a."userId" = ${userId}
+      AND a."deletedAt" IS NULL
+      AND t."deletedAt" IS NULL
       AND t."type" IN ('DEPOSIT'::"TransactionType", 'WITHDRAWAL'::"TransactionType")
       AND t."effectiveAt" >= DATE_TRUNC('month', NOW()) - ${months - 1} * INTERVAL '1 month'
     GROUP BY DATE_TRUNC('month', t."effectiveAt")
@@ -402,6 +416,7 @@ async function computeManualTotalsForMonth(
           COALESCE(SUM(CASE WHEN "type" = 'LIABILITY'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualLiabilities"
         FROM "ManualEntry"
         WHERE "userId" = ${userId}
+          AND "deletedAt" IS NULL
           AND ("date" IS NULL OR "date" <= (${firstDay}::date + INTERVAL '1 month' - INTERVAL '1 day'))
       `
     : await prisma.$queryRaw<{ manualAssets: string; manualLiabilities: string }[]>`
@@ -410,6 +425,7 @@ async function computeManualTotalsForMonth(
           COALESCE(SUM(CASE WHEN "type" = 'LIABILITY'::"ManualEntryType" THEN "amount" ELSE 0 END), 0) AS "manualLiabilities"
         FROM "ManualEntry"
         WHERE "userId" = ${userId}
+          AND "deletedAt" IS NULL
           AND "date" IS NOT NULL
           AND "date" <= (${firstDay}::date + INTERVAL '1 month' - INTERVAL '1 day')
       `;
@@ -425,7 +441,7 @@ async function computeManualTotalsForMonth(
  * This ensures a July-dated student loan appears on the July chart point, not just the current month.
  */
 export async function recordNetWorthSnapshot(userId: string) {
-  const accounts = await prisma.account.findMany({ where: { userId } });
+  const accounts = await prisma.account.findMany({ where: { userId, deletedAt: null } });
   const accountAssets = accounts
     .filter((a) => a.accountType !== "CREDIT")
     .reduce((sum, a) => sum + a.balance.toNumber(), 0);
@@ -529,7 +545,7 @@ export async function listAccounts(userId: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
     FROM "Account"
-    WHERE "userId" = ${userId}
+    WHERE "userId" = ${userId} AND "deletedAt" IS NULL
     ORDER BY "createdAt" DESC
   `;
   return rows.map(normalizeAccount);
@@ -772,10 +788,12 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
   const rawTransactions = await prisma.$queryRaw<TransactionRecord[]>`
     SELECT "id", "type", "amount", "balanceAfter", "transferGroupId", "category", "merchant", "description", "effectiveAt", "createdAt", "fromAccountId", "toAccountId"
     FROM "Transaction"
-    WHERE
-      ("fromAccountId" = ${id} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
-      OR
-      ("toAccountId" = ${id} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+    WHERE "deletedAt" IS NULL
+      AND (
+        ("fromAccountId" = ${id} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+        OR
+        ("toAccountId" = ${id} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+      )
     ORDER BY "effectiveAt" DESC, "createdAt" DESC
   `;
 
@@ -946,8 +964,9 @@ export async function deleteTransaction(userId: string, accountId: string, trans
     ) as string[];
 
     await prisma.$transaction(async (tx) => {
-      await tx.transaction.deleteMany({
-        where: { transferGroupId: transaction.transferGroupId },
+      await tx.transaction.updateMany({
+        where: { transferGroupId: transaction.transferGroupId, deletedAt: null },
+        data: { deletedAt: new Date() },
       });
       for (const affectedAccountId of affectedAccountIds) {
         await replayAccountBalances(tx as Prisma.TransactionClient, affectedAccountId);
@@ -965,7 +984,10 @@ export async function deleteTransaction(userId: string, accountId: string, trans
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.transaction.delete({ where: { id: transactionId } });
+    await tx.transaction.update({
+      where: { id: transactionId },
+      data: { deletedAt: new Date() },
+    });
     await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
   });
 
@@ -977,6 +999,89 @@ export async function deleteTransaction(userId: string, accountId: string, trans
     { accountId, transactionId }
   );
   return accountAfterDelete;
+}
+
+/**
+ * Fetches a single transaction by id (regardless of soft-delete state) and
+ * verifies it is visible from `accountId` for `userId`. Used by the undo path.
+ */
+async function selectAnyTransactionByAccount(
+  userId: string,
+  accountId: string,
+  transactionId: string
+) {
+  const rows = await prisma.$queryRaw<TransactionRecord[]>`
+    SELECT t."id", t."type", t."amount", t."balanceAfter", t."transferGroupId", t."category", t."merchant", t."description", t."effectiveAt", t."createdAt", t."fromAccountId", t."toAccountId"
+    FROM "Transaction" t
+    JOIN "Account" a ON (
+      (t."fromAccountId" = a."id" AND t."type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+      OR
+      (t."toAccountId" = a."id" AND t."type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+    )
+    WHERE t."id" = ${transactionId}
+      AND a."id" = ${accountId}
+      AND a."userId" = ${userId}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+/**
+ * Restores a soft-deleted transaction (the "Undo" action after a delete) and
+ * replays the affected account balances. For a transfer, both legs are restored
+ * together. Throws 404 if the transaction is not found for this account, 409 if
+ * replaying balances afterwards would overdraw an account.
+ */
+export async function restoreTransaction(userId: string, accountId: string, transactionId: string) {
+  await getAccount(userId, accountId);
+  const transaction = await selectAnyTransactionByAccount(userId, accountId, transactionId);
+  if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
+
+  const isTransfer =
+    transaction.type === TransactionType.TRANSFER_OUT ||
+    transaction.type === TransactionType.TRANSFER_IN;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (isTransfer && transaction.transferGroupId) {
+        const legs = await tx.$queryRaw<TransactionRecord[]>`
+          SELECT "id", "fromAccountId", "toAccountId"
+          FROM "Transaction"
+          WHERE "transferGroupId" = ${transaction.transferGroupId}
+        `;
+        await tx.transaction.updateMany({
+          where: { transferGroupId: transaction.transferGroupId, deletedAt: { not: null } },
+          data: { deletedAt: null },
+        });
+        const affectedAccountIds = Array.from(
+          new Set(legs.flatMap((leg) => [leg.fromAccountId, leg.toAccountId]).filter(Boolean))
+        ) as string[];
+        for (const affectedAccountId of affectedAccountIds) {
+          await replayAccountBalances(tx as Prisma.TransactionClient, affectedAccountId);
+        }
+      } else {
+        await tx.transaction.update({
+          where: { id: transactionId },
+          data: { deletedAt: null },
+        });
+        await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
+      }
+    });
+  } catch (err) {
+    if (err instanceof AppError && err.statusCode === 400) {
+      throw new AppError(409, "Restoring this transaction would overdraw the account");
+    }
+    throw err;
+  }
+
+  const accountAfterRestore = await getAccount(userId, accountId);
+  logActivity(
+    userId,
+    "TRANSACTION_RESTORED",
+    `Restored a transaction on "${accountLabel(accountAfterRestore.ownerName, accountAfterRestore.nickname)}"`,
+    { accountId, transactionId }
+  );
+  return accountAfterRestore;
 }
 
 /**
@@ -1020,17 +1125,24 @@ export async function unfreezeAccount(userId: string, id: string) {
 }
 
 /**
- * Deletes an account and all of its associated transactions.
- * Throws 404 if the account does not exist.
- * Runs inside a Prisma transaction to ensure atomicity.
+ * Soft-deletes an account and, with the same timestamp, every one of its
+ * still-live transactions (recoverable via restoreAccount). The shared timestamp
+ * lets the restore re-attach exactly the transactions this call removed, leaving
+ * any the user had already deleted individually untouched.
+ * Throws 404 if the account does not exist or is already deleted.
  */
 export async function deleteAccount(userId: string, id: string) {
   const accountToDelete = await getAccount(userId, id);
+  const deletedAt = new Date();
   await prisma.$transaction([
-    prisma.transaction.deleteMany({
-      where: { OR: [{ fromAccountId: id }, { toAccountId: id }] },
+    prisma.transaction.updateMany({
+      where: {
+        deletedAt: null,
+        OR: [{ fromAccountId: id }, { toAccountId: id }],
+      },
+      data: { deletedAt },
     }),
-    prisma.account.delete({ where: { id } }),
+    prisma.account.update({ where: { id }, data: { deletedAt } }),
   ]);
   logActivity(
     userId,
@@ -1038,6 +1150,42 @@ export async function deleteAccount(userId: string, id: string) {
     `Deleted account "${accountLabel(accountToDelete.ownerName, accountToDelete.nickname)}"`,
     { accountId: id, accountType: accountToDelete.accountType }
   );
+}
+
+/**
+ * Restores a soft-deleted account (the "Undo" action after a delete) along with
+ * the transactions removed by the same delete (matched on the shared timestamp).
+ * Throws 404 if the account does not exist or is not currently deleted.
+ */
+export async function restoreAccount(userId: string, id: string) {
+  const rows = await prisma.$queryRaw<
+    { deletedAt: Date; ownerName: string; nickname: string | null }[]
+  >`
+    SELECT "deletedAt", "ownerName", "nickname"
+    FROM "Account"
+    WHERE "id" = ${id} AND "userId" = ${userId} AND "deletedAt" IS NOT NULL
+    LIMIT 1
+  `;
+  const deletedAccount = rows[0];
+  if (!deletedAccount) throw new AppError(404, `Account ${id} not found`);
+
+  await prisma.$transaction([
+    prisma.transaction.updateMany({
+      where: {
+        deletedAt: deletedAccount.deletedAt,
+        OR: [{ fromAccountId: id }, { toAccountId: id }],
+      },
+      data: { deletedAt: null },
+    }),
+    prisma.account.update({ where: { id }, data: { deletedAt: null } }),
+  ]);
+  logActivity(
+    userId,
+    "ACCOUNT_RESTORED",
+    `Restored account "${accountLabel(deletedAccount.ownerName, deletedAccount.nickname)}"`,
+    { accountId: id }
+  );
+  return getAccount(userId, id);
 }
 
 type ImportRow = {
@@ -1065,10 +1213,12 @@ async function backfillNetWorthSnapshots(
       TO_CHAR(DATE_TRUNC('month', "effectiveAt"), 'YYYY-MM') AS month,
       "balanceAfter"
     FROM "Transaction"
-    WHERE
-      ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
-      OR
-      ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+    WHERE "deletedAt" IS NULL
+      AND (
+        ("toAccountId" = ${accountId} AND "type" IN ('DEPOSIT'::"TransactionType", 'TRANSFER_IN'::"TransactionType"))
+        OR
+        ("fromAccountId" = ${accountId} AND "type" IN ('WITHDRAWAL'::"TransactionType", 'TRANSFER_OUT'::"TransactionType"))
+      )
     ORDER BY "effectiveAt" DESC, "createdAt" DESC, "id" DESC
   `;
 
@@ -1083,7 +1233,7 @@ async function backfillNetWorthSnapshots(
   const otherAccounts = await prisma.$queryRaw<AccountRecord[]>`
     SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
     FROM "Account"
-    WHERE "userId" = ${userId} AND "id" != ${accountId}
+    WHERE "userId" = ${userId} AND "id" != ${accountId} AND "deletedAt" IS NULL
   `;
   const otherAssets = otherAccounts
     .filter((a) => a.accountType !== AccountType.CREDIT)

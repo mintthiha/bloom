@@ -9,6 +9,7 @@ const { serviceMock } = vi.hoisted(() => ({
     upsertRule: vi.fn(),
     updateRule: vi.fn(),
     deleteRule: vi.fn(),
+    restoreRule: vi.fn(),
   },
 }));
 
@@ -29,6 +30,7 @@ describe("categorization rule routes", () => {
     serviceMock.upsertRule.mockReset();
     serviceMock.updateRule.mockReset();
     serviceMock.deleteRule.mockReset();
+    serviceMock.restoreRule.mockReset();
   });
 
   it("returns 401 when x-user-id is missing", async () => {
@@ -154,5 +156,33 @@ describe("categorization rule routes", () => {
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Rule not found" });
+  });
+
+  it("restores a rule and returns 200 with the rule", async () => {
+    const rule = { id: "rule-1", userId: "user-1", merchant: "Metro", category: "Groceries" };
+    serviceMock.restoreRule.mockResolvedValue(rule);
+
+    const response = await request(app)
+      .post("/api/categorization-rules/rule-1/restore")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(rule);
+    expect(serviceMock.restoreRule).toHaveBeenCalledWith("user-1", "rule-1");
+  });
+
+  it("returns 409 when a live rule for the merchant was re-created during the undo window", async () => {
+    const { AppError } = await import("../middleware/errorHandler");
+    serviceMock.restoreRule.mockRejectedValue(
+      new AppError(409, 'A rule for "Metro" already exists')
+    );
+
+    const response = await request(app)
+      .post("/api/categorization-rules/rule-1/restore")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(409);
   });
 });

@@ -127,7 +127,7 @@ async function selectRecurringTransactionById(userId: string, id: string) {
       a."accountType" AS "accountType"
     FROM "RecurringTransaction" r
     JOIN "Account" a ON a."id" = r."accountId"
-    WHERE r."userId" = ${userId} AND r."id" = ${id}
+    WHERE r."userId" = ${userId} AND r."id" = ${id} AND r."deletedAt" IS NULL
     LIMIT 1
   `;
 
@@ -162,7 +162,7 @@ export async function listRecurringTransactions(userId: string) {
       a."accountType" AS "accountType"
     FROM "RecurringTransaction" r
     JOIN "Account" a ON a."id" = r."accountId"
-    WHERE r."userId" = ${userId}
+    WHERE r."userId" = ${userId} AND r."deletedAt" IS NULL AND a."deletedAt" IS NULL
     ORDER BY r."active" DESC, r."nextRunAt" ASC, r."createdAt" DESC
   `;
   return rows.map(normalizeRecurringTransaction);
@@ -387,7 +387,8 @@ export async function setRecurringTransactionActive(userId: string, id: string, 
 }
 
 /**
- * Deletes a recurring rule without removing previously generated transactions.
+ * Soft-deletes a recurring rule (recoverable via restoreRecurringTransaction)
+ * without removing previously generated transactions.
  */
 export async function deleteRecurringTransaction(userId: string, id: string) {
   const existing = await selectRecurringTransactionById(userId, id);
@@ -396,12 +397,33 @@ export async function deleteRecurringTransaction(userId: string, id: string) {
   }
 
   await prisma.$queryRaw`
-    DELETE FROM "RecurringTransaction"
-    WHERE "id" = ${id} AND "userId" = ${userId}
+    UPDATE "RecurringTransaction"
+    SET "deletedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${id} AND "userId" = ${userId} AND "deletedAt" IS NULL
   `;
   logActivity(userId, "RECURRING_DELETED", `Deleted recurring transaction "${existing.name}"`, {
     recurringId: id,
   });
+}
+
+/**
+ * Restores a soft-deleted recurring rule (the "Undo" action after a delete).
+ * Throws 404 if the rule does not exist or is not currently deleted.
+ */
+export async function restoreRecurringTransaction(userId: string, id: string) {
+  const rows = await prisma.$queryRaw<{ id: string; name: string }[]>`
+    UPDATE "RecurringTransaction"
+    SET "deletedAt" = NULL
+    WHERE "id" = ${id} AND "userId" = ${userId} AND "deletedAt" IS NOT NULL
+    RETURNING "id", "name"
+  `;
+  if (!rows[0]) {
+    throw new AppError(404, `Recurring transaction ${id} not found`);
+  }
+  logActivity(userId, "RECURRING_RESTORED", `Restored recurring transaction "${rows[0].name}"`, {
+    recurringId: id,
+  });
+  return selectRecurringTransactionById(userId, id);
 }
 
 /**
@@ -437,6 +459,8 @@ export async function applyDueRecurringTransactions(
     FROM "RecurringTransaction" r
     JOIN "Account" a ON a."id" = r."accountId"
     WHERE r."userId" = ${userId}
+      AND r."deletedAt" IS NULL
+      AND a."deletedAt" IS NULL
       AND r."active" = true
       AND r."nextRunAt" <= ${now}
     ORDER BY r."nextRunAt" ASC, r."createdAt" ASC

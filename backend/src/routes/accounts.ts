@@ -323,7 +323,8 @@ router.patch(
 );
 
 /**
- * Deletes a manual deposit or withdrawal for the selected account.
+ * Soft-deletes a manual deposit or withdrawal for the selected account
+ * (recoverable via the restore endpoint).
  */
 router.delete(
   "/:id/transactions/:transactionId",
@@ -335,6 +336,26 @@ router.delete(
         req.params["transactionId"] as string
       );
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * Restores a previously soft-deleted transaction (the "Undo" action after a delete)
+ * and returns the refreshed account.
+ */
+router.post(
+  "/:id/transactions/:transactionId/restore",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const account = await accountService.restoreTransaction(
+        extractUserId(req),
+        extractParamId(req),
+        req.params["transactionId"] as string
+      );
+      res.json(account);
     } catch (err) {
       next(err);
     }
@@ -381,6 +402,18 @@ router.delete("/:id", async (req: Request, res: Response, next: NextFunction) =>
   try {
     await accountService.deleteAccount(extractUserId(req), extractParamId(req));
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Restores a previously soft-deleted account and its transactions (the "Undo" action).
+ */
+router.post("/:id/restore", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const account = await accountService.restoreAccount(extractUserId(req), extractParamId(req));
+    res.json(account);
   } catch (err) {
     next(err);
   }

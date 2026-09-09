@@ -98,14 +98,34 @@ export function CreditRewardsPanel({ txns }: CreditRewardsPanelProps) {
     toast.success("Template saved");
   }
 
-  /** Removes the selected custom program, falls back to the first built-in, and confirms via toast. */
+  /**
+   * Removes the selected custom program, falls back to the first built-in, and
+   * offers a 5-second "Undo" that re-adds the removed template.
+   */
   function handleDeleteCustomProgram() {
+    const removed = customPrograms.find((p) => p.id === selectedProgramId);
+    if (!removed) return;
     const updated = customPrograms.filter((p) => p.id !== selectedProgramId);
     saveCustomPrograms(updated);
     setCustomPrograms(updated);
     setSelectedProgramId(CARD_PROGRAMS[0].id);
     setIsPendingDelete(false);
-    toast.success("Template deleted");
+    toast.success("Template deleted", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setCustomPrograms((current) => {
+            if (current.some((p) => p.id === removed.id)) return current;
+            const restored = [...current, removed];
+            saveCustomPrograms(restored);
+            return restored;
+          });
+          setSelectedProgramId(removed.id);
+          toast.success("Template restored");
+        },
+      },
+    });
   }
 
   return (

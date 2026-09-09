@@ -53,6 +53,8 @@ export async function searchTransactions(
       (t.type IN ('DEPOSIT', 'TRANSFER_IN') AND a.id = t."toAccountId")
     )
     WHERE a."userId" = ${userId}
+      AND t."deletedAt" IS NULL
+      AND a."deletedAt" IS NULL
       AND (
         LOWER(t.description) LIKE ${searchPattern}
         OR LOWER(t.merchant)  LIKE ${searchPattern}

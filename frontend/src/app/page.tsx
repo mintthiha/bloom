@@ -98,15 +98,6 @@ function Home() {
     setTimeZone(getBrowserTimeZone());
   }, []);
 
-  /** Shows a toast when returning from an account deletion. */
-  useEffect(() => {
-    const deleted = searchParams.get("deleted");
-    if (deleted) {
-      toast.success(`${deleted} deleted`);
-      router.replace("/");
-    }
-  }, []);
-
   /** Loads all dashboard data in parallel, then records and fetches net worth history. */
   const loadAccounts = useCallback(async () => {
     try {
@@ -163,6 +154,38 @@ function Home() {
   useEffect(() => {
     loadAccounts();
   }, [loadAccounts]);
+
+  /** Shows a toast (with a 5s "Undo") when returning from an account deletion. */
+  useEffect(() => {
+    const deleted = searchParams.get("deleted");
+    const deletedId = searchParams.get("deletedId");
+    if (deleted) {
+      if (deletedId) {
+        toast.success(`${deleted} deleted`, {
+          duration: 5000,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                await api.restoreAccount(deletedId);
+                await loadAccounts();
+                toast.success(`${deleted} restored`);
+              } catch (error) {
+                toast.error(
+                  error instanceof Error && error.message
+                    ? error.message
+                    : "Couldn't undo — account stays deleted"
+                );
+              }
+            },
+          },
+        });
+      } else {
+        toast.success(`${deleted} deleted`);
+      }
+      router.replace("/");
+    }
+  }, []);
 
   /** Scrolls to the account balances card after a new account is created so the glow is visible. */
   useEffect(() => {

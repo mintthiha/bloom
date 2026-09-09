@@ -63,7 +63,7 @@ async function fetchSavingsGoalWithAccount(goalId: string) {
 async function getSavingsGoalOrThrow(userId: string, goalId: string) {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id" FROM "SavingsGoal"
-    WHERE "id" = ${goalId} AND "userId" = ${userId}
+    WHERE "id" = ${goalId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     LIMIT 1
   `;
   if (!rows[0]) throw new AppError(404, `Savings goal ${goalId} not found`);
@@ -82,7 +82,7 @@ export async function listSavingsGoals(userId: string) {
       a."accountType"::text AS "accountType"
     FROM "SavingsGoal" g
     JOIN "Account" a ON a."id" = g."accountId"
-    WHERE g."userId" = ${userId}
+    WHERE g."userId" = ${userId} AND g."deletedAt" IS NULL AND a."deletedAt" IS NULL
     ORDER BY g."createdAt" ASC
   `;
   return rows.map(normalizeSavingsGoalRow);
@@ -95,7 +95,7 @@ export async function createSavingsGoal(
 ) {
   const accountRows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id" FROM "Account"
-    WHERE "id" = ${input.accountId} AND "userId" = ${userId}
+    WHERE "id" = ${input.accountId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     LIMIT 1
   `;
   if (!accountRows[0]) throw new AppError(404, "Account not found");
@@ -125,7 +125,7 @@ export async function updateSavingsGoal(
 
   const accountRows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id" FROM "Account"
-    WHERE "id" = ${input.accountId} AND "userId" = ${userId}
+    WHERE "id" = ${input.accountId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     LIMIT 1
   `;
   if (!accountRows[0]) throw new AppError(404, "Account not found");
@@ -146,12 +146,13 @@ export async function updateSavingsGoal(
   return goal;
 }
 
-/** Deletes a savings goal. Throws 404 when the goal does not belong to the user. */
+/** Soft-deletes a savings goal (recoverable via restoreSavingsGoal). Throws 404 if not found or already deleted. */
 export async function deleteSavingsGoal(userId: string, goalId: string) {
   const goalBeforeDelete = await fetchSavingsGoalWithAccount(goalId);
   const rows = await prisma.$queryRaw<{ id: string }[]>`
-    DELETE FROM "SavingsGoal"
-    WHERE "id" = ${goalId} AND "userId" = ${userId}
+    UPDATE "SavingsGoal"
+    SET "deletedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${goalId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     RETURNING "id"
   `;
   if (!rows[0]) throw new AppError(404, `Savings goal ${goalId} not found`);
@@ -161,4 +162,20 @@ export async function deleteSavingsGoal(userId: string, goalId: string) {
     `Deleted savings goal "${goalBeforeDelete?.name ?? goalId}"`,
     { goalId }
   );
+}
+
+/** Restores a soft-deleted savings goal (the "Undo" action after a delete). Throws 404 if not found or not deleted. */
+export async function restoreSavingsGoal(userId: string, goalId: string) {
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    UPDATE "SavingsGoal"
+    SET "deletedAt" = NULL
+    WHERE "id" = ${goalId} AND "userId" = ${userId} AND "deletedAt" IS NOT NULL
+    RETURNING "id"
+  `;
+  if (!rows[0]) throw new AppError(404, `Savings goal ${goalId} not found`);
+  const restored = await fetchSavingsGoalWithAccount(goalId);
+  logActivity(userId, "GOAL_RESTORED", `Restored savings goal "${restored?.name ?? goalId}"`, {
+    goalId,
+  });
+  return restored;
 }

@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
-import { listRules, upsertRule, updateRule, deleteRule } from "./categorizationRuleService";
+import {
+  listRules,
+  upsertRule,
+  updateRule,
+  deleteRule,
+  restoreRule,
+} from "./categorizationRuleService";
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     autoCategorizationRule: {
       findMany: vi.fn(),
-      upsert: vi.fn(),
       findFirst: vi.fn(),
+      create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -31,6 +37,7 @@ type Rule = {
   category: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 };
 
 /** Builds a categorization rule fixture. */
@@ -42,6 +49,7 @@ function makeRule(overrides?: Partial<Rule>): Rule {
     category: "Food",
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -59,7 +67,7 @@ beforeEach(() => {
 });
 
 describe("listRules", () => {
-  it("returns the user's rules ordered by merchant", async () => {
+  it("returns the user's live rules ordered by merchant", async () => {
     const rules = [makeRule({ id: "r-1" }), makeRule({ id: "r-2" })];
     prismaMock.autoCategorizationRule.findMany.mockResolvedValueOnce(rules);
 
@@ -67,25 +75,40 @@ describe("listRules", () => {
 
     expect(result).toBe(rules);
     expect(prismaMock.autoCategorizationRule.findMany).toHaveBeenCalledWith({
-      where: { userId: "u-1" },
+      where: { userId: "u-1", deletedAt: null },
       orderBy: { merchant: "asc" },
     });
   });
 });
 
 describe("upsertRule", () => {
-  it("upserts on the user+merchant unique key and returns the rule", async () => {
+  it("creates a new rule when none exists for the merchant", async () => {
     const rule = makeRule({ merchant: "Metro", category: "Groceries" });
-    prismaMock.autoCategorizationRule.upsert.mockResolvedValueOnce(rule);
+    prismaMock.autoCategorizationRule.findFirst.mockResolvedValueOnce(null);
+    prismaMock.autoCategorizationRule.create.mockResolvedValueOnce(rule);
 
     const result = await upsertRule("u-1", "Metro", "Groceries");
 
     expect(result).toBe(rule);
-    expect(prismaMock.autoCategorizationRule.upsert).toHaveBeenCalledWith({
-      where: { userId_merchant: { userId: "u-1", merchant: "Metro" } },
-      update: { category: "Groceries" },
-      create: { userId: "u-1", merchant: "Metro", category: "Groceries" },
+    expect(prismaMock.autoCategorizationRule.create).toHaveBeenCalledWith({
+      data: { userId: "u-1", merchant: "Metro", category: "Groceries" },
     });
+  });
+
+  it("revives and re-points a soft-deleted rule for the same merchant", async () => {
+    const existing = makeRule({ deletedAt: new Date("2026-02-02") });
+    const updated = makeRule({ category: "Groceries" });
+    prismaMock.autoCategorizationRule.findFirst.mockResolvedValueOnce(existing);
+    prismaMock.autoCategorizationRule.update.mockResolvedValueOnce(updated);
+
+    const result = await upsertRule("u-1", "Metro", "Groceries");
+
+    expect(result).toBe(updated);
+    expect(prismaMock.autoCategorizationRule.update).toHaveBeenCalledWith({
+      where: { id: "r-1" },
+      data: { category: "Groceries", deletedAt: null },
+    });
+    expect(prismaMock.autoCategorizationRule.create).not.toHaveBeenCalled();
   });
 });
 
@@ -133,14 +156,50 @@ describe("deleteRule", () => {
     prismaMock.autoCategorizationRule.findFirst.mockResolvedValueOnce(null);
 
     await expect(deleteRule("u-1", "r-99")).rejects.toMatchObject({ statusCode: 404 });
-    expect(prismaMock.autoCategorizationRule.delete).not.toHaveBeenCalled();
+    expect(prismaMock.autoCategorizationRule.update).not.toHaveBeenCalled();
   });
 
-  it("deletes the rule when it belongs to the user", async () => {
+  it("soft-deletes the rule when it belongs to the user", async () => {
     prismaMock.autoCategorizationRule.findFirst.mockResolvedValueOnce(makeRule());
-    prismaMock.autoCategorizationRule.delete.mockResolvedValueOnce(makeRule());
+    prismaMock.autoCategorizationRule.update.mockResolvedValueOnce(makeRule());
 
     await expect(deleteRule("u-1", "r-1")).resolves.toBeUndefined();
-    expect(prismaMock.autoCategorizationRule.delete).toHaveBeenCalledWith({ where: { id: "r-1" } });
+    expect(prismaMock.autoCategorizationRule.update).toHaveBeenCalledWith({
+      where: { id: "r-1" },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+});
+
+describe("restoreRule", () => {
+  it("throws AppError 404 when the rule is not currently soft-deleted", async () => {
+    prismaMock.autoCategorizationRule.findFirst.mockResolvedValueOnce(
+      makeRule({ deletedAt: null })
+    );
+
+    await expect(restoreRule("u-1", "r-1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("throws AppError 409 when a live rule for the merchant now exists", async () => {
+    prismaMock.autoCategorizationRule.findFirst
+      .mockResolvedValueOnce(makeRule({ deletedAt: new Date("2026-02-02") }))
+      .mockResolvedValueOnce(makeRule({ id: "r-2" }));
+
+    await expect(restoreRule("u-1", "r-1")).rejects.toMatchObject({ statusCode: 409 });
+    expect(prismaMock.autoCategorizationRule.update).not.toHaveBeenCalled();
+  });
+
+  it("clears deletedAt when no live rule for the merchant exists", async () => {
+    const restored = makeRule();
+    prismaMock.autoCategorizationRule.findFirst
+      .mockResolvedValueOnce(makeRule({ deletedAt: new Date("2026-02-02") }))
+      .mockResolvedValueOnce(null);
+    prismaMock.autoCategorizationRule.update.mockResolvedValueOnce(restored);
+
+    await expect(restoreRule("u-1", "r-1")).resolves.toBe(restored);
+    expect(prismaMock.autoCategorizationRule.update).toHaveBeenCalledWith({
+      where: { id: "r-1" },
+      data: { deletedAt: null },
+    });
   });
 });

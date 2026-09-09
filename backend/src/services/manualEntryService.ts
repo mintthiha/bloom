@@ -28,12 +28,12 @@ function normalizeRow(row: ManualEntryRow) {
   };
 }
 
-/** Returns all manual entries for the user, ordered by date descending then creation date. */
+/** Returns all live (non-soft-deleted) manual entries for the user, ordered by date then creation date. */
 export async function listManualEntries(userId: string) {
   const rows = await prisma.$queryRaw<ManualEntryRow[]>`
     SELECT "id", "userId", "name", "type", "amount", "date", "createdAt", "updatedAt"
     FROM "ManualEntry"
-    WHERE "userId" = ${userId}
+    WHERE "userId" = ${userId} AND "deletedAt" IS NULL
     ORDER BY "date" DESC NULLS LAST, "createdAt" ASC
   `;
   return rows.map(normalizeRow);
@@ -71,22 +71,37 @@ export async function updateManualEntry(
       "amount" = ${input.amount},
       "date" = ${input.date ? new Date(input.date) : null}::date,
       "updatedAt" = CURRENT_TIMESTAMP
-    WHERE "id" = ${entryId} AND "userId" = ${userId}
+    WHERE "id" = ${entryId} AND "userId" = ${userId} AND "deletedAt" IS NULL
     RETURNING "id", "userId", "name", "type", "amount", "date", "createdAt", "updatedAt"
   `;
   if (!rows[0]) throw new AppError(404, `Manual entry ${entryId} not found`);
   return normalizeRow(rows[0]);
 }
 
-/** Deletes a manual entry. Throws 404 if the entry does not belong to the user. */
-/** Deletes a manual entry and returns its name and type for activity logging. */
+/** Soft-deletes a manual entry (recoverable via restoreManualEntry). Throws 404 if not found or already deleted. */
 export async function deleteManualEntry(
   userId: string,
   entryId: string
 ): Promise<{ name: string; type: ManualEntryType }> {
   const rows = await prisma.$queryRaw<{ id: string; name: string; type: ManualEntryType }[]>`
-    DELETE FROM "ManualEntry"
-    WHERE "id" = ${entryId} AND "userId" = ${userId}
+    UPDATE "ManualEntry"
+    SET "deletedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${entryId} AND "userId" = ${userId} AND "deletedAt" IS NULL
+    RETURNING "id", "name", "type"
+  `;
+  if (!rows[0]) throw new AppError(404, `Manual entry ${entryId} not found`);
+  return { name: rows[0].name, type: rows[0].type };
+}
+
+/** Restores a soft-deleted manual entry. Throws 404 if not found or not currently deleted. */
+export async function restoreManualEntry(
+  userId: string,
+  entryId: string
+): Promise<{ name: string; type: ManualEntryType }> {
+  const rows = await prisma.$queryRaw<{ id: string; name: string; type: ManualEntryType }[]>`
+    UPDATE "ManualEntry"
+    SET "deletedAt" = NULL
+    WHERE "id" = ${entryId} AND "userId" = ${userId} AND "deletedAt" IS NOT NULL
     RETURNING "id", "name", "type"
   `;
   if (!rows[0]) throw new AppError(404, `Manual entry ${entryId} not found`);
@@ -100,7 +115,7 @@ export async function getManualEntryTotals(
   const rows = await prisma.$queryRaw<{ type: ManualEntryType; total: string }[]>`
     SELECT "type", SUM("amount") AS "total"
     FROM "ManualEntry"
-    WHERE "userId" = ${userId}
+    WHERE "userId" = ${userId} AND "deletedAt" IS NULL
     GROUP BY "type"
   `;
   let manualAssets = 0;

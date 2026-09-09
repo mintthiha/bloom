@@ -9,6 +9,7 @@ import {
   RecurringTransactionType,
 } from "@/lib/api";
 import { Repeat } from "lucide-react";
+import { deleteWithUndo } from "@/lib/undoableDelete";
 import { formatCurrency } from "@/lib/format";
 import { formatLocalDate } from "@/lib/date-range";
 import { CollapsibleCard } from "@/components/collapsible-card";
@@ -229,17 +230,23 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
     }
   }
 
-  /** Deletes the recurring rule that is pending confirmation. */
+  /** Soft-deletes the pending recurring rule with a 5-second undo toast. */
   async function handleConfirmDelete(id: string) {
     setDeletingId(id);
     setError(null);
-    try {
-      await api.deleteRecurringTransaction(id);
+    const notifyChanged = async () => {
       await onChanged();
       window.dispatchEvent(new CustomEvent("recurring-changed"));
-      toast.success(`Recurring rule "${pendingDeleteRule?.name ?? "rule"}" deleted`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete recurring transaction");
+    };
+    try {
+      await deleteWithUndo({
+        entityLabel: "Recurring rule",
+        remove: () => api.deleteRecurringTransaction(id),
+        restore: () => api.restoreRecurringTransaction(id),
+        onChange: notifyChanged,
+      });
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       setDeletingId(null);
       setPendingDeleteRule(null);

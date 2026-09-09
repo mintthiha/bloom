@@ -4,6 +4,7 @@ import {
   createSavingsGoal,
   updateSavingsGoal,
   deleteSavingsGoal,
+  restoreSavingsGoal,
 } from "./savingsGoalService";
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -255,8 +256,25 @@ describe("deleteSavingsGoal", () => {
   it("resolves without error when the goal is deleted successfully", async () => {
     prismaMock.$queryRaw
       .mockResolvedValueOnce([makeGoalRow()]) // fetchSavingsGoalWithAccount
-      .mockResolvedValueOnce([{ id: "g-1" }]); // DELETE RETURNING → found
+      .mockResolvedValueOnce([{ id: "g-1" }]); // UPDATE ... SET deletedAt RETURNING → found
 
     await expect(deleteSavingsGoal("u-1", "g-1")).resolves.toBeUndefined();
+  });
+});
+
+describe("restoreSavingsGoal", () => {
+  it("throws AppError 404 when there is no soft-deleted goal to restore", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]); // UPDATE ... SET deletedAt = NULL RETURNING → none
+
+    await expect(restoreSavingsGoal("u-1", "g-99")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("clears deletedAt and returns the goal with its account data", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "g-1" }]) // UPDATE RETURNING → restored
+      .mockResolvedValueOnce([makeGoalRow()]); // fetchSavingsGoalWithAccount
+
+    const goal = await restoreSavingsGoal("u-1", "g-1");
+    expect(goal).toMatchObject({ id: "g-1" });
   });
 });

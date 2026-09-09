@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api, AutoCategorizationRule } from "@/lib/api";
+import { deleteWithUndo, UNDO_WINDOW_MS } from "@/lib/undoableDelete";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
@@ -159,29 +160,38 @@ export function CategorizationRulesManager({
     }
   }
 
-  /** Deletes the rule identified by pendingDeleteId after the confirm dialog is accepted. */
+  /** Re-fetches the saved rules and clamps the current page (used after a delete and after an undo). */
+  async function reloadRules() {
+    try {
+      const data = await api.listCategorizationRules();
+      setRules(data);
+      const maxPage = Math.max(1, Math.ceil(data.length / RULES_PER_PAGE));
+      setCurrentPage((p) => Math.min(p, maxPage));
+    } catch {
+      // Silently keep the current list.
+    }
+  }
+
+  /** Soft-deletes the pending rule with a 5-second undo toast, then refreshes the list. */
   async function handleConfirmDelete() {
     if (!pendingDeleteId) return;
-    const rule = rules.find((r) => r.id === pendingDeleteId);
-    if (!rule) return;
-    setDeletingId(pendingDeleteId);
+    const ruleId = pendingDeleteId;
+    setDeletingId(ruleId);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(ruleId);
+      return next;
+    });
+    if (editingId === ruleId) setEditingId(null);
     try {
-      await api.deleteCategorizationRule(pendingDeleteId);
-      setRules((prev) => {
-        const updated = prev.filter((r) => r.id !== pendingDeleteId);
-        const maxPage = Math.max(1, Math.ceil(updated.length / RULES_PER_PAGE));
-        setCurrentPage((p) => Math.min(p, maxPage));
-        return updated;
+      await deleteWithUndo({
+        entityLabel: "Rule",
+        remove: () => api.deleteCategorizationRule(ruleId),
+        restore: () => api.restoreCategorizationRule(ruleId),
+        onChange: reloadRules,
       });
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(pendingDeleteId);
-        return next;
-      });
-      if (editingId === pendingDeleteId) setEditingId(null);
-      toast.success(`Rule for "${rule.merchant}" deleted`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't delete rule");
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       setDeletingId(null);
       setPendingDeleteId(null);
@@ -233,7 +243,29 @@ export function CategorizationRulesManager({
       });
       if (editingId && deletedIds.has(editingId)) setEditingId(null);
       if (deletedIds.size > 0) {
-        toast.success(`${deletedIds.size} rule${deletedIds.size !== 1 ? "s" : ""} deleted`);
+        toast.success(`${deletedIds.size} rule${deletedIds.size !== 1 ? "s" : ""} deleted`, {
+          duration: UNDO_WINDOW_MS,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              const undo = await Promise.allSettled(
+                [...deletedIds].map((id) => api.restoreCategorizationRule(id))
+              );
+              await reloadRules();
+              const restored = undo.filter((r) => r.status === "fulfilled").length;
+              if (restored > 0) {
+                toast.success(`${restored} rule${restored !== 1 ? "s" : ""} restored`);
+              }
+              if (restored < deletedIds.size) {
+                toast.error(
+                  `${deletedIds.size - restored} rule${
+                    deletedIds.size - restored !== 1 ? "s" : ""
+                  } couldn't be restored`
+                );
+              }
+            },
+          },
+        });
       }
       if (failedCount > 0) {
         toast.error(`${failedCount} rule${failedCount > 1 ? "s" : ""} couldn't be deleted`);

@@ -11,6 +11,7 @@ const { serviceMock } = vi.hoisted(() => ({
     applyDueRecurringTransactions: vi.fn(),
     setRecurringTransactionActive: vi.fn(),
     deleteRecurringTransaction: vi.fn(),
+    restoreRecurringTransaction: vi.fn(),
   },
 }));
 
@@ -24,6 +25,7 @@ describe("recurring routes", () => {
     serviceMock.applyDueRecurringTransactions.mockReset();
     serviceMock.setRecurringTransactionActive.mockReset();
     serviceMock.deleteRecurringTransaction.mockReset();
+    serviceMock.restoreRecurringTransaction.mockReset();
   });
 
   it("returns 401 when x-user-id is missing", async () => {
@@ -165,5 +167,17 @@ describe("recurring routes", () => {
 
     expect(response.status).toBe(204);
     expect(serviceMock.deleteRecurringTransaction).toHaveBeenCalledWith("user-1", "rule-1");
+  });
+
+  it("passes restores through to the service", async () => {
+    serviceMock.restoreRecurringTransaction.mockResolvedValue({ id: "rule-1", name: "Rent" });
+
+    const response = await request(app)
+      .post("/api/recurring/rule-1/restore")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.restoreRecurringTransaction).toHaveBeenCalledWith("user-1", "rule-1");
   });
 });

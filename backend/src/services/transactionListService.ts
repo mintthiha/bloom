@@ -71,7 +71,11 @@ export async function listTransactions(
   const offset = (page - 1) * limit;
   const sort = filters.sort ?? "date_desc";
 
-  const conditions: Prisma.Sql[] = [Prisma.sql`a."userId" = ${userId}`];
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`a."userId" = ${userId}`,
+    Prisma.sql`t."deletedAt" IS NULL`,
+    Prisma.sql`a."deletedAt" IS NULL`,
+  ];
 
   if (filters.accountId) {
     conditions.push(Prisma.sql`a."id" = ${filters.accountId}`);

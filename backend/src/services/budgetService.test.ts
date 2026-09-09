@@ -403,6 +403,45 @@ describe("budgetService", () => {
     await expect(deleteBudget("user-1", "missing")).rejects.toMatchObject({ statusCode: 404 });
   });
 
+  it("restores a soft-deleted budget when no live budget for the category exists", async () => {
+    const { restoreBudget } = await import("./budgetService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "budget-1", category: "Groceries" }]) // the soft-deleted row
+      .mockResolvedValueOnce([]) // no live clash
+      .mockResolvedValueOnce([
+        {
+          id: "budget-1",
+          userId: "user-1",
+          category: "Groceries",
+          monthlyLimit: "300",
+          rolloverEnabled: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+    await expect(restoreBudget("user-1", "budget-1")).resolves.toMatchObject({
+      id: "budget-1",
+      monthlyLimit: 300,
+    });
+  });
+
+  it("throws 409 when a live budget for the category was re-created during the undo window", async () => {
+    const { restoreBudget } = await import("./budgetService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "budget-1", category: "Groceries" }])
+      .mockResolvedValueOnce([{ id: "budget-2" }]);
+
+    await expect(restoreBudget("user-1", "budget-1")).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it("throws 404 when restoring a budget that is not soft-deleted", async () => {
+    const { restoreBudget } = await import("./budgetService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(restoreBudget("user-1", "missing")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
   it("toggles rollover and returns the updated budget record", async () => {
     const { setRolloverEnabled } = await import("./budgetService");
     prismaMock.$queryRaw.mockResolvedValueOnce([

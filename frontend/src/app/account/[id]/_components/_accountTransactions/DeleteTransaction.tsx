@@ -1,5 +1,6 @@
 "use client";
 import { api } from "@/lib/api";
+import { deleteWithUndo } from "@/lib/undoableDelete";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +20,8 @@ type DeleteTransactionProps = {
   onDeletingChange: (id: string | null) => void;
   editingTransactionId: string | null;
   onCancelEditing: () => void;
-  onDeleted: () => void;
-  onError: (message: string) => void;
+  /** Re-fetches the account + transactions; called after both the delete and any undo. */
+  onChange: () => void | Promise<void>;
 };
 
 export function DeleteTransaction({
@@ -31,18 +32,21 @@ export function DeleteTransaction({
   onDeletingChange,
   editingTransactionId,
   onCancelEditing,
-  onDeleted,
-  onError,
+  onChange,
 }: DeleteTransactionProps) {
-  /** Calls the delete API, cancels any active edit on that transaction, then notifies the parent. */
+  /** Soft-deletes the transaction with a 5s undo toast, cancelling any active edit on it. */
   async function handleDelete(transactionId: string) {
     onDeletingChange(transactionId);
     try {
-      await api.deleteTransaction(accountId, transactionId);
+      await deleteWithUndo({
+        entityLabel: "Transaction",
+        remove: () => api.deleteTransaction(accountId, transactionId),
+        restore: () => api.restoreTransaction(accountId, transactionId),
+        onChange,
+      });
       if (editingTransactionId === transactionId) onCancelEditing();
-      onDeleted();
-    } catch (err) {
-      onError(err instanceof Error ? err.message : "Failed to delete transaction");
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       onDeletingChange(null);
       onPendingChange(null);
@@ -61,7 +65,8 @@ export function DeleteTransaction({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete transaction?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the transaction and replay the account balance history.
+              This will remove the transaction and replay the account balance history. You can undo
+              this for a few seconds afterwards.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -50,7 +50,7 @@ describe("DeleteAccount", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(apiMock.deleteAccount).toHaveBeenCalledWith("a-1"));
-    expect(routerMock.push).toHaveBeenCalledWith("/?deleted=My%20Chequing");
+    expect(routerMock.push).toHaveBeenCalledWith("/?deleted=My%20Chequing&deletedId=a-1");
   });
 
   it("returns to the confirm state and does not redirect when the delete fails", async () => {

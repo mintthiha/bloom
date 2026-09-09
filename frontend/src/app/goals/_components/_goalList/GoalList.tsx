@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Target } from "lucide-react";
 import { api, AccountType, SavingsGoal } from "@/lib/api";
+import { deleteWithUndo } from "@/lib/undoableDelete";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { EmptyState } from "@/components/EmptyState";
@@ -179,7 +180,16 @@ export function GoalList() {
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
 
-  /** Loads all savings goals for the user. */
+  /** Re-fetches the savings goal list (used after create, edit, delete, and undo). */
+  const reloadGoals = useCallback(async () => {
+    try {
+      setGoals(await api.listSavingsGoals());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load goals");
+    }
+  }, []);
+
+  /** Loads all savings goals for the user on mount. */
   useEffect(() => {
     let cancelled = false;
 
@@ -225,15 +235,18 @@ export function GoalList() {
     setEditingGoal(null);
   }
 
-  /** Deletes the goal and removes it from local state. */
+  /** Soft-deletes the goal with a 5-second undo toast, then refreshes the list. */
   async function handleDelete(goalId: string) {
     setDeletingId(goalId);
     try {
-      await api.deleteSavingsGoal(goalId);
-      setGoals((previous) => previous.filter((goal) => goal.id !== goalId));
-      toast.success("Goal deleted.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete goal");
+      await deleteWithUndo({
+        entityLabel: "Goal",
+        remove: () => api.deleteSavingsGoal(goalId),
+        restore: () => api.restoreSavingsGoal(goalId),
+        onChange: reloadGoals,
+      });
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       setDeletingId(null);
       setPendingDeleteId(null);

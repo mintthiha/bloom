@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api, ManualEntry, ManualEntryType } from "@/lib/api";
+import { deleteWithUndo, UNDO_WINDOW_MS } from "@/lib/undoableDelete";
 import { formatCurrency } from "@/lib/format";
 import { BackToHome } from "@/components/BackToHome";
 import { inputStyle } from "@/lib/styles/input";
@@ -45,13 +46,14 @@ function EntryRow({
   isSelected,
   onToggleSelect,
   onUpdated,
-  onDeleted,
+  onChange,
 }: {
   entry: ManualEntry;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
   onUpdated: (updated: ManualEntry) => void;
-  onDeleted: (id: string) => void;
+  /** Re-fetches the entry list + net worth; called after both the delete and any undo. */
+  onChange: () => void | Promise<void>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(entry.name);
@@ -86,15 +88,18 @@ function EntryRow({
     }
   }
 
-  /** Deletes the entry after confirmation and notifies the parent. */
+  /** Soft-deletes the entry with a 5-second undo toast, then refreshes the parent list. */
   async function handleConfirmDelete() {
     setIsSubmitting(true);
     try {
-      await api.deleteManualEntry(entry.id);
-      onDeleted(entry.id);
-      toast.success(`${entry.name} deleted`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete entry");
+      await deleteWithUndo({
+        entityLabel: entry.type === "ASSET" ? "Asset" : "Liability",
+        remove: () => api.deleteManualEntry(entry.id),
+        restore: () => api.restoreManualEntry(entry.id),
+        onChange,
+      });
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       setIsSubmitting(false);
       setShowDeleteDialog(false);
@@ -306,7 +311,7 @@ function EntrySection({
   onToggleSelect,
   onSelectAll,
   onUpdated,
-  onDeleted,
+  onChange,
 }: {
   label: string;
   accentColor: string;
@@ -316,7 +321,7 @@ function EntrySection({
   onToggleSelect: (id: string) => void;
   onSelectAll: (ids: string[], select: boolean) => void;
   onUpdated: (updated: ManualEntry) => void;
-  onDeleted: (id: string) => void;
+  onChange: () => void | Promise<void>;
 }) {
   const allSelected = entries.length > 0 && entries.every((e) => selectedIds.has(e.id));
   const someSelected = entries.some((e) => selectedIds.has(e.id));
@@ -376,7 +381,7 @@ function EntrySection({
           isSelected={selectedIds.has(e.id)}
           onToggleSelect={onToggleSelect}
           onUpdated={onUpdated}
-          onDeleted={onDeleted}
+          onChange={onChange}
         />
       ))}
     </div>
@@ -631,17 +636,46 @@ export default function ManualEntriesPage() {
     });
   }
 
-  /** Deletes all selected entries and refreshes the net worth snapshot. */
+  /** Re-fetches the entry list and records a fresh net worth snapshot. */
+  async function reloadEntries() {
+    try {
+      setEntries(await api.listManualEntries());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load entries");
+    }
+    await api.recordNetWorthSnapshot().catch(() => {});
+  }
+
+  /** Soft-deletes all selected entries with a 5-second undo toast, then refreshes. */
   async function handleBulkDelete() {
     setIsBulkDeleting(true);
+    const ids = [...selectedIds];
     try {
-      await Promise.all([...selectedIds].map((id) => api.deleteManualEntry(id)));
-      const count = selectedIds.size;
-      setEntries((prev) => prev.filter((e) => !selectedIds.has(e.id)));
+      await Promise.all(ids.map((id) => api.deleteManualEntry(id)));
       setSelectedIds(new Set());
       setShowBulkDeleteDialog(false);
-      toast.success(`${count} ${count === 1 ? "entry" : "entries"} deleted`);
-      await api.recordNetWorthSnapshot().catch(() => {});
+      await reloadEntries();
+      toast.success(`${ids.length} ${ids.length === 1 ? "entry" : "entries"} deleted`, {
+        duration: UNDO_WINDOW_MS,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await Promise.allSettled(ids.map((id) => api.restoreManualEntry(id)));
+            await reloadEntries();
+            const restored = undo.filter((r) => r.status === "fulfilled").length;
+            if (restored > 0) {
+              toast.success(`${restored} ${restored === 1 ? "entry" : "entries"} restored`);
+            }
+            if (restored < ids.length) {
+              toast.error(
+                `${ids.length - restored} ${
+                  ids.length - restored === 1 ? "entry" : "entries"
+                } couldn't be restored`
+              );
+            }
+          },
+        },
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete entries");
     } finally {
@@ -658,17 +692,6 @@ export default function ManualEntriesPage() {
   /** Replaces an updated entry in the list and refreshes the net worth snapshot. */
   async function handleEntryUpdated(updated: ManualEntry) {
     setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-    await api.recordNetWorthSnapshot().catch(() => {});
-  }
-
-  /** Removes a deleted entry from the list, clears its selection, and refreshes the net worth snapshot. */
-  async function handleEntryDeleted(id: string) {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
     await api.recordNetWorthSnapshot().catch(() => {});
   }
 
@@ -813,7 +836,7 @@ export default function ManualEntriesPage() {
               onToggleSelect={handleToggleSelect}
               onSelectAll={handleSelectAll}
               onUpdated={handleEntryUpdated}
-              onDeleted={handleEntryDeleted}
+              onChange={reloadEntries}
             />
           )}
           {assets.length > 0 && (
@@ -826,7 +849,7 @@ export default function ManualEntriesPage() {
               onToggleSelect={handleToggleSelect}
               onSelectAll={handleSelectAll}
               onUpdated={handleEntryUpdated}
-              onDeleted={handleEntryDeleted}
+              onChange={reloadEntries}
             />
           )}
         </div>

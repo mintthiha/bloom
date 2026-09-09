@@ -16,9 +16,11 @@ import {
   getTransactions,
   updateTransaction,
   deleteTransaction,
+  restoreTransaction,
   freezeAccount,
   unfreezeAccount,
   deleteAccount,
+  restoreAccount,
   importTransactions,
 } from "./accountService";
 
@@ -27,7 +29,7 @@ const { prismaMock } = vi.hoisted(() => ({
     $queryRaw: vi.fn(),
     $transaction: vi.fn(),
     account: { update: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
-    transaction: { deleteMany: vi.fn(), update: vi.fn() },
+    transaction: { deleteMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   },
 }));
 
@@ -105,6 +107,7 @@ beforeEach(() => {
         transaction: {
           delete: vi.fn().mockResolvedValue({}),
           update: vi.fn().mockResolvedValue({}),
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
         },
         $queryRaw: prismaMock.$queryRaw,
       });
@@ -376,13 +379,47 @@ describe("deleteAccount", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it("deletes the account and its transactions atomically", async () => {
+  it("soft-deletes the account and its transactions atomically with a shared timestamp", async () => {
     prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]);
-    prismaMock.transaction.deleteMany.mockResolvedValueOnce({ count: 3 });
-    prismaMock.account.delete.mockResolvedValueOnce({});
+    prismaMock.transaction.updateMany.mockResolvedValueOnce({ count: 3 });
+    prismaMock.account.update.mockResolvedValueOnce({});
     await expect(deleteAccount("u-1", "a-1")).resolves.toBeUndefined();
-    expect(prismaMock.transaction.deleteMany).toHaveBeenCalled();
-    expect(prismaMock.account.delete).toHaveBeenCalledWith({ where: { id: "a-1" } });
+    expect(prismaMock.transaction.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { deletedAt: expect.any(Date) } })
+    );
+    expect(prismaMock.account.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "a-1" },
+        data: { deletedAt: expect.any(Date) },
+      })
+    );
+  });
+});
+
+describe("restoreAccount", () => {
+  it("throws 404 when there is no soft-deleted account to restore", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(restoreAccount("u-1", "a-9")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("clears deletedAt on the account and its co-deleted transactions", async () => {
+    const deletedAt = new Date("2026-09-09T00:00:00Z");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ deletedAt, ownerName: "Test User", nickname: null }])
+      .mockResolvedValueOnce([makeAccountRow()]);
+    prismaMock.transaction.updateMany.mockResolvedValueOnce({ count: 2 });
+    prismaMock.account.update.mockResolvedValueOnce({});
+    await restoreAccount("u-1", "a-1");
+    expect(prismaMock.transaction.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ deletedAt }),
+        data: { deletedAt: null },
+      })
+    );
+    expect(prismaMock.account.update).toHaveBeenCalledWith({
+      where: { id: "a-1" },
+      data: { deletedAt: null },
+    });
   });
 });
 
@@ -523,12 +560,13 @@ describe("deleteTransaction", () => {
     });
   });
 
-  it("deletes a non-transfer transaction and replays balances", async () => {
+  it("soft-deletes a non-transfer transaction and replays balances", async () => {
+    const txUpdate = vi.fn().mockResolvedValue({});
     prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
       fn({
         $queryRaw: prismaMock.$queryRaw,
         account: { update: vi.fn().mockResolvedValue({}) },
-        transaction: { delete: vi.fn().mockResolvedValue({}) },
+        transaction: { update: txUpdate },
       })
     );
     prismaMock.$queryRaw
@@ -538,7 +576,41 @@ describe("deleteTransaction", () => {
       .mockResolvedValueOnce([makeAccountRow({ balance: "50.00" })]);
     const account = await deleteTransaction("u-1", "a-1", "t-1");
     expect(account.balance).toBe(50);
-    expect(prismaMock.$transaction).toHaveBeenCalled();
+    expect(txUpdate).toHaveBeenCalledWith({
+      where: { id: "t-1" },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+});
+
+describe("restoreTransaction", () => {
+  it("throws 404 when the transaction is not visible from the account", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([]);
+    await expect(restoreTransaction("u-1", "a-1", "t-99")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("clears deletedAt on a non-transfer transaction and replays balances", async () => {
+    const txUpdate = vi.fn().mockResolvedValue({});
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: { update: txUpdate },
+      })
+    );
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "DEPOSIT" })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "50.00" })]);
+    const account = await restoreTransaction("u-1", "a-1", "t-1");
+    expect(account.balance).toBe(50);
+    expect(txUpdate).toHaveBeenCalledWith({
+      where: { id: "t-1" },
+      data: { deletedAt: null },
+    });
   });
 });
 

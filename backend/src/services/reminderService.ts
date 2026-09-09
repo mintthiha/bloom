@@ -132,6 +132,7 @@ export async function generateBillReminders(userId: string, now = new Date()) {
     SELECT r."id", r."name", r."merchant", r."amount", r."nextRunAt"
     FROM "RecurringTransaction" r
     WHERE r."userId" = ${userId}
+      AND r."deletedAt" IS NULL
       AND r."active" = true
       AND r."type" = 'WITHDRAWAL'::"RecurringTransactionType"
       AND r."nextRunAt" <= ${cutoff}

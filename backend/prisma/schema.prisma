@@ -48,6 +48,7 @@ model Account {
   institutionName String?
   createdAt       DateTime    @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime?   @db.Timestamptz(3)
 
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
@@ -71,17 +72,21 @@ model Profile {
 }
 
 model CategoryBudget {
-  id              String   @id
+  id              String    @id
   userId          String
   category        String
-  monthlyLimit    Decimal  @db.Decimal(19, 4)
-  rolloverEnabled Boolean  @default(false)
-  createdAt       DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  monthlyLimit    Decimal   @db.Decimal(19, 4)
+  rolloverEnabled Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
 
   periods BudgetPeriod[]
 
-  @@unique([userId, category])
+  /// Uniqueness of (userId, category) is enforced by a PARTIAL unique index
+  /// (`WHERE "deletedAt" IS NULL`) defined in the add_soft_delete migration, so a
+  /// soft-deleted budget does not block re-creating the same category. Prisma
+  /// cannot model a partial unique index, hence no `@@unique` here.
 }
 
 /// Per-month envelope state for a budget: an optional limit override for that
@@ -114,6 +119,7 @@ model Transaction {
   description        String?
   effectiveAt        DateTime        @default(now()) @db.Timestamptz(3)
   createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  deletedAt          DateTime?       @db.Timestamptz(3)
   plaidTransactionId String?         @unique
 
   fromAccountId String?
@@ -153,13 +159,14 @@ model NetWorthSnapshot {
 }
 
 model SavingsGoal {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   accountId    String
   name         String
-  targetAmount Decimal @db.Decimal(19, 4)
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  targetAmount Decimal   @db.Decimal(19, 4)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt    DateTime? @db.Timestamptz(3)
 
   account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
@@ -182,6 +189,7 @@ model RecurringTransaction {
   active      Boolean                  @default(true)
   createdAt   DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime                 @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?                @db.Timestamptz(3)
 
   account     Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   notifications Notification[]
@@ -223,19 +231,24 @@ model ManualEntry {
   date      DateTime?       @db.Date
   createdAt DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime?       @db.Timestamptz(3)
 
   @@index([userId])
 }
 
 model AutoCategorizationRule {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   merchant  String
   category  String
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
 
-  @@unique([userId, merchant])
+  /// Uniqueness of (userId, merchant) is enforced by a PARTIAL unique index
+  /// (`WHERE "deletedAt" IS NULL`) defined in the add_soft_delete migration, so a
+  /// soft-deleted rule does not block re-creating one for the same merchant.
+  /// Prisma cannot model a partial unique index, hence no `@@unique` here.
 }
 
 model ActivityLog {

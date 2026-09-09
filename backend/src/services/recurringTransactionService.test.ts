@@ -349,13 +349,34 @@ describe("deleteRecurringTransaction", () => {
     });
   });
 
-  it("deletes the rule when it exists and resolves without error", async () => {
+  it("soft-deletes the rule when it exists and resolves without error", async () => {
     const { deleteRecurringTransaction } = await import("./recurringTransactionService");
     prismaMock.$queryRaw
       .mockResolvedValueOnce([makeRuleRow()]) // selectRecurringTransactionById
-      .mockResolvedValueOnce([]); // DELETE
+      .mockResolvedValueOnce([]); // UPDATE ... SET deletedAt
 
     await expect(deleteRecurringTransaction("user-1", "rule-1")).resolves.toBeUndefined();
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("restoreRecurringTransaction", () => {
+  it("throws 404 when there is no soft-deleted rule to restore", async () => {
+    const { restoreRecurringTransaction } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]); // UPDATE ... RETURNING → none
+
+    await expect(restoreRecurringTransaction("user-1", "missing")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("clears deletedAt and returns the refreshed rule", async () => {
+    const { restoreRecurringTransaction } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "rule-1", name: "Rent" }]) // UPDATE ... RETURNING
+      .mockResolvedValueOnce([makeRuleRow()]); // selectRecurringTransactionById
+
+    await expect(restoreRecurringTransaction("user-1", "rule-1")).resolves.toBeTruthy();
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
   });
 });

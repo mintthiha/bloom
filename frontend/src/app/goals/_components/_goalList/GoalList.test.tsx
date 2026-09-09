@@ -7,6 +7,7 @@ const { apiMock } = vi.hoisted(() => ({
   apiMock: {
     listSavingsGoals: vi.fn(),
     deleteSavingsGoal: vi.fn(),
+    restoreSavingsGoal: vi.fn(),
   },
 }));
 
@@ -18,6 +19,7 @@ vi.mock("@/lib/api", async () => {
       ...actual.api,
       listSavingsGoals: apiMock.listSavingsGoals,
       deleteSavingsGoal: apiMock.deleteSavingsGoal,
+      restoreSavingsGoal: apiMock.restoreSavingsGoal,
     },
   };
 });
@@ -125,8 +127,9 @@ describe("GoalList", () => {
     expect(within(dialog).getByText("editing")).toBeInTheDocument();
   });
 
-  it("confirms and deletes a goal, then removes it and toasts success", async () => {
-    apiMock.listSavingsGoals.mockResolvedValue([makeGoal({ name: "Emergency Fund" })]);
+  it("confirms and deletes a goal, then refreshes and shows an undo toast", async () => {
+    apiMock.listSavingsGoals.mockResolvedValueOnce([makeGoal({ name: "Emergency Fund" })]);
+    apiMock.listSavingsGoals.mockResolvedValueOnce([]);
     apiMock.deleteSavingsGoal.mockResolvedValue(undefined);
 
     render(<GoalList />);
@@ -141,7 +144,34 @@ describe("GoalList", () => {
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
     await waitFor(() => expect(apiMock.deleteSavingsGoal).toHaveBeenCalledWith("g-1"));
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Goal deleted."));
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "Goal deleted",
+        expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) })
+      )
+    );
     await waitFor(() => expect(screen.queryByText("Emergency Fund")).not.toBeInTheDocument());
+  });
+
+  it("restores the goal when the undo action is invoked", async () => {
+    apiMock.listSavingsGoals.mockResolvedValueOnce([makeGoal({ name: "Emergency Fund" })]);
+    apiMock.listSavingsGoals.mockResolvedValueOnce([]);
+    apiMock.listSavingsGoals.mockResolvedValueOnce([makeGoal({ name: "Emergency Fund" })]);
+    apiMock.deleteSavingsGoal.mockResolvedValue(undefined);
+    apiMock.restoreSavingsGoal.mockResolvedValue(undefined);
+
+    render(<GoalList />);
+    await screen.findByText("Emergency Fund");
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await screen.findByText("Delete goal?");
+    const deleteButtons = screen.getAllByRole("button", { name: /^Delete$/ });
+    fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    const [, options] = (toast.success as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    await options.action.onClick();
+
+    expect(apiMock.restoreSavingsGoal).toHaveBeenCalledWith("g-1");
+    await screen.findByText("Emergency Fund");
   });
 });

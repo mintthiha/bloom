@@ -4,6 +4,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { PiggyBank } from "lucide-react";
 import { api, Budget, MonthlySummary } from "@/lib/api";
+import { deleteWithUndo } from "@/lib/undoableDelete";
 import { EmptyState } from "@/components/EmptyState";
 import { BudgetCard } from "@/components/BudgetCard";
 import { SelectableBudgetRow } from "@/components/SelectableBudgetRow";
@@ -142,16 +143,19 @@ export function BudgetsManager({
     }
   }
 
-  /** Deletes a budget by id and refreshes the list. */
+  /** Soft-deletes a budget by id with a 5-second undo toast, then refreshes the list. */
   async function handleDeleteBudget(id: string) {
     setDeletingBudgetId(id);
     setBudgetError(null);
     try {
-      await api.deleteBudget(id);
-      toast.success("Budget deleted");
-      await onChanged();
-    } catch (err) {
-      setBudgetError(err instanceof Error ? err.message : "Failed to delete budget");
+      await deleteWithUndo({
+        entityLabel: "Budget",
+        remove: () => api.deleteBudget(id),
+        restore: () => api.restoreBudget(id),
+        onChange: onChanged,
+      });
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       setDeletingBudgetId(null);
       setPendingDeleteId(null);

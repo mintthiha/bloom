@@ -57,11 +57,20 @@ router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-/** Deletes a savings goal by id. */
+/** Soft-deletes a savings goal by id (recoverable via the restore endpoint). */
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     await savingsGoalService.deleteSavingsGoal(uid(req), req.params["id"] as string);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Restores a previously soft-deleted savings goal (the "Undo" action after a delete). */
+router.post("/:id/restore", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await savingsGoalService.restoreSavingsGoal(uid(req), req.params["id"] as string));
   } catch (err) {
     next(err);
   }

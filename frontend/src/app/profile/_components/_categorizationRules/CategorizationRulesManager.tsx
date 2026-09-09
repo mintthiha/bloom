@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, AutoCategorizationRule } from "@/lib/api";
+import { deleteWithUndo } from "@/lib/undoableDelete";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import {
@@ -70,18 +71,29 @@ export function CategorizationRulesManager() {
     }
   }
 
-  /** Deletes the rule identified by pendingDeleteId after the confirm dialog is accepted. */
+  /** Re-fetches the saved rules (used after a delete and after an undo). */
+  async function reloadRules() {
+    try {
+      setRules(await api.listCategorizationRules());
+    } catch {
+      // Silently keep the current list.
+    }
+  }
+
+  /** Soft-deletes the pending rule with a 5-second undo toast, then refreshes the list. */
   async function handleConfirmDelete() {
     if (!pendingDeleteId) return;
-    const rule = rules.find((r) => r.id === pendingDeleteId);
-    if (!rule) return;
-    setDeletingId(pendingDeleteId);
+    const ruleId = pendingDeleteId;
+    setDeletingId(ruleId);
     try {
-      await api.deleteCategorizationRule(pendingDeleteId);
-      setRules((prev) => prev.filter((r) => r.id !== pendingDeleteId));
-      toast.success(`Rule for "${rule.merchant}" deleted`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't delete rule");
+      await deleteWithUndo({
+        entityLabel: "Rule",
+        remove: () => api.deleteCategorizationRule(ruleId),
+        restore: () => api.restoreCategorizationRule(ruleId),
+        onChange: reloadRules,
+      });
+    } catch {
+      // deleteWithUndo already surfaced the failure toast.
     } finally {
       setDeletingId(null);
       setPendingDeleteId(null);

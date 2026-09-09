@@ -9,6 +9,7 @@ const { serviceMock } = vi.hoisted(() => ({
     getBudgetActivity: vi.fn(),
     upsertBudget: vi.fn(),
     deleteBudget: vi.fn(),
+    restoreBudget: vi.fn(),
   },
 }));
 
@@ -20,6 +21,7 @@ describe("budget routes", () => {
     serviceMock.getBudgetActivity.mockReset();
     serviceMock.upsertBudget.mockReset();
     serviceMock.deleteBudget.mockReset();
+    serviceMock.restoreBudget.mockReset();
   });
 
   it("returns 401 when x-user-id is missing", async () => {
@@ -143,5 +145,17 @@ describe("budget routes", () => {
 
     expect(response.status).toBe(204);
     expect(serviceMock.deleteBudget).toHaveBeenCalledWith("user-1", "budget-1");
+  });
+
+  it("restores a budget by id", async () => {
+    serviceMock.restoreBudget.mockResolvedValue({ id: "budget-1", category: "Groceries" });
+
+    const response = await request(app)
+      .post("/api/budgets/budget-1/restore")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.restoreBudget).toHaveBeenCalledWith("user-1", "budget-1");
   });
 });

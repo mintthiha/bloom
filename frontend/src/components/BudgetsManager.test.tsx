@@ -4,14 +4,19 @@ import { BudgetsManager } from "./BudgetsManager";
 import type { Budget } from "@/lib/api";
 
 const { apiMock } = vi.hoisted(() => ({
-  apiMock: { saveBudget: vi.fn(), deleteBudget: vi.fn() },
+  apiMock: { saveBudget: vi.fn(), deleteBudget: vi.fn(), restoreBudget: vi.fn() },
 }));
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
-    api: { ...actual.api, saveBudget: apiMock.saveBudget, deleteBudget: apiMock.deleteBudget },
+    api: {
+      ...actual.api,
+      saveBudget: apiMock.saveBudget,
+      deleteBudget: apiMock.deleteBudget,
+      restoreBudget: apiMock.restoreBudget,
+    },
   };
 });
 
@@ -167,7 +172,7 @@ describe("BudgetsManager", () => {
     expect(apiMock.saveBudget).not.toHaveBeenCalled();
   });
 
-  it("confirms then deletes a budget", async () => {
+  it("confirms then deletes a budget with an undo toast", async () => {
     apiMock.deleteBudget.mockResolvedValue(undefined);
     const onChanged = vi.fn().mockResolvedValue(undefined);
 
@@ -186,6 +191,35 @@ describe("BudgetsManager", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
 
     await waitFor(() => expect(apiMock.deleteBudget).toHaveBeenCalledWith("b-1"));
-    expect(toast.success).toHaveBeenCalledWith("Budget deleted");
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(toast.success).toHaveBeenCalledWith(
+      "Budget deleted",
+      expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) })
+    );
+  });
+
+  it("restores a budget when the undo action is invoked", async () => {
+    apiMock.deleteBudget.mockResolvedValue(undefined);
+    apiMock.restoreBudget.mockResolvedValue(undefined);
+    const onChanged = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <BudgetsManager
+        budgets={[makeBudget({ id: "b-1", category: "Groceries" })]}
+        monthlySummary={null}
+        onChanged={onChanged}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "request-delete" }));
+    await screen.findByText("Delete budget?");
+    fireEvent.click(screen.getByRole("button", { name: /^Delete$/ }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    const [, options] = (toast.success as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    await options.action.onClick();
+
+    expect(apiMock.restoreBudget).toHaveBeenCalledWith("b-1");
+    expect(toast.success).toHaveBeenLastCalledWith("Budget restored");
   });
 });
