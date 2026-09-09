@@ -79,13 +79,18 @@ export async function updateManualEntry(
 }
 
 /** Deletes a manual entry. Throws 404 if the entry does not belong to the user. */
-export async function deleteManualEntry(userId: string, entryId: string) {
-  const rows = await prisma.$queryRaw<{ id: string }[]>`
+/** Deletes a manual entry and returns its name and type for activity logging. */
+export async function deleteManualEntry(
+  userId: string,
+  entryId: string
+): Promise<{ name: string; type: ManualEntryType }> {
+  const rows = await prisma.$queryRaw<{ id: string; name: string; type: ManualEntryType }[]>`
     DELETE FROM "ManualEntry"
     WHERE "id" = ${entryId} AND "userId" = ${userId}
-    RETURNING "id"
+    RETURNING "id", "name", "type"
   `;
   if (!rows[0]) throw new AppError(404, `Manual entry ${entryId} not found`);
+  return { name: rows[0].name, type: rows[0].type };
 }
 
 /** Returns the total manual assets and liabilities for a user (used by net worth snapshot). */

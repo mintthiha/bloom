@@ -25,6 +25,9 @@ const ACTIVITY_META: Record<string, { label: string; color: string; icon: string
   BUDGET_DELETED: { label: "Budget deleted", color: "#f87171", icon: "×" },
   RECURRING_CREATED: { label: "Recurring created", color: "#22c55e", icon: "↻" },
   RECURRING_DELETED: { label: "Recurring deleted", color: "#f87171", icon: "×" },
+  MANUAL_ENTRY_CREATED: { label: "Entry added", color: "#22c55e", icon: "+" },
+  MANUAL_ENTRY_UPDATED: { label: "Entry updated", color: "#a78bfa", icon: "✎" },
+  MANUAL_ENTRY_DELETED: { label: "Entry removed", color: "#f87171", icon: "×" },
 };
 
 /** Returns display metadata for an activity type, falling back to a generic entry. */

@@ -21,7 +21,10 @@ export type ActivityType =
   | "BUDGET_UPDATED"
   | "BUDGET_DELETED"
   | "RECURRING_CREATED"
-  | "RECURRING_DELETED";
+  | "RECURRING_DELETED"
+  | "MANUAL_ENTRY_CREATED"
+  | "MANUAL_ENTRY_UPDATED"
+  | "MANUAL_ENTRY_DELETED";
 
 export type ActivityLogEntry = {
   id: string;

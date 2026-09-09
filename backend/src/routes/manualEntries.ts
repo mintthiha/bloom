@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { ManualEntryType } from "@prisma/client";
 import * as manualEntryService from "../services/manualEntryService";
+import { logActivity } from "../services/activityService";
 import { AppError } from "../middleware/errorHandler";
 import { requireObject, requireString, requirePositiveNumber } from "../lib/validation";
 
@@ -43,9 +44,20 @@ router.post("/", async (req: Request, res: Response, next: NextFunction) => {
     const type = rawType as ManualEntryType;
     const amount = requirePositiveNumber(body.amount, "amount");
     const date = parseOptionalDate(body.date);
-    res
-      .status(201)
-      .json(await manualEntryService.createManualEntry(uid(req), { name, type, amount, date }));
+    const userId = uid(req);
+    const created = await manualEntryService.createManualEntry(userId, {
+      name,
+      type,
+      amount,
+      date,
+    });
+    logActivity(
+      userId,
+      "MANUAL_ENTRY_CREATED",
+      `Added ${type === "ASSET" ? "asset" : "liability"} "${name}"`,
+      { entryId: created.id, type, amount }
+    );
+    res.status(201).json(created);
   } catch (err) {
     next(err);
   }
@@ -59,7 +71,14 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
     const name = requireString(body.name, "name", { max: 100 });
     const amount = requirePositiveNumber(body.amount, "amount");
     const date = parseOptionalDate(body.date);
-    res.json(await manualEntryService.updateManualEntry(uid(req), entryId, { name, amount, date }));
+    const userId = uid(req);
+    const updated = await manualEntryService.updateManualEntry(userId, entryId, {
+      name,
+      amount,
+      date,
+    });
+    logActivity(userId, "MANUAL_ENTRY_UPDATED", `Updated "${name}"`, { entryId, amount });
+    res.json(updated);
   } catch (err) {
     next(err);
   }
@@ -69,7 +88,14 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
 router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const entryId = req.params["id"] as string;
-    await manualEntryService.deleteManualEntry(uid(req), entryId);
+    const userId = uid(req);
+    const { name, type } = await manualEntryService.deleteManualEntry(userId, entryId);
+    logActivity(
+      userId,
+      "MANUAL_ENTRY_DELETED",
+      `Removed ${type === "ASSET" ? "asset" : "liability"} "${name}"`,
+      { entryId, type }
+    );
     res.status(204).end();
   } catch (err) {
     next(err);
