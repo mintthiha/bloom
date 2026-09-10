@@ -50,6 +50,13 @@ export type ActivityGroup =
   | "RECURRING"
   | "MANUAL_ENTRY";
 
+/**
+ * Lifecycle action the activity list can filter by; each maps to a `_ACTION` type suffix.
+ * Every logged type ends in one of these except the standalone events (import, freeze,
+ * unfreeze, rename, deposit, withdrawal, transfer), which match no action.
+ */
+export type ActivityAction = "CREATED" | "UPDATED" | "DELETED" | "RESTORED";
+
 /** Sort orders the activity list accepts, mapped to a whitelisted ORDER BY clause. */
 export type ActivitySortKey = "date_desc" | "date_asc";
 
@@ -57,6 +64,7 @@ export type ActivitySortKey = "date_desc" | "date_asc";
 export type ActivityLogFilters = {
   search?: string;
   group?: ActivityGroup;
+  action?: ActivityAction;
   start?: Date;
   end?: Date;
   sort?: ActivitySortKey;
@@ -96,7 +104,8 @@ export function logActivity(
 
 /**
  * Returns a paginated page of activity log entries for a user, with optional filtering by
- * coarse group, free-text search over the description, and a created-at date range.
+ * coarse group, lifecycle action, free-text search over the description, and a created-at
+ * date range.
  */
 export async function listActivityLogs(
   userId: string,
@@ -111,6 +120,10 @@ export async function listActivityLogs(
   if (filters.group) {
     // Escaped underscore so the group prefix is matched literally, then any suffix.
     conditions.push(Prisma.sql`"type" LIKE ${`${filters.group}\\_%`}`);
+  }
+  if (filters.action) {
+    // Match any prefix, then the escaped `_ACTION` suffix at the end of the type.
+    conditions.push(Prisma.sql`"type" LIKE ${`%\\_${filters.action}`}`);
   }
   const search = filters.search?.trim().toLowerCase();
   if (search) {

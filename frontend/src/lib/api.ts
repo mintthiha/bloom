@@ -357,6 +357,9 @@ export type ActivityGroupKey =
   | "RECURRING"
   | "MANUAL_ENTRY";
 
+/** Lifecycle action the activity list can filter by; matches a `_ACTION` type suffix. */
+export type ActivityActionKey = "CREATED" | "UPDATED" | "DELETED" | "RESTORED";
+
 /** Sort orders the activity list accepts. */
 export type ActivitySortKey = "date_desc" | "date_asc";
 
@@ -371,6 +374,7 @@ export type ActivityLogQuery = {
   offset?: number;
   search?: string;
   group?: ActivityGroupKey;
+  action?: ActivityActionKey;
   sort?: ActivitySortKey;
   start?: string;
   end?: string;
@@ -619,6 +623,7 @@ export const api = {
         offset: query.offset != null ? String(query.offset) : undefined,
         search: query.search || undefined,
         group: query.group || undefined,
+        action: query.action || undefined,
         sort: query.sort || undefined,
         start: query.start || undefined,
         end: query.end || undefined,

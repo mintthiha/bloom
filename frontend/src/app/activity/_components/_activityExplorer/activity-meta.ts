@@ -1,4 +1,4 @@
-import { ActivityGroupKey, ActivitySortKey } from "@/lib/api";
+import { ActivityActionKey, ActivityGroupKey, ActivitySortKey } from "@/lib/api";
 
 /** Per-type display metadata: a human label, an accent colour, and a compact glyph. */
 export const ACTIVITY_META: Record<string, { label: string; color: string; icon: string }> = {
@@ -45,6 +45,17 @@ export const ACTIVITY_GROUP_OPTIONS: { value: ActivityGroupKey; label: string }[
   { value: "BUDGET", label: "Budgets" },
   { value: "RECURRING", label: "Recurring" },
   { value: "MANUAL_ENTRY", label: "Manual entries" },
+];
+
+/**
+ * Action filter options shown in the dropdown, mapped to the API action keys. Standalone
+ * events (imports, freezes, renames, deposits, withdrawals, transfers) match none of these.
+ */
+export const ACTIVITY_ACTION_OPTIONS: { value: ActivityActionKey; label: string }[] = [
+  { value: "CREATED", label: "Created" },
+  { value: "UPDATED", label: "Updated" },
+  { value: "DELETED", label: "Deleted" },
+  { value: "RESTORED", label: "Restored" },
 ];
 
 /** Sort options shown in the dropdown, mapped to the API sort keys. */

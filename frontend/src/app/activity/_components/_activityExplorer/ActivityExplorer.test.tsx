@@ -17,9 +17,14 @@ vi.mock("@/lib/api", async () => {
 
 // Stub children so the test targets the explorer's own fetching/paging/filter logic.
 vi.mock("./ActivityFilterBar", () => ({
-  ActivityFilterBar: (props: { onGroupChange: (v: string) => void; onClear: () => void }) => (
+  ActivityFilterBar: (props: {
+    onGroupChange: (v: string) => void;
+    onActionChange: (v: string) => void;
+    onClear: () => void;
+  }) => (
     <div>
       <button onClick={() => props.onGroupChange("BUDGET")}>set-group</button>
+      <button onClick={() => props.onActionChange("DELETED")}>set-action</button>
       <button onClick={props.onClear}>clear-filters</button>
     </div>
   ),
@@ -68,6 +73,19 @@ describe("ActivityExplorer", () => {
     );
   });
 
+  it("refetches with the action filter and resets to page one", async () => {
+    render(<ActivityExplorer />);
+    await screen.findByText("Showing 1–2 of 2 events");
+
+    fireEvent.click(screen.getByRole("button", { name: "set-action" }));
+
+    await waitFor(() =>
+      expect(apiMock.listActivityLogs).toHaveBeenLastCalledWith(
+        expect.objectContaining({ action: "DELETED", offset: 0 })
+      )
+    );
+  });
+
   it("paginates to the next page", async () => {
     apiMock.listActivityLogs.mockResolvedValue(makeResult(25, 60));
     render(<ActivityExplorer />);
@@ -98,7 +116,12 @@ describe("ActivityExplorer", () => {
 
     await waitFor(() =>
       expect(apiMock.listActivityLogs).toHaveBeenLastCalledWith(
-        expect.objectContaining({ group: undefined, search: undefined, offset: 0 })
+        expect.objectContaining({
+          group: undefined,
+          action: undefined,
+          search: undefined,
+          offset: 0,
+        })
       )
     );
   });

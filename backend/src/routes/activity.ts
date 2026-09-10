@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { AppError } from "../middleware/errorHandler";
 import { parseDateRangeQuery } from "../lib/date-range";
 import * as activityService from "../services/activityService";
-import { ActivityGroup, ActivitySortKey } from "../services/activityService";
+import { ActivityAction, ActivityGroup, ActivitySortKey } from "../services/activityService";
 
 const router = Router();
 
@@ -19,11 +19,14 @@ const VALID_GROUPS: ActivityGroup[] = [
   "MANUAL_ENTRY",
 ];
 
+/** Lifecycle actions the ?action= query parameter is allowed to take. */
+const VALID_ACTIONS: ActivityAction[] = ["CREATED", "UPDATED", "DELETED", "RESTORED"];
+
 /** Sort keys the ?sort= query parameter is allowed to take. */
 const VALID_SORT_KEYS: ActivitySortKey[] = ["date_desc", "date_asc"];
 
 /**
- * GET /api/activity?limit=&offset=&search=&group=&sort=&start=&end=
+ * GET /api/activity?limit=&offset=&search=&group=&action=&sort=&start=&end=
  * Returns a paginated, filterable page of activity logs for the authenticated user.
  */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
@@ -42,6 +45,11 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError(400, "group must be one of: " + VALID_GROUPS.join(", "));
     }
 
+    const actionParam = req.query.action as string | undefined;
+    if (actionParam && !VALID_ACTIONS.includes(actionParam as ActivityAction)) {
+      throw new AppError(400, "action must be one of: " + VALID_ACTIONS.join(", "));
+    }
+
     const sortParam = req.query.sort as string | undefined;
     if (sortParam && !VALID_SORT_KEYS.includes(sortParam as ActivitySortKey)) {
       throw new AppError(400, "sort must be one of: " + VALID_SORT_KEYS.join(", "));
@@ -55,6 +63,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         offset,
         search: (req.query.search as string | undefined) || undefined,
         group: groupParam ? (groupParam as ActivityGroup) : undefined,
+        action: actionParam ? (actionParam as ActivityAction) : undefined,
         sort: sortParam ? (sortParam as ActivitySortKey) : undefined,
         start: dateRange?.start,
         end: dateRange?.end,

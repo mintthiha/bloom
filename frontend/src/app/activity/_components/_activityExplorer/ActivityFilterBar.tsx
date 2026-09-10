@@ -3,7 +3,11 @@
 import { CSSProperties } from "react";
 import { Search, X } from "lucide-react";
 import { ActivitySortKey } from "@/lib/api";
-import { ACTIVITY_GROUP_OPTIONS, ACTIVITY_SORT_OPTIONS } from "./activity-meta";
+import {
+  ACTIVITY_ACTION_OPTIONS,
+  ACTIVITY_GROUP_OPTIONS,
+  ACTIVITY_SORT_OPTIONS,
+} from "./activity-meta";
 
 /** Shared visual style for the select and date inputs so every control lines up. */
 const controlStyle: CSSProperties = {
@@ -22,6 +26,8 @@ interface ActivityFilterBarProps {
   onSearchInputChange: (value: string) => void;
   group: string;
   onGroupChange: (value: string) => void;
+  action: string;
+  onActionChange: (value: string) => void;
   sort: ActivitySortKey;
   onSortChange: (value: ActivitySortKey) => void;
   from: string;
@@ -38,6 +44,8 @@ export function ActivityFilterBar({
   onSearchInputChange,
   group,
   onGroupChange,
+  action,
+  onActionChange,
   sort,
   onSortChange,
   from,
@@ -97,6 +105,21 @@ export function ActivityFilterBar({
       >
         <option value="">All categories</option>
         {ACTIVITY_GROUP_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Action */}
+      <select
+        aria-label="Filter by action"
+        value={action}
+        onChange={(event) => onActionChange(event.target.value)}
+        style={controlStyle}
+      >
+        <option value="">All actions</option>
+        {ACTIVITY_ACTION_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>

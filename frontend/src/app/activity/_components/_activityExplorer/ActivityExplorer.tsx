@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, ActivityGroupKey, ActivityLogResult, ActivitySortKey } from "@/lib/api";
+import {
+  api,
+  ActivityActionKey,
+  ActivityGroupKey,
+  ActivityLogResult,
+  ActivitySortKey,
+} from "@/lib/api";
 import { ActivityFilterBar } from "./ActivityFilterBar";
 import { ActivityTable } from "./ActivityTable";
 
@@ -26,6 +32,7 @@ export function ActivityExplorer() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [group, setGroup] = useState("");
+  const [action, setAction] = useState("");
   const [sort, setSort] = useState<ActivitySortKey>("date_desc");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -34,7 +41,7 @@ export function ActivityExplorer() {
   const [result, setResult] = useState<ActivityLogResult | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const hasActiveFilters = Boolean(search || group || from || to);
+  const hasActiveFilters = Boolean(search || group || action || from || to);
 
   /** Debounces the search box, committing it to the query and resetting to the first page. */
   useEffect(() => {
@@ -57,6 +64,7 @@ export function ActivityExplorer() {
         offset: (page - 1) * PAGE_SIZE,
         search: search || undefined,
         group: (group || undefined) as ActivityGroupKey | undefined,
+        action: (action || undefined) as ActivityActionKey | undefined,
         sort,
         start: withinDateRange ? dateInputToIso(from) : undefined,
         end: withinDateRange ? endDateInputToIso(to) : undefined,
@@ -74,7 +82,7 @@ export function ActivityExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [search, group, sort, from, to, page]);
+  }, [search, group, action, sort, from, to, page]);
 
   /** Applies a filter change and returns to the first page so results stay consistent. */
   const changeFilter = useCallback(<T,>(setter: (value: T) => void) => {
@@ -89,6 +97,7 @@ export function ActivityExplorer() {
     setSearchInput("");
     setSearch("");
     setGroup("");
+    setAction("");
     setFrom("");
     setTo("");
     setPage(1);
@@ -106,6 +115,8 @@ export function ActivityExplorer() {
         onSearchInputChange={setSearchInput}
         group={group}
         onGroupChange={changeFilter(setGroup)}
+        action={action}
+        onActionChange={changeFilter(setAction)}
         sort={sort}
         onSortChange={changeFilter<ActivitySortKey>(setSort)}
         from={from}

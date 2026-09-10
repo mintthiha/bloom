@@ -109,6 +109,24 @@ describe("listActivityLogs", () => {
     expect(allBoundValues()).toContain("TRANSACTION\\_%");
   });
 
+  it("adds an escaped suffix LIKE pattern when filtering by action", async () => {
+    mockQuery([], 0);
+
+    await listActivityLogs("u-1", { action: "DELETED" });
+
+    expect(allBoundValues()).toContain("%\\_DELETED");
+  });
+
+  it("combines the group and action filters", async () => {
+    mockQuery([], 0);
+
+    await listActivityLogs("u-1", { group: "GOAL", action: "RESTORED" });
+
+    const values = allBoundValues();
+    expect(values).toContain("GOAL\\_%");
+    expect(values).toContain("%\\_RESTORED");
+  });
+
   it("adds a lowercased contains pattern when searching the description", async () => {
     mockQuery([], 0);
 
