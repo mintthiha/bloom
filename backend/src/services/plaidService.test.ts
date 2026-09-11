@@ -30,12 +30,15 @@ vi.mock("plaid", () => ({
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     plaidItem: { findUnique: vi.fn(), upsert: vi.fn() },
-    account: { upsert: vi.fn() },
-    transaction: { upsert: vi.fn() },
+    account: { upsert: vi.fn(), findMany: vi.fn() },
+    transaction: { upsert: vi.fn(), findMany: vi.fn() },
   },
 }));
 
 vi.mock("../lib/prisma", () => ({ default: prismaMock }));
+
+const { logActivityMock } = vi.hoisted(() => ({ logActivityMock: vi.fn() }));
+vi.mock("./activityService", () => ({ logActivity: logActivityMock }));
 
 const originalEnv = { ...process.env };
 
@@ -43,6 +46,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.PLAID_CLIENT_ID = "test-client";
   process.env.PLAID_SECRET = "test-secret";
+  // Default to "nothing synced before" — tests that care about existing records override this.
+  prismaMock.account.findMany.mockResolvedValue([]);
+  prismaMock.transaction.findMany.mockResolvedValue([]);
 });
 
 afterAll(() => {
@@ -243,6 +249,98 @@ describe("syncAccountsAndTransactions", () => {
     expect(inflow.create.category).toBeNull();
     // Falls back to txn name when merchant_name is absent.
     expect(inflow.create.merchant).toBe("Payroll");
+  });
+
+  it("logs ACCOUNT_CREATED only for newly linked accounts, not re-synced ones", async () => {
+    stubValidItem();
+    plaidMethods.accountsGet.mockResolvedValue({
+      data: {
+        accounts: [
+          { account_id: "p-new", name: "New Chq", subtype: "checking", balances: { current: 100 } },
+          {
+            account_id: "p-existing",
+            name: "Old Sav",
+            subtype: "savings",
+            balances: { current: 200 },
+          },
+        ],
+      },
+    });
+    // Only "p-existing" was already linked in Bloom.
+    prismaMock.account.findMany.mockResolvedValue([{ plaidAccountId: "p-existing" }]);
+    prismaMock.account.upsert.mockImplementation((args) =>
+      Promise.resolve({
+        id: `bloom-${args.where.plaidAccountId}`,
+        ownerName: args.create.ownerName,
+        nickname: null,
+        plaidAccountId: args.where.plaidAccountId,
+      })
+    );
+    plaidMethods.transactionsGet.mockResolvedValue({
+      data: { transactions: [], total_transactions: 0 },
+    });
+
+    await syncAccountsAndTransactions("item-1", "user-1");
+
+    const accountCreatedCalls = logActivityMock.mock.calls.filter(
+      (call) => call[1] === "ACCOUNT_CREATED"
+    );
+    expect(accountCreatedCalls).toHaveLength(1);
+    expect(accountCreatedCalls[0][0]).toBe("user-1");
+    expect(accountCreatedCalls[0][3]).toMatchObject({ accountId: "bloom-p-new" });
+  });
+
+  it("logs TRANSACTION_IMPORTED with a per-account count of only newly synced transactions", async () => {
+    stubValidItem();
+    plaidMethods.accountsGet.mockResolvedValue({
+      data: {
+        accounts: [
+          { account_id: "p-1", name: "Chq", subtype: "checking", balances: { current: 100 } },
+        ],
+      },
+    });
+    prismaMock.account.upsert.mockResolvedValue({
+      id: "bloom-1",
+      ownerName: "Chq",
+      nickname: null,
+      plaidAccountId: "p-1",
+    });
+    // "t-old" was already synced in a previous run; only "t-new" should count as imported.
+    prismaMock.transaction.findMany.mockResolvedValue([{ plaidTransactionId: "t-old" }]);
+    plaidMethods.transactionsGet.mockResolvedValue({
+      data: {
+        transactions: [
+          {
+            transaction_id: "t-old",
+            account_id: "p-1",
+            amount: 10,
+            date: "2026-03-01",
+            name: "Old",
+            merchant_name: null,
+            category: null,
+          },
+          {
+            transaction_id: "t-new",
+            account_id: "p-1",
+            amount: 20,
+            date: "2026-03-02",
+            name: "New",
+            merchant_name: null,
+            category: null,
+          },
+        ],
+        total_transactions: 2,
+      },
+    });
+    prismaMock.transaction.upsert.mockResolvedValue({});
+
+    await syncAccountsAndTransactions("item-1", "user-1");
+
+    const importedCalls = logActivityMock.mock.calls.filter(
+      (call) => call[1] === "TRANSACTION_IMPORTED"
+    );
+    expect(importedCalls).toHaveLength(1);
+    expect(importedCalls[0][3]).toMatchObject({ accountId: "bloom-1", count: 1 });
   });
 
   it("pages through transactions until the reported total is reached", async () => {

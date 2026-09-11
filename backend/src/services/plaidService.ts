@@ -2,6 +2,12 @@ import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } fro
 import { AccountType, TransactionType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
+import { logActivity } from "./activityService";
+
+/** Renders an account's display label the same way accountService does — nickname if set, otherwise its owner name. */
+function accountLabel(ownerName: string, nickname: string | null): string {
+  return nickname ?? ownerName;
+}
 
 /** Lazily initialized singleton — created on first use to avoid startup failure when credentials are absent. */
 let plaidClientSingleton: PlaidApi | null = null;
@@ -113,6 +119,17 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
   });
   const plaidAccounts = accountsResponse.data.accounts;
 
+  // Snapshot which of these Plaid accounts already exist in Bloom, so newly linked ones can be
+  // told apart from re-synced ones for activity logging.
+  const preExistingAccountIds = new Set(
+    (
+      await prisma.account.findMany({
+        where: { plaidAccountId: { in: plaidAccounts.map((account) => account.account_id) } },
+        select: { plaidAccountId: true },
+      })
+    ).map((account) => account.plaidAccountId)
+  );
+
   const bloomAccounts = await Promise.all(
     plaidAccounts.map((plaidAccount) => {
       const accountType = mapSubtypeToAccountType(plaidAccount.subtype);
@@ -138,6 +155,16 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
       });
     })
   );
+
+  for (const bloomAccount of bloomAccounts) {
+    if (preExistingAccountIds.has(bloomAccount.plaidAccountId)) continue;
+    logActivity(
+      userId,
+      "ACCOUNT_CREATED",
+      `Linked account "${accountLabel(bloomAccount.ownerName, bloomAccount.nickname)}" via ${plaidItem.institutionName}`,
+      { accountId: bloomAccount.id, institutionName: plaidItem.institutionName }
+    );
+  }
 
   // Build a map from Plaid account_id → Bloom account id for fast lookup
   const accountIdMap = new Map(
@@ -168,6 +195,21 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
     if (txnResponse.data.transactions.length === 0) break;
   }
 
+  // Snapshot which of these Plaid transactions already exist in Bloom, so this sync only counts
+  // newly imported ones toward the activity log (re-synced ones are silent updates).
+  const preExistingTransactionIds = new Set(
+    (
+      await prisma.transaction.findMany({
+        where: {
+          plaidTransactionId: { in: allPlaidTransactions.map((txn) => txn.transaction_id) },
+        },
+        select: { plaidTransactionId: true },
+      })
+    ).map((txn) => txn.plaidTransactionId)
+  );
+
+  const importedCountByAccountId = new Map<string, number>();
+
   await Promise.all(
     allPlaidTransactions.map((txn) => {
       const bloomAccountId = accountIdMap.get(txn.account_id);
@@ -180,6 +222,13 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
       const effectiveAt = new Date(txn.date);
       const category = txn.category?.[0] ?? null;
       const merchantName = txn.merchant_name ?? txn.name;
+
+      if (!preExistingTransactionIds.has(txn.transaction_id)) {
+        importedCountByAccountId.set(
+          bloomAccountId,
+          (importedCountByAccountId.get(bloomAccountId) ?? 0) + 1
+        );
+      }
 
       return prisma.transaction.upsert({
         where: { plaidTransactionId: txn.transaction_id },
@@ -204,6 +253,18 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
       });
     })
   );
+
+  const bloomAccountById = new Map(bloomAccounts.map((account) => [account.id, account]));
+  for (const [accountId, count] of importedCountByAccountId) {
+    const bloomAccount = bloomAccountById.get(accountId);
+    if (!bloomAccount || count === 0) continue;
+    logActivity(
+      userId,
+      "TRANSACTION_IMPORTED",
+      `Synced ${count} transaction${count === 1 ? "" : "s"} from Plaid to "${accountLabel(bloomAccount.ownerName, bloomAccount.nickname)}"`,
+      { accountId, count }
+    );
+  }
 
   return bloomAccounts.length;
 }
