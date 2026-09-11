@@ -58,6 +58,7 @@ export const ACTIVITY_ACTION_OPTIONS: { value: ActivityActionKey; label: string 
   { value: "UPDATED", label: "Updated" },
   { value: "DELETED", label: "Deleted" },
   { value: "RESTORED", label: "Restored" },
+  { value: "RESYNCED", label: "Re-synced" },
 ];
 
 /** Sort options shown in the dropdown, mapped to the API sort keys. */

@@ -358,7 +358,7 @@ export type ActivityGroupKey =
   | "MANUAL_ENTRY";
 
 /** Lifecycle action the activity list can filter by; matches a `_ACTION` type suffix. */
-export type ActivityActionKey = "CREATED" | "UPDATED" | "DELETED" | "RESTORED";
+export type ActivityActionKey = "CREATED" | "UPDATED" | "DELETED" | "RESTORED" | "RESYNCED";
 
 /** Sort orders the activity list accepts. */
 export type ActivitySortKey = "date_desc" | "date_asc";

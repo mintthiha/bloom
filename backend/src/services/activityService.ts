@@ -60,7 +60,7 @@ export type ActivityGroup =
  * Every logged type ends in one of these except the standalone events (import, freeze,
  * unfreeze, rename, deposit, withdrawal, transfer), which match no action.
  */
-export type ActivityAction = "CREATED" | "UPDATED" | "DELETED" | "RESTORED";
+export type ActivityAction = "CREATED" | "UPDATED" | "DELETED" | "RESTORED" | "RESYNCED";
 
 /** Sort orders the activity list accepts, mapped to a whitelisted ORDER BY clause. */
 export type ActivitySortKey = "date_desc" | "date_asc";
