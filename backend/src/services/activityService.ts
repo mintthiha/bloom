@@ -59,10 +59,19 @@ export type ActivityGroup =
 
 /**
  * Lifecycle action the activity list can filter by; each maps to a `_ACTION` type suffix.
- * Every logged type ends in one of these except the standalone events (import, freeze,
- * unfreeze, rename, deposit, withdrawal, transfer), which match no action.
+ * Every logged type ends in one of these except the standalone events (freeze, unfreeze,
+ * rename, withdrawal, transfer), which match no action.
  */
-export type ActivityAction = "CREATED" | "UPDATED" | "DELETED" | "RESTORED" | "RESYNCED";
+export type ActivityAction =
+  | "CREATED"
+  | "UPDATED"
+  | "DELETED"
+  | "RESTORED"
+  | "RESYNCED"
+  | "PAUSED"
+  | "RESUMED"
+  | "DEPOSIT"
+  | "IMPORTED";
 
 /** Sort orders the activity list accepts, mapped to a whitelisted ORDER BY clause. */
 export type ActivitySortKey = "date_desc" | "date_asc";

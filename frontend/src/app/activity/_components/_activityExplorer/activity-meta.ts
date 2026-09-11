@@ -53,7 +53,7 @@ export const ACTIVITY_GROUP_OPTIONS: { value: ActivityGroupKey; label: string }[
 
 /**
  * Action filter options shown in the dropdown, mapped to the API action keys. Standalone
- * events (imports, freezes, renames, deposits, withdrawals, transfers) match none of these.
+ * events (freezes, renames, withdrawals, transfers) match none of these.
  */
 export const ACTIVITY_ACTION_OPTIONS: { value: ActivityActionKey; label: string }[] = [
   { value: "CREATED", label: "Created" },
@@ -61,6 +61,10 @@ export const ACTIVITY_ACTION_OPTIONS: { value: ActivityActionKey; label: string 
   { value: "DELETED", label: "Deleted" },
   { value: "RESTORED", label: "Restored" },
   { value: "RESYNCED", label: "Re-synced" },
+  { value: "PAUSED", label: "Paused" },
+  { value: "RESUMED", label: "Resumed" },
+  { value: "DEPOSIT", label: "Deposit" },
+  { value: "IMPORTED", label: "Import" },
 ];
 
 /** Sort options shown in the dropdown, mapped to the API sort keys. */

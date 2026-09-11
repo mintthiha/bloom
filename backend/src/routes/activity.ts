@@ -20,7 +20,17 @@ const VALID_GROUPS: ActivityGroup[] = [
 ];
 
 /** Lifecycle actions the ?action= query parameter is allowed to take. */
-const VALID_ACTIONS: ActivityAction[] = ["CREATED", "UPDATED", "DELETED", "RESTORED", "RESYNCED"];
+const VALID_ACTIONS: ActivityAction[] = [
+  "CREATED",
+  "UPDATED",
+  "DELETED",
+  "RESTORED",
+  "RESYNCED",
+  "PAUSED",
+  "RESUMED",
+  "DEPOSIT",
+  "IMPORTED",
+];
 
 /** Sort keys the ?sort= query parameter is allowed to take. */
 const VALID_SORT_KEYS: ActivitySortKey[] = ["date_desc", "date_asc"];
