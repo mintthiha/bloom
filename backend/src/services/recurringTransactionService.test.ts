@@ -140,7 +140,8 @@ describe("recurringTransactionService", () => {
       "Salary",
       "Pay cheque",
       new Date("2026-04-01T12:00:00.000Z"),
-      "Acme Payroll"
+      "Acme Payroll",
+      { recurringTransactionId: "rule-1", recurringName: "Payroll" }
     );
     expect(result.appliedCount).toBe(1);
     expect(result.failedCount).toBe(0);

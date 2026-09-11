@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
-import { deposit, getAccount, withdraw } from "./accountService";
+import { deposit, getAccount, RecurringActivitySource, withdraw } from "./accountService";
 import prisma from "../lib/prisma";
 import { logActivity } from "./activityService";
 
@@ -343,7 +343,14 @@ export async function updateRecurringTransaction(
       ${account.accountType} AS "accountType"
   `;
 
-  return normalizeRecurringTransaction(rows[0]);
+  const recurring = normalizeRecurringTransaction(rows[0]);
+  logActivity(
+    userId,
+    "RECURRING_UPDATED",
+    `Updated recurring ${recurring.type.toLowerCase()} "${recurring.name}"`,
+    { recurringId: recurring.id, amount: recurring.amount, frequency: recurring.frequency }
+  );
+  return recurring;
 }
 
 /**
@@ -486,6 +493,10 @@ export async function applyDueRecurringTransactions(
 
       try {
         const ruleAmount = Number(rule.amount);
+        const recurringSource: RecurringActivitySource = {
+          recurringTransactionId: rule.id,
+          recurringName: rule.name,
+        };
         if (rule.type === "DEPOSIT") {
           await deposit(
             userId,
@@ -494,7 +505,8 @@ export async function applyDueRecurringTransactions(
             rule.category ?? undefined,
             rule.description ?? undefined,
             nextRunAt,
-            rule.merchant ?? undefined
+            rule.merchant ?? undefined,
+            recurringSource
           );
         } else {
           await withdraw(
@@ -504,7 +516,8 @@ export async function applyDueRecurringTransactions(
             rule.category ?? undefined,
             rule.description ?? undefined,
             nextRunAt,
-            rule.merchant ?? undefined
+            rule.merchant ?? undefined,
+            recurringSource
           );
         }
 

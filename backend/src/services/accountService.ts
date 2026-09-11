@@ -63,6 +63,22 @@ function accountLabel(ownerName: string, nickname: string | null): string {
   return nickname ?? ownerName;
 }
 
+/** Identifies a recurring rule that triggered a deposit/withdrawal, so the activity log can attribute it. */
+export type RecurringActivitySource = {
+  recurringTransactionId: string;
+  recurringName: string;
+};
+
+/** Builds the "(recurring: ...)" suffix appended to auto-applied deposit/withdrawal activity descriptions. */
+function recurringActivitySuffix(recurringSource?: RecurringActivitySource): string {
+  return recurringSource ? ` (recurring: "${recurringSource.recurringName}")` : "";
+}
+
+/** Builds the extra activity metadata recording which recurring rule generated a deposit/withdrawal. */
+function recurringActivityMetadata(recurringSource?: RecurringActivitySource) {
+  return recurringSource ? { recurringTransactionId: recurringSource.recurringTransactionId } : {};
+}
+
 /** Converts a raw DB AccountRecord (Decimal balance string) to API-safe format with numeric balance. */
 function normalizeAccount(row: AccountRecord) {
   return { ...row, balance: Number(row.balance) };
@@ -630,7 +646,8 @@ export async function deposit(
   category?: string,
   description?: string,
   effectiveAt?: Date,
-  merchant?: string
+  merchant?: string,
+  recurringSource?: RecurringActivitySource
 ) {
   if (amount <= 0) throw new AppError(400, "Deposit amount must be positive");
   const rawAccount = await selectAccountByUserId(userId, id);
@@ -654,8 +671,8 @@ export async function deposit(
   logActivity(
     userId,
     "TRANSACTION_DEPOSIT",
-    `Deposited $${amount.toFixed(2)} to "${accountLabel(rawAccount.ownerName, rawAccount.nickname)}"`,
-    { accountId: id, amount }
+    `Deposited $${amount.toFixed(2)} to "${accountLabel(rawAccount.ownerName, rawAccount.nickname)}"${recurringActivitySuffix(recurringSource)}`,
+    { accountId: id, amount, ...recurringActivityMetadata(recurringSource) }
   );
   return [updatedAccount, transaction] as const;
 }
@@ -674,7 +691,8 @@ export async function withdraw(
   category?: string,
   description?: string,
   effectiveAt?: Date,
-  merchant?: string
+  merchant?: string,
+  recurringSource?: RecurringActivitySource
 ) {
   if (amount <= 0) throw new AppError(400, "Withdrawal amount must be positive");
   const rawAccount = await selectAccountByUserId(userId, id);
@@ -700,8 +718,8 @@ export async function withdraw(
   logActivity(
     userId,
     "TRANSACTION_WITHDRAWAL",
-    `Withdrew $${amount.toFixed(2)} from "${accountLabel(rawAccount.ownerName, rawAccount.nickname)}"`,
-    { accountId: id, amount }
+    `Withdrew $${amount.toFixed(2)} from "${accountLabel(rawAccount.ownerName, rawAccount.nickname)}"${recurringActivitySuffix(recurringSource)}`,
+    { accountId: id, amount, ...recurringActivityMetadata(recurringSource) }
   );
   return [updatedAccount, transaction] as const;
 }
