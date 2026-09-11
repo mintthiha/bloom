@@ -258,6 +258,14 @@ body {
   transition-duration: 0.09s;
 }
 
+/* Clickable activity log rows — subtle background on hover to hint they expand. */
+.activity-row {
+  transition: background-color 0.15s ease;
+}
+.activity-row:hover {
+  background: var(--surface-2);
+}
+
 .press {
   transition:
     transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),

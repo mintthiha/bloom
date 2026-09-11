@@ -1,7 +1,7 @@
 "use client";
 
-import { CSSProperties } from "react";
-import { Activity } from "lucide-react";
+import { CSSProperties, useState } from "react";
+import { Activity, ChevronRight } from "lucide-react";
 import { ActivityLogEntry } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { activityMeta } from "./activity-meta";
@@ -41,6 +41,13 @@ interface ActivityTableProps {
 
 /** Renders activity log entries as a data table, with loading skeleton and empty states. */
 export function ActivityTable({ rows, loading, hasActiveFilters }: ActivityTableProps) {
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+  /** Toggles a row's expanded state, showing its full untruncated activity text. */
+  function toggleRow(rowId: string) {
+    setExpandedRowId((previous) => (previous === rowId ? null : rowId));
+  }
+
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -70,6 +77,7 @@ export function ActivityTable({ rows, loading, hasActiveFilters }: ActivityTable
       <table style={{ width: "100%", minWidth: "640px", borderCollapse: "collapse" }}>
         <thead>
           <tr>
+            <th style={{ ...headerCellStyle, width: "28px" }} />
             <th style={headerCellStyle}>Type</th>
             <th style={headerCellStyle}>Activity</th>
             <th style={{ ...headerCellStyle, textAlign: "right" }}>When</th>
@@ -78,9 +86,37 @@ export function ActivityTable({ rows, loading, hasActiveFilters }: ActivityTable
         <tbody>
           {rows.map((row) => {
             const { label, color, icon } = activityMeta(row.type);
+            const isExpanded = expandedRowId === row.id;
 
             return (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                className="activity-row"
+                onClick={() => toggleRow(row.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleRow(row.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                style={{ cursor: "pointer" }}
+              >
+                <td style={{ ...bodyCellStyle, padding: "12px 0 12px 14px" }}>
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "flex",
+                      color: "var(--text-muted)",
+                      transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  >
+                    <ChevronRight size={14} />
+                  </span>
+                </td>
                 <td style={bodyCellStyle}>
                   <span
                     style={{
@@ -110,7 +146,11 @@ export function ActivityTable({ rows, loading, hasActiveFilters }: ActivityTable
                       {icon}
                     </span>
                     <span
-                      style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "var(--text-secondary)",
+                      }}
                     >
                       {label}
                     </span>
@@ -118,12 +158,12 @@ export function ActivityTable({ rows, loading, hasActiveFilters }: ActivityTable
                 </td>
                 <td style={{ ...bodyCellStyle, fontWeight: 600, maxWidth: "420px" }}>
                   <span
-                    title={row.description}
+                    title={isExpanded ? undefined : row.description}
                     style={{
                       display: "block",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
+                      overflow: isExpanded ? "visible" : "hidden",
+                      textOverflow: isExpanded ? "clip" : "ellipsis",
+                      whiteSpace: isExpanded ? "normal" : "nowrap",
                     }}
                   >
                     {row.description}
