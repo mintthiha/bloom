@@ -25,12 +25,16 @@ export async function listRules(userId: string): Promise<CategorizationRule[]> {
 /**
  * Creates or updates the categorization rule for a given merchant (unique per user+merchant).
  * If a soft-deleted rule exists for the merchant it is revived and re-pointed at `category`.
+ * `source` tags the activity log entry (e.g. "ai") when the rule came from an AI suggestion
+ * rather than a manually typed one, so Activity can show who/what created it.
  */
 export async function upsertRule(
   userId: string,
   merchant: string,
-  category: string
+  category: string,
+  source: "manual" | "ai" = "manual"
 ): Promise<CategorizationRule> {
+  const sourceSuffix = source === "ai" ? " (AI suggested)" : "";
   const existing = await prisma.autoCategorizationRule.findFirst({
     where: { userId, merchant },
   });
@@ -51,8 +55,8 @@ export async function upsertRule(
     logActivity(
       userId,
       "CATEGORIZATION_RULE_UPDATED",
-      `Updated categorization rule for "${rule.merchant}": ${describeActivityFieldChanges(changes, "no changes")}`,
-      { ruleId: rule.id, merchant: rule.merchant, changes }
+      `Updated categorization rule for "${rule.merchant}": ${describeActivityFieldChanges(changes, "no changes")}${sourceSuffix}`,
+      { ruleId: rule.id, merchant: rule.merchant, changes, source }
     );
     return rule;
   }
@@ -60,8 +64,8 @@ export async function upsertRule(
   logActivity(
     userId,
     "CATEGORIZATION_RULE_CREATED",
-    `Created categorization rule: "${rule.merchant}" → ${rule.category}`,
-    { ruleId: rule.id, merchant: rule.merchant, category: rule.category }
+    `Created categorization rule: "${rule.merchant}" → ${rule.category}${sourceSuffix}`,
+    { ruleId: rule.id, merchant: rule.merchant, category: rule.category, source }
   );
   return rule;
 }

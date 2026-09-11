@@ -30,7 +30,12 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
     const body = requireObject(req.body);
     const merchant = requireString(body.merchant, "merchant", { max: 100 });
     const category = requireString(body.category, "category", { max: 50 });
-    res.json(await categorizationRuleService.upsertRule(uid(req), merchant, category));
+    const rawSource = body.source;
+    if (rawSource !== undefined && rawSource !== "manual" && rawSource !== "ai") {
+      throw new AppError(400, "source must be 'manual' or 'ai'");
+    }
+    const source = rawSource === "ai" ? "ai" : "manual";
+    res.json(await categorizationRuleService.upsertRule(uid(req), merchant, category, source));
   } catch (err) {
     next(err);
   }

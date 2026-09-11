@@ -57,7 +57,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
     if (suggestions.length === 0) return;
     setIsAddingAll(true);
     const results = await Promise.allSettled(
-      suggestions.map((s) => api.upsertCategorizationRule(s.merchant, s.category))
+      suggestions.map((s) => api.upsertCategorizationRule(s.merchant, s.category, "ai"))
     );
     const savedCount = results.filter((r) => r.status === "fulfilled").length;
     const failedCount = results.length - savedCount;
@@ -76,7 +76,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
   async function handleAddRule(suggestion: AiSuggestion) {
     setAddingMerchant(suggestion.merchant);
     try {
-      await api.upsertCategorizationRule(suggestion.merchant, suggestion.category);
+      await api.upsertCategorizationRule(suggestion.merchant, suggestion.category, "ai");
       toast.success(`Rule saved: ${suggestion.merchant} → ${suggestion.category}`);
       setSuggestions((prev) => prev.filter((s) => s.merchant !== suggestion.merchant));
       onRuleAdded();

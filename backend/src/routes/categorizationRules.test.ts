@@ -65,8 +65,32 @@ describe("categorization rule routes", () => {
       .send({ merchant: "Loblaws", category: "Groceries" });
 
     expect(response.status).toBe(200);
-    expect(serviceMock.upsertRule).toHaveBeenCalledWith("user-1", "Loblaws", "Groceries");
+    expect(serviceMock.upsertRule).toHaveBeenCalledWith("user-1", "Loblaws", "Groceries", "manual");
     expect(response.body).toMatchObject({ merchant: "Loblaws", category: "Groceries" });
+  });
+
+  it("passes source: 'ai' through to the service when the rule came from an AI suggestion", async () => {
+    serviceMock.upsertRule.mockResolvedValue(RULE);
+
+    const response = await request(app)
+      .put("/api/categorization-rules")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ merchant: "Loblaws", category: "Groceries", source: "ai" });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.upsertRule).toHaveBeenCalledWith("user-1", "Loblaws", "Groceries", "ai");
+  });
+
+  it("rejects an invalid source value", async () => {
+    const response = await request(app)
+      .put("/api/categorization-rules")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ merchant: "Loblaws", category: "Groceries", source: "robot" });
+
+    expect(response.status).toBe(400);
+    expect(serviceMock.upsertRule).not.toHaveBeenCalled();
   });
 
   it("rejects a rule payload missing merchant", async () => {

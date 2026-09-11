@@ -601,10 +601,10 @@ export const api = {
       body: JSON.stringify(input),
     }),
   listCategorizationRules: () => request<AutoCategorizationRule[]>("/categorization-rules"),
-  upsertCategorizationRule: (merchant: string, category: string) =>
+  upsertCategorizationRule: (merchant: string, category: string, source?: "manual" | "ai") =>
     request<AutoCategorizationRule>("/categorization-rules", {
       method: "PUT",
-      body: JSON.stringify({ merchant, category }),
+      body: JSON.stringify({ merchant, category, source }),
     }),
   updateCategorizationRule: (id: string, merchant: string, category: string) =>
     request<AutoCategorizationRule>(`/categorization-rules/${id}`, {
