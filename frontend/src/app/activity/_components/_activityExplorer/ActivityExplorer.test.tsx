@@ -21,11 +21,13 @@ vi.mock("./ActivityFilterBar", () => ({
     onGroupChange: (v: string) => void;
     onActionChange: (v: string) => void;
     onClear: () => void;
+    onRefresh: () => void;
   }) => (
     <div>
       <button onClick={() => props.onGroupChange("BUDGET")}>set-group</button>
       <button onClick={() => props.onActionChange("DELETED")}>set-action</button>
       <button onClick={props.onClear}>clear-filters</button>
+      <button onClick={props.onRefresh}>refresh</button>
     </div>
   ),
 }));
@@ -97,6 +99,19 @@ describe("ActivityExplorer", () => {
       expect(apiMock.listActivityLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({ offset: 25 })
       )
+    );
+  });
+
+  it("refetches the current page when refresh is clicked, without changing filters", async () => {
+    render(<ActivityExplorer />);
+    await screen.findByText("Showing 1–2 of 2 events");
+    apiMock.listActivityLogs.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "refresh" }));
+
+    await waitFor(() => expect(apiMock.listActivityLogs).toHaveBeenCalledTimes(1));
+    expect(apiMock.listActivityLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ group: undefined, action: undefined, offset: 0 })
     );
   });
 

@@ -27,8 +27,8 @@ export default function ActivityPage() {
           Activity
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>
-          A log of every action you&apos;ve taken in Bloom — account changes, transactions, goals,
-          budgets, and more.
+          A log of every action you&apos;ve taken in Bloom, such as account changes, transactions,
+          goals, budgets, and more.
         </p>
       </div>
 

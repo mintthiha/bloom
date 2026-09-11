@@ -258,6 +258,21 @@ body {
   transition-duration: 0.09s;
 }
 
+/* Spins the refresh icon while the activity list is reloading. */
+@keyframes activity-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.activity-refresh-spin {
+  animation: activity-refresh-spin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .activity-refresh-spin {
+    animation: none;
+  }
+}
+
 /* Clickable activity log rows — subtle background on hover to hint they expand. */
 .activity-row {
   transition: background-color 0.15s ease;

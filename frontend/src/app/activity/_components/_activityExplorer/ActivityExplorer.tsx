@@ -40,6 +40,7 @@ export function ActivityExplorer() {
 
   const [result, setResult] = useState<ActivityLogResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   const hasActiveFilters = Boolean(search || group || action || from || to);
 
@@ -82,7 +83,12 @@ export function ActivityExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [search, group, action, sort, from, to, page]);
+  }, [search, group, action, sort, from, to, page, refreshNonce]);
+
+  /** Re-fetches the current page without changing any filter or paging state. */
+  function handleRefresh() {
+    setRefreshNonce((current) => current + 1);
+  }
 
   /** Applies a filter change and returns to the first page so results stay consistent. */
   const changeFilter = useCallback(<T,>(setter: (value: T) => void) => {
@@ -125,6 +131,8 @@ export function ActivityExplorer() {
         onToChange={changeFilter(setTo)}
         hasActiveFilters={hasActiveFilters}
         onClear={handleClear}
+        onRefresh={handleRefresh}
+        refreshing={loading}
       />
 
       <div style={{ marginBottom: "12px" }}>

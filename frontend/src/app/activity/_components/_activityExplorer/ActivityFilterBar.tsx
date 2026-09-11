@@ -1,7 +1,7 @@
 "use client";
 
 import { CSSProperties } from "react";
-import { Search, X } from "lucide-react";
+import { RefreshCw, Search, X } from "lucide-react";
 import { ActivitySortKey } from "@/lib/api";
 import {
   ACTIVITY_ACTION_OPTIONS,
@@ -36,6 +36,8 @@ interface ActivityFilterBarProps {
   onToChange: (value: string) => void;
   hasActiveFilters: boolean;
   onClear: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
 }
 
 /** Controlled filter/search/sort bar for the activity explorer; owns no state of its own. */
@@ -54,6 +56,8 @@ export function ActivityFilterBar({
   onToChange,
   hasActiveFilters,
   onClear,
+  onRefresh,
+  refreshing,
 }: ActivityFilterBarProps) {
   return (
     <div
@@ -182,6 +186,31 @@ export function ActivityFilterBar({
           Clear
         </button>
       )}
+
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={refreshing}
+        aria-label="Refresh activity"
+        className="press"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          background: "transparent",
+          border: "1px solid var(--border)",
+          borderRadius: "8px",
+          padding: "8px 10px",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "var(--text-secondary)",
+          cursor: refreshing ? "not-allowed" : "pointer",
+          opacity: refreshing ? 0.6 : 1,
+        }}
+      >
+        <RefreshCw size={13} className={refreshing ? "activity-refresh-spin" : undefined} />
+        Refresh
+      </button>
     </div>
   );
 }
