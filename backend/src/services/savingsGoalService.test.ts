@@ -213,6 +213,7 @@ describe("updateSavingsGoal", () => {
   it("throws AppError 404 when the new account does not belong to the user", async () => {
     prismaMock.$queryRaw
       .mockResolvedValueOnce([{ id: "g-1" }]) // getSavingsGoalOrThrow → found
+      .mockResolvedValueOnce([makeGoalRow()]) // fetchSavingsGoalWithAccount (before-state for the diff)
       .mockResolvedValueOnce([]); // account check → not found
 
     await expect(
@@ -224,8 +225,9 @@ describe("updateSavingsGoal", () => {
     const row = makeGoalRow({ name: "Updated Goal", targetAmount: "3000", accountBalance: "1500" });
     prismaMock.$queryRaw
       .mockResolvedValueOnce([{ id: "g-1" }]) // getSavingsGoalOrThrow
+      .mockResolvedValueOnce([makeGoalRow()]) // fetchSavingsGoalWithAccount (before-state for the diff)
       .mockResolvedValueOnce([{ id: "a-1" }]) // account check
-      .mockResolvedValueOnce([row]); // fetchSavingsGoalWithAccount
+      .mockResolvedValueOnce([row]); // fetchSavingsGoalWithAccount (after update)
     prismaMock.$executeRaw.mockResolvedValueOnce(1);
 
     const goal = await updateSavingsGoal("u-1", "g-1", {

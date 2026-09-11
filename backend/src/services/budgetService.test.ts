@@ -46,7 +46,7 @@ describe("budgetService", () => {
 
   it("normalizes category names when saving budgets", async () => {
     const { upsertBudget } = await import("./budgetService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([
+    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
       {
         id: "budget-1",
         userId: "user-1",

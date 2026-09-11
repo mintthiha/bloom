@@ -42,6 +42,9 @@ export type ActivityLogEntry = {
   createdAt: Date;
 };
 
+export type { ActivityFieldChange, ActivityFieldChangeKind } from "./activityChanges";
+export { describeActivityFieldChanges, pushActivityFieldChange } from "./activityChanges";
+
 /** Coarse groupings the activity list can filter by; each maps to a `TYPE_` prefix. */
 export type ActivityGroup =
   | "ACCOUNT"

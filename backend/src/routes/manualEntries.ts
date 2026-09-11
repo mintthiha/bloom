@@ -2,6 +2,11 @@ import { Router, Request, Response, NextFunction } from "express";
 import { ManualEntryType } from "@prisma/client";
 import * as manualEntryService from "../services/manualEntryService";
 import { logActivity } from "../services/activityService";
+import {
+  ActivityFieldChange,
+  describeActivityFieldChanges,
+  pushActivityFieldChange,
+} from "../services/activityChanges";
 import { AppError } from "../middleware/errorHandler";
 import { requireObject, requireString, requirePositiveNumber } from "../lib/validation";
 
@@ -72,12 +77,30 @@ router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => 
     const amount = requirePositiveNumber(body.amount, "amount");
     const date = parseOptionalDate(body.date);
     const userId = uid(req);
-    const updated = await manualEntryService.updateManualEntry(userId, entryId, {
+    const { updated, previous } = await manualEntryService.updateManualEntry(userId, entryId, {
       name,
       amount,
       date,
     });
-    logActivity(userId, "MANUAL_ENTRY_UPDATED", `Updated "${name}"`, { entryId, amount });
+
+    const changes: ActivityFieldChange[] = [];
+    pushActivityFieldChange(changes, "name", "Name", "text", previous?.name ?? null, updated.name);
+    pushActivityFieldChange(
+      changes,
+      "amount",
+      "Amount",
+      "currency",
+      previous?.amount ?? null,
+      updated.amount
+    );
+    pushActivityFieldChange(changes, "date", "Date", "date", previous?.date ?? null, updated.date);
+
+    logActivity(
+      userId,
+      "MANUAL_ENTRY_UPDATED",
+      `Updated "${name}": ${describeActivityFieldChanges(changes, "no changes")}`,
+      { entryId, changes }
+    );
     res.json(updated);
   } catch (err) {
     next(err);

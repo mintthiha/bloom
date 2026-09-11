@@ -3,6 +3,11 @@ import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
 import { logActivity } from "./activityService";
 import {
+  ActivityFieldChange,
+  describeActivityFieldChanges,
+  pushActivityFieldChange,
+} from "./activityChanges";
+import {
   computeRolloverForMonth,
   monthKey,
   type MonthOverride,
@@ -387,6 +392,13 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
     throw new AppError(400, "Monthly limit must be a positive number");
   }
 
+  const existingRows = await prisma.$queryRaw<{ monthlyLimit: string }[]>`
+    SELECT "monthlyLimit" FROM "CategoryBudget"
+    WHERE "userId" = ${userId} AND "category" = ${category} AND "deletedAt" IS NULL
+    LIMIT 1
+  `;
+  const previousMonthlyLimit = existingRows[0] ? Number(existingRows[0].monthlyLimit) : null;
+
   const id = randomUUID();
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
     INSERT INTO "CategoryBudget" ("id", "userId", "category", "monthlyLimit", "createdAt", "updatedAt")
@@ -409,11 +421,20 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
       { budgetId: budget.id, category: budget.category, monthlyLimit: budget.monthlyLimit }
     );
   } else {
+    const changes: ActivityFieldChange[] = [];
+    pushActivityFieldChange(
+      changes,
+      "monthlyLimit",
+      "Monthly limit",
+      "currency",
+      previousMonthlyLimit,
+      budget.monthlyLimit
+    );
     logActivity(
       userId,
       "BUDGET_UPDATED",
-      `Updated budget for ${budget.category} to $${budget.monthlyLimit.toFixed(0)}/mo`,
-      { budgetId: budget.id, category: budget.category, monthlyLimit: budget.monthlyLimit }
+      `Updated budget for ${budget.category}: ${describeActivityFieldChanges(changes, "no changes")}`,
+      { budgetId: budget.id, category: budget.category, monthlyLimit: budget.monthlyLimit, changes }
     );
   }
   return budget;

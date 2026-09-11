@@ -2,6 +2,11 @@ import { randomUUID } from "crypto";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
 import { logActivity } from "./activityService";
+import {
+  ActivityFieldChange,
+  describeActivityFieldChanges,
+  pushActivityFieldChange,
+} from "./activityChanges";
 
 type SavingsGoalRow = {
   id: string;
@@ -122,6 +127,7 @@ export async function updateSavingsGoal(
   input: { accountId: string; name: string; targetAmount: number }
 ) {
   await getSavingsGoalOrThrow(userId, goalId);
+  const existingGoal = await fetchSavingsGoalWithAccount(goalId);
 
   const accountRows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id" FROM "Account"
@@ -142,7 +148,32 @@ export async function updateSavingsGoal(
 
   const goal = await fetchSavingsGoalWithAccount(goalId);
   if (!goal) throw new AppError(500, "Failed to update savings goal");
-  logActivity(userId, "GOAL_UPDATED", `Updated savings goal "${goal.name}"`, { goalId });
+
+  const changes: ActivityFieldChange[] = [];
+  pushActivityFieldChange(changes, "name", "Name", "text", existingGoal?.name ?? null, goal.name);
+  pushActivityFieldChange(
+    changes,
+    "targetAmount",
+    "Target amount",
+    "currency",
+    existingGoal?.targetAmount ?? null,
+    goal.targetAmount
+  );
+  pushActivityFieldChange(
+    changes,
+    "accountId",
+    "Account",
+    "text",
+    existingGoal?.accountName ?? null,
+    goal.accountName
+  );
+
+  logActivity(
+    userId,
+    "GOAL_UPDATED",
+    `Updated savings goal "${goal.name}": ${describeActivityFieldChanges(changes, "no changes")}`,
+    { goalId, changes }
+  );
   return goal;
 }
 

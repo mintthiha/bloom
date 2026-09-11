@@ -3,6 +3,11 @@ import { AppError } from "../middleware/errorHandler";
 import { deposit, getAccount, RecurringActivitySource, withdraw } from "./accountService";
 import prisma from "../lib/prisma";
 import { logActivity } from "./activityService";
+import {
+  ActivityFieldChange,
+  describeActivityFieldChanges,
+  pushActivityFieldChange,
+} from "./activityChanges";
 
 export type RecurringTransactionType = "DEPOSIT" | "WITHDRAWAL";
 export type RecurringFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
@@ -344,11 +349,63 @@ export async function updateRecurringTransaction(
   `;
 
   const recurring = normalizeRecurringTransaction(rows[0]);
+
+  const changes: ActivityFieldChange[] = [];
+  pushActivityFieldChange(changes, "name", "Name", "text", existing.name, recurring.name);
+  pushActivityFieldChange(
+    changes,
+    "amount",
+    "Amount",
+    "currency",
+    Number(existing.amount),
+    recurring.amount
+  );
+  pushActivityFieldChange(
+    changes,
+    "frequency",
+    "Frequency",
+    "text",
+    existing.frequency,
+    recurring.frequency
+  );
+  pushActivityFieldChange(
+    changes,
+    "category",
+    "Category",
+    "text",
+    existing.category,
+    recurring.category
+  );
+  pushActivityFieldChange(
+    changes,
+    "merchant",
+    "Merchant",
+    "text",
+    existing.merchant,
+    recurring.merchant
+  );
+  pushActivityFieldChange(
+    changes,
+    "startDate",
+    "Start date",
+    "date",
+    existing.startDate.toISOString().slice(0, 10),
+    recurring.startDate.toISOString().slice(0, 10)
+  );
+  pushActivityFieldChange(
+    changes,
+    "endDate",
+    "End date",
+    "date",
+    existing.endDate ? existing.endDate.toISOString().slice(0, 10) : null,
+    recurring.endDate ? recurring.endDate.toISOString().slice(0, 10) : null
+  );
+
   logActivity(
     userId,
     "RECURRING_UPDATED",
-    `Updated recurring ${recurring.type.toLowerCase()} "${recurring.name}"`,
-    { recurringId: recurring.id, amount: recurring.amount, frequency: recurring.frequency }
+    `Updated recurring ${recurring.type.toLowerCase()} "${recurring.name}": ${describeActivityFieldChanges(changes, "no changes")}`,
+    { recurringId: recurring.id, changes }
   );
   return recurring;
 }

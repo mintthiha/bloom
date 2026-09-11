@@ -4,6 +4,11 @@ import { AppError } from "../middleware/errorHandler";
 import { resolveDateRange } from "../lib/date-range";
 import prisma from "../lib/prisma";
 import { logActivity } from "./activityService";
+import {
+  ActivityFieldChange,
+  describeActivityFieldChanges,
+  pushActivityFieldChange,
+} from "./activityChanges";
 
 type AccountRecord = {
   id: string;
@@ -908,12 +913,38 @@ export async function updateTransaction(
       }
     });
 
+    const transferChanges: ActivityFieldChange[] = [];
+    pushActivityFieldChange(
+      transferChanges,
+      "amount",
+      "Amount",
+      "currency",
+      Number(transaction.amount),
+      input.amount
+    );
+    pushActivityFieldChange(
+      transferChanges,
+      "category",
+      "Category",
+      "text",
+      transaction.category,
+      category
+    );
+    pushActivityFieldChange(
+      transferChanges,
+      "effectiveAt",
+      "Date",
+      "date",
+      transaction.effectiveAt.toISOString().slice(0, 10),
+      effectiveAt.toISOString().slice(0, 10)
+    );
+
     const updatedAccountAfterTransfer = await getAccount(userId, accountId);
     logActivity(
       userId,
       "TRANSACTION_UPDATED",
-      `Edited a transfer on account "${accountLabel(updatedAccountAfterTransfer.ownerName, updatedAccountAfterTransfer.nickname)}"`,
-      { accountId, transactionId }
+      `Edited a transfer on account "${accountLabel(updatedAccountAfterTransfer.ownerName, updatedAccountAfterTransfer.nickname)}": ${describeActivityFieldChanges(transferChanges, "no changes")}`,
+      { accountId, transactionId, changes: transferChanges }
     );
     return updatedAccountAfterTransfer;
   }
@@ -934,12 +965,54 @@ export async function updateTransaction(
     await replayAccountBalances(tx as Prisma.TransactionClient, accountId);
   });
 
+  const transactionChanges: ActivityFieldChange[] = [];
+  pushActivityFieldChange(
+    transactionChanges,
+    "amount",
+    "Amount",
+    "currency",
+    Number(transaction.amount),
+    input.amount
+  );
+  pushActivityFieldChange(
+    transactionChanges,
+    "category",
+    "Category",
+    "text",
+    transaction.category,
+    category
+  );
+  pushActivityFieldChange(
+    transactionChanges,
+    "merchant",
+    "Merchant",
+    "text",
+    transaction.merchant,
+    merchant
+  );
+  pushActivityFieldChange(
+    transactionChanges,
+    "description",
+    "Description",
+    "text",
+    transaction.description,
+    description
+  );
+  pushActivityFieldChange(
+    transactionChanges,
+    "effectiveAt",
+    "Date",
+    "date",
+    transaction.effectiveAt.toISOString().slice(0, 10),
+    effectiveAt.toISOString().slice(0, 10)
+  );
+
   const updatedAccount = await getAccount(userId, accountId);
   logActivity(
     userId,
     "TRANSACTION_UPDATED",
-    `Edited a transaction on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}"`,
-    { accountId, transactionId }
+    `Edited a transaction on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}": ${describeActivityFieldChanges(transactionChanges, "no changes")}`,
+    { accountId, transactionId, changes: transactionChanges }
   );
   return updatedAccount;
 }

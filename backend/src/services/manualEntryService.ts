@@ -64,6 +64,13 @@ export async function updateManualEntry(
   entryId: string,
   input: { name: string; amount: number; date: string | null }
 ) {
+  const existingRows = await prisma.$queryRaw<ManualEntryRow[]>`
+    SELECT "id", "userId", "name", "type", "amount", "date", "createdAt", "updatedAt"
+    FROM "ManualEntry"
+    WHERE "id" = ${entryId} AND "userId" = ${userId} AND "deletedAt" IS NULL
+  `;
+  const previous = existingRows[0] ? normalizeRow(existingRows[0]) : null;
+
   const rows = await prisma.$queryRaw<ManualEntryRow[]>`
     UPDATE "ManualEntry"
     SET
@@ -75,7 +82,7 @@ export async function updateManualEntry(
     RETURNING "id", "userId", "name", "type", "amount", "date", "createdAt", "updatedAt"
   `;
   if (!rows[0]) throw new AppError(404, `Manual entry ${entryId} not found`);
-  return normalizeRow(rows[0]);
+  return { updated: normalizeRow(rows[0]), previous };
 }
 
 /** Soft-deletes a manual entry (recoverable via restoreManualEntry). Throws 404 if not found or already deleted. */

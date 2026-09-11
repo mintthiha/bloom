@@ -118,6 +118,7 @@ export function ActivityTable({ rows, loading, hasActiveFilters }: ActivityTable
                 </td>
                 <td style={{ ...bodyCellStyle, fontWeight: 600, maxWidth: "420px" }}>
                   <span
+                    title={row.description}
                     style={{
                       display: "block",
                       overflow: "hidden",
