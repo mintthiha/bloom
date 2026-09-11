@@ -34,6 +34,10 @@ export const ACTIVITY_META: Record<string, { label: string; color: string; icon:
   MANUAL_ENTRY_UPDATED: { label: "Entry updated", color: "#a78bfa", icon: "✎" },
   MANUAL_ENTRY_DELETED: { label: "Entry removed", color: "#f87171", icon: "×" },
   MANUAL_ENTRY_RESTORED: { label: "Entry restored", color: "#34d399", icon: "↺" },
+  CATEGORIZATION_RULE_CREATED: { label: "Rule created", color: "#22c55e", icon: "+" },
+  CATEGORIZATION_RULE_UPDATED: { label: "Rule updated", color: "#a78bfa", icon: "✎" },
+  CATEGORIZATION_RULE_DELETED: { label: "Rule deleted", color: "#f87171", icon: "×" },
+  CATEGORIZATION_RULE_RESTORED: { label: "Rule restored", color: "#34d399", icon: "↺" },
 };
 
 /** Returns display metadata for an activity type, falling back to a generic entry. */
@@ -49,6 +53,7 @@ export const ACTIVITY_GROUP_OPTIONS: { value: ActivityGroupKey; label: string }[
   { value: "BUDGET", label: "Budgets" },
   { value: "RECURRING", label: "Recurring" },
   { value: "MANUAL_ENTRY", label: "Manual entries" },
+  { value: "CATEGORIZATION_RULE", label: "Categorization rules" },
 ];
 
 /**

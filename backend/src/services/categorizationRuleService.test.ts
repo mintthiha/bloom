@@ -30,6 +30,9 @@ vi.mock("@prisma/client", async (importOriginal) => {
   };
 });
 
+const { logActivityMock } = vi.hoisted(() => ({ logActivityMock: vi.fn() }));
+vi.mock("./activityService", () => ({ logActivity: logActivityMock }));
+
 type Rule = {
   id: string;
   userId: string;
@@ -64,6 +67,7 @@ function uniqueConstraintError(): Prisma.PrismaClientKnownRequestError {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  logActivityMock.mockClear();
 });
 
 describe("listRules", () => {
@@ -93,6 +97,12 @@ describe("upsertRule", () => {
     expect(prismaMock.autoCategorizationRule.create).toHaveBeenCalledWith({
       data: { userId: "u-1", merchant: "Metro", category: "Groceries" },
     });
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "u-1",
+      "CATEGORIZATION_RULE_CREATED",
+      expect.stringContaining("Metro"),
+      expect.objectContaining({ ruleId: "r-1", merchant: "Metro", category: "Groceries" })
+    );
   });
 
   it("revives and re-points a soft-deleted rule for the same merchant", async () => {
@@ -109,6 +119,12 @@ describe("upsertRule", () => {
       data: { category: "Groceries", deletedAt: null },
     });
     expect(prismaMock.autoCategorizationRule.create).not.toHaveBeenCalled();
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "u-1",
+      "CATEGORIZATION_RULE_UPDATED",
+      expect.stringContaining("Category Food → Groceries"),
+      expect.objectContaining({ ruleId: "r-1" })
+    );
   });
 });
 
@@ -130,6 +146,12 @@ describe("updateRule", () => {
     const result = await updateRule("u-1", "r-1", "Loblaws", "Food");
 
     expect(result).toBe(updated);
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "u-1",
+      "CATEGORIZATION_RULE_UPDATED",
+      expect.stringContaining("Merchant Metro → Loblaws"),
+      expect.objectContaining({ ruleId: "r-1" })
+    );
   });
 
   it("translates a P2002 unique violation into AppError 409", async () => {
@@ -168,6 +190,12 @@ describe("deleteRule", () => {
       where: { id: "r-1" },
       data: { deletedAt: expect.any(Date) },
     });
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "u-1",
+      "CATEGORIZATION_RULE_DELETED",
+      expect.stringContaining("Metro"),
+      { ruleId: "r-1", merchant: "Metro" }
+    );
   });
 });
 
@@ -201,5 +229,11 @@ describe("restoreRule", () => {
       where: { id: "r-1" },
       data: { deletedAt: null },
     });
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "u-1",
+      "CATEGORIZATION_RULE_RESTORED",
+      expect.stringContaining("Metro"),
+      { ruleId: "r-1", merchant: "Metro" }
+    );
   });
 });

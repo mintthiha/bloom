@@ -355,7 +355,8 @@ export type ActivityGroupKey =
   | "GOAL"
   | "BUDGET"
   | "RECURRING"
-  | "MANUAL_ENTRY";
+  | "MANUAL_ENTRY"
+  | "CATEGORIZATION_RULE";
 
 /** Lifecycle action the activity list can filter by; matches a `_ACTION` type suffix. */
 export type ActivityActionKey =

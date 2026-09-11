@@ -17,6 +17,7 @@ const VALID_GROUPS: ActivityGroup[] = [
   "BUDGET",
   "RECURRING",
   "MANUAL_ENTRY",
+  "CATEGORIZATION_RULE",
 ];
 
 /** Lifecycle actions the ?action= query parameter is allowed to take. */

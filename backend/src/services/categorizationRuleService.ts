@@ -1,6 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
+import { logActivity } from "./activityService";
+import { describeActivityFieldChanges, pushActivityFieldChange } from "./activityChanges";
+import type { ActivityFieldChange } from "./activityChanges";
 
 export type CategorizationRule = {
   id: string;
@@ -32,12 +35,35 @@ export async function upsertRule(
     where: { userId, merchant },
   });
   if (existing) {
-    return prisma.autoCategorizationRule.update({
+    const rule = await prisma.autoCategorizationRule.update({
       where: { id: existing.id },
       data: { category, deletedAt: null },
     });
+    const changes: ActivityFieldChange[] = [];
+    pushActivityFieldChange(
+      changes,
+      "category",
+      "Category",
+      "text",
+      existing.category,
+      rule.category
+    );
+    logActivity(
+      userId,
+      "CATEGORIZATION_RULE_UPDATED",
+      `Updated categorization rule for "${rule.merchant}": ${describeActivityFieldChanges(changes, "no changes")}`,
+      { ruleId: rule.id, merchant: rule.merchant, changes }
+    );
+    return rule;
   }
-  return prisma.autoCategorizationRule.create({ data: { userId, merchant, category } });
+  const rule = await prisma.autoCategorizationRule.create({ data: { userId, merchant, category } });
+  logActivity(
+    userId,
+    "CATEGORIZATION_RULE_CREATED",
+    `Created categorization rule: "${rule.merchant}" → ${rule.category}`,
+    { ruleId: rule.id, merchant: rule.merchant, category: rule.category }
+  );
+  return rule;
 }
 
 /**
@@ -56,10 +82,34 @@ export async function updateRule(
   });
   if (!existing) throw new AppError(404, "Rule not found");
   try {
-    return await prisma.autoCategorizationRule.update({
+    const rule = await prisma.autoCategorizationRule.update({
       where: { id },
       data: { merchant, category },
     });
+    const changes: ActivityFieldChange[] = [];
+    pushActivityFieldChange(
+      changes,
+      "merchant",
+      "Merchant",
+      "text",
+      existing.merchant,
+      rule.merchant
+    );
+    pushActivityFieldChange(
+      changes,
+      "category",
+      "Category",
+      "text",
+      existing.category,
+      rule.category
+    );
+    logActivity(
+      userId,
+      "CATEGORIZATION_RULE_UPDATED",
+      `Updated categorization rule for "${existing.merchant}": ${describeActivityFieldChanges(changes, "no changes")}`,
+      { ruleId: rule.id, changes }
+    );
+    return rule;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       throw new AppError(409, `A rule for "${merchant}" already exists`);
@@ -78,6 +128,12 @@ export async function deleteRule(userId: string, id: string): Promise<void> {
     where: { id },
     data: { deletedAt: new Date() },
   });
+  logActivity(
+    userId,
+    "CATEGORIZATION_RULE_DELETED",
+    `Deleted categorization rule for "${rule.merchant}"`,
+    { ruleId: id, merchant: rule.merchant }
+  );
 }
 
 /**
@@ -92,8 +148,15 @@ export async function restoreRule(userId: string, id: string): Promise<Categoriz
     where: { userId, merchant: rule.merchant, deletedAt: null },
   });
   if (clash) throw new AppError(409, `A rule for "${rule.merchant}" already exists`);
-  return prisma.autoCategorizationRule.update({
+  const restored = await prisma.autoCategorizationRule.update({
     where: { id },
     data: { deletedAt: null },
   });
+  logActivity(
+    userId,
+    "CATEGORIZATION_RULE_RESTORED",
+    `Restored categorization rule for "${restored.merchant}"`,
+    { ruleId: id, merchant: restored.merchant }
+  );
+  return restored;
 }
