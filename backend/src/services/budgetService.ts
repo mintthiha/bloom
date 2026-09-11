@@ -445,6 +445,8 @@ export async function upsertBudget(userId: string, input: BudgetInput) {
  * money roll into the next month; disabling reverts to a plain monthly cap.
  */
 export async function setRolloverEnabled(userId: string, budgetId: string, enabled: boolean) {
+  const existing = await getBudgetRecord(userId, budgetId);
+
   const rows = await prisma.$queryRaw<BudgetRecord[]>`
     UPDATE "CategoryBudget"
     SET "rolloverEnabled" = ${enabled}, "updatedAt" = CURRENT_TIMESTAMP
@@ -456,7 +458,25 @@ export async function setRolloverEnabled(userId: string, budgetId: string, enabl
   if (!row) {
     throw new AppError(404, `Budget ${budgetId} not found`);
   }
-  return { ...row, monthlyLimit: Number(row.monthlyLimit) };
+  const budget = { ...row, monthlyLimit: Number(row.monthlyLimit) };
+
+  const changes: ActivityFieldChange[] = [];
+  pushActivityFieldChange(
+    changes,
+    "rolloverEnabled",
+    "Rollover",
+    "text",
+    existing.rolloverEnabled ? "On" : "Off",
+    budget.rolloverEnabled ? "On" : "Off"
+  );
+  logActivity(
+    userId,
+    "BUDGET_UPDATED",
+    `Updated budget for ${budget.category}: ${describeActivityFieldChanges(changes, "no changes")}`,
+    { budgetId: budget.id, category: budget.category, changes }
+  );
+
+  return budget;
 }
 
 /**
@@ -505,6 +525,20 @@ export async function moveBudgetMoney(
   const monthStart = `${targetMonth}-01`;
   await applyBudgetAdjustment(userId, source.id, monthStart, -amount);
   await applyBudgetAdjustment(userId, destination.id, monthStart, amount);
+
+  logActivity(
+    userId,
+    "BUDGET_UPDATED",
+    `Moved $${amount.toFixed(2)} from ${source.category} to ${destination.category} for ${targetMonth}`,
+    {
+      fromBudgetId: source.id,
+      toBudgetId: destination.id,
+      fromCategory: source.category,
+      toCategory: destination.category,
+      month: targetMonth,
+      amount,
+    }
+  );
 
   return { fromBudgetId: source.id, toBudgetId: destination.id, month: targetMonth, amount };
 }

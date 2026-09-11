@@ -12,11 +12,13 @@ vi.mock("@prisma/client", () => ({
   },
 }));
 
-vi.mock("./activityService", () => ({ logActivity: vi.fn() }));
+const { logActivityMock } = vi.hoisted(() => ({ logActivityMock: vi.fn() }));
+vi.mock("./activityService", () => ({ logActivity: logActivityMock }));
 
 describe("budgetService", () => {
   beforeEach(() => {
     prismaMock.$queryRaw.mockReset();
+    logActivityMock.mockClear();
   });
 
   it("rejects when category is missing", async () => {
@@ -302,6 +304,20 @@ describe("budgetService", () => {
       amount: 120,
     });
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(6);
+
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "BUDGET_UPDATED",
+      expect.stringContaining("Moved $120.00 from Dining to Groceries for 2026-07"),
+      expect.objectContaining({
+        fromBudgetId: "from",
+        toBudgetId: "to",
+        fromCategory: "Dining",
+        toCategory: "Groceries",
+        month: "2026-07",
+        amount: 120,
+      })
+    );
   });
 
   it("rejects a move larger than the source envelope's available balance", async () => {
@@ -444,22 +460,40 @@ describe("budgetService", () => {
 
   it("toggles rollover and returns the updated budget record", async () => {
     const { setRolloverEnabled } = await import("./budgetService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([
-      {
-        id: "budget-1",
-        userId: "user-1",
-        category: "Groceries",
-        monthlyLimit: "300",
-        rolloverEnabled: true,
-        createdAt: new Date("2026-04-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-04-08T00:00:00.000Z"),
-      },
-    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          id: "budget-1",
+          userId: "user-1",
+          category: "Groceries",
+          monthlyLimit: "300",
+          rolloverEnabled: false,
+          createdAt: new Date("2026-04-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        },
+      ]) // getBudgetRecord (before-state for the diff)
+      .mockResolvedValueOnce([
+        {
+          id: "budget-1",
+          userId: "user-1",
+          category: "Groceries",
+          monthlyLimit: "300",
+          rolloverEnabled: true,
+          createdAt: new Date("2026-04-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-08T00:00:00.000Z"),
+        },
+      ]); // UPDATE ... RETURNING
 
     const result = await setRolloverEnabled("user-1", "budget-1", true);
 
     expect(result.rolloverEnabled).toBe(true);
     expect(result.monthlyLimit).toBe(300);
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "BUDGET_UPDATED",
+      expect.stringContaining("Rollover Off → On"),
+      expect.objectContaining({ budgetId: "budget-1", category: "Groceries" })
+    );
   });
 
   it("rejects moveBudgetMoney with a non-positive amount", async () => {
