@@ -26,6 +26,8 @@ export const ACTIVITY_META: Record<string, { label: string; color: string; icon:
   BUDGET_RESTORED: { label: "Budget restored", color: "#34d399", icon: "↺" },
   RECURRING_CREATED: { label: "Recurring created", color: "#22c55e", icon: "↻" },
   RECURRING_UPDATED: { label: "Recurring updated", color: "#a78bfa", icon: "✎" },
+  RECURRING_PAUSED: { label: "Recurring paused", color: "#60a5fa", icon: "❚❚" },
+  RECURRING_RESUMED: { label: "Recurring resumed", color: "#34d399", icon: "▶" },
   RECURRING_DELETED: { label: "Recurring deleted", color: "#f87171", icon: "×" },
   RECURRING_RESTORED: { label: "Recurring restored", color: "#34d399", icon: "↺" },
   MANUAL_ENTRY_CREATED: { label: "Entry added", color: "#22c55e", icon: "+" },

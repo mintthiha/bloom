@@ -447,7 +447,14 @@ export async function setRecurringTransactionActive(userId: string, id: string, 
       ${existing.accountType} AS "accountType"
   `;
 
-  return normalizeRecurringTransaction(rows[0]);
+  const recurring = normalizeRecurringTransaction(rows[0]);
+  logActivity(
+    userId,
+    active ? "RECURRING_RESUMED" : "RECURRING_PAUSED",
+    `${active ? "Resumed" : "Paused"} recurring ${recurring.type.toLowerCase()} "${recurring.name}"`,
+    { recurringId: recurring.id }
+  );
+  return recurring;
 }
 
 /**

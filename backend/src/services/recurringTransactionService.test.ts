@@ -18,7 +18,9 @@ vi.mock("@prisma/client", () => ({
 }));
 
 vi.mock("./accountService", () => accountServiceMock);
-vi.mock("./activityService", () => ({ logActivity: vi.fn() }));
+
+const { logActivityMock } = vi.hoisted(() => ({ logActivityMock: vi.fn() }));
+vi.mock("./activityService", () => ({ logActivity: logActivityMock }));
 
 describe("recurringTransactionService", () => {
   beforeEach(() => {
@@ -26,6 +28,7 @@ describe("recurringTransactionService", () => {
     accountServiceMock.getAccount.mockReset();
     accountServiceMock.deposit.mockReset();
     accountServiceMock.withdraw.mockReset();
+    logActivityMock.mockClear();
   });
 
   it("rejects when endDate is before startDate", async () => {
@@ -392,7 +395,7 @@ describe("setRecurringTransactionActive", () => {
     });
   });
 
-  it("returns the updated rule on success", async () => {
+  it("returns the updated rule on success and logs RECURRING_PAUSED", async () => {
     const { setRecurringTransactionActive } = await import("./recurringTransactionService");
     prismaMock.$queryRaw
       .mockResolvedValueOnce([makeRuleRow()]) // selectRecurringTransactionById
@@ -402,6 +405,29 @@ describe("setRecurringTransactionActive", () => {
 
     expect(result.active).toBe(false);
     expect(result.amount).toBe(1200);
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "RECURRING_PAUSED",
+      expect.stringContaining("Paused recurring"),
+      { recurringId: "rule-1" }
+    );
+  });
+
+  it("logs RECURRING_RESUMED when reactivating a rule", async () => {
+    const { setRecurringTransactionActive } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeRuleRow({ active: false })]) // selectRecurringTransactionById
+      .mockResolvedValueOnce([makeRuleRow({ active: true })]); // UPDATE RETURNING
+
+    const result = await setRecurringTransactionActive("user-1", "rule-1", true);
+
+    expect(result.active).toBe(true);
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "RECURRING_RESUMED",
+      expect.stringContaining("Resumed recurring"),
+      { recurringId: "rule-1" }
+    );
   });
 });
 
