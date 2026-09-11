@@ -103,8 +103,17 @@ export async function exchangePublicToken(
  * Fetches all accounts and transactions for a PlaidItem and upserts them into Bloom.
  * Transactions are synced from the beginning (no cursor stored) so this is a full re-sync.
  * Returns the number of Bloom accounts that were linked.
+ *
+ * `isManualResync` logs a single `ACCOUNT_RESYNCED` summary event when set — used for the
+ * user-triggered "Re-sync" action so it always shows up in Activity, even when nothing changed.
+ * The initial link (via `exchangePublicToken`) leaves this off since the per-account
+ * `ACCOUNT_CREATED`/`TRANSACTION_IMPORTED` entries it produces already cover that case.
  */
-export async function syncAccountsAndTransactions(itemId: string, userId: string): Promise<number> {
+export async function syncAccountsAndTransactions(
+  itemId: string,
+  userId: string,
+  isManualResync = false
+): Promise<number> {
   const plaidItem = await prisma.plaidItem.findUnique({ where: { itemId } });
 
   if (!plaidItem || plaidItem.userId !== userId) {
@@ -156,8 +165,10 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
     })
   );
 
+  let newAccountsCount = 0;
   for (const bloomAccount of bloomAccounts) {
     if (preExistingAccountIds.has(bloomAccount.plaidAccountId)) continue;
+    newAccountsCount += 1;
     logActivity(
       userId,
       "ACCOUNT_CREATED",
@@ -255,14 +266,30 @@ export async function syncAccountsAndTransactions(itemId: string, userId: string
   );
 
   const bloomAccountById = new Map(bloomAccounts.map((account) => [account.id, account]));
+  let newTransactionsCount = 0;
   for (const [accountId, count] of importedCountByAccountId) {
     const bloomAccount = bloomAccountById.get(accountId);
     if (!bloomAccount || count === 0) continue;
+    newTransactionsCount += count;
     logActivity(
       userId,
       "TRANSACTION_IMPORTED",
       `Synced ${count} transaction${count === 1 ? "" : "s"} from Plaid to "${accountLabel(bloomAccount.ownerName, bloomAccount.nickname)}"`,
       { accountId, count }
+    );
+  }
+
+  if (isManualResync) {
+    logActivity(
+      userId,
+      "ACCOUNT_RESYNCED",
+      `Re-synced ${bloomAccounts.length} account${bloomAccounts.length === 1 ? "" : "s"} from Plaid via ${plaidItem.institutionName} (${newAccountsCount} new account${newAccountsCount === 1 ? "" : "s"}, ${newTransactionsCount} new transaction${newTransactionsCount === 1 ? "" : "s"})`,
+      {
+        itemId,
+        accountsLinked: bloomAccounts.length,
+        newAccounts: newAccountsCount,
+        newTransactions: newTransactionsCount,
+      }
     );
   }
 

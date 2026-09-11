@@ -8,6 +8,7 @@ export const ACTIVITY_META: Record<string, { label: string; color: string; icon:
   ACCOUNT_FROZEN: { label: "Account frozen", color: "#60a5fa", icon: "❄" },
   ACCOUNT_UNFROZEN: { label: "Account unfrozen", color: "#34d399", icon: "✓" },
   ACCOUNT_RENAMED: { label: "Account renamed", color: "#a78bfa", icon: "✎" },
+  ACCOUNT_RESYNCED: { label: "Account re-synced", color: "#38bdf8", icon: "↻" },
   TRANSACTION_DEPOSIT: { label: "Deposit", color: "#22c55e", icon: "↓" },
   TRANSACTION_WITHDRAWAL: { label: "Withdrawal", color: "#f87171", icon: "↑" },
   TRANSACTION_TRANSFER: { label: "Transfer", color: "#fb923c", icon: "→" },

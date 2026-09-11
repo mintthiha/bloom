@@ -343,6 +343,60 @@ describe("syncAccountsAndTransactions", () => {
     expect(importedCalls[0][3]).toMatchObject({ accountId: "bloom-1", count: 1 });
   });
 
+  it("logs ACCOUNT_RESYNCED only when isManualResync is true, even with nothing new", async () => {
+    stubValidItem();
+    plaidMethods.accountsGet.mockResolvedValue({
+      data: {
+        accounts: [
+          { account_id: "p-1", name: "Chq", subtype: "checking", balances: { current: 100 } },
+        ],
+      },
+    });
+    // Account and transaction already exist — a no-op re-sync.
+    prismaMock.account.findMany.mockResolvedValue([{ plaidAccountId: "p-1" }]);
+    prismaMock.transaction.findMany.mockResolvedValue([{ plaidTransactionId: "t-1" }]);
+    prismaMock.account.upsert.mockResolvedValue({
+      id: "bloom-1",
+      ownerName: "Chq",
+      nickname: null,
+      plaidAccountId: "p-1",
+    });
+    plaidMethods.transactionsGet.mockResolvedValue({
+      data: {
+        transactions: [
+          {
+            transaction_id: "t-1",
+            account_id: "p-1",
+            amount: 10,
+            date: "2026-03-01",
+            name: "Old",
+            merchant_name: null,
+            category: null,
+          },
+        ],
+        total_transactions: 1,
+      },
+    });
+    prismaMock.transaction.upsert.mockResolvedValue({});
+
+    await syncAccountsAndTransactions("item-1", "user-1");
+    expect(
+      logActivityMock.mock.calls.filter((call) => call[1] === "ACCOUNT_RESYNCED")
+    ).toHaveLength(0);
+
+    logActivityMock.mockClear();
+    await syncAccountsAndTransactions("item-1", "user-1", true);
+    const resyncCalls = logActivityMock.mock.calls.filter((call) => call[1] === "ACCOUNT_RESYNCED");
+    expect(resyncCalls).toHaveLength(1);
+    expect(resyncCalls[0][0]).toBe("user-1");
+    expect(resyncCalls[0][3]).toMatchObject({
+      itemId: "item-1",
+      accountsLinked: 1,
+      newAccounts: 0,
+      newTransactions: 0,
+    });
+  });
+
   it("pages through transactions until the reported total is reached", async () => {
     stubValidItem();
     plaidMethods.accountsGet.mockResolvedValue({

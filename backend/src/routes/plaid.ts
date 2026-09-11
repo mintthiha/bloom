@@ -39,7 +39,7 @@ router.post("/exchange-token", async (req: Request, res: Response, next: NextFun
 router.post("/sync/:itemId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const itemId = req.params["itemId"] as string;
-    const accountsLinked = await plaidService.syncAccountsAndTransactions(itemId, uid(req));
+    const accountsLinked = await plaidService.syncAccountsAndTransactions(itemId, uid(req), true);
     res.json({ accountsLinked });
   } catch (err) {
     next(err);
