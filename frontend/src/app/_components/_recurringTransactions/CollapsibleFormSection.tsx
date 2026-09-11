@@ -74,7 +74,7 @@ export function CollapsibleFormSection({ title, open, onToggle, children }: Prop
         <div style={{ overflow: "hidden" }}>
           <div
             style={{
-              paddingTop: "16px",
+              padding: "16px 6px 6px",
               opacity: open ? 1 : 0,
               transition: "opacity 0.2s ease",
             }}
