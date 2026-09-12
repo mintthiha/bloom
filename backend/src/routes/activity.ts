@@ -18,6 +18,7 @@ const VALID_GROUPS: ActivityGroup[] = [
   "RECURRING",
   "MANUAL_ENTRY",
   "CATEGORIZATION_RULE",
+  "PROFILE",
 ];
 
 /** Lifecycle actions the ?action= query parameter is allowed to take. */

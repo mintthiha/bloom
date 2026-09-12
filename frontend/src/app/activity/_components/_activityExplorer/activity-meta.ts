@@ -38,6 +38,8 @@ export const ACTIVITY_META: Record<string, { label: string; color: string; icon:
   CATEGORIZATION_RULE_UPDATED: { label: "Rule updated", color: "#a78bfa", icon: "✎" },
   CATEGORIZATION_RULE_DELETED: { label: "Rule deleted", color: "#f87171", icon: "×" },
   CATEGORIZATION_RULE_RESTORED: { label: "Rule restored", color: "#34d399", icon: "↺" },
+  PROFILE_UPDATED: { label: "Profile updated", color: "#a78bfa", icon: "✎" },
+  PROFILE_REMINDERS_UPDATED: { label: "Reminder preferences updated", color: "#a78bfa", icon: "✎" },
 };
 
 /** Returns display metadata for an activity type, falling back to a generic entry. */
@@ -54,6 +56,7 @@ export const ACTIVITY_GROUP_OPTIONS: { value: ActivityGroupKey; label: string }[
   { value: "RECURRING", label: "Recurring" },
   { value: "MANUAL_ENTRY", label: "Manual entries" },
   { value: "CATEGORIZATION_RULE", label: "Categorization rules" },
+  { value: "PROFILE", label: "Profile" },
 ];
 
 /**

@@ -12,9 +12,13 @@ vi.mock("@prisma/client", () => ({
   },
 }));
 
+const { logActivityMock } = vi.hoisted(() => ({ logActivityMock: vi.fn() }));
+vi.mock("./activityService", () => ({ logActivity: logActivityMock }));
+
 describe("profileService", () => {
   beforeEach(() => {
     prismaMock.$queryRaw.mockReset();
+    logActivityMock.mockClear();
   });
 
   it("rejects when first name is missing", async () => {
@@ -45,7 +49,9 @@ describe("profileService", () => {
 
   it("rejects usernames already used by another user", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([{ userId: "other-user" }]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ userId: "other-user" }]);
 
     await expect(
       upsertProfile("user-1", {
@@ -59,20 +65,23 @@ describe("profileService", () => {
 
   it("creates or updates a profile and normalizes username/email casing", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        userId: "user-1",
-        firstName: "Jane",
-        lastName: "Doe",
-        username: "janedoe",
-        email: "jane@example.com",
-        tfsaBirthYear: null,
-        tfsaRoomUsedElsewhere: null,
-        rrspContributionRoom: null,
-        createdAt: new Date("2026-04-04T00:00:00.000Z"),
-        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
-      },
-    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: null,
+          tfsaRoomUsedElsewhere: null,
+          rrspContributionRoom: null,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ]);
 
     const result = await upsertProfile("user-1", {
       firstName: " Jane ",
@@ -88,7 +97,13 @@ describe("profileService", () => {
       username: "janedoe",
       email: "jane@example.com",
     });
-    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(3);
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "PROFILE_UPDATED",
+      expect.stringContaining("Updated profile"),
+      expect.any(Object)
+    );
   });
 
   it("rejects tfsaBirthYear before 1900", async () => {
@@ -156,20 +171,23 @@ describe("profileService", () => {
 
   it("accepts null values for all three contribution room fields", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        userId: "user-1",
-        firstName: "Jane",
-        lastName: "Doe",
-        username: "janedoe",
-        email: "jane@example.com",
-        tfsaBirthYear: null,
-        tfsaRoomUsedElsewhere: null,
-        rrspContributionRoom: null,
-        createdAt: new Date("2026-04-04T00:00:00.000Z"),
-        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
-      },
-    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: null,
+          tfsaRoomUsedElsewhere: null,
+          rrspContributionRoom: null,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ]);
 
     const result = await upsertProfile("user-1", {
       firstName: "Jane",
@@ -190,20 +208,23 @@ describe("profileService", () => {
 
   it("accepts valid contribution room values", async () => {
     const { upsertProfile } = await import("./profileService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([
-      {
-        userId: "user-1",
-        firstName: "Jane",
-        lastName: "Doe",
-        username: "janedoe",
-        email: "jane@example.com",
-        tfsaBirthYear: 1995,
-        tfsaRoomUsedElsewhere: 5000,
-        rrspContributionRoom: 14000,
-        createdAt: new Date("2026-04-04T00:00:00.000Z"),
-        updatedAt: new Date("2026-04-04T00:00:00.000Z"),
-      },
-    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: 1995,
+          tfsaRoomUsedElsewhere: 5000,
+          rrspContributionRoom: 14000,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ]);
 
     const result = await upsertProfile("user-1", {
       firstName: "Jane",
@@ -329,22 +350,39 @@ describe("updateReminderPreferences", () => {
 
   it("updates reminder preferences and returns the updated profile", async () => {
     const { updateReminderPreferences } = await import("./profileService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([
-      {
-        userId: "user-1",
-        firstName: "Jane",
-        lastName: "Doe",
-        username: "janedoe",
-        email: "jane@example.com",
-        tfsaBirthYear: null,
-        tfsaRoomUsedElsewhere: null,
-        rrspContributionRoom: null,
-        billRemindersEnabled: true,
-        billReminderLeadDays: 5,
-        createdAt: new Date("2026-04-04T00:00:00.000Z"),
-        updatedAt: new Date("2026-04-08T00:00:00.000Z"),
-      },
-    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: null,
+          tfsaRoomUsedElsewhere: null,
+          rrspContributionRoom: null,
+          billRemindersEnabled: false,
+          billReminderLeadDays: 3,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: null,
+          tfsaRoomUsedElsewhere: null,
+          rrspContributionRoom: null,
+          billRemindersEnabled: true,
+          billReminderLeadDays: 5,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-08T00:00:00.000Z"),
+        },
+      ]);
 
     const result = await updateReminderPreferences("user-1", {
       billRemindersEnabled: true,
@@ -355,26 +393,49 @@ describe("updateReminderPreferences", () => {
       billRemindersEnabled: true,
       billReminderLeadDays: 5,
     });
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "PROFILE_REMINDERS_UPDATED",
+      expect.stringContaining("Updated reminder preferences"),
+      expect.any(Object)
+    );
   });
 
   it("accepts billReminderLeadDays of 0 (no lead)", async () => {
     const { updateReminderPreferences } = await import("./profileService");
-    prismaMock.$queryRaw.mockResolvedValueOnce([
-      {
-        userId: "user-1",
-        firstName: "Jane",
-        lastName: "Doe",
-        username: "janedoe",
-        email: "jane@example.com",
-        tfsaBirthYear: null,
-        tfsaRoomUsedElsewhere: null,
-        rrspContributionRoom: null,
-        billRemindersEnabled: false,
-        billReminderLeadDays: 0,
-        createdAt: new Date("2026-04-04T00:00:00.000Z"),
-        updatedAt: new Date("2026-04-08T00:00:00.000Z"),
-      },
-    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: null,
+          tfsaRoomUsedElsewhere: null,
+          rrspContributionRoom: null,
+          billRemindersEnabled: false,
+          billReminderLeadDays: 3,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          tfsaBirthYear: null,
+          tfsaRoomUsedElsewhere: null,
+          rrspContributionRoom: null,
+          billRemindersEnabled: false,
+          billReminderLeadDays: 0,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-08T00:00:00.000Z"),
+        },
+      ]);
 
     const result = await updateReminderPreferences("user-1", { billReminderLeadDays: 0 });
 

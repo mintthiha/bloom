@@ -1,5 +1,11 @@
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
+import { logActivity } from "./activityService";
+import {
+  ActivityFieldChange,
+  describeActivityFieldChanges,
+  pushActivityFieldChange,
+} from "./activityChanges";
 
 type ProfileInput = {
   firstName?: string;
@@ -131,6 +137,8 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     }
   }
 
+  const existingProfile = await getProfile(userId);
+
   const existingUsername = await prisma.$queryRaw<Pick<ProfileRecord, "userId">[]>`
     SELECT "userId"
     FROM "Profile"
@@ -171,7 +179,76 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "createdAt", "updatedAt"
   `;
 
-  return normalizeProfile(rows[0]);
+  const updatedProfile = normalizeProfile(rows[0]);
+
+  const changes: ActivityFieldChange[] = [];
+  pushActivityFieldChange(
+    changes,
+    "firstName",
+    "First name",
+    "text",
+    existingProfile?.firstName ?? null,
+    updatedProfile.firstName
+  );
+  pushActivityFieldChange(
+    changes,
+    "lastName",
+    "Last name",
+    "text",
+    existingProfile?.lastName ?? null,
+    updatedProfile.lastName
+  );
+  pushActivityFieldChange(
+    changes,
+    "username",
+    "Username",
+    "text",
+    existingProfile?.username ?? null,
+    updatedProfile.username
+  );
+  pushActivityFieldChange(
+    changes,
+    "email",
+    "Email",
+    "text",
+    existingProfile?.email ?? null,
+    updatedProfile.email
+  );
+  pushActivityFieldChange(
+    changes,
+    "tfsaBirthYear",
+    "TFSA birth year",
+    "text",
+    existingProfile?.tfsaBirthYear ?? null,
+    updatedProfile.tfsaBirthYear
+  );
+  pushActivityFieldChange(
+    changes,
+    "tfsaRoomUsedElsewhere",
+    "TFSA room used elsewhere",
+    "currency",
+    existingProfile?.tfsaRoomUsedElsewhere ?? null,
+    updatedProfile.tfsaRoomUsedElsewhere
+  );
+  pushActivityFieldChange(
+    changes,
+    "rrspContributionRoom",
+    "RRSP contribution room",
+    "currency",
+    existingProfile?.rrspContributionRoom ?? null,
+    updatedProfile.rrspContributionRoom
+  );
+
+  if (changes.length > 0) {
+    logActivity(
+      userId,
+      "PROFILE_UPDATED",
+      `Updated profile: ${describeActivityFieldChanges(changes, "no changes")}`,
+      { changes }
+    );
+  }
+
+  return updatedProfile;
 }
 
 const MAX_REMINDER_LEAD_DAYS = 30;
@@ -192,6 +269,11 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
         `billReminderLeadDays must be an integer between 0 and ${MAX_REMINDER_LEAD_DAYS}`
       );
     }
+  }
+
+  const existingProfile = await getProfile(userId);
+  if (!existingProfile) {
+    throw new AppError(404, "Profile not found");
   }
 
   const enabled = input.billRemindersEnabled ?? null;
@@ -216,5 +298,34 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
     throw new AppError(404, "Profile not found");
   }
 
-  return normalizeProfile(rows[0]);
+  const updatedProfile = normalizeProfile(rows[0]);
+
+  const changes: ActivityFieldChange[] = [];
+  pushActivityFieldChange(
+    changes,
+    "billRemindersEnabled",
+    "Bill reminders",
+    "text",
+    existingProfile.billRemindersEnabled ? "On" : "Off",
+    updatedProfile.billRemindersEnabled ? "On" : "Off"
+  );
+  pushActivityFieldChange(
+    changes,
+    "billReminderLeadDays",
+    "Reminder lead days",
+    "text",
+    existingProfile.billReminderLeadDays,
+    updatedProfile.billReminderLeadDays
+  );
+
+  if (changes.length > 0) {
+    logActivity(
+      userId,
+      "PROFILE_REMINDERS_UPDATED",
+      `Updated reminder preferences: ${describeActivityFieldChanges(changes, "no changes")}`,
+      { changes }
+    );
+  }
+
+  return updatedProfile;
 }

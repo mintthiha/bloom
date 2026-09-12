@@ -39,7 +39,9 @@ export type ActivityType =
   | "CATEGORIZATION_RULE_CREATED"
   | "CATEGORIZATION_RULE_UPDATED"
   | "CATEGORIZATION_RULE_DELETED"
-  | "CATEGORIZATION_RULE_RESTORED";
+  | "CATEGORIZATION_RULE_RESTORED"
+  | "PROFILE_UPDATED"
+  | "PROFILE_REMINDERS_UPDATED";
 
 export type ActivityLogEntry = {
   id: string;
@@ -60,7 +62,8 @@ export type ActivityGroup =
   | "BUDGET"
   | "RECURRING"
   | "MANUAL_ENTRY"
-  | "CATEGORIZATION_RULE";
+  | "CATEGORIZATION_RULE"
+  | "PROFILE";
 
 /**
  * Lifecycle action the activity list can filter by; each maps to a `_ACTION` type suffix.
