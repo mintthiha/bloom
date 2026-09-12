@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/format";
 import { formatLocalDate } from "@/lib/date-range";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { CollapsibleFormSection } from "./CollapsibleFormSection";
+import { runApplyDueRecurringTransactions } from "./apply-due-recurring";
 import { EmptyState } from "@/components/EmptyState";
 import {
   AlertDialog,
@@ -196,9 +197,8 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
     setApplying(true);
     setError(null);
     try {
-      const result = await api.applyDueRecurringTransactions();
+      const result = await runApplyDueRecurringTransactions();
       await onChanged();
-      window.dispatchEvent(new CustomEvent("recurring-changed"));
       if (result.appliedCount > 0) {
         toast.success(
           `Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`

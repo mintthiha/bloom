@@ -505,7 +505,22 @@ export async function applyDueRecurringTransactions(
   userId: string,
   now = new Date()
 ): Promise<ApplyDueResult> {
-  const rules = await prisma.$queryRaw<RecurringTransactionRecord[]>`
+  // Serializes concurrent callers (e.g. two open tabs, or the login auto-apply racing the
+  // manual button) so the same due occurrence can't be read and applied twice. The advisory
+  // lock is scoped to this transaction and releases automatically when it commits.
+  return prisma.$transaction((tx) => applyDueRecurringTransactionsLocked(tx, userId, now), {
+    timeout: 30000,
+  });
+}
+
+async function applyDueRecurringTransactionsLocked(
+  tx: Pick<typeof prisma, "$queryRaw" | "$executeRaw">,
+  userId: string,
+  now: Date
+): Promise<ApplyDueResult> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+
+  const rules = await tx.$queryRaw<RecurringTransactionRecord[]>`
     SELECT
       r."id",
       r."userId",
@@ -614,7 +629,7 @@ export async function applyDueRecurringTransactions(
       shouldDeactivate = true;
     }
 
-    await prisma.$queryRaw`
+    await tx.$queryRaw`
       UPDATE "RecurringTransaction"
       SET "nextRunAt" = ${nextRunAt},
           "lastRunAt" = ${lastRunAt},

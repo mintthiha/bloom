@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { prismaMock, accountServiceMock } = vi.hoisted(() => ({
   prismaMock: {
     $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
+    $transaction: vi.fn(),
   },
   accountServiceMock: {
     getAccount: vi.fn(),
@@ -14,6 +16,8 @@ const { prismaMock, accountServiceMock } = vi.hoisted(() => ({
 vi.mock("@prisma/client", () => ({
   PrismaClient: class {
     $queryRaw = prismaMock.$queryRaw;
+    $executeRaw = prismaMock.$executeRaw;
+    $transaction = prismaMock.$transaction;
   },
 }));
 
@@ -25,6 +29,11 @@ vi.mock("./activityService", () => ({ logActivity: logActivityMock }));
 describe("recurringTransactionService", () => {
   beforeEach(() => {
     prismaMock.$queryRaw.mockReset();
+    prismaMock.$executeRaw.mockReset();
+    prismaMock.$transaction.mockReset();
+    prismaMock.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn({ $queryRaw: prismaMock.$queryRaw, $executeRaw: prismaMock.$executeRaw })
+    );
     accountServiceMock.getAccount.mockReset();
     accountServiceMock.deposit.mockReset();
     accountServiceMock.withdraw.mockReset();

@@ -34,6 +34,7 @@ import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
 import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot";
 import { BudgetsCard } from "./_components/_budgets/BudgetsCard";
 import { RecurringTransactionsCard } from "./_components/_recurringTransactions/RecurringTransactionsCard";
+import { runApplyDueRecurringTransactions } from "./_components/_recurringTransactions/apply-due-recurring";
 import { RecurringCalendar } from "./_components/_recurringCalendar/RecurringCalendar";
 import { NetWorthHistory } from "./_components/_netWorthHistory/NetWorthHistory";
 import { ManualEntriesCard } from "./_components/_manualEntries/ManualEntriesCard";
@@ -154,6 +155,31 @@ function Home() {
   useEffect(() => {
     loadAccounts();
   }, [loadAccounts]);
+
+  /** Applies any recurring transactions that came due since the last visit, once per page load. */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function applyDueOnLoad() {
+      try {
+        const result = await runApplyDueRecurringTransactions();
+        if (cancelled) return;
+        if (result.appliedCount > 0) {
+          toast.success(
+            `Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`
+          );
+          await loadAccounts();
+        }
+      } catch {
+        // Silent: the recurring card's manual "Apply due" button surfaces failures explicitly.
+      }
+    }
+
+    applyDueOnLoad();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Shows a toast (with a 5s "Undo") when returning from an account deletion. */
   useEffect(() => {
