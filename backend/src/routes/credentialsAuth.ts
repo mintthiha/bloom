@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { requireString } from "../lib/validation";
 import { requireObject } from "../lib/validation";
 import * as credentialsAuthService from "../services/credentialsAuthService";
+import * as demoService from "../services/demoService";
 
 const router = Router();
 
@@ -94,6 +95,20 @@ router.delete("/remember", async (req: Request, res: Response, next: NextFunctio
     const token = requireString(body.token, "token", { max: 256 });
     await credentialsAuthService.revokeRememberToken(token);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Provisions a throwaway demo account seeded with six months of transaction
+ * history and returns a "remember me" token to sign the visitor straight in.
+ * No body required.
+ */
+router.post("/demo", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token, expiresAt } = await demoService.createDemoAccount();
+    res.status(201).json({ token, expiresAt });
   } catch (err) {
     next(err);
   }

@@ -51,6 +51,22 @@ export async function verifyCredentials(
 }
 
 /**
+ * Issues a "remember me" token for an already-identified user, skipping the
+ * password check. Used after verified credentials, and for demo accounts that
+ * have no password a caller could re-enter.
+ */
+async function createRememberToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
+  const token = crypto.randomBytes(REMEMBER_TOKEN_BYTES).toString("hex");
+  const expiresAt = new Date(Date.now() + REMEMBER_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+
+  await prisma.rememberToken.create({
+    data: { userId, tokenHash: hashRememberToken(token), expiresAt },
+  });
+
+  return { token, expiresAt };
+}
+
+/**
  * Verifies email and password, then issues a "remember me" token for that user.
  * Returns null when the credentials are invalid; throws only on unexpected errors.
  */
@@ -61,14 +77,41 @@ export async function issueRememberToken(
   const user = await verifyCredentials(email, password);
   if (!user) return null;
 
-  const token = crypto.randomBytes(REMEMBER_TOKEN_BYTES).toString("hex");
-  const expiresAt = new Date(Date.now() + REMEMBER_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const { token, expiresAt } = await createRememberToken(user.id);
+  return { ...user, token, expiresAt };
+}
 
-  await prisma.rememberToken.create({
-    data: { userId: user.id, tokenHash: hashRememberToken(token), expiresAt },
+const DEMO_ACCOUNT_TTL_HOURS = 24;
+
+/**
+ * Creates a throwaway credential user for the "Try Bloom" demo flow: a random
+ * email and an unrecoverable random password, flagged so the cleanup script
+ * can sweep it up once `demoExpiresAt` passes.
+ */
+export async function registerDemoUser(): Promise<{
+  id: string;
+  email: string;
+  demoExpiresAt: Date;
+}> {
+  const email = `demo-${crypto.randomBytes(8).toString("hex")}@bloom.local`;
+  const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString("hex"), SALT_ROUNDS);
+  const demoExpiresAt = new Date(Date.now() + DEMO_ACCOUNT_TTL_HOURS * 60 * 60 * 1000);
+
+  const user = await prisma.credentialUser.create({
+    data: { email, passwordHash, isDemo: true, demoExpiresAt },
   });
 
-  return { ...user, token, expiresAt };
+  return { id: user.id, email: user.email, demoExpiresAt };
+}
+
+/**
+ * Issues a "remember me" token for a demo user right after it's created, so
+ * the frontend can sign them in without ever seeing a password.
+ */
+export async function issueRememberTokenForUserId(
+  userId: string
+): Promise<{ token: string; expiresAt: Date }> {
+  return createRememberToken(userId);
 }
 
 /**

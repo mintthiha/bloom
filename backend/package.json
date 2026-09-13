@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
+    "demo:cleanup": "ts-node src/demo-cleanup.ts",
     "lint": "eslint src",
     "format:check": "prettier --check src"
   },

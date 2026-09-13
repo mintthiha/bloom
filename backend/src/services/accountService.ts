@@ -1279,7 +1279,7 @@ export async function restoreAccount(userId: string, id: string) {
   return getAccount(userId, id);
 }
 
-type ImportRow = {
+export type ImportRow = {
   type: "DEPOSIT" | "WITHDRAWAL";
   amount: number;
   effectiveAt: Date;

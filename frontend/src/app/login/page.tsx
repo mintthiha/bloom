@@ -120,6 +120,8 @@ export default function LoginPage() {
   const [isCredentialSubmitting, setIsCredentialSubmitting] = useState(false);
   const [isSavedSigningIn, setIsSavedSigningIn] = useState(false);
   const [savedAccount, setSavedAccount] = useState<{ token: string; email: string } | null>(null);
+  const [isTryingDemo, setIsTryingDemo] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
 
   /** Reads any saved account from localStorage on mount. */
   useEffect(() => {
@@ -204,6 +206,34 @@ export default function LoginPage() {
       setCredentialError("Something went wrong. Please try again.");
     } finally {
       setIsCredentialSubmitting(false);
+    }
+  }
+
+  /** Provisions a throwaway demo account with six months of history and signs the visitor into it. */
+  async function handleTryDemo() {
+    setDemoError(null);
+    setIsTryingDemo(true);
+    try {
+      const res = await fetch("/api/demo", { method: "POST" });
+      if (!res.ok) {
+        setDemoError("Couldn't start the demo right now. Please try again.");
+        return;
+      }
+      const data = await res.json();
+      const result = await signIn("credentials", {
+        rememberToken: data.token,
+        callbackUrl: "/",
+        redirect: false,
+      });
+      if (result?.error) {
+        setDemoError("Couldn't start the demo right now. Please try again.");
+        return;
+      }
+      if (result?.url) window.location.href = result.url;
+    } catch {
+      setDemoError("Something went wrong. Please try again.");
+    } finally {
+      setIsTryingDemo(false);
     }
   }
 
@@ -653,6 +683,61 @@ export default function LoginPage() {
           >
             Secure sign-in with Google. New here? Signing in creates your account automatically.
           </p>
+
+          <div className="fade-up" style={{ marginTop: "12px", animationDelay: "0.3s" }}>
+            <button
+              type="button"
+              disabled={isTryingDemo}
+              onClick={handleTryDemo}
+              className="press"
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "12px 20px",
+                background: "#f59e0b1a",
+                color: "#f59e0b",
+                border: "1px solid #f59e0b40",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: isTryingDemo ? "not-allowed" : "pointer",
+                opacity: isTryingDemo ? 0.7 : 1,
+              }}
+            >
+              {isTryingDemo ? "Preparing your demo…" : "Try Bloom without signing in"}
+            </button>
+          </div>
+          <p
+            className="fade-up"
+            style={{
+              fontSize: "12px",
+              color: "var(--text-muted)",
+              marginTop: "8px",
+              lineHeight: 1.5,
+              animationDelay: "0.35s",
+            }}
+          >
+            Explore a sample account with six months of transactions, no sign-up required.
+          </p>
+          {demoError && (
+            <p
+              className="fade-up"
+              style={{
+                fontSize: "13px",
+                color: "#f87171",
+                padding: "8px 12px",
+                marginTop: "8px",
+                background: "#f8717110",
+                border: "1px solid #f8717130",
+                borderRadius: "8px",
+              }}
+            >
+              {demoError}
+            </p>
+          )}
 
           {/* Saved account — shown when a remember-me token exists */}
           {savedAccount && (

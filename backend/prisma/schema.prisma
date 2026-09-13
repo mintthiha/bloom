@@ -266,8 +266,12 @@ model CredentialUser {
   id             String          @id @default(cuid())
   email          String          @unique
   passwordHash   String
+  isDemo         Boolean         @default(false)
+  demoExpiresAt  DateTime?       @db.Timestamptz(3)
   createdAt      DateTime        @default(now()) @db.Timestamptz(3)
   rememberTokens RememberToken[]
+
+  @@index([isDemo, demoExpiresAt])
 }
 
 // "Remember me" login: an opaque, revocable token exchanged for a session without
