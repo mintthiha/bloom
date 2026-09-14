@@ -123,6 +123,7 @@ function makeDeposit(toAccountId: string, amount: number): Transaction {
     createdAt: "2026-03-01T00:00:00Z",
     fromAccountId: null,
     toAccountId,
+    splits: [],
   };
 }
 

@@ -58,6 +58,14 @@ export type Account = {
   updatedAt: string;
 };
 
+/** One category line item within a split transaction. */
+export type TransactionSplit = {
+  id: string;
+  category: string;
+  amount: number;
+  description: string | null;
+};
+
 export type Transaction = {
   id: string;
   type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER_OUT" | "TRANSFER_IN";
@@ -71,6 +79,7 @@ export type Transaction = {
   createdAt: string;
   fromAccountId: string | null;
   toAccountId: string | null;
+  splits: TransactionSplit[];
 };
 
 export type Profile = {
@@ -547,6 +556,17 @@ export const api = {
     request<void>(`/accounts/${id}/transactions/${transactionId}`, { method: "DELETE" }),
   restoreTransaction: (id: string, transactionId: string) =>
     request<Account>(`/accounts/${id}/transactions/${transactionId}/restore`, { method: "POST" }),
+  setTransactionSplits: (
+    id: string,
+    transactionId: string,
+    splits: Array<{ category: string; amount: number; description?: string }>
+  ) =>
+    request<Account>(`/accounts/${id}/transactions/${transactionId}/splits`, {
+      method: "PUT",
+      body: JSON.stringify({ splits }),
+    }),
+  clearTransactionSplits: (id: string, transactionId: string) =>
+    request<Account>(`/accounts/${id}/transactions/${transactionId}/splits`, { method: "DELETE" }),
   freeze: (id: string) => request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) => request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
   updateNickname: (id: string, nickname?: string) =>

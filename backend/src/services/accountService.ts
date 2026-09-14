@@ -41,6 +41,20 @@ type TransactionRecord = {
   toAccountId: string | null;
 };
 
+type TransactionSplitRecord = {
+  id: string;
+  transactionId: string;
+  category: string;
+  amount: string;
+  description: string | null;
+};
+
+export type TransactionSplitInput = {
+  category: string;
+  amount: number;
+  description?: string;
+};
+
 type MonthlySummaryRow = {
   category: string;
   income: number | string | null;
@@ -92,6 +106,34 @@ function normalizeAccount(row: AccountRecord) {
 /** Converts a raw DB TransactionRecord (Decimal strings) to API-safe format with numeric money fields. */
 function normalizeTransaction(row: TransactionRecord) {
   return { ...row, amount: Number(row.amount), balanceAfter: Number(row.balanceAfter) };
+}
+
+/** Converts a raw DB TransactionSplitRecord (Decimal string) to API-safe format with a numeric amount. */
+function normalizeSplit(row: TransactionSplitRecord) {
+  return {
+    id: row.id,
+    category: row.category,
+    amount: Number(row.amount),
+    description: row.description,
+  };
+}
+
+/** Fetches every split line item for the given transaction ids, grouped by transaction id. */
+async function selectSplitsByTransactionIds(transactionIds: string[]) {
+  if (transactionIds.length === 0) return new Map<string, ReturnType<typeof normalizeSplit>[]>();
+  const rows = await prisma.$queryRaw<TransactionSplitRecord[]>`
+    SELECT "id", "transactionId", "category", "amount", "description"
+    FROM "TransactionSplit"
+    WHERE "transactionId" IN (${Prisma.join(transactionIds)})
+    ORDER BY "createdAt" ASC
+  `;
+  const byTransaction = new Map<string, ReturnType<typeof normalizeSplit>[]>();
+  for (const row of rows) {
+    const splits = byTransaction.get(row.transactionId) ?? [];
+    splits.push(normalizeSplit(row));
+    byTransaction.set(row.transactionId, splits);
+  }
+  return byTransaction;
 }
 
 async function selectAccountByUserId(userId: string, id: string) {
@@ -249,7 +291,7 @@ export async function getMonthlySummary(
             WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType" THEN t."amount"
             ELSE 0
           END) AS "spending"
-        FROM "Transaction" t
+        FROM "TransactionLineItem" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
           AND a."deletedAt" IS NULL
@@ -269,7 +311,7 @@ export async function getMonthlySummary(
             WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType" THEN t."amount"
             ELSE 0
           END) AS "spending"
-        FROM "Transaction" t
+        FROM "TransactionLineItem" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
           AND a."deletedAt" IS NULL
@@ -325,7 +367,7 @@ export async function getCategoryBreakdown(userId: string, input?: { start?: Dat
             WHEN t."type" = 'DEPOSIT'::"TransactionType"    AND a."accountType" = 'CREDIT'::"AccountType"  THEN t."amount"
             ELSE 0
           END) AS "spending"
-        FROM "Transaction" t
+        FROM "TransactionLineItem" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
           AND a."deletedAt" IS NULL
@@ -352,7 +394,7 @@ export async function getCategoryBreakdown(userId: string, input?: { start?: Dat
             WHEN t."type" = 'DEPOSIT'::"TransactionType"    AND a."accountType" = 'CREDIT'::"AccountType"  THEN t."amount"
             ELSE 0
           END) AS "spending"
-        FROM "Transaction" t
+        FROM "TransactionLineItem" t
         JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
         WHERE a."userId" = ${userId}
           AND a."deletedAt" IS NULL
@@ -396,7 +438,7 @@ export async function getMonthlyTrends(userId: string, months: number = 6) {
         WHEN t."type" = 'DEPOSIT'::"TransactionType" AND a."accountType" = 'CREDIT'::"AccountType" THEN t."amount"
         ELSE 0
       END) AS "spending"
-    FROM "Transaction" t
+    FROM "TransactionLineItem" t
     JOIN "Account" a ON t."toAccountId" = a."id" OR t."fromAccountId" = a."id"
     WHERE a."userId" = ${userId}
       AND a."deletedAt" IS NULL
@@ -820,35 +862,136 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
     ORDER BY "effectiveAt" DESC, "createdAt" DESC
   `;
 
-  return rawTransactions
-    .filter((transaction) => {
-      if (filters?.type && transaction.type !== filters.type) {
+  const filteredTransactions = rawTransactions.filter((transaction) => {
+    if (filters?.type && transaction.type !== filters.type) {
+      return false;
+    }
+    if (categoryFilter) {
+      if (categoryFilter === "Uncategorized") {
+        if (transaction.category != null && transaction.category.trim() !== "") return false;
+      } else if ((transaction.category ?? "") !== categoryFilter) {
         return false;
       }
-      if (categoryFilter) {
-        if (categoryFilter === "Uncategorized") {
-          if (transaction.category != null && transaction.category.trim() !== "") return false;
-        } else if ((transaction.category ?? "") !== categoryFilter) {
-          return false;
-        }
-      }
-      if (searchFilter) {
-        const haystack = [transaction.description ?? "", transaction.merchant ?? ""]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(searchFilter)) {
-          return false;
-        }
-      }
-      if (
-        range &&
-        !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)
-      ) {
+    }
+    if (searchFilter) {
+      const haystack = [transaction.description ?? "", transaction.merchant ?? ""]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(searchFilter)) {
         return false;
       }
-      return true;
-    })
-    .map(normalizeTransaction);
+    }
+    if (range && !(transaction.effectiveAt >= range.start && transaction.effectiveAt < range.end)) {
+      return false;
+    }
+    return true;
+  });
+
+  const splitsByTransaction = await selectSplitsByTransactionIds(
+    filteredTransactions.map((transaction) => transaction.id)
+  );
+  return filteredTransactions.map((transaction) => ({
+    ...normalizeTransaction(transaction),
+    splits: splitsByTransaction.get(transaction.id) ?? [],
+  }));
+}
+
+/**
+ * Replaces the full set of category splits on a manual deposit or withdrawal.
+ * Splits let one transaction (e.g. a $120 grocery run) count toward multiple
+ * categories for the 50/30/20 summary and budgets, instead of just one.
+ * Throws 404 if the transaction is not visible from this account for the current user.
+ * Throws 400 for transfers (both legs would need splitting together), fewer than
+ * two splits, a non-positive split amount, or a total that doesn't match the
+ * transaction's amount (to the cent).
+ */
+export async function setTransactionSplits(
+  userId: string,
+  accountId: string,
+  transactionId: string,
+  splits: TransactionSplitInput[]
+) {
+  await getAccount(userId, accountId);
+  const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
+  if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
+  if (
+    transaction.type !== TransactionType.DEPOSIT &&
+    transaction.type !== TransactionType.WITHDRAWAL
+  ) {
+    throw new AppError(400, "Only deposits and withdrawals can be split");
+  }
+  if (splits.length < 2) {
+    throw new AppError(400, "A split needs at least two categories");
+  }
+
+  const normalizedSplits = splits.map((split, index) => {
+    const category = split.category?.trim();
+    if (!category) throw new AppError(400, `Split ${index + 1}: category is required`);
+    if (!Number.isFinite(split.amount) || split.amount <= 0) {
+      throw new AppError(400, `Split ${index + 1}: amount must be positive`);
+    }
+    return {
+      category,
+      amount: split.amount,
+      description: split.description?.trim() || null,
+    };
+  });
+
+  const splitTotal = normalizedSplits.reduce(
+    (sum, split) => sum.plus(split.amount),
+    new Prisma.Decimal(0)
+  );
+  if (!splitTotal.equals(new Prisma.Decimal(transaction.amount))) {
+    throw new AppError(400, "Split amounts must add up to the transaction total");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.transactionSplit.deleteMany({ where: { transactionId } });
+    await tx.transactionSplit.createMany({
+      data: normalizedSplits.map((split) => ({
+        id: randomUUID(),
+        transactionId,
+        category: split.category,
+        amount: split.amount,
+        description: split.description,
+      })),
+    });
+  });
+
+  const updatedAccount = await getAccount(userId, accountId);
+  logActivity(
+    userId,
+    "TRANSACTION_UPDATED",
+    `Split a transaction on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}" into ${normalizedSplits.length} categories`,
+    { accountId, transactionId, categories: normalizedSplits.map((split) => split.category) }
+  );
+  return updatedAccount;
+}
+
+/**
+ * Removes all category splits from a transaction, reverting it to its own
+ * single category for the 50/30/20 summary and budgets.
+ * Throws 404 if the transaction is not visible from this account for the current user.
+ */
+export async function clearTransactionSplits(
+  userId: string,
+  accountId: string,
+  transactionId: string
+) {
+  await getAccount(userId, accountId);
+  const transaction = await selectTransactionByAccount(userId, accountId, transactionId);
+  if (!transaction) throw new AppError(404, `Transaction ${transactionId} not found`);
+
+  await prisma.transactionSplit.deleteMany({ where: { transactionId } });
+
+  const updatedAccount = await getAccount(userId, accountId);
+  logActivity(
+    userId,
+    "TRANSACTION_UPDATED",
+    `Removed the category split on a transaction on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}"`,
+    { accountId, transactionId }
+  );
+  return updatedAccount;
 }
 
 /**

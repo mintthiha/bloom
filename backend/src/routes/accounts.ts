@@ -362,6 +362,55 @@ router.post(
   }
 );
 
+/**
+ * Replaces the full set of category splits on a manual deposit or withdrawal.
+ */
+router.put(
+  "/:id/transactions/:transactionId/splits",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = requireObject(req.body);
+      if (!Array.isArray(body.splits)) throw new AppError(400, "splits must be an array");
+      const splits = (body.splits as unknown[]).map((split, i) => {
+        const s = requireObject(split, `Split ${i + 1} must be an object`);
+        return {
+          category: requireString(s.category, `Split ${i + 1} category`, { max: 50 }),
+          amount: requirePositiveNumber(s.amount, `Split ${i + 1} amount`),
+          description: optionalString(s.description, `Split ${i + 1} description`, { max: 240 }),
+        };
+      });
+      const account = await accountService.setTransactionSplits(
+        extractUserId(req),
+        extractParamId(req),
+        req.params["transactionId"] as string,
+        splits
+      );
+      res.json(account);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * Removes all category splits from a transaction, reverting it to a single category.
+ */
+router.delete(
+  "/:id/transactions/:transactionId/splits",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const account = await accountService.clearTransactionSplits(
+        extractUserId(req),
+        extractParamId(req),
+        req.params["transactionId"] as string
+      );
+      res.json(account);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.patch("/:id/freeze", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const account = await accountService.freezeAccount(extractUserId(req), extractParamId(req));

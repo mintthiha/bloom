@@ -128,8 +128,31 @@ model Transaction {
   toAccountId String?
   toAccount   Account? @relation("ReceivedTransactions", fields: [toAccountId], references: [id])
 
+  splits TransactionSplit[]
+
   @@index([fromAccountId, effectiveAt])
   @@index([toAccountId, effectiveAt])
+}
+
+/// A category line item within a split transaction (e.g. one $120 grocery run split
+/// into $80 Groceries + $40 Household). When a transaction has splits, its own
+/// `category`/`amount` are superseded for category-aggregated views (the
+/// `TransactionLineItem` SQL view, created in the add_transaction_splits migration,
+/// expands each split transaction into one row per split); the parent row's amount
+/// stays authoritative for account balance replay. Splits are always replaced as a
+/// whole set (delete-then-insert), never patched individually, so there is no
+/// soft-delete column here.
+model TransactionSplit {
+  id            String   @id @default(cuid())
+  transactionId String
+  category      String
+  amount        Decimal  @db.Decimal(19, 4)
+  description   String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
 }
 
 // NOTE: accessToken is stored in plain text — encrypt before production.

@@ -163,7 +163,7 @@ async function loadBudgetRolloverInputs(
       ${budgetId} AS "budgetId",
       TO_CHAR(DATE_TRUNC('month', t."effectiveAt" AT TIME ZONE 'UTC'), 'YYYY-MM') AS "month",
       COALESCE(SUM(t."amount"), 0) AS "total"
-    FROM "Transaction" t
+    FROM "TransactionLineItem" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
       OR
@@ -213,7 +213,7 @@ export async function listBudgets(
       COALESCE(SUM(t."amount"), 0) AS "total"
     FROM "CategoryBudget" b
     JOIN "Account" a ON a."userId" = b."userId"
-    JOIN "Transaction" t
+    JOIN "TransactionLineItem" t
       ON (
         (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
         OR
@@ -270,7 +270,7 @@ export async function getBudgetActivity(
       a."id" AS "accountId",
       a."nickname" AS "accountNickname",
       a."ownerName" AS "accountOwnerName"
-    FROM "Transaction" t
+    FROM "TransactionLineItem" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
       OR
@@ -286,7 +286,7 @@ export async function getBudgetActivity(
   `;
   const dailySpending = await prisma.$queryRaw<DailySpendingRow[]>`
     SELECT DATE_TRUNC('day', t."effectiveAt") AS "day", COALESCE(SUM(t."amount"), 0) AS "total"
-    FROM "Transaction" t
+    FROM "TransactionLineItem" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
       OR
@@ -307,7 +307,7 @@ export async function getBudgetActivity(
       a."nickname" AS "accountNickname",
       a."ownerName" AS "accountOwnerName",
       COALESCE(SUM(t."amount"), 0) AS "total"
-    FROM "Transaction" t
+    FROM "TransactionLineItem" t
     JOIN "Account" a ON (
       (t."fromAccountId" = a."id" AND t."type" = 'WITHDRAWAL'::"TransactionType" AND a."accountType" != 'CREDIT'::"AccountType")
       OR

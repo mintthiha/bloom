@@ -16,6 +16,7 @@ function makeTxn(overrides?: Partial<Transaction>): Transaction {
     createdAt: "2026-01-18T14:30:00.000Z",
     fromAccountId: "a-1",
     toAccountId: null,
+    splits: [],
     ...overrides,
   };
 }

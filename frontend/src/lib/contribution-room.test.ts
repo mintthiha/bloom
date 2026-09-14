@@ -21,6 +21,7 @@ function txn(overrides: Partial<Transaction> & Pick<Transaction, "type" | "amoun
     createdAt: "2026-06-01T00:00:00.000Z",
     fromAccountId: null,
     toAccountId: null,
+    splits: [],
     ...overrides,
   };
 }

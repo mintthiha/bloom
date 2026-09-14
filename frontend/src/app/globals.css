@@ -483,6 +483,17 @@ body {
 }
 
 /*
+ * Split-transaction dialog footer buttons. The shared shadcn Button's default
+ * focus-visible ring uses a neutral gray that reads as a stray halo against
+ * this dialog's dark surface, so a tight amber ring replaces it here instead —
+ * consistent with the rest of the app's amber accent.
+ */
+.dialog-footer-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--amber);
+}
+
+/*
  * Login/register page — text inputs. Border brightens on hover; on focus a blue
  * ring replaces the global outline so it matches the rest of the design system.
  * The inline `outline: none` on these inputs is intentional — this class owns focus.

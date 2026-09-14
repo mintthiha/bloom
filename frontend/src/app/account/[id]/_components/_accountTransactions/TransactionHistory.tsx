@@ -45,6 +45,7 @@ interface TransactionHistoryProps {
   onCancelEditing: () => void;
   onSaveTransaction: (transactionId: string) => void;
   onRequestDelete: (transactionId: string) => void;
+  onRequestSplit: (transaction: Transaction) => void;
 }
 
 /** Returns display metadata for a transaction row based on type and account kind. */
@@ -83,6 +84,11 @@ function isEditableTransaction(transaction: Transaction): boolean {
   );
 }
 
+/** Returns true for transaction types that can be split across multiple categories (transfers cannot). */
+function isSplittableTransaction(transaction: Transaction): boolean {
+  return transaction.type === "DEPOSIT" || transaction.type === "WITHDRAWAL";
+}
+
 /** Renders the full transaction history panel with filters, pagination, and inline editing. */
 export function TransactionHistory({
   txns,
@@ -113,6 +119,7 @@ export function TransactionHistory({
   onCancelEditing,
   onSaveTransaction,
   onRequestDelete,
+  onRequestSplit,
 }: TransactionHistoryProps) {
   const [page, setPage] = useState(1);
 
@@ -476,8 +483,11 @@ export function TransactionHistory({
                                 {label}
                               </span>
                             )}
-                            {t.category && (
+                            {t.splits.length > 0 ? (
                               <span
+                                title={t.splits
+                                  .map((s) => `${s.category} (${formatCurrency(s.amount)})`)
+                                  .join(", ")}
                                 style={{
                                   color: "var(--text-secondary)",
                                   marginRight: "8px",
@@ -486,8 +496,22 @@ export function TransactionHistory({
                                   fontSize: "10px",
                                 }}
                               >
-                                {t.category}
+                                Split · {t.splits.length} categories
                               </span>
+                            ) : (
+                              t.category && (
+                                <span
+                                  style={{
+                                    color: "var(--text-secondary)",
+                                    marginRight: "8px",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.04em",
+                                    fontSize: "10px",
+                                  }}
+                                >
+                                  {t.category}
+                                </span>
+                              )
                             )}
                             {t.merchant && (
                               <span
@@ -628,6 +652,28 @@ export function TransactionHistory({
                           gap: "8px",
                         }}
                       >
+                        {!isEditing && isSplittableTransaction(t) && (
+                          <button
+                            type="button"
+                            className="rule-edit-button"
+                            onClick={() => onRequestSplit(t)}
+                            disabled={savingTransaction || deletingTransactionId === t.id}
+                            style={{
+                              padding: "6px 10px",
+                              borderRadius: "8px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              cursor:
+                                savingTransaction || deletingTransactionId === t.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity:
+                                savingTransaction || deletingTransactionId === t.id ? 0.45 : 1,
+                            }}
+                          >
+                            {t.splits.length > 0 ? "Edit split" : "Split"}
+                          </button>
+                        )}
                         {!isEditing && (
                           <button
                             type="button"

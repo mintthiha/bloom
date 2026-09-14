@@ -9,6 +9,7 @@ import { AccountCard } from "./_components/_accountCard/AccountCard";
 import { NicknameEditor } from "./_components/_accountActions/NicknameEditor";
 import { DeleteTransaction } from "./_components/_accountTransactions/DeleteTransaction";
 import { TransactionHistory } from "./_components/_accountTransactions/TransactionHistory";
+import { SplitTransactionDialog } from "./_components/_accountTransactions/SplitTransactionDialog";
 import {
   buildDateRangeQuery,
   DateRangeState,
@@ -51,6 +52,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [splittingTransaction, setSplittingTransaction] = useState<Transaction | null>(null);
   const [filterType, setFilterType] = useState<"ALL" | Transaction["type"]>("ALL");
   const [filterCategory, setFilterCategory] = useState("ALL");
   const [filterSearch, setFilterSearch] = useState("");
@@ -226,6 +228,13 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         onChange={refresh}
       />
 
+      <SplitTransactionDialog
+        accountId={id}
+        transaction={splittingTransaction}
+        onOpenChange={(open) => !open && setSplittingTransaction(null)}
+        onChange={refresh}
+      />
+
       <div style={{ display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
         <BackToHome />
         <BackToAccounts />
@@ -333,6 +342,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
           onCancelEditing={cancelEditingTransaction}
           onSaveTransaction={handleSaveTransaction}
           onRequestDelete={setPendingDeleteTransactionId}
+          onRequestSplit={setSplittingTransaction}
         />
       </div>
     </div>

@@ -22,6 +22,8 @@ import {
   deleteAccount,
   restoreAccount,
   importTransactions,
+  setTransactionSplits,
+  clearTransactionSplits,
 } from "./accountService";
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -30,6 +32,7 @@ const { prismaMock } = vi.hoisted(() => ({
     $transaction: vi.fn(),
     account: { update: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
     transaction: { deleteMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    transactionSplit: { deleteMany: vi.fn(), createMany: vi.fn() },
   },
 }));
 
@@ -45,6 +48,7 @@ vi.mock("@prisma/client", async (importOriginal) => {
       $transaction = prismaMock.$transaction;
       account = prismaMock.account;
       transaction = prismaMock.transaction;
+      transactionSplit = prismaMock.transactionSplit;
     },
   };
 });
@@ -98,6 +102,10 @@ function makeTxnRow(overrides?: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // Default every $queryRaw call to an empty result; tests override the calls they care about
+  // with mockResolvedValueOnce, so any call beyond those (e.g. the splits lookup in
+  // getTransactions) safely resolves to "no splits" instead of undefined.
+  prismaMock.$queryRaw.mockResolvedValue([]);
   // Default: run the callback form of $transaction with a fake tx that shares the query mock;
   // resolve the array form (used by deleteAccount) via Promise.all.
   prismaMock.$transaction.mockImplementation((arg: unknown) => {
@@ -108,6 +116,10 @@ beforeEach(() => {
           delete: vi.fn().mockResolvedValue({}),
           update: vi.fn().mockResolvedValue({}),
           updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+        transactionSplit: {
+          deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+          createMany: vi.fn().mockResolvedValue({ count: 0 }),
         },
         $queryRaw: prismaMock.$queryRaw,
       });
@@ -439,6 +451,33 @@ describe("getTransactions", () => {
     expect(txns[0].balanceAfter).toBe(175);
   });
 
+  it("attaches split line items to their matching transaction", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ id: "t-1", amount: "120.00" })])
+      .mockResolvedValueOnce([
+        {
+          id: "s-1",
+          transactionId: "t-1",
+          category: "Groceries",
+          amount: "80.00",
+          description: null,
+        },
+        {
+          id: "s-2",
+          transactionId: "t-1",
+          category: "Household",
+          amount: "40.00",
+          description: null,
+        },
+      ]);
+    const txns = await getTransactions("u-1", "a-1");
+    expect(txns[0].splits).toEqual([
+      { id: "s-1", category: "Groceries", amount: 80, description: null },
+      { id: "s-2", category: "Household", amount: 40, description: null },
+    ]);
+  });
+
   it("filters by transaction type", async () => {
     prismaMock.$queryRaw
       .mockResolvedValueOnce([makeAccountRow()])
@@ -610,6 +649,111 @@ describe("restoreTransaction", () => {
     expect(txUpdate).toHaveBeenCalledWith({
       where: { id: "t-1" },
       data: { deletedAt: null },
+    });
+  });
+});
+
+describe("setTransactionSplits", () => {
+  it("throws 404 when the transaction does not belong to the account", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([]);
+    await expect(
+      setTransactionSplits("u-1", "a-1", "t-99", [
+        { category: "Groceries", amount: 60 },
+        { category: "Household", amount: 60 },
+      ])
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("throws 400 for a transfer", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "TRANSFER_OUT", amount: "120.00" })]);
+    await expect(
+      setTransactionSplits("u-1", "a-1", "t-1", [
+        { category: "Groceries", amount: 60 },
+        { category: "Household", amount: 60 },
+      ])
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("throws 400 for fewer than two splits", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "WITHDRAWAL", amount: "120.00" })]);
+    await expect(
+      setTransactionSplits("u-1", "a-1", "t-1", [{ category: "Groceries", amount: 120 }])
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("throws 400 when split amounts don't add up to the transaction total", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "WITHDRAWAL", amount: "120.00" })]);
+    await expect(
+      setTransactionSplits("u-1", "a-1", "t-1", [
+        { category: "Groceries", amount: 80 },
+        { category: "Household", amount: 30 },
+      ])
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("throws 400 for a non-positive split amount", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "WITHDRAWAL", amount: "120.00" })]);
+    await expect(
+      setTransactionSplits("u-1", "a-1", "t-1", [
+        { category: "Groceries", amount: 120 },
+        { category: "Household", amount: 0 },
+      ])
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("replaces the splits and returns the refreshed account when amounts add up", async () => {
+    const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
+    const createMany = vi.fn().mockResolvedValue({ count: 2 });
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        transactionSplit: { deleteMany, createMany },
+      })
+    );
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "WITHDRAWAL", amount: "120.00" })])
+      .mockResolvedValueOnce([makeAccountRow()]);
+    const account = await setTransactionSplits("u-1", "a-1", "t-1", [
+      { category: "Groceries", amount: 80 },
+      { category: "Household", amount: 40 },
+    ]);
+    expect(account.id).toBe("a-1");
+    expect(deleteMany).toHaveBeenCalledWith({ where: { transactionId: "t-1" } });
+    expect(createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ category: "Groceries", amount: 80 }),
+        expect.objectContaining({ category: "Household", amount: 40 }),
+      ],
+    });
+  });
+});
+
+describe("clearTransactionSplits", () => {
+  it("throws 404 when the transaction does not belong to the account", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([]);
+    await expect(clearTransactionSplits("u-1", "a-1", "t-99")).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("deletes all splits and returns the refreshed account", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ type: "WITHDRAWAL", amount: "120.00" })])
+      .mockResolvedValueOnce([makeAccountRow()]);
+    const account = await clearTransactionSplits("u-1", "a-1", "t-1");
+    expect(account.id).toBe("a-1");
+    expect(prismaMock.transactionSplit.deleteMany).toHaveBeenCalledWith({
+      where: { transactionId: "t-1" },
     });
   });
 });
