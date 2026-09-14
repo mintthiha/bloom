@@ -677,13 +677,11 @@ export function TransactionHistory({
                         {!isEditing && (
                           <button
                             type="button"
+                            className="rule-edit-button"
                             onClick={() => onStartEditing(t)}
                             disabled={savingTransaction || deletingTransactionId === t.id}
                             style={{
                               padding: "6px 10px",
-                              border: "1px solid var(--border)",
-                              background: "transparent",
-                              color: "var(--text-secondary)",
                               borderRadius: "8px",
                               fontSize: "11px",
                               fontWeight: 600,
@@ -701,13 +699,11 @@ export function TransactionHistory({
                         {!isEditing && (
                           <button
                             type="button"
+                            className="transaction-delete-button"
                             onClick={() => onRequestDelete(t.id)}
                             disabled={savingTransaction || deletingTransactionId === t.id}
                             style={{
                               padding: "6px 10px",
-                              border: "1px solid #f8717130",
-                              background: "transparent",
-                              color: "#f87171",
                               borderRadius: "8px",
                               fontSize: "11px",
                               fontWeight: 600,

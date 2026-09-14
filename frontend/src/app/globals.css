@@ -404,6 +404,28 @@ body {
 }
 
 /*
+ * Transaction delete button. Already reads as destructive at rest (red border/label),
+ * so hover deepens the red tint rather than introducing it, and press gives a tactile dip.
+ */
+.transaction-delete-button {
+  background: transparent;
+  border: 1px solid #f8717130;
+  color: #f87171;
+  border-radius: 8px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.transaction-delete-button:not(:disabled):hover {
+  border-color: #f8717166;
+  background: #f8717114;
+}
+.transaction-delete-button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/*
  * Rule edit button. Neutral at rest; hover reveals intent with a blue accent border,
  * tint, and label shift, and press gives a tactile dip.
  */
@@ -591,6 +613,7 @@ body {
   .reset-button:active,
   .reset-button:hover .reset-button-icon,
   .budget-delete-button:not(:disabled):active,
+  .transaction-delete-button:not(:disabled):active,
   .rule-edit-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
   .budget-card:hover,
