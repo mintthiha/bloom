@@ -244,7 +244,7 @@ export function SplitTransactionDialog({
                 variant="destructive"
                 onClick={handleRemoveSplit}
                 disabled={busy}
-                className="dialog-footer-button mr-auto"
+                className="dialog-footer-button mr-auto min-w-24 px-4"
               >
                 {removingSplit ? "Removing..." : "Remove split"}
               </Button>
@@ -254,7 +254,7 @@ export function SplitTransactionDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={busy}
-              className="dialog-footer-button"
+              className="dialog-footer-button min-w-24 px-4"
             >
               Cancel
             </Button>
@@ -262,7 +262,7 @@ export function SplitTransactionDialog({
               type="button"
               onClick={handleSave}
               disabled={busy}
-              className="dialog-footer-button"
+              className="dialog-footer-button min-w-24 px-4"
             >
               {saving ? "Saving..." : "Save split"}
             </Button>
