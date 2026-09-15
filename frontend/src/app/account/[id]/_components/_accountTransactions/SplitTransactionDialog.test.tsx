@@ -139,6 +139,102 @@ describe("SplitTransactionDialog", () => {
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("does not show an Auto-fix button while the split is already fully allocated", () => {
+    renderDialog({
+      transaction: makeTxn({
+        splits: [
+          { id: "s-1", category: "Groceries", amount: 80, description: null },
+          { id: "s-2", category: "Household", amount: 40, description: null },
+        ],
+      }),
+    });
+    expect(screen.queryByRole("button", { name: "Auto-fix" })).not.toBeInTheDocument();
+  });
+
+  it("auto-fixes the other row to absorb the unallocated remainder", () => {
+    renderDialog({
+      transaction: makeTxn({
+        amount: 100,
+        splits: [
+          { id: "s-1", category: "Groceries", amount: 50, description: null },
+          { id: "s-2", category: "Household", amount: 50, description: null },
+        ],
+      }),
+    });
+
+    fireEvent.change(screen.getByLabelText("Split 1 amount"), { target: { value: "60" } });
+    expect(screen.getByRole("button", { name: "Auto-fix" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Auto-fix" }));
+
+    expect(screen.getByLabelText("Split 1 amount")).toHaveValue(60);
+    expect(screen.getByLabelText("Split 2 amount")).toHaveValue(40);
+    expect(screen.queryByRole("button", { name: "Auto-fix" })).not.toBeInTheDocument();
+  });
+
+  it("auto-fixes 3+ rows by distributing the remainder proportionally across the others", () => {
+    renderDialog({
+      transaction: makeTxn({
+        amount: 100,
+        splits: [
+          { id: "s-1", category: "Groceries", amount: 40, description: null },
+          { id: "s-2", category: "Dining", amount: 30, description: null },
+          { id: "s-3", category: "Entertainment", amount: 30, description: null },
+        ],
+      }),
+    });
+
+    // Groceries goes to 50, putting the split $10 over. Dining and Entertainment
+    // start equal (30/30), so they should each absorb half of the $10 overage.
+    fireEvent.change(screen.getByLabelText("Split 1 amount"), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Auto-fix" }));
+
+    expect(screen.getByLabelText("Split 1 amount")).toHaveValue(50);
+    expect(screen.getByLabelText("Split 2 amount")).toHaveValue(25);
+    expect(screen.getByLabelText("Split 3 amount")).toHaveValue(25);
+    expect(screen.queryByRole("button", { name: "Auto-fix" })).not.toBeInTheDocument();
+  });
+
+  it("shows an info tooltip warning that a blank row will be skipped by Auto-fix", () => {
+    renderDialog({
+      transaction: makeTxn({
+        amount: 100,
+        splits: [
+          { id: "s-1", category: "Dining", amount: 50, description: null },
+          { id: "s-2", category: "Entertainment", amount: 50, description: null },
+        ],
+      }),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Add category" }));
+    expect(screen.queryByText("ⓘ")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Split 1 amount"), { target: { value: "40" } });
+    expect(screen.getByText("ⓘ")).toBeInTheDocument();
+  });
+
+  it("auto-fixes while a freshly added row is still blank, leaving that row untouched", () => {
+    renderDialog({
+      transaction: makeTxn({
+        amount: 100,
+        splits: [
+          { id: "s-1", category: "Dining", amount: 50, description: null },
+          { id: "s-2", category: "Entertainment", amount: 50, description: null },
+        ],
+      }),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Add category" }));
+    fireEvent.change(screen.getByLabelText("Split 2 amount"), { target: { value: "2" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Auto-fix" }));
+
+    expect(screen.getByLabelText("Split 1 amount")).toHaveValue(98);
+    expect(screen.getByLabelText("Split 2 amount")).toHaveValue(2);
+    expect(screen.getByLabelText("Split 3 amount")).toHaveValue(null);
+    expect(screen.queryByRole("button", { name: "Auto-fix" })).not.toBeInTheDocument();
+  });
+
   it("adds and removes split rows, keeping at least two", () => {
     renderDialog();
     fireEvent.click(screen.getByRole("button", { name: "+ Add category" }));

@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SplitRow = { category: string; amount: string; description: string };
 
@@ -52,6 +53,7 @@ export function SplitTransactionDialog({
   onChange,
 }: SplitTransactionDialogProps) {
   const [rows, setRows] = useState<SplitRow[]>([]);
+  const [lastEditedAmountIndex, setLastEditedAmountIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [removingSplit, setRemovingSplit] = useState(false);
   // Keeps rendering the last-open transaction's fields while the dialog's close
@@ -74,9 +76,65 @@ export function SplitTransactionDialog({
   const remaining = Math.round((shown.amount - total) * 100) / 100;
   const hasExistingSplit = shown.splits.length > 0;
 
-  /** Updates a single field of one split row. */
+  // Auto-fix skips still-blank rows whenever another row already has an amount to weight the
+  // split by, so a mixed set of blank and valued "other" rows means at least one will be left as-is.
+  const otherRows = rows.filter((_, i) => i !== lastEditedAmountIndex);
+  const autoFixWillSkipABlankRow =
+    otherRows.some((row) => !((parseFloat(row.amount) || 0) > 0)) &&
+    otherRows.some((row) => (parseFloat(row.amount) || 0) > 0);
+
+  /** Updates a single field of one split row, remembering the row when its amount changes so auto-balance knows which other row to adjust. */
   function updateRow(index: number, field: keyof SplitRow, value: string) {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+    if (field === "amount") {
+      setLastEditedAmountIndex(index);
+    }
+  }
+
+  /**
+   * Spreads the unallocated remainder across every row except the one just edited, weighted by
+   * each row's current amount, so the split adds back up to the transaction total. A running
+   * remainder (rather than rounding each share independently) keeps the distributed cents exact.
+   * Still-blank rows (e.g. a freshly added row with no amount yet) sit out of the split rather
+   * than being forced to a value, as long as at least one other row already has an amount to
+   * absorb the difference.
+   */
+  function autoBalanceRemaining() {
+    const others = rows
+      .map((row, i) => ({ rowIndex: i, amount: parseFloat(row.amount) || 0 }))
+      .filter((entry) => entry.rowIndex !== lastEditedAmountIndex);
+    if (others.length === 0) return;
+
+    const otherTotal = others.reduce((sum, entry) => sum + entry.amount, 0);
+    const participants = otherTotal > 0 ? others.filter((entry) => entry.amount > 0) : others;
+    if (participants.length === 0) return;
+
+    const newAmounts = new Map<number, number>();
+    let amountLeftToDistribute = remaining;
+    let weightLeft = participants.reduce(
+      (sum, entry) => sum + (otherTotal > 0 ? entry.amount : 1),
+      0
+    );
+
+    participants.forEach((entry) => {
+      const weight = otherTotal > 0 ? entry.amount : 1;
+      const share = weightLeft > 0 ? (amountLeftToDistribute * weight) / weightLeft : 0;
+      const roundedShare = Math.round(share * 100) / 100;
+      newAmounts.set(entry.rowIndex, Math.round((entry.amount + roundedShare) * 100) / 100);
+      amountLeftToDistribute -= roundedShare;
+      weightLeft -= weight;
+    });
+
+    if ([...newAmounts.values()].some((amount) => amount < 0.01)) {
+      toast.error("Not enough left in the other categories to auto-balance");
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((row, i) =>
+        newAmounts.has(i) ? { ...row, amount: newAmounts.get(i)!.toFixed(2) } : row
+      )
+    );
   }
 
   /** Appends a blank split row, prefilled with whatever amount remains unallocated. */
@@ -208,21 +266,73 @@ export function SplitTransactionDialog({
               </div>
             ))}
 
-            <button
-              type="button"
-              className="rule-edit-button"
-              onClick={addRow}
-              disabled={busy}
+            <div
               style={{
-                padding: "8px 12px",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: busy ? "not-allowed" : "pointer",
-                justifySelf: "start",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "8px",
               }}
             >
-              + Add category
-            </button>
+              <button
+                type="button"
+                className="rule-edit-button"
+                onClick={addRow}
+                disabled={busy}
+                style={{
+                  padding: "8px 12px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: busy ? "not-allowed" : "pointer",
+                }}
+              >
+                + Add category
+              </button>
+              {Math.abs(remaining) >= 0.01 && rows.length > 1 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  {autoFixWillSkipABlankRow && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          type="button"
+                          style={{
+                            color: "var(--text-muted)",
+                            cursor: "help",
+                            fontSize: "12px",
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                          }}
+                        >
+                          ⓘ
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          style={{ maxWidth: "220px", padding: "10px 14px" }}
+                        >
+                          Auto-fix only adjusts rows that already have an amount — a blank row is
+                          left as-is until you enter one yourself.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  <button
+                    type="button"
+                    className="rule-edit-button press"
+                    onClick={autoBalanceRemaining}
+                    disabled={busy}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: busy ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Auto-fix
+                  </button>
+                </div>
+              )}
+            </div>
 
             <p
               className="num"
@@ -254,7 +364,7 @@ export function SplitTransactionDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={busy}
-              className="dialog-footer-button min-w-24 px-4"
+              className="dialog-footer-button press min-w-24 px-4"
             >
               Cancel
             </Button>
@@ -262,7 +372,7 @@ export function SplitTransactionDialog({
               type="button"
               onClick={handleSave}
               disabled={busy}
-              className="dialog-footer-button min-w-24 px-4"
+              className="dialog-footer-button press min-w-24 px-4"
             >
               {saving ? "Saving..." : "Save split"}
             </Button>
