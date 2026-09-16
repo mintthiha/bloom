@@ -148,6 +148,7 @@ export function MonthlySnapshot({
             }}
           >
             <div
+              className="snapshot-stat-card"
               style={{
                 background: "var(--surface-2)",
                 border: "1px solid var(--border)",
@@ -188,6 +189,7 @@ export function MonthlySnapshot({
             </div>
 
             <div
+              className="snapshot-stat-card"
               style={{
                 background: "var(--surface-2)",
                 border: "1px solid var(--border)",
@@ -228,6 +230,7 @@ export function MonthlySnapshot({
             </div>
 
             <div
+              className="snapshot-stat-card"
               style={{
                 background: "var(--surface-2)",
                 border: "1px solid var(--border)",
@@ -276,6 +279,7 @@ export function MonthlySnapshot({
 
             <div
               title={savingsRateTooltip}
+              className="snapshot-stat-card"
               style={{
                 background: "var(--surface-2)",
                 border: "1px solid var(--border)",

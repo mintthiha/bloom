@@ -258,6 +258,23 @@ body {
   transition-duration: 0.09s;
 }
 
+/* Monthly Snapshot stat tiles (Income/Spending/Net/Savings Rate) — same lift treatment as .balance-row. */
+.snapshot-stat-card {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.snapshot-stat-card:hover {
+  background: var(--surface-3);
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+.snapshot-stat-card:active {
+  transform: translateY(0);
+  transition-duration: 0.09s;
+}
+
 /* Spins the refresh icon while the activity list is reloading. */
 @keyframes activity-refresh-spin {
   to {
@@ -605,6 +622,8 @@ body {
   .press:active,
   .balance-row:hover,
   .balance-row:active,
+  .snapshot-stat-card:hover,
+  .snapshot-stat-card:active,
   .lift:active,
   .nav-item:active,
   .value-prop:hover .value-prop-icon,
