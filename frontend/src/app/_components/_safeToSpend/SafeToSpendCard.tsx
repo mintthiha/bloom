@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { Account, RecurringTransaction } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrency } from "@/lib/format";
 import { computeSafeToSpend, SafeToSpendResult } from "@/lib/safe-to-spend";
 import { formatRelativeDate } from "../_recurringCalendar/recurring-calendar-utils";
@@ -92,6 +93,7 @@ export function SafeToSpendCard({ accounts, recurringRules }: Props) {
     () => computeSafeToSpend(accounts, recurringRules),
     [accounts, recurringRules]
   );
+  const isMobile = useIsMobile();
 
   const isPositive = result.safeToSpend > 0;
   const headlineColor = result.safeToSpend >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR;
@@ -103,7 +105,12 @@ export function SafeToSpendCard({ accounts, recurringRules }: Props) {
       eyebrow="Safe to Spend"
       title="What's free to spend this month"
       description="Your cash plus expected income, minus the bills still due before month-end."
-      headerRight={<SafeToSpendBadge result={result} />}
+      // On mobile the header stacks into a column, so the badge would float on its own line
+      // right above the headline figure that already shows the same number — only show it
+      // there while collapsed, when the badge is the sole visible figure.
+      headerRight={(isCollapsed) =>
+        !isMobile || isCollapsed ? <SafeToSpendBadge result={result} /> : null
+      }
     >
       {/* Prominent headline figure */}
       <div
