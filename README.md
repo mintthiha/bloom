@@ -5,7 +5,13 @@
 
 **Live demo:** [mintbloom.duckdns.org](https://mintbloom.duckdns.org/)
 
-Bloom is a full-stack personal finance demo app built for Canadians learning to manage their money. It includes Google sign-in, profile onboarding, a guided onboarding checklist, multi-account tracking, external bank linking via Plaid, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, subscription auto-detection, bill-reminder notifications, AI-assisted transaction auto-categorization, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, a financial health score, a safe-to-spend allowance, actionable financial insights, a credit card rewards estimator, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, a customizable dashboard, and a locally-hosted AI Canadian financial education assistant.
+Bloom is a full-stack personal finance demo app built for Canadians that are learning to manage their money. It includes Google sign-in, profile onboarding, a guided onboarding checklist, multi-account tracking, external bank linking via Plaid, merchant-aware transactions, recurring transaction scheduling, an upcoming payment calendar, subscription auto-detection, bill-reminder notifications, AI-assisted transaction auto-categorization, monthly budgeting, net worth tracking, savings goals, a 50/30/20 budget rule visualizer, a financial health score, a safe-to-spend allowance, actionable financial insights, a credit card rewards estimator, savings rate tracking, TFSA/RRSP/FHSA contribution room tracking, proactive over-contribution warnings, a customizable dashboard, and a locally-hosted AI Canadian financial education assistant.
+
+## Home page
+
+![Dashboard Top](docs/screenshots/dashboard.png)
+
+![Dashboard Bottom](docs/screenshots/dashboard2.png)
 
 ## Tech Stack
 
