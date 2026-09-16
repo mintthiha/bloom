@@ -12,6 +12,9 @@ import {
 
 const router = Router();
 
+/** Caps how many category splits a single transaction can be replaced with, matching the frontend dialog's row limit. */
+const MAX_TRANSACTION_SPLITS = 10;
+
 /** Extracts the route :id param from the request. */
 const extractParamId = (req: Request): string => req.params["id"] as string;
 
@@ -371,6 +374,9 @@ router.put(
     try {
       const body = requireObject(req.body);
       if (!Array.isArray(body.splits)) throw new AppError(400, "splits must be an array");
+      if (body.splits.length > MAX_TRANSACTION_SPLITS) {
+        throw new AppError(400, `A transaction can have at most ${MAX_TRANSACTION_SPLITS} splits`);
+      }
       const splits = (body.splits as unknown[]).map((split, i) => {
         const s = requireObject(split, `Split ${i + 1} must be an object`);
         return {

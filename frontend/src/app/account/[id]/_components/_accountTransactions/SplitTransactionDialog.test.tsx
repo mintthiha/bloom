@@ -235,6 +235,18 @@ describe("SplitTransactionDialog", () => {
     expect(screen.queryByRole("button", { name: "Auto-fix" })).not.toBeInTheDocument();
   });
 
+  it("stops adding rows once the maximum split count is reached", () => {
+    renderDialog();
+
+    for (let i = 0; i < 10; i++) {
+      fireEvent.click(screen.getByRole("button", { name: /Add category|Limit of/ }));
+    }
+
+    expect(screen.queryByLabelText("Split 11 amount")).not.toBeInTheDocument();
+    const addButton = screen.getByRole("button", { name: "Limit of 10 reached" });
+    expect(addButton).toBeDisabled();
+  });
+
   it("adds and removes split rows, keeping at least two", () => {
     renderDialog();
     fireEvent.click(screen.getByRole("button", { name: "+ Add category" }));

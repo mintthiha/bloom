@@ -15,6 +15,7 @@ const { serviceMock } = vi.hoisted(() => ({
     restoreTransaction: vi.fn(),
     deleteAccount: vi.fn(),
     restoreAccount: vi.fn(),
+    setTransactionSplits: vi.fn(),
   },
 }));
 
@@ -32,6 +33,7 @@ describe("account routes", () => {
     serviceMock.restoreTransaction.mockReset();
     serviceMock.deleteAccount.mockReset();
     serviceMock.restoreAccount.mockReset();
+    serviceMock.setTransactionSplits.mockReset();
   });
 
   it("returns 401 for monthly summary when x-user-id is missing", async () => {
@@ -259,6 +261,44 @@ describe("account routes", () => {
 
     expect(response.status).toBe(200);
     expect(serviceMock.restoreTransaction).toHaveBeenCalledWith("user-1", "account-1", "txn-1");
+  });
+
+  it("rejects a split payload that exceeds the maximum number of splits", async () => {
+    const splits = Array.from({ length: 11 }, (_, i) => ({
+      category: `Category ${i}`,
+      amount: 10,
+    }));
+
+    const response = await request(app)
+      .put("/api/accounts/account-1/transactions/txn-1/splits")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ splits });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "A transaction can have at most 10 splits" });
+    expect(serviceMock.setTransactionSplits).not.toHaveBeenCalled();
+  });
+
+  it("passes a valid split payload through to the service", async () => {
+    serviceMock.setTransactionSplits.mockResolvedValue({ id: "account-1", balance: 100 });
+
+    const response = await request(app)
+      .put("/api/accounts/account-1/transactions/txn-1/splits")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({
+        splits: [
+          { category: "Groceries", amount: 60 },
+          { category: "Dining", amount: 40 },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.setTransactionSplits).toHaveBeenCalledWith("user-1", "account-1", "txn-1", [
+      { category: "Groceries", amount: 60, description: undefined },
+      { category: "Dining", amount: 40, description: undefined },
+    ]);
   });
 
   it("passes account restores through to the service", async () => {

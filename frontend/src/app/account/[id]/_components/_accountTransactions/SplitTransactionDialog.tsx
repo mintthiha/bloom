@@ -18,6 +18,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 type SplitRow = { category: string; amount: string; description: string };
 
+/** Caps how many categories a single transaction can be split into, keeping the dialog usable and each split meaningfully sized. */
+const MAX_SPLIT_ROWS = 10;
+
 type SplitTransactionDialogProps = {
   accountId: string;
   transaction: Transaction | null;
@@ -137,12 +140,16 @@ export function SplitTransactionDialog({
     );
   }
 
-  /** Appends a blank split row, prefilled with whatever amount remains unallocated. */
+  /** Appends a blank split row, prefilled with whatever amount remains unallocated, up to the row cap. */
   function addRow() {
-    setRows((prev) => [
-      ...prev,
-      { category: "", amount: remaining > 0 ? remaining.toFixed(2) : "", description: "" },
-    ]);
+    setRows((prev) =>
+      prev.length >= MAX_SPLIT_ROWS
+        ? prev
+        : [
+            ...prev,
+            { category: "", amount: remaining > 0 ? remaining.toFixed(2) : "", description: "" },
+          ]
+    );
   }
 
   /** Removes a split row, as long as at least two remain. */
@@ -278,15 +285,18 @@ export function SplitTransactionDialog({
                 type="button"
                 className="rule-edit-button"
                 onClick={addRow}
-                disabled={busy}
+                disabled={busy || rows.length >= MAX_SPLIT_ROWS}
                 style={{
                   padding: "8px 12px",
                   fontSize: "12px",
                   fontWeight: 600,
-                  cursor: busy ? "not-allowed" : "pointer",
+                  cursor: busy || rows.length >= MAX_SPLIT_ROWS ? "not-allowed" : "pointer",
+                  opacity: rows.length >= MAX_SPLIT_ROWS ? 0.45 : 1,
                 }}
               >
-                + Add category
+                {rows.length >= MAX_SPLIT_ROWS
+                  ? `Limit of ${MAX_SPLIT_ROWS} reached`
+                  : "+ Add category"}
               </button>
               {Math.abs(remaining) >= 0.01 && rows.length > 1 && (
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
