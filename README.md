@@ -102,13 +102,15 @@ flowchart LR
 
 ![Login](docs/screenshots/login.png)
 
-![Login](docs/screenshots/createAccount.png)
+![Create Account](docs/screenshots/createAccount.png)
+
+![First-Time Profile Setup](docs/screenshots/firstTimeSetup.png)
 
 - Google login integration
 - Email/password sign-in via a NextAuth Credentials provider, backed by the Express `credentials-auth` service (bcrypt-hashed passwords, verified server-side)
 - Registration page (`/register`) for creating an email/password account
-- **Remember me for 30 days** — issues a long-lived remember-me token stored in the browser, letting a returning visitor sign back in with one click without re-entering a password
-- **"Try Bloom without signing in"** — provisions a throwaway demo account pre-populated with six months of sample transactions, no sign-up required
+- **Remember me for 30 days**: Gives a long-lived remember-me token stored in the browser, letting a returning visitor sign back in with one click without re-entering a password
+- **"Try Bloom without signing in"**: Bloom gives a throwaway demo account pre-populated with six months of sample transactions, and no sign-up required
 - Protected application routes via NextAuth
 - First-time user onboarding flow
 - Prisma-backed user profile
@@ -116,9 +118,11 @@ flowchart LR
 
 ### Onboarding Checklist
 
-- Guided getting-started checklist shown on the dashboard for new users
+![Onboarding Checklist](docs/screenshots/onboardingChecklist.png)
+
+- Guided getting-started checklist shown on the dashboard for new users.
 - Six steps: set up profile, add first account, add first transaction, set up a budget, create a savings goal, and explore the Learn page
-- Completion state derived live from real dashboard data (accounts, budgets, goals, monthly summary) plus localStorage flags — no separate tracking table
+- Completion state derived live from real dashboard data (accounts, budgets, goals, monthly summary) plus localStorage flags
 - Each incomplete step links to the relevant section or page (same-page anchor scroll or route navigation)
 - Dismissible, and auto-hides once all steps are complete; derivation logic lives in `onboarding-steps.ts` and is unit-tested
 
