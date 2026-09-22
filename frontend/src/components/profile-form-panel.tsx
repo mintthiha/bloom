@@ -3,8 +3,9 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { api, Profile } from "@/lib/api";
+import { api, Profile, ProvinceCode } from "@/lib/api";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
+import { PROVINCE_OPTIONS } from "@/lib/provinces";
 
 type ProfileFormPanelProps = {
   title: string;
@@ -51,6 +52,7 @@ export function ProfileFormPanel({
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [province, setProvince] = useState<ProvinceCode | "">("");
   const [tfsaBirthYear, setTfsaBirthYear] = useState("");
   const [tfsaRoomUsedElsewhere, setTfsaRoomUsedElsewhere] = useState("");
   const [rrspContributionRoom, setRrspContributionRoom] = useState("");
@@ -85,6 +87,7 @@ export function ProfileFormPanel({
         setLastName(profile?.lastName ?? sessionName.lastName);
         setUsername(profile?.username ?? deriveUsernameFromEmail(session?.user?.email));
         setEmail(profile?.email ?? session?.user?.email ?? "");
+        setProvince(profile?.province ?? "");
         setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
         setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");
         setRrspContributionRoom(profile?.rrspContributionRoom?.toString() ?? "");
@@ -129,6 +132,7 @@ export function ProfileFormPanel({
         lastName: lastName.trim(),
         username: username.trim(),
         email: email.trim(),
+        province: province === "" ? null : province,
         tfsaBirthYear: parsedBirthYear,
         tfsaRoomUsedElsewhere: parsedRoomUsedElsewhere,
         rrspContributionRoom: parsedRrspRoom,
@@ -137,6 +141,7 @@ export function ProfileFormPanel({
       setLastName(profile.lastName);
       setUsername(profile.username);
       setEmail(profile.email);
+      setProvince(profile.province ?? "");
       setTfsaBirthYear(profile.tfsaBirthYear?.toString() ?? "");
       setTfsaRoomUsedElsewhere(profile.tfsaRoomUsedElsewhere?.toString() ?? "");
       setRrspContributionRoom(profile.rrspContributionRoom?.toString() ?? "");
@@ -263,6 +268,26 @@ export function ProfileFormPanel({
               placeholder="you@example.com"
               style={inputStyle}
             />
+          </div>
+
+          <div>
+            <label htmlFor="profile-province" style={sectionLabelStyle}>
+              Province or Territory
+            </label>
+            <select
+              id="profile-province"
+              value={province}
+              onChange={(e) => setProvince(e.target.value as ProvinceCode | "")}
+              style={{ ...inputStyle, cursor: "pointer", appearance: "none" }}
+            >
+              <option value="">Select your province</option>
+              {PROVINCE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p style={hintStyle}>Lets Bloom tailor tax and benefit guidance to where you live.</p>
           </div>
 
           {/* Contribution Room section */}

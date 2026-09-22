@@ -2,6 +2,13 @@ import { Router, Request, Response, NextFunction } from "express";
 import * as profileService from "../services/profileService";
 import { AppError } from "../middleware/errorHandler";
 import { requireObject, requireString } from "../lib/validation";
+import {
+  PAY_FREQUENCIES,
+  PRIMARY_FINANCIAL_GOALS,
+  PROVINCE_CODES,
+  normalizeEnumValue,
+  parseOptionalDateOnly,
+} from "../services/profileOptions";
 
 const router = Router();
 
@@ -82,6 +89,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
       patternMessage: "username must contain only letters, numbers, or underscores",
     });
     const email = requireString(body.email, "email", { max: 254 });
+    const province = normalizeEnumValue(body.province, "province", PROVINCE_CODES);
     const currentYear = new Date().getFullYear();
     const tfsaBirthYear = parseOptionalInt(body.tfsaBirthYear, "tfsaBirthYear", 1900, currentYear);
     const tfsaRoomUsedElsewhere = parseOptionalNonNegativeFloat(
@@ -98,6 +106,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
         lastName,
         username,
         email,
+        province,
         tfsaBirthYear,
         tfsaRoomUsedElsewhere,
         rrspContributionRoom,
@@ -132,6 +141,37 @@ router.patch("/reminder-preferences", async (req: Request, res: Response, next: 
       await profileService.updateReminderPreferences(uid(req), {
         billRemindersEnabled,
         billReminderLeadDays: billReminderLeadDays ?? undefined,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Replaces the current user's cashflow details (income, pay cycle, primary goal).
+ * Any field may be null, which clears it.
+ */
+router.patch("/financial-profile", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const monthlyTakeHomeIncome = parseOptionalNonNegativeFloat(
+      body.monthlyTakeHomeIncome,
+      "monthlyTakeHomeIncome"
+    );
+    const payFrequency = normalizeEnumValue(body.payFrequency, "payFrequency", PAY_FREQUENCIES);
+    const nextPayday = parseOptionalDateOnly(body.nextPayday, "nextPayday");
+    const primaryFinancialGoal = normalizeEnumValue(
+      body.primaryFinancialGoal,
+      "primaryFinancialGoal",
+      PRIMARY_FINANCIAL_GOALS
+    );
+    res.json(
+      await profileService.updateFinancialProfile(uid(req), {
+        monthlyTakeHomeIncome,
+        payFrequency,
+        nextPayday,
+        primaryFinancialGoal,
       })
     );
   } catch (err) {

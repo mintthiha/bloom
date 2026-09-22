@@ -41,7 +41,8 @@ export type ActivityType =
   | "CATEGORIZATION_RULE_DELETED"
   | "CATEGORIZATION_RULE_RESTORED"
   | "PROFILE_UPDATED"
-  | "PROFILE_REMINDERS_UPDATED";
+  | "PROFILE_REMINDERS_UPDATED"
+  | "PROFILE_FINANCIAL_UPDATED";
 
 export type ActivityLogEntry = {
   id: string;

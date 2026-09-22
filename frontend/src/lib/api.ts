@@ -82,15 +82,43 @@ export type Transaction = {
   splits: TransactionSplit[];
 };
 
+export type ProvinceCode =
+  | "AB"
+  | "BC"
+  | "MB"
+  | "NB"
+  | "NL"
+  | "NS"
+  | "NT"
+  | "NU"
+  | "ON"
+  | "PE"
+  | "QC"
+  | "SK"
+  | "YT";
+
+export type PayFrequency = "WEEKLY" | "BIWEEKLY" | "SEMIMONTHLY" | "MONTHLY";
+
+export type PrimaryFinancialGoal =
+  | "EMERGENCY_FUND"
+  | "PAY_OFF_DEBT"
+  | "BIG_PURCHASE"
+  | "TRACK_SPENDING";
+
 export type Profile = {
   userId: string;
   firstName: string;
   lastName: string;
   username: string;
   email: string;
+  province: ProvinceCode | null;
   tfsaBirthYear: number | null;
   tfsaRoomUsedElsewhere: number | null;
   rrspContributionRoom: number | null;
+  monthlyTakeHomeIncome: number | null;
+  payFrequency: PayFrequency | null;
+  nextPayday: string | null;
+  primaryFinancialGoal: PrimaryFinancialGoal | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   createdAt: string;
@@ -609,10 +637,21 @@ export const api = {
     lastName: string;
     username: string;
     email: string;
+    province?: ProvinceCode | null;
     tfsaBirthYear?: number | null;
     tfsaRoomUsedElsewhere?: number | null;
     rrspContributionRoom?: number | null;
   }) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
+  updateFinancialProfile: (input: {
+    monthlyTakeHomeIncome: number | null;
+    payFrequency: PayFrequency | null;
+    nextPayday: string | null;
+    primaryFinancialGoal: PrimaryFinancialGoal | null;
+  }) =>
+    request<Profile>("/profile/financial-profile", {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
   updateReminderPreferences: (input: {
     billRemindersEnabled?: boolean;
     billReminderLeadDays?: number;

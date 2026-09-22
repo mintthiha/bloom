@@ -128,13 +128,10 @@ flowchart LR
 
 ### Profile Management
 
-<!-- Screenshot of the profile page (/profile) — name, username, email, and contribution-room fields -->
 ![Profile](docs/screenshots/profile.png)
 
-<!-- Screenshot of the navbar profile dropdown — email, link to /profile, sign out -->
 ![Navbar Profile Dropdown](docs/screenshots/navbarProfile.png)
 
-<!-- Screenshot of the home page time-based greeting using the saved first name -->
 ![Home Page Greeting](docs/screenshots/homeGreeting.png)
 
 - Separate first name, last name, username, and email

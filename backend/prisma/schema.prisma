@@ -62,9 +62,14 @@ model Profile {
   lastName                String
   username                String   @unique
   email                   String
+  province                String?
   tfsaBirthYear           Int?
   tfsaRoomUsedElsewhere   Decimal? @db.Decimal(19, 4)
   rrspContributionRoom    Decimal? @db.Decimal(19, 4)
+  monthlyTakeHomeIncome   Decimal? @db.Decimal(19, 4)
+  payFrequency            String?
+  nextPayday              DateTime? @db.Date
+  primaryFinancialGoal    String?
   billRemindersEnabled    Boolean  @default(true)
   billReminderLeadDays    Int      @default(3)
   createdAt               DateTime @default(now()) @db.Timestamptz(3)

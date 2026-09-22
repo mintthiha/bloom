@@ -40,6 +40,7 @@ export const ACTIVITY_META: Record<string, { label: string; color: string; icon:
   CATEGORIZATION_RULE_RESTORED: { label: "Rule restored", color: "#34d399", icon: "↺" },
   PROFILE_UPDATED: { label: "Profile updated", color: "#a78bfa", icon: "✎" },
   PROFILE_REMINDERS_UPDATED: { label: "Reminder preferences updated", color: "#a78bfa", icon: "✎" },
+  PROFILE_FINANCIAL_UPDATED: { label: "Financial profile updated", color: "#a78bfa", icon: "✎" },
 };
 
 /** Returns display metadata for an activity type, falling back to a generic entry. */

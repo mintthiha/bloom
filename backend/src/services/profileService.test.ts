@@ -442,3 +442,130 @@ describe("updateReminderPreferences", () => {
     expect(result.billReminderLeadDays).toBe(0);
   });
 });
+
+describe("updateFinancialProfile", () => {
+  beforeEach(() => {
+    prismaMock.$queryRaw.mockReset();
+    logActivityMock.mockClear();
+  });
+
+  /** Builds a profile row with the financial columns overridden per test. */
+  function buildProfileRow(overrides: Record<string, unknown> = {}) {
+    return {
+      userId: "user-1",
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      province: "ON",
+      tfsaBirthYear: null,
+      tfsaRoomUsedElsewhere: null,
+      rrspContributionRoom: null,
+      monthlyTakeHomeIncome: null,
+      payFrequency: null,
+      nextPayday: null,
+      primaryFinancialGoal: null,
+      billRemindersEnabled: true,
+      billReminderLeadDays: 3,
+      createdAt: new Date("2026-04-04T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+      ...overrides,
+    };
+  }
+
+  it("rejects a negative monthly take-home income", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+
+    await expect(
+      updateFinancialProfile("user-1", { monthlyTakeHomeIncome: -1 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it("rejects an implausibly large monthly take-home income", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+
+    await expect(
+      updateFinancialProfile("user-1", { monthlyTakeHomeIncome: 10_000_001 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("throws 404 when the profile does not exist", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(
+      updateFinancialProfile("user-1", { monthlyTakeHomeIncome: 3750 })
+    ).rejects.toMatchObject({ statusCode: 404, message: "Profile not found" });
+  });
+
+  it("saves the cashflow fields and returns a date-only payday", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([buildProfileRow()]).mockResolvedValueOnce([
+      buildProfileRow({
+        monthlyTakeHomeIncome: "3750.0000",
+        payFrequency: "BIWEEKLY",
+        nextPayday: new Date("2026-09-25T00:00:00.000Z"),
+        primaryFinancialGoal: "EMERGENCY_FUND",
+      }),
+    ]);
+
+    const result = await updateFinancialProfile("user-1", {
+      monthlyTakeHomeIncome: 3750,
+      payFrequency: "BIWEEKLY",
+      nextPayday: new Date("2026-09-25T00:00:00.000Z"),
+      primaryFinancialGoal: "EMERGENCY_FUND",
+    });
+
+    expect(result.monthlyTakeHomeIncome).toBe(3750);
+    expect(result.nextPayday).toBe("2026-09-25");
+    expect(result.payFrequency).toBe("BIWEEKLY");
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "PROFILE_FINANCIAL_UPDATED",
+      expect.stringContaining("Updated financial profile"),
+      expect.any(Object)
+    );
+  });
+
+  it("clears every field when nulls are passed", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        buildProfileRow({
+          monthlyTakeHomeIncome: "3750.0000",
+          payFrequency: "BIWEEKLY",
+          nextPayday: new Date("2026-09-25T00:00:00.000Z"),
+          primaryFinancialGoal: "EMERGENCY_FUND",
+        }),
+      ])
+      .mockResolvedValueOnce([buildProfileRow()]);
+
+    const result = await updateFinancialProfile("user-1", {
+      monthlyTakeHomeIncome: null,
+      payFrequency: null,
+      nextPayday: null,
+      primaryFinancialGoal: null,
+    });
+
+    expect(result.monthlyTakeHomeIncome).toBeNull();
+    expect(result.nextPayday).toBeNull();
+    expect(result.primaryFinancialGoal).toBeNull();
+  });
+
+  it("does not log activity when nothing actually changed", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([buildProfileRow()])
+      .mockResolvedValueOnce([buildProfileRow()]);
+
+    await updateFinancialProfile("user-1", {
+      monthlyTakeHomeIncome: null,
+      payFrequency: null,
+      nextPayday: null,
+      primaryFinancialGoal: null,
+    });
+
+    expect(logActivityMock).not.toHaveBeenCalled();
+  });
+});

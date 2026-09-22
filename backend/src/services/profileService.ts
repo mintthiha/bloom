@@ -1,5 +1,6 @@
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
+import type { PayFrequency, PrimaryFinancialGoal, ProvinceCode } from "./profileOptions";
 import { logActivity } from "./activityService";
 import {
   ActivityFieldChange,
@@ -12,6 +13,7 @@ type ProfileInput = {
   lastName?: string;
   username?: string;
   email?: string;
+  province?: ProvinceCode | null;
   tfsaBirthYear?: number | null;
   tfsaRoomUsedElsewhere?: number | null;
   rrspContributionRoom?: number | null;
@@ -22,22 +24,37 @@ type ReminderPreferenceInput = {
   billReminderLeadDays?: number;
 };
 
+type FinancialProfileInput = {
+  monthlyTakeHomeIncome?: number | null;
+  payFrequency?: PayFrequency | null;
+  nextPayday?: Date | null;
+  primaryFinancialGoal?: PrimaryFinancialGoal | null;
+};
+
 type ProfileRecord = {
   userId: string;
   firstName: string;
   lastName: string;
   username: string;
   email: string;
+  province: string | null;
   tfsaBirthYear: number | null;
   tfsaRoomUsedElsewhere: string | null;
   rrspContributionRoom: string | null;
+  monthlyTakeHomeIncome: string | null;
+  payFrequency: string | null;
+  nextPayday: Date | null;
+  primaryFinancialGoal: string | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   createdAt: Date;
   updatedAt: Date;
 };
 
-/** Converts a raw profile row (Decimal strings) to API-safe numeric values. */
+/**
+ * Converts a raw profile row to API-safe values: Decimal strings become numbers
+ * and the date-only payday becomes a `YYYY-MM-DD` string.
+ */
 function normalizeProfile(row: ProfileRecord) {
   return {
     ...row,
@@ -45,6 +62,9 @@ function normalizeProfile(row: ProfileRecord) {
       row.tfsaRoomUsedElsewhere != null ? Number(row.tfsaRoomUsedElsewhere) : null,
     rrspContributionRoom:
       row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
+    monthlyTakeHomeIncome:
+      row.monthlyTakeHomeIncome != null ? Number(row.monthlyTakeHomeIncome) : null,
+    nextPayday: row.nextPayday != null ? row.nextPayday.toISOString().slice(0, 10) : null,
   };
 }
 
@@ -55,9 +75,14 @@ function normalizeProfile(row: ProfileRecord) {
 export async function getProfile(userId: string) {
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     SELECT "userId", "firstName", "lastName", "username", "email",
+           "province",
            "tfsaBirthYear",
            "tfsaRoomUsedElsewhere",
            "rrspContributionRoom",
+           "monthlyTakeHomeIncome",
+           "payFrequency",
+           "nextPayday",
+           "primaryFinancialGoal",
            "billRemindersEnabled",
            "billReminderLeadDays",
            "createdAt", "updatedAt"
@@ -149,16 +174,18 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     throw new AppError(409, "Username is already taken");
   }
 
+  const province = input.province ?? null;
   const tfsaBirthYear = input.tfsaBirthYear ?? null;
   const tfsaRoomUsedElsewhere = input.tfsaRoomUsedElsewhere ?? null;
   const rrspContributionRoom = input.rrspContributionRoom ?? null;
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email",
-                           "tfsaBirthYear", "tfsaRoomUsedElsewhere", "rrspContributionRoom",
+                           "province", "tfsaBirthYear", "tfsaRoomUsedElsewhere",
+                           "rrspContributionRoom",
                            "createdAt", "updatedAt")
     VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email},
-            ${tfsaBirthYear}, ${tfsaRoomUsedElsewhere}, ${rrspContributionRoom},
+            ${province}, ${tfsaBirthYear}, ${tfsaRoomUsedElsewhere}, ${rrspContributionRoom},
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId")
     DO UPDATE SET
@@ -166,14 +193,20 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
       "lastName" = EXCLUDED."lastName",
       "username" = EXCLUDED."username",
       "email" = EXCLUDED."email",
+      "province" = EXCLUDED."province",
       "tfsaBirthYear" = EXCLUDED."tfsaBirthYear",
       "tfsaRoomUsedElsewhere" = EXCLUDED."tfsaRoomUsedElsewhere",
       "rrspContributionRoom" = EXCLUDED."rrspContributionRoom",
       "updatedAt" = CURRENT_TIMESTAMP
     RETURNING "userId", "firstName", "lastName", "username", "email",
+              "province",
               "tfsaBirthYear",
               "tfsaRoomUsedElsewhere",
               "rrspContributionRoom",
+              "monthlyTakeHomeIncome",
+              "payFrequency",
+              "nextPayday",
+              "primaryFinancialGoal",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "createdAt", "updatedAt"
@@ -213,6 +246,14 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     "text",
     existingProfile?.email ?? null,
     updatedProfile.email
+  );
+  pushActivityFieldChange(
+    changes,
+    "province",
+    "Province",
+    "text",
+    existingProfile?.province ?? null,
+    updatedProfile.province
   );
   pushActivityFieldChange(
     changes,
@@ -286,9 +327,14 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "userId" = ${userId}
     RETURNING "userId", "firstName", "lastName", "username", "email",
+              "province",
               "tfsaBirthYear",
               "tfsaRoomUsedElsewhere",
               "rrspContributionRoom",
+              "monthlyTakeHomeIncome",
+              "payFrequency",
+              "nextPayday",
+              "primaryFinancialGoal",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "createdAt", "updatedAt"
@@ -323,6 +369,110 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
       userId,
       "PROFILE_REMINDERS_UPDATED",
       `Updated reminder preferences: ${describeActivityFieldChanges(changes, "no changes")}`,
+      { changes }
+    );
+  }
+
+  return updatedProfile;
+}
+
+const MAX_MONTHLY_TAKE_HOME_INCOME = 10_000_000;
+
+/**
+ * Replaces the current user's cashflow details (income, pay cycle, goal).
+ * Every field is nullable: passing null clears it, so the card can save a
+ * partially filled form. Requires an existing profile.
+ */
+export async function updateFinancialProfile(userId: string, input: FinancialProfileInput) {
+  const monthlyTakeHomeIncome = input.monthlyTakeHomeIncome ?? null;
+  if (monthlyTakeHomeIncome !== null) {
+    if (!Number.isFinite(monthlyTakeHomeIncome) || monthlyTakeHomeIncome < 0) {
+      throw new AppError(400, "monthlyTakeHomeIncome must be at least 0");
+    }
+    if (monthlyTakeHomeIncome > MAX_MONTHLY_TAKE_HOME_INCOME) {
+      throw new AppError(
+        400,
+        `monthlyTakeHomeIncome must be at most ${MAX_MONTHLY_TAKE_HOME_INCOME}`
+      );
+    }
+  }
+
+  const existingProfile = await getProfile(userId);
+  if (!existingProfile) {
+    throw new AppError(404, "Profile not found");
+  }
+
+  const payFrequency = input.payFrequency ?? null;
+  const nextPayday = input.nextPayday ?? null;
+  const primaryFinancialGoal = input.primaryFinancialGoal ?? null;
+
+  const rows = await prisma.$queryRaw<ProfileRecord[]>`
+    UPDATE "Profile"
+    SET "monthlyTakeHomeIncome" = ${monthlyTakeHomeIncome},
+        "payFrequency" = ${payFrequency},
+        "nextPayday" = ${nextPayday}::date,
+        "primaryFinancialGoal" = ${primaryFinancialGoal},
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "userId" = ${userId}
+    RETURNING "userId", "firstName", "lastName", "username", "email",
+              "province",
+              "tfsaBirthYear",
+              "tfsaRoomUsedElsewhere",
+              "rrspContributionRoom",
+              "monthlyTakeHomeIncome",
+              "payFrequency",
+              "nextPayday",
+              "primaryFinancialGoal",
+              "billRemindersEnabled",
+              "billReminderLeadDays",
+              "createdAt", "updatedAt"
+  `;
+
+  if (!rows[0]) {
+    throw new AppError(404, "Profile not found");
+  }
+
+  const updatedProfile = normalizeProfile(rows[0]);
+
+  const changes: ActivityFieldChange[] = [];
+  pushActivityFieldChange(
+    changes,
+    "monthlyTakeHomeIncome",
+    "Monthly take-home income",
+    "currency",
+    existingProfile.monthlyTakeHomeIncome,
+    updatedProfile.monthlyTakeHomeIncome
+  );
+  pushActivityFieldChange(
+    changes,
+    "payFrequency",
+    "Pay frequency",
+    "text",
+    existingProfile.payFrequency,
+    updatedProfile.payFrequency
+  );
+  pushActivityFieldChange(
+    changes,
+    "nextPayday",
+    "Next payday",
+    "text",
+    existingProfile.nextPayday,
+    updatedProfile.nextPayday
+  );
+  pushActivityFieldChange(
+    changes,
+    "primaryFinancialGoal",
+    "Primary goal",
+    "text",
+    existingProfile.primaryFinancialGoal,
+    updatedProfile.primaryFinancialGoal
+  );
+
+  if (changes.length > 0) {
+    logActivity(
+      userId,
+      "PROFILE_FINANCIAL_UPDATED",
+      `Updated financial profile: ${describeActivityFieldChanges(changes, "no changes")}`,
       { changes }
     );
   }
