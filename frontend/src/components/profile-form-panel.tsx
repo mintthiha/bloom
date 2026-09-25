@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { api, Profile, ProvinceCode } from "@/lib/api";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import { PROVINCE_OPTIONS } from "@/lib/provinces";
 
@@ -13,6 +14,14 @@ type ProfileFormPanelProps = {
   submitLabel: string;
   successMessage?: string;
   onSaved?: (profile: Profile) => void;
+  /**
+   * Renders the form inside a `CollapsibleCard`. Off by default because onboarding shows this
+   * form as a required first step — a user shouldn't be able to collapse a form they must fill
+   * in before continuing. The profile page opts in so its cards read as one scannable set.
+   */
+  collapsible?: boolean;
+  /** Short label for the collapsible shell's eyebrow; ignored unless `collapsible` is set. */
+  eyebrow?: string;
 };
 
 /**
@@ -46,6 +55,8 @@ export function ProfileFormPanel({
   submitLabel,
   successMessage = "Profile saved",
   onSaved,
+  collapsible = false,
+  eyebrow = "Profile",
 }: ProfileFormPanelProps) {
   const { data: session, status } = useSession();
   const [firstName, setFirstName] = useState("");
@@ -172,30 +183,8 @@ export function ProfileFormPanel({
     marginTop: "8px",
   };
 
-  return (
-    <div
-      className="fade-up fade-up-1"
-      style={{
-        background: "var(--surface-1)",
-        border: "1px solid var(--border)",
-        borderRadius: "16px",
-        padding: "24px",
-      }}
-    >
-      <div style={{ marginBottom: "20px" }}>
-        <h2
-          style={{
-            fontSize: "24px",
-            fontWeight: 800,
-            letterSpacing: "-0.4px",
-            marginBottom: "6px",
-          }}
-        >
-          {title}
-        </h2>
-        <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{description}</p>
-      </div>
-
+  const body = (
+    <>
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div className="skeleton" style={{ height: "44px" }} />
@@ -399,6 +388,46 @@ export function ProfileFormPanel({
           </div>
         </form>
       )}
+    </>
+  );
+
+  if (collapsible) {
+    return (
+      <CollapsibleCard
+        className="fade-up fade-up-1"
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+      >
+        {body}
+      </CollapsibleCard>
+    );
+  }
+
+  return (
+    <div
+      className="fade-up fade-up-1"
+      style={{
+        background: "var(--surface-1)",
+        border: "1px solid var(--border)",
+        borderRadius: "16px",
+        padding: "24px",
+      }}
+    >
+      <div style={{ marginBottom: "20px" }}>
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: 800,
+            letterSpacing: "-0.4px",
+            marginBottom: "6px",
+          }}
+        >
+          {title}
+        </h2>
+        <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{description}</p>
+      </div>
+      {body}
     </div>
   );
 }

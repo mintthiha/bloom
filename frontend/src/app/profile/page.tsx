@@ -23,8 +23,10 @@ export default function ProfilePage() {
         </p>
       </div>
       <ProfileFormPanel
-        title="Profile Details"
-        description="Update the personal information stored for your Bloom account."
+        collapsible
+        eyebrow="Profile Details"
+        title="Who you are"
+        description="Your name, username, email, and the tax details Bloom uses for contribution room."
         submitLabel="Save profile"
       />
       <FinancialProfilePanel />

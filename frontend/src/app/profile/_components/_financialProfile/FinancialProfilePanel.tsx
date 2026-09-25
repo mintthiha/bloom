@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, PayFrequency, PrimaryFinancialGoal } from "@/lib/api";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import {
   PAY_FREQUENCY_OPTIONS,
@@ -102,21 +103,13 @@ export function FinancialProfilePanel() {
   );
 
   return (
-    <div
+    <CollapsibleCard
       className="fade-up"
-      style={{
-        background: "var(--surface-1)",
-        border: "1px solid var(--border)",
-        borderRadius: "16px",
-        padding: "24px",
-        marginTop: "20px",
-      }}
+      eyebrow="Financial Profile"
+      title="How your money comes in"
+      description="Tell Bloom your pay cycle so your dashboard can speak in paycheques, not just months."
+      style={{ marginTop: "20px" }}
     >
-      <h2 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px" }}>Financial profile</h2>
-      <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginBottom: "20px" }}>
-        Tell Bloom how money comes in so your dashboard can speak in paycheques, not just months.
-      </p>
-
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div className="skeleton" style={{ height: "44px" }} />
@@ -239,6 +232,6 @@ export function FinancialProfilePanel() {
           </div>
         </form>
       )}
-    </div>
+    </CollapsibleCard>
   );
 }

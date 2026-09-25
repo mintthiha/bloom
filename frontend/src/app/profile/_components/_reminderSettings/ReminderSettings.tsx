@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { CollapsibleCard } from "@/components/collapsible-card";
 
 const LEAD_DAY_OPTIONS = [1, 3, 5, 7];
 
@@ -68,22 +69,13 @@ export function ReminderSettings() {
   }
 
   return (
-    <div
+    <CollapsibleCard
       className="fade-up"
-      style={{
-        background: "var(--surface-1)",
-        border: "1px solid var(--border)",
-        borderRadius: "16px",
-        padding: "24px",
-        marginTop: "20px",
-        opacity: loading ? 0.6 : 1,
-      }}
+      eyebrow="Bill Reminders"
+      title="Get a heads-up before bills are due"
+      description="Reminders appear in your notifications ahead of recurring payments."
+      style={{ marginTop: "20px", opacity: loading ? 0.6 : 1 }}
     >
-      <h2 style={{ fontSize: "18px", fontWeight: 700, marginBottom: "4px" }}>Bill reminders</h2>
-      <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginBottom: "20px" }}>
-        Get a heads-up in your notifications before recurring payments are due.
-      </p>
-
       <div
         style={{
           display: "flex",
@@ -168,6 +160,6 @@ export function ReminderSettings() {
           })}
         </div>
       </div>
-    </div>
+    </CollapsibleCard>
   );
 }
