@@ -15,22 +15,22 @@ export const PRIMARY_FINANCIAL_GOAL_OPTIONS: {
   {
     value: "EMERGENCY_FUND",
     label: "Build an emergency fund",
-    hint: "Bloom highlights how many months of expenses you have saved.",
+    hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
   },
   {
     value: "PAY_OFF_DEBT",
     label: "Pay off debt",
-    hint: "Bloom focuses on balances owing and interest you're carrying.",
+    hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
   },
   {
     value: "BIG_PURCHASE",
     label: "Save for a big purchase",
-    hint: "Bloom keeps your savings goals front and centre.",
+    hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
   },
   {
     value: "TRACK_SPENDING",
     label: "Just track my spending",
-    hint: "Bloom keeps things simple and focuses on your categories.",
+    hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
   },
 ];
 
@@ -87,6 +87,18 @@ function formatDateOnly(date: Date): string {
 }
 
 /**
+ * Pins a moment to the start of its **local** calendar day, expressed in the same UTC-midnight
+ * space `parseDateOnly` produces so the two can be compared directly.
+ *
+ * Reading the local date rather than the UTC one matters: west of Greenwich, late evening is
+ * already tomorrow in UTC, which would shift every countdown a day ahead of the date the user
+ * sees on their own calendar — and out of step with the rest of the app, which is local.
+ */
+function startOfLocalDay(moment: Date): Date {
+  return new Date(Date.UTC(moment.getFullYear(), moment.getMonth(), moment.getDate()));
+}
+
+/**
  * Rolls a saved payday forward by its cadence until it is on or after today, so a
  * date the user entered months ago still shows the *next* payday rather than a
  * stale past one. Weekly and bi-weekly step by a fixed interval; monthly and
@@ -103,9 +115,7 @@ export function advancePaydayToUpcoming(
     return null;
   }
 
-  const todayUtc = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  );
+  const todayUtc = startOfLocalDay(today);
   if (start >= todayUtc) {
     return formatDateOnly(start);
   }
@@ -152,7 +162,7 @@ export function getDaysUntil(dateOnly: string | null, today: Date): number | nul
   if (!target) {
     return null;
   }
-  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const todayUtc = startOfLocalDay(today).getTime();
   return Math.round((target.getTime() - todayUtc) / (24 * 60 * 60 * 1000));
 }
 

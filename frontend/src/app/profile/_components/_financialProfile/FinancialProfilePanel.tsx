@@ -9,7 +9,7 @@ import {
   PAY_FREQUENCY_OPTIONS,
   PRIMARY_FINANCIAL_GOAL_OPTIONS,
   describePayCycle,
-} from "./financial-profile";
+} from "@/lib/financial-profile";
 
 /**
  * Profile-page card for the cashflow details Bloom personalizes around:

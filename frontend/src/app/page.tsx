@@ -454,7 +454,9 @@ function Home() {
     if (visibleCards.has("safe-to-spend")) {
       reorderableCards.push({
         id: "safe-to-spend",
-        node: <SafeToSpendCard accounts={accounts} recurringRules={recurringRules} />,
+        node: (
+          <SafeToSpendCard accounts={accounts} recurringRules={recurringRules} profile={profile} />
+        ),
       });
     }
     if (visibleCards.has("goals")) {

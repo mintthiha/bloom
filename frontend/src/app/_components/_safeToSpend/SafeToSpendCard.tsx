@@ -1,15 +1,18 @@
 "use client";
 import { useMemo } from "react";
-import { Account, RecurringTransaction } from "@/lib/api";
+import { Account, Profile, RecurringTransaction } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrency } from "@/lib/format";
+import { computePaydayContext } from "@/lib/payday-context";
 import { computeSafeToSpend, SafeToSpendResult } from "@/lib/safe-to-spend";
 import { formatRelativeDate } from "../_recurringCalendar/recurring-calendar-utils";
 
 type Props = {
   accounts: Account[];
   recurringRules: RecurringTransaction[];
+  /** Supplies the pay cycle for the payday line; the line is omitted when it isn't set up. */
+  profile?: Profile | null;
 };
 
 const POSITIVE_COLOR = "#22c55e";
@@ -65,6 +68,23 @@ function LedgerRow({
   );
 }
 
+/** Renders a payday as a weekday and date ("Fri, Sep 25"). */
+function formatPaydayDate(dateOnly: string): string {
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-CA", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/** Phrases the countdown to payday, special-casing today and tomorrow. */
+function formatPaydayCountdown(daysUntilPayday: number): string {
+  if (daysUntilPayday === 0) return "today";
+  if (daysUntilPayday === 1) return "tomorrow";
+  return `in ${daysUntilPayday} days`;
+}
+
 /** Header badge showing the headline safe-to-spend figure, kept visible while the card is collapsed. */
 function SafeToSpendBadge({ result }: { result: SafeToSpendResult }) {
   const color = result.safeToSpend >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR;
@@ -88,10 +108,14 @@ function SafeToSpendBadge({ result }: { result: SafeToSpendResult }) {
 }
 
 /** Dashboard card showing how much cash is free to spend for the rest of the month, with a full breakdown. */
-export function SafeToSpendCard({ accounts, recurringRules }: Props) {
+export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
   const result = useMemo(
     () => computeSafeToSpend(accounts, recurringRules),
     [accounts, recurringRules]
+  );
+  const paydayContext = useMemo(
+    () => computePaydayContext(result.billItems, profile),
+    [result.billItems, profile]
   );
   const isMobile = useIsMobile();
 
@@ -150,6 +174,50 @@ export function SafeToSpendCard({ accounts, recurringRules }: Props) {
           </p>
         )}
       </div>
+
+      {/* Payday context: how this month's figure splits around the next paycheque. */}
+      {paydayContext && (
+        <div
+          style={{
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "10px",
+            padding: "10px 12px",
+            marginBottom: "18px",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: "4px 10px",
+          }}
+        >
+          <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)" }}>
+            Payday {formatPaydayDate(paydayContext.payday)} ·{" "}
+            {formatPaydayCountdown(paydayContext.daysUntilPayday)}
+          </span>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            {paydayContext.billsBeforePayday === 0 && paydayContext.billsAfterPayday === 0 ? (
+              "No bills due this month"
+            ) : (
+              <>
+                <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
+                  {formatCurrency(paydayContext.billsBeforePayday)}
+                </span>{" "}
+                due before then
+                {paydayContext.billsAfterPayday > 0 && (
+                  <>
+                    ,{" "}
+                    <span className="num" style={{ fontWeight: 700 }}>
+                      {formatCurrency(paydayContext.billsAfterPayday)}
+                    </span>{" "}
+                    after
+                  </>
+                )}
+              </>
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Breakdown ledger */}
       <div style={{ marginBottom: result.billItems.length > 0 ? "18px" : 0 }}>
