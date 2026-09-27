@@ -8,6 +8,8 @@ type ProfileIdentityHeaderProps = {
   lastName: string | null;
   username: string | null;
   email: string | null;
+  /** The colour the user picked, or null to derive it from their name. */
+  avatarColor: string | null;
   /** Google profile picture from the session, when one exists. */
   imageUrl: string | null;
 };
@@ -21,6 +23,7 @@ export function ProfileIdentityHeader({
   lastName,
   username,
   email,
+  avatarColor,
   imageUrl,
 }: ProfileIdentityHeaderProps) {
   const isMobile = useIsMobile();
@@ -41,6 +44,7 @@ export function ProfileIdentityHeader({
         firstName={firstName}
         lastName={lastName}
         fallbackLabel={username ?? email}
+        colorChoice={avatarColor}
         imageUrl={imageUrl}
         size={isMobile ? 56 : 72}
         label={displayName}

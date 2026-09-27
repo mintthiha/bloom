@@ -38,6 +38,7 @@ export default function ProfilePage() {
         lastName={savedProfile?.lastName ?? null}
         username={savedProfile?.username ?? null}
         email={savedProfile?.email ?? session?.user?.email ?? null}
+        avatarColor={savedProfile?.avatarColor ?? null}
         imageUrl={session?.user?.image ?? null}
       />
       <ProfileFormPanel

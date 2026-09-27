@@ -9,6 +9,8 @@ type InitialsAvatarProps = {
   lastName: string | null | undefined;
   /** Handle or email used to derive initials and the colour when no name is saved yet. */
   fallbackLabel?: string | null;
+  /** The colour the user picked on their profile; null falls back to a name-derived colour. */
+  colorChoice?: string | null;
   /** Google profile picture, when the session has one. Falls back to initials if it fails to load. */
   imageUrl?: string | null;
   /** Rendered width/height in pixels. */
@@ -27,6 +29,7 @@ export function InitialsAvatar({
   firstName,
   lastName,
   fallbackLabel,
+  colorChoice,
   imageUrl,
   size,
   borderColor,
@@ -41,7 +44,8 @@ export function InitialsAvatar({
 
   const initials = getAvatarInitials(firstName, lastName, fallbackLabel);
   const palette = getAvatarPalette(
-    [firstName, lastName].filter(Boolean).join(" ") || (fallbackLabel ?? "")
+    [firstName, lastName].filter(Boolean).join(" ") || (fallbackLabel ?? ""),
+    colorChoice
   );
 
   if (imageUrl && !hasImageFailed) {

@@ -1,3 +1,5 @@
+import type { AvatarColor } from "./initials-avatar";
+
 const BASE = "/api/bloom";
 
 export type DateRangeQuery = {
@@ -119,6 +121,7 @@ export type Profile = {
   payFrequency: PayFrequency | null;
   nextPayday: string | null;
   primaryFinancialGoal: PrimaryFinancialGoal | null;
+  avatarColor: AvatarColor | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   createdAt: string;
@@ -641,6 +644,7 @@ export const api = {
     tfsaBirthYear?: number | null;
     tfsaRoomUsedElsewhere?: number | null;
     rrspContributionRoom?: number | null;
+    avatarColor?: AvatarColor | null;
   }) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
   updateFinancialProfile: (input: {
     monthlyTakeHomeIncome: number | null;

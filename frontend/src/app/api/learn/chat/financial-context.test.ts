@@ -93,6 +93,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     payFrequency: null,
     nextPayday: null,
     primaryFinancialGoal: null,
+    avatarColor: null,
     billRemindersEnabled: true,
     billReminderLeadDays: 3,
     createdAt: "2026-01-01T00:00:00Z",

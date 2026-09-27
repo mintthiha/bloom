@@ -1066,3 +1066,30 @@ body::before {
     transition: none;
   }
 }
+
+/*
+ * Avatar colour swatches in the profile form. The selected swatch gets its ring from an
+ * inline `box-shadow` (the chosen colour is only known in JS), so hover/active handle
+ * the lift and press feedback here.
+ */
+.avatar-swatch {
+  cursor: pointer;
+  transition:
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.15s ease;
+}
+.avatar-swatch:hover {
+  transform: scale(1.1);
+  filter: brightness(1.15);
+}
+.avatar-swatch:active {
+  transform: scale(0.94);
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-swatch,
+  .avatar-swatch:hover,
+  .avatar-swatch:active {
+    transform: none;
+    transition: none;
+  }
+}

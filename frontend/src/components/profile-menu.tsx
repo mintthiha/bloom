@@ -18,6 +18,7 @@ export function ProfileMenu() {
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarColor, setAvatarColor] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -34,12 +35,14 @@ export function ProfileMenu() {
           setFirstName(profile?.firstName ?? null);
           setLastName(profile?.lastName ?? null);
           setUsername(profile?.username ?? null);
+          setAvatarColor(profile?.avatarColor ?? null);
         }
       } catch {
         if (!cancelled) {
           setFirstName(null);
           setLastName(null);
           setUsername(null);
+          setAvatarColor(null);
         }
       }
     }
@@ -48,6 +51,7 @@ export function ProfileMenu() {
       loadProfile();
     } else {
       setUsername(null);
+      setAvatarColor(null);
     }
 
     return () => {
@@ -104,6 +108,7 @@ export function ProfileMenu() {
           firstName={firstName}
           lastName={lastName}
           fallbackLabel={username ?? session.user.email}
+          colorChoice={avatarColor}
           imageUrl={session.user.image}
           size={32}
           borderColor={isOpen ? "#3b82f6" : undefined}

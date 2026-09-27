@@ -70,6 +70,7 @@ model Profile {
   payFrequency            String?
   nextPayday              DateTime? @db.Date
   primaryFinancialGoal    String?
+  avatarColor             String?
   billRemindersEnabled    Boolean  @default(true)
   billReminderLeadDays    Int      @default(3)
   createdAt               DateTime @default(now()) @db.Timestamptz(3)

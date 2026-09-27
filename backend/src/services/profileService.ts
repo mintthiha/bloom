@@ -1,6 +1,11 @@
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
-import type { PayFrequency, PrimaryFinancialGoal, ProvinceCode } from "./profileOptions";
+import type {
+  AvatarColor,
+  PayFrequency,
+  PrimaryFinancialGoal,
+  ProvinceCode,
+} from "./profileOptions";
 import { logActivity } from "./activityService";
 import {
   ActivityFieldChange,
@@ -17,6 +22,7 @@ type ProfileInput = {
   tfsaBirthYear?: number | null;
   tfsaRoomUsedElsewhere?: number | null;
   rrspContributionRoom?: number | null;
+  avatarColor?: AvatarColor | null;
 };
 
 type ReminderPreferenceInput = {
@@ -45,6 +51,7 @@ type ProfileRecord = {
   payFrequency: string | null;
   nextPayday: Date | null;
   primaryFinancialGoal: string | null;
+  avatarColor: string | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   createdAt: Date;
@@ -83,6 +90,7 @@ export async function getProfile(userId: string) {
            "payFrequency",
            "nextPayday",
            "primaryFinancialGoal",
+           "avatarColor",
            "billRemindersEnabled",
            "billReminderLeadDays",
            "createdAt", "updatedAt"
@@ -178,14 +186,16 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   const tfsaBirthYear = input.tfsaBirthYear ?? null;
   const tfsaRoomUsedElsewhere = input.tfsaRoomUsedElsewhere ?? null;
   const rrspContributionRoom = input.rrspContributionRoom ?? null;
+  const avatarColor = input.avatarColor ?? null;
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email",
                            "province", "tfsaBirthYear", "tfsaRoomUsedElsewhere",
-                           "rrspContributionRoom",
+                           "rrspContributionRoom", "avatarColor",
                            "createdAt", "updatedAt")
     VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email},
             ${province}, ${tfsaBirthYear}, ${tfsaRoomUsedElsewhere}, ${rrspContributionRoom},
+            ${avatarColor},
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId")
     DO UPDATE SET
@@ -197,6 +207,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
       "tfsaBirthYear" = EXCLUDED."tfsaBirthYear",
       "tfsaRoomUsedElsewhere" = EXCLUDED."tfsaRoomUsedElsewhere",
       "rrspContributionRoom" = EXCLUDED."rrspContributionRoom",
+      "avatarColor" = EXCLUDED."avatarColor",
       "updatedAt" = CURRENT_TIMESTAMP
     RETURNING "userId", "firstName", "lastName", "username", "email",
               "province",
@@ -207,6 +218,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "payFrequency",
               "nextPayday",
               "primaryFinancialGoal",
+              "avatarColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "createdAt", "updatedAt"
@@ -279,6 +291,14 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     existingProfile?.rrspContributionRoom ?? null,
     updatedProfile.rrspContributionRoom
   );
+  pushActivityFieldChange(
+    changes,
+    "avatarColor",
+    "Avatar colour",
+    "text",
+    existingProfile?.avatarColor ?? null,
+    updatedProfile.avatarColor
+  );
 
   if (changes.length > 0) {
     logActivity(
@@ -335,6 +355,7 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
               "payFrequency",
               "nextPayday",
               "primaryFinancialGoal",
+              "avatarColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "createdAt", "updatedAt"
@@ -423,6 +444,7 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
               "payFrequency",
               "nextPayday",
               "primaryFinancialGoal",
+              "avatarColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "createdAt", "updatedAt"

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getAvatarInitials, getAvatarPalette } from "./initials-avatar";
+import {
+  AVATAR_COLOR_OPTIONS,
+  getAvatarInitials,
+  getAvatarPalette,
+  parseAvatarColor,
+} from "./initials-avatar";
 
 describe("getAvatarInitials", () => {
   it("uses the first letter of the first and last name", () => {
@@ -66,5 +71,41 @@ describe("getAvatarPalette", () => {
     expect(palette.background).toMatch(/^#[0-9a-f]{8}$/i);
     expect(palette.text).toMatch(/^#[0-9a-f]{6}$/i);
     expect(getAvatarPalette(null)).toEqual(palette);
+  });
+});
+
+describe("getAvatarPalette with an explicit choice", () => {
+  it("uses the chosen colour instead of the name-derived one", () => {
+    const violet = AVATAR_COLOR_OPTIONS.find((option) => option.value === "VIOLET");
+
+    expect(getAvatarPalette("Ada Lovelace", "VIOLET")).toEqual(violet?.palette);
+  });
+
+  it("accepts a stored value in any casing", () => {
+    expect(getAvatarPalette("Ada Lovelace", "violet")).toEqual(
+      getAvatarPalette("Ada Lovelace", "VIOLET")
+    );
+  });
+
+  it("falls back to the name-derived colour for an unknown or missing choice", () => {
+    expect(getAvatarPalette("Ada Lovelace", "TEAL")).toEqual(getAvatarPalette("Ada Lovelace"));
+    expect(getAvatarPalette("Ada Lovelace", null)).toEqual(getAvatarPalette("Ada Lovelace"));
+  });
+
+  it("honours the choice even when there is no name to hash", () => {
+    expect(getAvatarPalette("", "PINK")).not.toEqual(getAvatarPalette(""));
+  });
+});
+
+describe("parseAvatarColor", () => {
+  it("normalizes a known colour", () => {
+    expect(parseAvatarColor(" green ")).toBe("GREEN");
+  });
+
+  it("returns null for unknown, empty, or missing values", () => {
+    expect(parseAvatarColor("TEAL")).toBeNull();
+    expect(parseAvatarColor("")).toBeNull();
+    expect(parseAvatarColor(null)).toBeNull();
+    expect(parseAvatarColor(undefined)).toBeNull();
   });
 });

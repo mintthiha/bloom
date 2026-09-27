@@ -28,9 +28,13 @@ export const PRIMARY_FINANCIAL_GOALS = [
   "TRACK_SPENDING",
 ] as const;
 
+/** Accent colours a user can pick for their initials avatar. */
+export const AVATAR_COLORS = ["AMBER", "BLUE", "GREEN", "VIOLET", "PINK", "CYAN"] as const;
+
 export type ProvinceCode = (typeof PROVINCE_CODES)[number];
 export type PayFrequency = (typeof PAY_FREQUENCIES)[number];
 export type PrimaryFinancialGoal = (typeof PRIMARY_FINANCIAL_GOALS)[number];
+export type AvatarColor = (typeof AVATAR_COLORS)[number];
 
 /**
  * Validates that an optional code belongs to the allowed set, uppercasing it first

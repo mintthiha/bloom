@@ -242,6 +242,81 @@ describe("profileService", () => {
       rrspContributionRoom: 14000,
     });
   });
+
+  it("persists the chosen avatar colour and records it in the activity log", async () => {
+    const { upsertProfile } = await import("./profileService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          avatarColor: null,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          avatarColor: "VIOLET",
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ]);
+
+    const result = await upsertProfile("user-1", {
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      avatarColor: "VIOLET",
+    });
+
+    expect(result).toMatchObject({ avatarColor: "VIOLET" });
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "PROFILE_UPDATED",
+      expect.stringContaining("Avatar colour"),
+      expect.any(Object)
+    );
+  });
+
+  it("clears the avatar colour back to the name-derived default when none is given", async () => {
+    const { upsertProfile } = await import("./profileService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          userId: "user-1",
+          firstName: "Jane",
+          lastName: "Doe",
+          username: "janedoe",
+          email: "jane@example.com",
+          avatarColor: null,
+          createdAt: new Date("2026-04-04T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-04T00:00:00.000Z"),
+        },
+      ]);
+
+    const result = await upsertProfile("user-1", {
+      firstName: "Jane",
+      lastName: "Doe",
+      username: "janedoe",
+      email: "jane@example.com",
+      avatarColor: null,
+    });
+
+    expect(result).toMatchObject({ avatarColor: null });
+  });
 });
 
 describe("getProfile", () => {

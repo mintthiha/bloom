@@ -3,6 +3,7 @@ import * as profileService from "../services/profileService";
 import { AppError } from "../middleware/errorHandler";
 import { requireObject, requireString } from "../lib/validation";
 import {
+  AVATAR_COLORS,
   PAY_FREQUENCIES,
   PRIMARY_FINANCIAL_GOALS,
   PROVINCE_CODES,
@@ -100,6 +101,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
       body.rrspContributionRoom,
       "rrspContributionRoom"
     );
+    const avatarColor = normalizeEnumValue(body.avatarColor, "avatarColor", AVATAR_COLORS);
     res.json(
       await profileService.upsertProfile(uid(req), {
         firstName,
@@ -110,6 +112,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
         tfsaBirthYear,
         tfsaRoomUsedElsewhere,
         rrspContributionRoom,
+        avatarColor,
       })
     );
   } catch (err) {

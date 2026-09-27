@@ -7,6 +7,8 @@ import { api, Profile, ProvinceCode } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import { PROVINCE_OPTIONS } from "@/lib/provinces";
+import { AvatarColorPicker } from "@/components/AvatarColorPicker";
+import { AvatarColor, parseAvatarColor } from "@/lib/initials-avatar";
 
 type ProfileFormPanelProps = {
   title: string;
@@ -64,6 +66,7 @@ export function ProfileFormPanel({
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [province, setProvince] = useState<ProvinceCode | "">("");
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
   const [tfsaBirthYear, setTfsaBirthYear] = useState("");
   const [tfsaRoomUsedElsewhere, setTfsaRoomUsedElsewhere] = useState("");
   const [rrspContributionRoom, setRrspContributionRoom] = useState("");
@@ -99,6 +102,7 @@ export function ProfileFormPanel({
         setUsername(profile?.username ?? deriveUsernameFromEmail(session?.user?.email));
         setEmail(profile?.email ?? session?.user?.email ?? "");
         setProvince(profile?.province ?? "");
+        setAvatarColor(parseAvatarColor(profile?.avatarColor));
         setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
         setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");
         setRrspContributionRoom(profile?.rrspContributionRoom?.toString() ?? "");
@@ -144,6 +148,7 @@ export function ProfileFormPanel({
         username: username.trim(),
         email: email.trim(),
         province: province === "" ? null : province,
+        avatarColor,
         tfsaBirthYear: parsedBirthYear,
         tfsaRoomUsedElsewhere: parsedRoomUsedElsewhere,
         rrspContributionRoom: parsedRrspRoom,
@@ -153,6 +158,7 @@ export function ProfileFormPanel({
       setUsername(profile.username);
       setEmail(profile.email);
       setProvince(profile.province ?? "");
+      setAvatarColor(parseAvatarColor(profile.avatarColor));
       setTfsaBirthYear(profile.tfsaBirthYear?.toString() ?? "");
       setTfsaRoomUsedElsewhere(profile.tfsaRoomUsedElsewhere?.toString() ?? "");
       setRrspContributionRoom(profile.rrspContributionRoom?.toString() ?? "");
@@ -277,6 +283,20 @@ export function ProfileFormPanel({
               ))}
             </select>
             <p style={hintStyle}>Lets Bloom tailor tax and benefit guidance to where you live.</p>
+          </div>
+
+          <div>
+            <span style={sectionLabelStyle}>Avatar Colour</span>
+            <AvatarColorPicker
+              value={avatarColor}
+              onChange={setAvatarColor}
+              firstName={firstName}
+              lastName={lastName}
+              fallbackLabel={username || email}
+            />
+            <p style={hintStyle}>
+              Used for your initials avatar in the header and here. Auto follows your name.
+            </p>
           </div>
 
           {/* Contribution Room section */}
