@@ -9,6 +9,7 @@ import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import { PROVINCE_OPTIONS } from "@/lib/provinces";
 import { AvatarColorPicker } from "@/components/AvatarColorPicker";
 import { AvatarColor, parseAvatarColor } from "@/lib/initials-avatar";
+import { publishProfileUpdate } from "@/lib/profile-updates";
 
 type ProfileFormPanelProps = {
   title: string;
@@ -163,6 +164,7 @@ export function ProfileFormPanel({
       setTfsaRoomUsedElsewhere(profile.tfsaRoomUsedElsewhere?.toString() ?? "");
       setRrspContributionRoom(profile.rrspContributionRoom?.toString() ?? "");
       setSuccess(successMessage);
+      publishProfileUpdate(profile);
       onSaved?.(profile);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save profile");

@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { subscribeToProfileUpdates } from "@/lib/profile-updates";
 
 /**
  * Top-right header identity control: an avatar button that opens a dropdown with the
@@ -58,6 +59,21 @@ export function ProfileMenu() {
       cancelled = true;
     };
   }, [session?.user?.id]);
+
+  /**
+   * Keeps the header avatar in step with the profile page: saving the form publishes the new
+   * profile, so the name, handle, and colour update without waiting for a page refresh.
+   */
+  useEffect(
+    () =>
+      subscribeToProfileUpdates((profile) => {
+        setFirstName(profile.firstName ?? null);
+        setLastName(profile.lastName ?? null);
+        setUsername(profile.username ?? null);
+        setAvatarColor(profile.avatarColor ?? null);
+      }),
+    []
+  );
 
   /** Closes the menu when clicking outside it or pressing Escape. */
   useEffect(() => {

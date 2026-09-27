@@ -1,6 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfileMenu } from "./profile-menu";
+import type { Profile } from "@/lib/api";
+import { publishProfileUpdate } from "@/lib/profile-updates";
 
 const { apiMock, useSessionMock, signOutMock } = vi.hoisted(() => ({
   apiMock: { getProfile: vi.fn() },
@@ -89,5 +91,38 @@ describe("ProfileMenu", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: "Sign out" }));
 
     expect(signOutMock).toHaveBeenCalledWith({ callbackUrl: "/login" });
+  });
+
+  it("refreshes the avatar and name when the profile page saves, without refetching", async () => {
+    useSessionMock.mockReturnValue(session());
+    apiMock.getProfile.mockResolvedValue({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      username: "ada",
+      avatarColor: null,
+    });
+
+    render(<ProfileMenu />);
+    await waitFor(() => expect(apiMock.getProfile).toHaveBeenCalledTimes(1));
+
+    const avatarColorBeforeSave = screen.getByRole("img", { name: "Ada Lovelace" }).style.color;
+
+    act(() =>
+      publishProfileUpdate({
+        firstName: "Grace",
+        lastName: "Hopper",
+        username: "grace",
+        avatarColor: "VIOLET",
+      } as Profile)
+    );
+
+    const updatedAvatar = await screen.findByRole("img", { name: "Grace Hopper" });
+    expect(updatedAvatar).toHaveTextContent("GH");
+    expect(updatedAvatar.style.color).not.toBe(avatarColorBeforeSave);
+    expect(apiMock.getProfile).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+    expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
+    expect(screen.getByText("@grace")).toBeInTheDocument();
   });
 });
