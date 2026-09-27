@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { api, Profile } from "@/lib/api";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
 import { ProfileIdentityHeader } from "./_components/_profileHeader/ProfileIdentityHeader";
+import { GlanceStatsStrip } from "./_components/_glanceStats/GlanceStatsStrip";
 import { FinancialProfilePanel } from "./_components/_financialProfile/FinancialProfilePanel";
 import { ReminderSettings } from "./_components/_reminderSettings/ReminderSettings";
 
@@ -41,6 +42,7 @@ export default function ProfilePage() {
         avatarColor={savedProfile?.avatarColor ?? null}
         imageUrl={session?.user?.image ?? null}
       />
+      <GlanceStatsStrip createdAt={savedProfile?.createdAt ?? null} />
       <ProfileFormPanel
         collapsible
         eyebrow="Profile Details"
