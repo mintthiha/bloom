@@ -1,33 +1,52 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { api, Profile } from "@/lib/api";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
+import { ProfileIdentityHeader } from "./_components/_profileHeader/ProfileIdentityHeader";
 import { FinancialProfilePanel } from "./_components/_financialProfile/FinancialProfilePanel";
 import { ReminderSettings } from "./_components/_reminderSettings/ReminderSettings";
 
 export default function ProfilePage() {
+  const { data: session } = useSession();
+  const [savedProfile, setSavedProfile] = useState<Profile | null>(null);
+
+  /** Loads the saved profile so the identity header can show the stored name and handle. */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      try {
+        const profile = await api.getProfile();
+        if (!cancelled) setSavedProfile(profile);
+      } catch {
+        if (!cancelled) setSavedProfile(null);
+      }
+    }
+
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", padding: "48px 24px" }}>
-      <div className="fade-up" style={{ marginBottom: "28px" }}>
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: 800,
-            letterSpacing: "-0.5px",
-            marginBottom: "6px",
-          }}
-        >
-          Profile
-        </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>
-          Manage the personal information stored for your Bloom account.
-        </p>
-      </div>
+      <ProfileIdentityHeader
+        firstName={savedProfile?.firstName ?? null}
+        lastName={savedProfile?.lastName ?? null}
+        username={savedProfile?.username ?? null}
+        email={savedProfile?.email ?? session?.user?.email ?? null}
+        imageUrl={session?.user?.image ?? null}
+      />
       <ProfileFormPanel
         collapsible
         eyebrow="Profile Details"
         title="Who you are"
         description="Your name, username, email, and the tax details Bloom uses for contribution room."
         submitLabel="Save profile"
+        onSaved={setSavedProfile}
       />
       <FinancialProfilePanel />
       <ReminderSettings />

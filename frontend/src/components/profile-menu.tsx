@@ -5,6 +5,7 @@ import { LogOut, User } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { InitialsAvatar } from "@/components/InitialsAvatar";
 
 /**
  * Top-right header identity control: an avatar button that opens a dropdown with the
@@ -17,13 +18,7 @@ export function ProfileMenu() {
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [avatarFailed, setAvatarFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  /** Resets the image-error state when the avatar URL changes so a new source can retry loading. */
-  useEffect(() => {
-    setAvatarFailed(false);
-  }, [session?.user?.image]);
 
   /**
    * Loads the current user's saved profile so the menu reflects Prisma data
@@ -85,7 +80,6 @@ export function ProfileMenu() {
 
   const displayName = [firstName, lastName].filter(Boolean).join(" ") || "Your profile";
   const displayHandle = username ? `@${username}` : (session.user.email ?? "");
-  const showAvatarImage = Boolean(session.user.image) && !avatarFailed;
 
   return (
     <div ref={containerRef} style={{ position: "relative", flexShrink: 0 }}>
@@ -106,36 +100,15 @@ export function ProfileMenu() {
           borderRadius: "999px",
         }}
       >
-        {showAvatarImage ? (
-          <img
-            src={session.user.image ?? undefined}
-            alt={displayName}
-            width={32}
-            height={32}
-            onError={() => setAvatarFailed(true)}
-            style={{
-              borderRadius: "999px",
-              display: "block",
-              border: isOpen ? "1px solid #3b82f6" : "1px solid var(--border)",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "999px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#3b82f622",
-              border: isOpen ? "1px solid #3b82f6" : "1px solid #3b82f644",
-              color: "#3b82f6",
-            }}
-          >
-            <User size={16} />
-          </div>
-        )}
+        <InitialsAvatar
+          firstName={firstName}
+          lastName={lastName}
+          fallbackLabel={username ?? session.user.email}
+          imageUrl={session.user.image}
+          size={32}
+          borderColor={isOpen ? "#3b82f6" : undefined}
+          label={displayName}
+        />
       </button>
 
       {isOpen && (
