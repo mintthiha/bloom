@@ -8,6 +8,7 @@ import { ProfileIdentityHeader } from "./_components/_profileHeader/ProfileIdent
 import { GlanceStatsStrip } from "./_components/_glanceStats/GlanceStatsStrip";
 import { FinancialProfilePanel } from "./_components/_financialProfile/FinancialProfilePanel";
 import { ReminderSettings } from "./_components/_reminderSettings/ReminderSettings";
+import { AccountDataPanel } from "./_components/_accountData/AccountDataPanel";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -53,6 +54,7 @@ export default function ProfilePage() {
       />
       <FinancialProfilePanel />
       <ReminderSettings />
+      <AccountDataPanel email={savedProfile?.email ?? session?.user?.email ?? null} />
     </div>
   );
 }

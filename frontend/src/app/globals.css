@@ -443,6 +443,32 @@ body {
 }
 
 /*
+ * Danger-zone button (deleting your whole account). Heavier than the row-level delete
+ * buttons on purpose: a filled red tint at rest so it never gets clicked by accident,
+ * deepening on hover, with the usual tactile dip on press.
+ */
+.danger-action-button {
+  background: #f8717118;
+  border: 1px solid #f8717159;
+  color: #f87171;
+  border-radius: 10px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.danger-action-button:not(:disabled):hover {
+  border-color: #f87171a6;
+  background: #f8717130;
+}
+.danger-action-button:not(:disabled):active {
+  transform: scale(0.97);
+}
+.danger-action-button:disabled {
+  opacity: 0.6;
+}
+
+/*
  * Rule edit button. Neutral at rest; hover reveals intent with a blue accent border,
  * tint, and label shift, and press gives a tactile dip.
  */
@@ -633,6 +659,7 @@ body {
   .reset-button:hover .reset-button-icon,
   .budget-delete-button:not(:disabled):active,
   .transaction-delete-button:not(:disabled):active,
+  .danger-action-button:not(:disabled):active,
   .rule-edit-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
   .budget-card:hover,

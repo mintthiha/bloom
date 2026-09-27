@@ -431,6 +431,66 @@ export type ActivityLogQuery = {
   end?: string;
 };
 
+/** Everything Bloom stores for the signed-in user, as returned by the whole-account export. */
+export type UserDataExport = {
+  exportVersion: number;
+  exportedAt: string;
+  profile: Omit<Profile, "userId" | "avatarColor" | "updatedAt"> | null;
+  accounts: Array<{
+    id: string;
+    ownerName: string;
+    nickname: string | null;
+    accountType: AccountType;
+    balance: number;
+    frozen: boolean;
+    isLinked: boolean;
+    institutionName: string | null;
+    createdAt: string;
+  }>;
+  transactions: TransactionListItem[];
+  budgets: Array<{
+    category: string;
+    monthlyLimit: number;
+    rolloverEnabled: boolean;
+    createdAt: string;
+  }>;
+  savingsGoals: Array<{
+    name: string;
+    targetAmount: number;
+    accountId: string;
+    createdAt: string;
+  }>;
+  recurringTransactions: Array<{
+    name: string;
+    type: RecurringTransactionType;
+    amount: number;
+    category: string | null;
+    merchant: string | null;
+    description: string | null;
+    frequency: RecurringFrequency;
+    startDate: string;
+    endDate: string | null;
+    active: boolean;
+    accountId: string;
+  }>;
+  manualEntries: Array<{
+    name: string;
+    type: ManualEntryType;
+    amount: number;
+    date: string | null;
+    createdAt: string;
+  }>;
+  categorizationRules: Array<{ merchant: string; category: string; createdAt: string }>;
+  netWorthSnapshots: Array<{
+    month: string;
+    netWorth: number;
+    totalAssets: number;
+    totalDebt: number;
+    manualAssets: number;
+    manualLiabilities: number;
+  }>;
+};
+
 export const api = {
   listAccounts: () => request<Account[]>("/accounts"),
   getMonthlySummary: (query?: DateRangeQuery) =>
@@ -715,4 +775,6 @@ export const api = {
   deleteManualEntry: (id: string) => request<void>(`/manual-entries/${id}`, { method: "DELETE" }),
   restoreManualEntry: (id: string) =>
     request<void>(`/manual-entries/${id}/restore`, { method: "POST" }),
+  exportUserData: () => request<UserDataExport>("/user-data/export"),
+  deleteUserAccount: () => request<void>("/user-data", { method: "DELETE" }),
 };

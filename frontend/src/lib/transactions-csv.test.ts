@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { TransactionListItem } from "@/lib/api";
-import { transactionListItemsToCsv, buildTransactionsExportFilename } from "./export-csv";
+import { transactionListItemsToCsv, buildTransactionsExportFilename } from "./transactions-csv";
 
 /** Builds a TransactionListItem fixture with sensible defaults. */
 function makeItem(overrides?: Partial<TransactionListItem>): TransactionListItem {

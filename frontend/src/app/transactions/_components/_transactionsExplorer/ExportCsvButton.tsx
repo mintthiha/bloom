@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { api, Transaction, TransactionSortKey } from "@/lib/api";
-import { transactionListItemsToCsv, buildTransactionsExportFilename } from "./export-csv";
+import { transactionListItemsToCsv, buildTransactionsExportFilename } from "@/lib/transactions-csv";
+import { downloadTextFile } from "@/lib/download-file";
 
 interface ExportCsvButtonProps {
   total: number;
@@ -43,14 +44,11 @@ export function ExportCsvButton({
         start,
         end,
       });
-      const csv = transactionListItemsToCsv(result.rows);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = buildTransactionsExportFilename();
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadTextFile(
+        buildTransactionsExportFilename(),
+        transactionListItemsToCsv(result.rows),
+        "text/csv"
+      );
     } catch {
       toast.error("Export failed");
     } finally {
