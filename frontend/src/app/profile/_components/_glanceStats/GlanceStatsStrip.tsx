@@ -92,7 +92,9 @@ export function GlanceStatsStrip({ createdAt }: GlanceStatsStripProps) {
                 fontSize: "22px",
                 fontWeight: 800,
                 letterSpacing: "-0.4px",
-                overflowWrap: "anywhere",
+                // No mid-word breaking: a wrapped "Septembe/r" reads as a rendering bug.
+                overflowWrap: "normal",
+                wordBreak: "keep-all",
               }}
             >
               {stat.value}

@@ -8,12 +8,12 @@ import {
 } from "./glance-stats";
 
 describe("formatMemberSince", () => {
-  it("formats a stored timestamp as month and year", () => {
-    expect(formatMemberSince("2026-06-10T14:23:00.000Z")).toBe("June 2026");
+  it("formats a stored timestamp as an abbreviated month and year", () => {
+    expect(formatMemberSince("2026-06-10T14:23:00.000Z")).toBe("Jun 2026");
   });
 
   it("reads the timestamp in UTC so a late-evening signup keeps its own month", () => {
-    expect(formatMemberSince("2026-07-01T02:00:00.000Z")).toBe("July 2026");
+    expect(formatMemberSince("2026-07-01T02:00:00.000Z")).toBe("Jul 2026");
   });
 
   it("falls back to a dash when there is no timestamp", () => {
@@ -80,7 +80,7 @@ describe("buildGlanceStats", () => {
       "transactions",
       "history",
     ]);
-    expect(stats.map((stat) => stat.value)).toEqual(["June 2026", "4", "1,312", "7"]);
+    expect(stats.map((stat) => stat.value)).toEqual(["Jun 2026", "4", "1,312", "7"]);
   });
 
   it("pluralizes each count label independently", () => {
@@ -118,7 +118,7 @@ describe("buildGlanceStats", () => {
       monthsOfHistory: 7,
     });
 
-    expect(stats.map((stat) => stat.value)).toEqual(["June 2026", "4", UNAVAILABLE_VALUE, "7"]);
+    expect(stats.map((stat) => stat.value)).toEqual(["Jun 2026", "4", UNAVAILABLE_VALUE, "7"]);
   });
 
   it("reports a brand-new account with zeroes rather than dashes", () => {
@@ -129,6 +129,6 @@ describe("buildGlanceStats", () => {
       monthsOfHistory: 0,
     });
 
-    expect(stats.map((stat) => stat.value)).toEqual(["September 2026", "0", "0", "0"]);
+    expect(stats.map((stat) => stat.value)).toEqual(["Sep 2026", "0", "0", "0"]);
   });
 });

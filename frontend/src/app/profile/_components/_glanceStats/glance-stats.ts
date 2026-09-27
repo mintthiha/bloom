@@ -22,15 +22,16 @@ export type GlanceStatsInput = {
 export const UNAVAILABLE_VALUE = "—";
 
 /**
- * Formats a stored ISO timestamp as "June 2026". Read in UTC so the label matches the stored
- * signup date rather than slipping to the previous month for viewers west of it.
+ * Formats a stored ISO timestamp as "Jun 2026". Abbreviated because the tile is only as wide as a
+ * quarter of the card, and read in UTC so the label matches the stored signup date rather than
+ * slipping to the previous month for viewers west of it.
  */
 export function formatMemberSince(createdAt: string | null): string {
   if (!createdAt) return UNAVAILABLE_VALUE;
   const created = new Date(createdAt);
   if (Number.isNaN(created.getTime())) return UNAVAILABLE_VALUE;
   return created.toLocaleDateString("en-CA", {
-    month: "long",
+    month: "short",
     year: "numeric",
     timeZone: "UTC",
   });
