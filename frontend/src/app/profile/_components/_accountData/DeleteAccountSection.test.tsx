@@ -19,6 +19,8 @@ import { toast } from "sonner";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  signOutMock.mockResolvedValue(undefined);
+  localStorage.clear();
 });
 
 describe("DeleteAccountSection", () => {
@@ -49,6 +51,39 @@ describe("DeleteAccountSection", () => {
     await waitFor(() => expect(apiMock.deleteUserAccount).toHaveBeenCalledTimes(1));
     expect(toast.success).toHaveBeenCalledWith("Account deleted");
     expect(signOutMock).toHaveBeenCalledWith({ callbackUrl: "/login" });
+  });
+
+  it("clears the preferences this browser cached for the deleted account", async () => {
+    apiMock.deleteUserAccount.mockResolvedValue(undefined);
+    localStorage.setItem("bloom_dashboard_card_order", "stale");
+    localStorage.setItem("bloom_saved_account", '{"token":"t","email":"alex@example.com"}');
+    localStorage.setItem("bloom_active_user", "u-1");
+
+    render(<DeleteAccountSection email="alex@example.com" />);
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(signOutMock).toHaveBeenCalled());
+    expect(localStorage.getItem("bloom_dashboard_card_order")).toBeNull();
+    expect(localStorage.getItem("bloom_saved_account")).toBeNull();
+    expect(localStorage.getItem("bloom_active_user")).toBeNull();
+  });
+
+  it("says the data is gone but sign-out failed when only the sign-out throws", async () => {
+    apiMock.deleteUserAccount.mockResolvedValue(undefined);
+    signOutMock.mockRejectedValue(new Error("offline"));
+
+    render(<DeleteAccountSection email="alex@example.com" />);
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Your data is deleted, but signing out failed — please sign out manually."
+      )
+    );
+    expect(toast.success).toHaveBeenCalledWith("Account deleted");
+    expect(toast.error).not.toHaveBeenCalledWith("Couldn't delete your account");
   });
 
   it("keeps the user signed in and reports the failure when the delete fails", async () => {

@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { clearPerUserStorage } from "@/lib/per-user-storage";
 
 interface DeleteAccountSectionProps {
   email: string | null;
@@ -18,15 +19,29 @@ export function DeleteAccountSection({ email }: DeleteAccountSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  /** Erases the account, then ends the session so the user lands back on the login page. */
+  /**
+   * Erases the account, clears the preferences this browser cached for it, then ends the
+   * session. Sign-out is attempted separately from the delete: once the data is gone the
+   * delete has succeeded regardless, so a failure there is reported as a sign-out problem
+   * rather than making the user think their data survived.
+   */
   async function handleConfirmDelete() {
     setIsDeleting(true);
     try {
       await api.deleteUserAccount();
-      toast.success("Account deleted");
-      await signOut({ callbackUrl: "/login" });
     } catch {
       toast.error("Couldn't delete your account");
+      setIsDeleting(false);
+      setIsDialogOpen(false);
+      return;
+    }
+
+    clearPerUserStorage();
+    toast.success("Account deleted");
+    try {
+      await signOut({ callbackUrl: "/login" });
+    } catch {
+      toast.error("Your data is deleted, but signing out failed — please sign out manually.");
       setIsDeleting(false);
       setIsDialogOpen(false);
     }

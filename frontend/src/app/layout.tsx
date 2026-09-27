@@ -10,6 +10,7 @@ import { DashboardViewProvider } from "@/components/dashboard-view-provider";
 import { DashboardVisibilityProvider } from "@/components/dashboard-visibility-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
+import { ACTIVE_USER_STORAGE_KEY, PER_USER_STORAGE_KEYS } from "@/lib/per-user-storage";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -17,24 +18,6 @@ export const metadata: Metadata = {
   title: "Bloom",
   description: "Simple, modern banking.",
 };
-
-// Per-user localStorage keys that must not leak between accounts on a shared browser (dashboard
-// layout, onboarding progress, cached name, pinned goal, custom templates). Appearance keys
-// (theme, dashboard view, collapse, orbs) are intentionally excluded so they persist across logins.
-const PER_USER_STORAGE_KEYS = [
-  "bloom_profile_first_name",
-  "bloom-account-order",
-  "bloom_learn_explored",
-  "bloom_dashboard_visible_cards",
-  "bloom_dashboard_card_order",
-  "bloom_dashboard_explained_cards",
-  "bloom_goal_widget_id",
-  "bloom_onboarding_dismissed",
-  "bloom_onboarding_all_steps_complete",
-  "bloom_onboarding_learn_explored",
-  "bloom-custom-reward-programs",
-  "bloom_saved_account",
-];
 
 /**
  * Builds a synchronous head script that clears per-user preferences when a different account is
@@ -44,7 +27,8 @@ const PER_USER_STORAGE_KEYS = [
 function buildPerUserResetScript(userId: string): string {
   const safeUserId = JSON.stringify(userId).replace(/</g, "\\u003c");
   const keys = JSON.stringify(PER_USER_STORAGE_KEYS).replace(/</g, "\\u003c");
-  return `(function(){try{var u=${safeUserId};if(!u)return;if(localStorage.getItem('bloom_active_user')===u)return;${keys}.forEach(function(k){localStorage.removeItem(k)});localStorage.setItem('bloom_active_user',u);}catch(e){}})();`;
+  const activeUserKey = JSON.stringify(ACTIVE_USER_STORAGE_KEY);
+  return `(function(){try{var u=${safeUserId};if(!u)return;if(localStorage.getItem(${activeUserKey})===u)return;${keys}.forEach(function(k){localStorage.removeItem(k)});localStorage.setItem(${activeUserKey},u);}catch(e){}})();`;
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
