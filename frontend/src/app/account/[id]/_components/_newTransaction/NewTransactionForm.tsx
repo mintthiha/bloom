@@ -8,6 +8,7 @@ import { ImportTab } from "../_import/ImportTab";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import { useCategories } from "@/hooks/useCategories";
+import { ensureCustomCategoryExists } from "@/lib/ensure-custom-category";
 import {
   calculateNetContributions,
   calculateNetContributionsForYear,
@@ -53,7 +54,7 @@ export function NewTransactionForm({
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [categorizationRules, setCategorizationRules] = useState<AutoCategorizationRule[]>([]);
-  const { incomeCategoryNames, expenseCategoryNames } = useCategories();
+  const { incomeCategoryNames, expenseCategoryNames, refresh: refreshCategories } = useCategories();
 
   /** Loads the user's auto-categorization rules once on mount. */
   useEffect(() => {
@@ -167,6 +168,12 @@ export function NewTransactionForm({
           return;
         }
         await api.transfer(account.id, toId.trim(), amt, desc);
+      }
+      if (category === "Custom..." && transactionCategory) {
+        const categoryType =
+          op === "deposit" && account.accountType !== "CREDIT" ? "INCOME" : "EXPENSE";
+        await ensureCustomCategoryExists(transactionCategory, categoryType);
+        await refreshCategories();
       }
       const opDisplayName =
         account.accountType === "CREDIT" && op === "deposit"

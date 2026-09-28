@@ -1,6 +1,6 @@
 "use client";
 import { Check } from "lucide-react";
-import { CATEGORY_COLOR_OPTIONS } from "./category-options";
+import { CATEGORY_COLOR_OPTIONS } from "@/lib/category-options";
 
 /** Swatch row for picking a category's accent colour from the curated palette. */
 export function CategoryColorPicker({

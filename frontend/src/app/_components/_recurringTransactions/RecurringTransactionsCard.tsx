@@ -16,6 +16,7 @@ import { CollapsibleCard } from "@/components/collapsible-card";
 import { CollapsibleFormSection } from "./CollapsibleFormSection";
 import { runApplyDueRecurringTransactions } from "./apply-due-recurring";
 import { EmptyState } from "@/components/EmptyState";
+import { ensureCustomCategoryExists } from "@/lib/ensure-custom-category";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -180,6 +181,10 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
       } else {
         await api.createRecurringTransaction(payload);
         toast.success("Recurring rule created");
+      }
+
+      if (form.category === "Custom..." && category) {
+        await ensureCustomCategoryExists(category, form.type === "DEPOSIT" ? "INCOME" : "EXPENSE");
       }
 
       resetForm();

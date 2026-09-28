@@ -9,7 +9,7 @@ import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import { CategoryRow } from "./CategoryRow";
 import { CategoryColorPicker } from "./CategoryColorPicker";
 import { CategoryIconPicker } from "./CategoryIconPicker";
-import { CATEGORY_COLOR_OPTIONS, validateCategoryName } from "./category-options";
+import { CATEGORY_COLOR_OPTIONS, validateCategoryName } from "@/lib/category-options";
 
 type CategoryManagerCardProps = {
   eyebrow: string;

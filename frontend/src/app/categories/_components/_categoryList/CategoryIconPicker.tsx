@@ -1,6 +1,6 @@
 "use client";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
-import { CATEGORY_ICON_QUICK_PICKS, MAX_CATEGORY_ICON_LENGTH } from "./category-options";
+import { CATEGORY_ICON_QUICK_PICKS, MAX_CATEGORY_ICON_LENGTH } from "@/lib/category-options";
 
 /** Quick-pick emoji grid plus a free-text field for a category's icon. */
 export function CategoryIconPicker({
