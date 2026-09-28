@@ -5,8 +5,9 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { api, Account, AutoCategorizationRule, Profile, Transaction } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
+import { useCategories } from "@/hooks/useCategories";
 import {
   calculateNetContributions,
   calculateNetContributionsForYear,
@@ -52,6 +53,7 @@ export function NewTransactionForm({
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [categorizationRules, setCategorizationRules] = useState<AutoCategorizationRule[]>([]);
+  const { incomeCategoryNames, expenseCategoryNames } = useCategories();
 
   /** Loads the user's auto-categorization rules once on mount. */
   useEffect(() => {
@@ -452,8 +454,8 @@ export function NewTransactionForm({
                   }
                 >
                   {(op === "deposit" && account.accountType !== "CREDIT"
-                    ? INCOME_CATEGORIES
-                    : EXPENSE_CATEGORIES
+                    ? incomeCategoryNames
+                    : expenseCategoryNames
                   ).map((c) => (
                     <option key={c} value={c}>
                       {c}

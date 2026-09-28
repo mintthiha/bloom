@@ -1,23 +1,3 @@
-export const INCOME_CATEGORIES = ["Salary", "Freelance", "Gift", "Investment", "Other Income"];
-
-export const EXPENSE_CATEGORIES = [
-  "Groceries",
-  "Rent",
-  "Utilities",
-  "Transport",
-  "Dining",
-  "Shopping",
-  "Healthcare",
-  "Entertainment",
-  "Other",
-];
-
-export const TRANSACTION_FILTER_CATEGORIES = [
-  ...INCOME_CATEGORIES,
-  ...EXPENSE_CATEGORIES,
-  "Transfer",
-];
-
 export const ACCOUNT_TYPE_META = {
   CHEQUING: { label: "Chequing", color: "#3b82f6", soft: "#3b82f622", border: "#3b82f644" },
   SAVINGS: { label: "Savings", color: "#22c55e", soft: "#16a34a22", border: "#16a34a44" },

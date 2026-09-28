@@ -34,6 +34,11 @@ enum RecurringFrequency {
   MONTHLY
 }
 
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
 model Account {
   id              String      @id @default(cuid())
   userId          String
@@ -284,6 +289,25 @@ model AutoCategorizationRule {
   /// (`WHERE "deletedAt" IS NULL`) defined in the add_soft_delete migration, so a
   /// soft-deleted rule does not block re-creating one for the same merchant.
   /// Prisma cannot model a partial unique index, hence no `@@unique` here.
+}
+
+/// A user's custom category list: the name/color/icon options offered across
+/// transaction, budget, and recurring-rule category pickers. Category names are
+/// stored as plain strings on those other tables (not a foreign key), so
+/// deleting a Category here never touches historical data — it only removes
+/// that option from future pickers.
+model Category {
+  id        String       @id @default(cuid())
+  userId    String
+  name      String
+  type      CategoryType
+  color     String
+  icon      String?
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime     @updatedAt @db.Timestamptz(3)
+
+  @@unique([userId, name])
+  @@index([userId, type])
 }
 
 model ActivityLog {

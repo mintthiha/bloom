@@ -1,16 +1,48 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NewTransactionForm } from "./NewTransactionForm";
-import type { Account, AutoCategorizationRule } from "@/lib/api";
+import type { Account, AutoCategorizationRule, Category } from "@/lib/api";
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: {
     listCategorizationRules: vi.fn(),
+    listCategories: vi.fn(),
     deposit: vi.fn(),
     withdraw: vi.fn(),
     transfer: vi.fn(),
   },
 }));
+
+/** Builds a Category fixture. */
+function makeCategory(name: string, type: "INCOME" | "EXPENSE"): Category {
+  return {
+    id: `cat-${name}`,
+    userId: "u-1",
+    name,
+    type,
+    color: "#22c55e",
+    icon: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+const DEFAULT_TEST_CATEGORIES: Category[] = [
+  makeCategory("Groceries", "EXPENSE"),
+  makeCategory("Rent", "EXPENSE"),
+  makeCategory("Utilities", "EXPENSE"),
+  makeCategory("Transport", "EXPENSE"),
+  makeCategory("Dining", "EXPENSE"),
+  makeCategory("Shopping", "EXPENSE"),
+  makeCategory("Healthcare", "EXPENSE"),
+  makeCategory("Entertainment", "EXPENSE"),
+  makeCategory("Other", "EXPENSE"),
+  makeCategory("Salary", "INCOME"),
+  makeCategory("Freelance", "INCOME"),
+  makeCategory("Gift", "INCOME"),
+  makeCategory("Investment", "INCOME"),
+  makeCategory("Other Income", "INCOME"),
+];
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
@@ -63,6 +95,7 @@ function renderForm(overrides: Partial<React.ComponentProps<typeof NewTransactio
 beforeEach(() => {
   vi.clearAllMocks();
   apiMock.listCategorizationRules.mockResolvedValue([]);
+  apiMock.listCategories.mockResolvedValue(DEFAULT_TEST_CATEGORIES);
 });
 
 describe("NewTransactionForm", () => {

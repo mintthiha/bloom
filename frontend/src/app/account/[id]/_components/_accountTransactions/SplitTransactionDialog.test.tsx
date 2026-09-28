@@ -1,10 +1,14 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SplitTransactionDialog } from "./SplitTransactionDialog";
-import type { Transaction } from "@/lib/api";
+import type { Category, Transaction } from "@/lib/api";
 
 const { apiMock, toastMock } = vi.hoisted(() => ({
-  apiMock: { setTransactionSplits: vi.fn(), clearTransactionSplits: vi.fn() },
+  apiMock: {
+    setTransactionSplits: vi.fn(),
+    clearTransactionSplits: vi.fn(),
+    listCategories: vi.fn(),
+  },
   toastMock: { success: vi.fn(), error: vi.fn() },
 }));
 
@@ -16,9 +20,41 @@ vi.mock("@/lib/api", async () => {
       ...actual.api,
       setTransactionSplits: apiMock.setTransactionSplits,
       clearTransactionSplits: apiMock.clearTransactionSplits,
+      listCategories: apiMock.listCategories,
     },
   };
 });
+
+/** Builds a Category fixture. */
+function makeCategory(name: string, type: "INCOME" | "EXPENSE"): Category {
+  return {
+    id: `cat-${name}`,
+    userId: "u-1",
+    name,
+    type,
+    color: "#22c55e",
+    icon: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+const DEFAULT_TEST_CATEGORIES: Category[] = [
+  makeCategory("Groceries", "EXPENSE"),
+  makeCategory("Rent", "EXPENSE"),
+  makeCategory("Utilities", "EXPENSE"),
+  makeCategory("Transport", "EXPENSE"),
+  makeCategory("Dining", "EXPENSE"),
+  makeCategory("Shopping", "EXPENSE"),
+  makeCategory("Healthcare", "EXPENSE"),
+  makeCategory("Entertainment", "EXPENSE"),
+  makeCategory("Other", "EXPENSE"),
+  makeCategory("Salary", "INCOME"),
+  makeCategory("Freelance", "INCOME"),
+  makeCategory("Gift", "INCOME"),
+  makeCategory("Investment", "INCOME"),
+  makeCategory("Other Income", "INCOME"),
+];
 
 vi.mock("sonner", () => ({ toast: toastMock }));
 
@@ -57,6 +93,7 @@ function renderDialog(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  apiMock.listCategories.mockResolvedValue(DEFAULT_TEST_CATEGORIES);
 });
 
 describe("SplitTransactionDialog", () => {
@@ -87,6 +124,7 @@ describe("SplitTransactionDialog", () => {
 
   it("blocks saving when the split total doesn't match the transaction amount", async () => {
     renderDialog();
+    await screen.findAllByText("Dining");
     fireEvent.change(screen.getByLabelText("Split 1 category"), {
       target: { value: "Groceries" },
     });
@@ -104,6 +142,7 @@ describe("SplitTransactionDialog", () => {
   it("saves a valid split, toasts success, closes, and refreshes", async () => {
     apiMock.setTransactionSplits.mockResolvedValue({});
     const { props } = renderDialog();
+    await screen.findAllByText("Dining");
 
     fireEvent.change(screen.getByLabelText("Split 2 category"), { target: { value: "Dining" } });
     fireEvent.change(screen.getByLabelText("Split 1 amount"), { target: { value: "80" } });

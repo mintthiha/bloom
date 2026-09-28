@@ -3,15 +3,11 @@ import { useState, useEffect } from "react";
 import { Transaction, Account } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { DateRangeState } from "@/lib/date-range";
-import {
-  INCOME_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  TRANSACTION_FILTER_CATEGORIES,
-} from "@/lib/constants/account";
 import { Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { inputStyle } from "@/lib/styles/input";
 import { EmptyState } from "@/components/EmptyState";
+import { useCategories } from "@/hooks/useCategories";
 import { ExportCsvButton } from "./ExportCsvButton";
 
 const PAGE_SIZE = 4;
@@ -122,6 +118,8 @@ export function TransactionHistory({
   onRequestSplit,
 }: TransactionHistoryProps) {
   const [page, setPage] = useState(1);
+  const { incomeCategoryNames, expenseCategoryNames } = useCategories();
+  const filterableCategoryOptions = [...incomeCategoryNames, ...expenseCategoryNames, "Transfer"];
 
   /** Resets to page 1 when filters change or the result set size changes (add/delete). */
   useEffect(() => {
@@ -213,7 +211,7 @@ export function TransactionHistory({
         >
           <option value="ALL">All categories</option>
           <option value="Uncategorized">Uncategorized</option>
-          {TRANSACTION_FILTER_CATEGORIES.map((categoryOption) => (
+          {filterableCategoryOptions.map((categoryOption) => (
             <option key={categoryOption} value={categoryOption}>
               {categoryOption}
             </option>
@@ -356,10 +354,10 @@ export function TransactionHistory({
                               >
                                 <option value="">No category</option>
                                 {(t.type === "DEPOSIT" && account.accountType !== "CREDIT"
-                                  ? INCOME_CATEGORIES
+                                  ? incomeCategoryNames
                                   : t.type === "WITHDRAWAL" ||
                                       (t.type === "DEPOSIT" && account.accountType === "CREDIT")
-                                    ? EXPENSE_CATEGORIES
+                                    ? expenseCategoryNames
                                     : ["Transfer"]
                                 ).map((categoryOption) => (
                                   <option key={categoryOption} value={categoryOption}>
@@ -369,10 +367,10 @@ export function TransactionHistory({
                                 {editingTransactionCategory &&
                                   !(
                                     t.type === "DEPOSIT" && account.accountType !== "CREDIT"
-                                      ? INCOME_CATEGORIES
+                                      ? incomeCategoryNames
                                       : t.type === "WITHDRAWAL" ||
                                           (t.type === "DEPOSIT" && account.accountType === "CREDIT")
-                                        ? EXPENSE_CATEGORIES
+                                        ? expenseCategoryNames
                                         : ["Transfer"]
                                   ).includes(editingTransactionCategory) && (
                                     <option value={editingTransactionCategory}>

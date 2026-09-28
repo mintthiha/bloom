@@ -3,11 +3,38 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
 import { INTERNAL_SECRET } from "../test-setup";
 
+const { categoryServiceMock } = vi.hoisted(() => ({
+  categoryServiceMock: { listCategories: vi.fn() },
+}));
+
+vi.mock("../services/categoryService", () => categoryServiceMock);
+
+const DEFAULT_CATEGORY_NAMES = [
+  "Groceries",
+  "Rent",
+  "Utilities",
+  "Transport",
+  "Dining",
+  "Shopping",
+  "Healthcare",
+  "Entertainment",
+  "Other",
+  "Salary",
+  "Freelance",
+  "Gift",
+  "Investment",
+  "Other Income",
+];
+
 const fetchMock = vi.fn();
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
+  categoryServiceMock.listCategories.mockReset();
+  categoryServiceMock.listCategories.mockResolvedValue(
+    DEFAULT_CATEGORY_NAMES.map((name) => ({ name }))
+  );
 });
 
 afterEach(() => {

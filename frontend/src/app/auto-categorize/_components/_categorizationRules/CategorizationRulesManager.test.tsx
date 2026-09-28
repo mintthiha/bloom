@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CategorizationRulesManager } from "./CategorizationRulesManager";
-import type { AutoCategorizationRule } from "@/lib/api";
+import type { AutoCategorizationRule, Category } from "@/lib/api";
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: {
@@ -9,8 +9,29 @@ const { apiMock } = vi.hoisted(() => ({
     upsertCategorizationRule: vi.fn(),
     updateCategorizationRule: vi.fn(),
     deleteCategorizationRule: vi.fn(),
+    listCategories: vi.fn(),
   },
 }));
+
+/** Builds a Category fixture. */
+function makeCategory(name: string, type: "INCOME" | "EXPENSE"): Category {
+  return {
+    id: `cat-${name}`,
+    userId: "u-1",
+    name,
+    type,
+    color: "#22c55e",
+    icon: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
+const DEFAULT_TEST_CATEGORIES: Category[] = [
+  makeCategory("Groceries", "EXPENSE"),
+  makeCategory("Entertainment", "EXPENSE"),
+  makeCategory("Salary", "INCOME"),
+];
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
@@ -50,6 +71,7 @@ function makeRule(overrides: Partial<AutoCategorizationRule> = {}): AutoCategori
 beforeEach(() => {
   vi.clearAllMocks();
   apiMock.listCategorizationRules.mockResolvedValue([]);
+  apiMock.listCategories.mockResolvedValue(DEFAULT_TEST_CATEGORIES);
 });
 
 describe("CategorizationRulesManager", () => {

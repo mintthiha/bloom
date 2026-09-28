@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, Transaction } from "@/lib/api";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
+import { useCategories } from "@/hooks/useCategories";
 import { inputStyle } from "@/lib/styles/input";
 import {
   AlertDialog,
@@ -71,10 +71,12 @@ export function SplitTransactionDialog({
     }
   }, [transaction]);
 
+  const { incomeCategoryNames, expenseCategoryNames } = useCategories();
+
   const shown = transaction ?? displayTransaction;
   if (!shown) return null;
 
-  const categoryOptions = shown.type === "DEPOSIT" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const categoryOptions = shown.type === "DEPOSIT" ? incomeCategoryNames : expenseCategoryNames;
   const total = rows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0);
   const remaining = Math.round((shown.amount - total) * 100) / 100;
   const hasExistingSplit = shown.splits.length > 0;

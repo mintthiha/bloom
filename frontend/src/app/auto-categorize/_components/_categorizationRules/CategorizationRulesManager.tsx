@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api, AutoCategorizationRule } from "@/lib/api";
 import { deleteWithUndo, UNDO_WINDOW_MS } from "@/lib/undoableDelete";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { useCategories } from "@/hooks/useCategories";
 
 const RULES_PER_PAGE = 10;
 
@@ -15,19 +15,25 @@ interface CategorizationRulesManagerProps {
 }
 
 /** Shared category dropdown options rendered inside a select element. */
-function CategoryOptions() {
+function CategoryOptions({
+  incomeCategoryNames,
+  expenseCategoryNames,
+}: {
+  incomeCategoryNames: string[];
+  expenseCategoryNames: string[];
+}) {
   return (
     <>
       <option value="">Category</option>
       <optgroup label="Expenses">
-        {EXPENSE_CATEGORIES.map((c) => (
+        {expenseCategoryNames.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
         ))}
       </optgroup>
       <optgroup label="Income">
-        {INCOME_CATEGORIES.map((c) => (
+        {incomeCategoryNames.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
@@ -41,6 +47,7 @@ function CategoryOptions() {
 export function CategorizationRulesManager({
   refreshTrigger = 0,
 }: CategorizationRulesManagerProps) {
+  const { incomeCategoryNames, expenseCategoryNames } = useCategories();
   const [rules, setRules] = useState<AutoCategorizationRule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [merchantInput, setMerchantInput] = useState("");
@@ -332,7 +339,10 @@ export function CategorizationRulesManager({
             color: categoryInput ? "var(--text-primary)" : "var(--text-muted)",
           }}
         >
-          <CategoryOptions />
+          <CategoryOptions
+            incomeCategoryNames={incomeCategoryNames}
+            expenseCategoryNames={expenseCategoryNames}
+          />
         </select>
         <button
           type="submit"
@@ -446,7 +456,10 @@ export function CategorizationRulesManager({
                         color: editCategory ? "var(--text-primary)" : "var(--text-muted)",
                       }}
                     >
-                      <CategoryOptions />
+                      <CategoryOptions
+                        incomeCategoryNames={incomeCategoryNames}
+                        expenseCategoryNames={expenseCategoryNames}
+                      />
                     </select>
                     <button
                       type="submit"

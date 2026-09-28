@@ -1,25 +1,9 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { AppError } from "../middleware/errorHandler";
 import { requireObject } from "../lib/validation";
+import { listCategories } from "../services/categoryService";
 
 const router = Router();
-
-const ALLOWED_CATEGORIES = [
-  "Groceries",
-  "Rent",
-  "Utilities",
-  "Transport",
-  "Dining",
-  "Shopping",
-  "Healthcare",
-  "Entertainment",
-  "Other",
-  "Salary",
-  "Freelance",
-  "Gift",
-  "Investment",
-  "Other Income",
-];
 
 const MAX_MERCHANTS = 20;
 
@@ -57,10 +41,11 @@ router.post("/suggest", async (req: Request, res: Response, next: NextFunction) 
     const body = requireObject(req.body);
     const merchants = parseMerchantsFromBody(body);
 
+    const allowedCategories = (await listCategories(userId)).map((category) => category.name);
     const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
     const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
 
-    const categoryList = ALLOWED_CATEGORIES.join(", ");
+    const categoryList = allowedCategories.join(", ");
     const merchantList = merchants.map((m) => `"${m}"`).join(", ");
 
     const systemPrompt = `You are a financial categorization assistant for a Canadian personal finance app called Bloom. Given merchant names, assign each one the most fitting category from the approved list. Return a JSON object with this exact shape: {"suggestions":[{"merchant":"...","category":"..."}]}. The category must be exactly one value from: ${categoryList}. Include every merchant from the input. Return only the JSON — no explanation, no markdown.`;
@@ -121,7 +106,7 @@ router.post("/suggest", async (req: Request, res: Response, next: NextFunction) 
           typeof item === "object" &&
           typeof (item as Record<string, unknown>).merchant === "string" &&
           typeof (item as Record<string, unknown>).category === "string" &&
-          ALLOWED_CATEGORIES.includes((item as Record<string, unknown>).category as string)
+          allowedCategories.includes((item as Record<string, unknown>).category as string)
       )
       .map((item) => ({ merchant: item.merchant, category: item.category }));
 
@@ -143,9 +128,10 @@ router.post("/suggest-stream", async (req: Request, res: Response, next: NextFun
     const body = requireObject(req.body);
     const merchants = parseMerchantsFromBody(body);
 
+    const allowedCategories = (await listCategories(userId)).map((category) => category.name);
     const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
     const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
-    const categoryList = ALLOWED_CATEGORIES.join(", ");
+    const categoryList = allowedCategories.join(", ");
     const merchantList = merchants.map((m) => `"${m}"`).join(", ");
 
     const systemPrompt = `You are a financial categorization assistant for a Canadian personal finance app called Bloom. Given merchant names, assign each one the most fitting category. Output ONLY one JSON object per line with this exact shape: {"merchant":"...","category":"..."}. No wrapper array, no markdown, no explanation. The category must be exactly one value from: ${categoryList}. Include every merchant from the input.`;
@@ -191,7 +177,7 @@ router.post("/suggest-stream", async (req: Request, res: Response, next: NextFun
         if (
           typeof suggestion.merchant === "string" &&
           typeof suggestion.category === "string" &&
-          ALLOWED_CATEGORIES.includes(suggestion.category)
+          allowedCategories.includes(suggestion.category)
         ) {
           res.write(
             `data: ${JSON.stringify({ merchant: suggestion.merchant, category: suggestion.category })}\n\n`

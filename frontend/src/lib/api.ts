@@ -369,6 +369,20 @@ export type AutoCategorizationRule = {
   updatedAt: string;
 };
 
+export type CategoryType = "INCOME" | "EXPENSE";
+
+/** A user's custom category: the name/color/icon shown in every category picker. */
+export type Category = {
+  id: string;
+  userId: string;
+  name: string;
+  type: CategoryType;
+  color: string;
+  icon: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TransactionQuery = DateRangeQuery & {
   type?: Transaction["type"];
   category?: string;
@@ -741,6 +755,16 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(input),
     }),
+  listCategories: () => request<Category[]>("/categories"),
+  createCategory: (input: {
+    name: string;
+    type: CategoryType;
+    color: string;
+    icon?: string | null;
+  }) => request<Category>("/categories", { method: "POST", body: JSON.stringify(input) }),
+  updateCategory: (id: string, input: { name: string; color: string; icon?: string | null }) =>
+    request<Category>(`/categories/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+  deleteCategory: (id: string) => request<void>(`/categories/${id}`, { method: "DELETE" }),
   listCategorizationRules: () => request<AutoCategorizationRule[]>("/categorization-rules"),
   upsertCategorizationRule: (merchant: string, category: string, source?: "manual" | "ai") =>
     request<AutoCategorizationRule>("/categorization-rules", {
