@@ -11,6 +11,7 @@ export const KIND_ACCENT: Record<NotificationKind, string> = {
   LOW_BALANCE: "#f59e0b",
   BUDGET_OVERSPEND: "#f87171",
   GOAL_REACHED: "#22c55e",
+  GOAL_MILESTONE: "#22c55e",
   SUBSCRIPTION_PRICE: "#f59e0b",
 };
 

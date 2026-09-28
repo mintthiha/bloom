@@ -343,6 +343,12 @@ describe("getProfile", () => {
         rrspContributionRoom: null,
         billRemindersEnabled: true,
         billReminderLeadDays: 3,
+        budgetOverspendAlertsEnabled: true,
+        lowBalanceAlertsEnabled: true,
+        lowBalanceThreshold: 100,
+        goalMilestoneAlertsEnabled: true,
+        goalMilestonePercentages: [50, 75, 100],
+        subscriptionPriceAlertsEnabled: true,
         createdAt: new Date("2026-04-04T00:00:00.000Z"),
         updatedAt: new Date("2026-04-04T00:00:00.000Z"),
       },
@@ -358,6 +364,12 @@ describe("getProfile", () => {
       email: "jane@example.com",
       billRemindersEnabled: true,
       billReminderLeadDays: 3,
+      budgetOverspendAlertsEnabled: true,
+      lowBalanceAlertsEnabled: true,
+      lowBalanceThreshold: 100,
+      goalMilestoneAlertsEnabled: true,
+      goalMilestonePercentages: [50, 75, 100],
+      subscriptionPriceAlertsEnabled: true,
     });
   });
 
@@ -375,6 +387,12 @@ describe("getProfile", () => {
         rrspContributionRoom: "14000.50",
         billRemindersEnabled: false,
         billReminderLeadDays: 3,
+        budgetOverspendAlertsEnabled: true,
+        lowBalanceAlertsEnabled: true,
+        lowBalanceThreshold: "100.0000",
+        goalMilestoneAlertsEnabled: true,
+        goalMilestonePercentages: [50, 75, 100],
+        subscriptionPriceAlertsEnabled: true,
         createdAt: new Date("2026-04-04T00:00:00.000Z"),
         updatedAt: new Date("2026-04-04T00:00:00.000Z"),
       },
@@ -414,6 +432,59 @@ describe("updateReminderPreferences", () => {
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
+  it("rejects a negative lowBalanceThreshold", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { lowBalanceThreshold: -1 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects a lowBalanceThreshold above the maximum", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { lowBalanceThreshold: 1_000_001 })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects an empty goalMilestonePercentages list", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { goalMilestonePercentages: [] })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects goal milestones outside 1-100", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { goalMilestonePercentages: [50, 101] })
+    ).rejects.toMatchObject({ statusCode: 400 });
+    await expect(
+      updateReminderPreferences("user-1", { goalMilestonePercentages: [0] })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects non-integer goal milestones", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", { goalMilestonePercentages: [33.3] })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("rejects more goal milestones than the maximum", async () => {
+    const { updateReminderPreferences } = await import("./profileService");
+
+    await expect(
+      updateReminderPreferences("user-1", {
+        goalMilestonePercentages: [10, 20, 30, 40, 50, 60, 70],
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
   it("throws 404 when the profile does not exist", async () => {
     const { updateReminderPreferences } = await import("./profileService");
     prismaMock.$queryRaw.mockResolvedValueOnce([]);
@@ -438,6 +509,12 @@ describe("updateReminderPreferences", () => {
           rrspContributionRoom: null,
           billRemindersEnabled: false,
           billReminderLeadDays: 3,
+          budgetOverspendAlertsEnabled: true,
+          lowBalanceAlertsEnabled: true,
+          lowBalanceThreshold: "100.0000",
+          goalMilestoneAlertsEnabled: true,
+          goalMilestonePercentages: [50, 75, 100],
+          subscriptionPriceAlertsEnabled: true,
           createdAt: new Date("2026-04-04T00:00:00.000Z"),
           updatedAt: new Date("2026-04-04T00:00:00.000Z"),
         },
@@ -454,6 +531,12 @@ describe("updateReminderPreferences", () => {
           rrspContributionRoom: null,
           billRemindersEnabled: true,
           billReminderLeadDays: 5,
+          budgetOverspendAlertsEnabled: true,
+          lowBalanceAlertsEnabled: true,
+          lowBalanceThreshold: "100.0000",
+          goalMilestoneAlertsEnabled: true,
+          goalMilestonePercentages: [50, 75, 100],
+          subscriptionPriceAlertsEnabled: true,
           createdAt: new Date("2026-04-04T00:00:00.000Z"),
           updatedAt: new Date("2026-04-08T00:00:00.000Z"),
         },
@@ -467,11 +550,17 @@ describe("updateReminderPreferences", () => {
     expect(result).toMatchObject({
       billRemindersEnabled: true,
       billReminderLeadDays: 5,
+      budgetOverspendAlertsEnabled: true,
+      lowBalanceAlertsEnabled: true,
+      lowBalanceThreshold: 100,
+      goalMilestoneAlertsEnabled: true,
+      goalMilestonePercentages: [50, 75, 100],
+      subscriptionPriceAlertsEnabled: true,
     });
     expect(logActivityMock).toHaveBeenCalledWith(
       "user-1",
       "PROFILE_REMINDERS_UPDATED",
-      expect.stringContaining("Updated reminder preferences"),
+      expect.stringContaining("Updated notification preferences"),
       expect.any(Object)
     );
   });
@@ -491,6 +580,12 @@ describe("updateReminderPreferences", () => {
           rrspContributionRoom: null,
           billRemindersEnabled: false,
           billReminderLeadDays: 3,
+          budgetOverspendAlertsEnabled: true,
+          lowBalanceAlertsEnabled: true,
+          lowBalanceThreshold: "100.0000",
+          goalMilestoneAlertsEnabled: true,
+          goalMilestonePercentages: [50, 75, 100],
+          subscriptionPriceAlertsEnabled: true,
           createdAt: new Date("2026-04-04T00:00:00.000Z"),
           updatedAt: new Date("2026-04-04T00:00:00.000Z"),
         },
@@ -507,6 +602,12 @@ describe("updateReminderPreferences", () => {
           rrspContributionRoom: null,
           billRemindersEnabled: false,
           billReminderLeadDays: 0,
+          budgetOverspendAlertsEnabled: true,
+          lowBalanceAlertsEnabled: true,
+          lowBalanceThreshold: "100.0000",
+          goalMilestoneAlertsEnabled: true,
+          goalMilestonePercentages: [50, 75, 100],
+          subscriptionPriceAlertsEnabled: true,
           createdAt: new Date("2026-04-04T00:00:00.000Z"),
           updatedAt: new Date("2026-04-08T00:00:00.000Z"),
         },
@@ -542,6 +643,12 @@ describe("updateFinancialProfile", () => {
       primaryFinancialGoal: null,
       billRemindersEnabled: true,
       billReminderLeadDays: 3,
+      budgetOverspendAlertsEnabled: true,
+      lowBalanceAlertsEnabled: true,
+      lowBalanceThreshold: "100.0000",
+      goalMilestoneAlertsEnabled: true,
+      goalMilestonePercentages: [50, 75, 100],
+      subscriptionPriceAlertsEnabled: true,
       createdAt: new Date("2026-04-04T00:00:00.000Z"),
       updatedAt: new Date("2026-04-04T00:00:00.000Z"),
       ...overrides,

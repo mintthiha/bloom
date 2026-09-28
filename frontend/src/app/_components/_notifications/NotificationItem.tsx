@@ -33,6 +33,7 @@ const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   LOW_BALANCE: Wallet,
   BUDGET_OVERSPEND: PieChart,
   GOAL_REACHED: PartyPopper,
+  GOAL_MILESTONE: PartyPopper,
   SUBSCRIPTION_PRICE: TrendingUp,
 };
 

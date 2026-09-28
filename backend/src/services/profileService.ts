@@ -12,6 +12,12 @@ import {
   describeActivityFieldChanges,
   pushActivityFieldChange,
 } from "./activityChanges";
+import {
+  MAX_GOAL_MILESTONES,
+  MAX_LOW_BALANCE_THRESHOLD,
+  MAX_REMINDER_LEAD_DAYS,
+  normalizeGoalMilestonePercentages,
+} from "./notificationPreferences";
 
 type ProfileInput = {
   firstName?: string;
@@ -28,6 +34,12 @@ type ProfileInput = {
 type ReminderPreferenceInput = {
   billRemindersEnabled?: boolean;
   billReminderLeadDays?: number;
+  budgetOverspendAlertsEnabled?: boolean;
+  lowBalanceAlertsEnabled?: boolean;
+  lowBalanceThreshold?: number;
+  goalMilestoneAlertsEnabled?: boolean;
+  goalMilestonePercentages?: number[];
+  subscriptionPriceAlertsEnabled?: boolean;
 };
 
 type FinancialProfileInput = {
@@ -54,6 +66,12 @@ type ProfileRecord = {
   avatarColor: string | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
+  budgetOverspendAlertsEnabled: boolean;
+  lowBalanceAlertsEnabled: boolean;
+  lowBalanceThreshold: string | null;
+  goalMilestoneAlertsEnabled: boolean;
+  goalMilestonePercentages: number[];
+  subscriptionPriceAlertsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -71,6 +89,7 @@ function normalizeProfile(row: ProfileRecord) {
       row.rrspContributionRoom != null ? Number(row.rrspContributionRoom) : null,
     monthlyTakeHomeIncome:
       row.monthlyTakeHomeIncome != null ? Number(row.monthlyTakeHomeIncome) : null,
+    lowBalanceThreshold: Number(row.lowBalanceThreshold ?? 0),
     nextPayday: row.nextPayday != null ? row.nextPayday.toISOString().slice(0, 10) : null,
   };
 }
@@ -93,6 +112,12 @@ export async function getProfile(userId: string) {
            "avatarColor",
            "billRemindersEnabled",
            "billReminderLeadDays",
+           "budgetOverspendAlertsEnabled",
+           "lowBalanceAlertsEnabled",
+           "lowBalanceThreshold",
+           "goalMilestoneAlertsEnabled",
+           "goalMilestonePercentages",
+           "subscriptionPriceAlertsEnabled",
            "createdAt", "updatedAt"
     FROM "Profile"
     WHERE "userId" = ${userId}
@@ -221,6 +246,12 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "avatarColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
+              "budgetOverspendAlertsEnabled",
+              "lowBalanceAlertsEnabled",
+              "lowBalanceThreshold",
+              "goalMilestoneAlertsEnabled",
+              "goalMilestonePercentages",
+              "subscriptionPriceAlertsEnabled",
               "createdAt", "updatedAt"
   `;
 
@@ -312,10 +343,8 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   return updatedProfile;
 }
 
-const MAX_REMINDER_LEAD_DAYS = 30;
-
 /**
- * Updates the current user's reminder preferences. Omitted fields are left
+ * Updates the current user's notification preferences. Omitted fields are left
  * unchanged. Requires an existing profile.
  */
 export async function updateReminderPreferences(userId: string, input: ReminderPreferenceInput) {
@@ -331,6 +360,37 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
       );
     }
   }
+  if (input.lowBalanceThreshold !== undefined) {
+    if (
+      !Number.isFinite(input.lowBalanceThreshold) ||
+      input.lowBalanceThreshold < 0 ||
+      input.lowBalanceThreshold > MAX_LOW_BALANCE_THRESHOLD
+    ) {
+      throw new AppError(
+        400,
+        `lowBalanceThreshold must be a number between 0 and ${MAX_LOW_BALANCE_THRESHOLD}`
+      );
+    }
+  }
+  if (input.goalMilestonePercentages !== undefined) {
+    const percentages = input.goalMilestonePercentages;
+    if (percentages.length === 0) {
+      throw new AppError(400, "goalMilestonePercentages must contain at least one milestone");
+    }
+    if (percentages.length > MAX_GOAL_MILESTONES) {
+      throw new AppError(
+        400,
+        `goalMilestonePercentages must contain at most ${MAX_GOAL_MILESTONES} milestones`
+      );
+    }
+    if (
+      percentages.some(
+        (percentage) => !Number.isInteger(percentage) || percentage < 1 || percentage > 100
+      )
+    ) {
+      throw new AppError(400, "goalMilestonePercentages must contain integers between 1 and 100");
+    }
+  }
 
   const existingProfile = await getProfile(userId);
   if (!existingProfile) {
@@ -339,11 +399,35 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
 
   const enabled = input.billRemindersEnabled ?? null;
   const leadDays = input.billReminderLeadDays ?? null;
+  const budgetOverspendEnabled = input.budgetOverspendAlertsEnabled ?? null;
+  const lowBalanceEnabled = input.lowBalanceAlertsEnabled ?? null;
+  const lowBalanceThreshold = input.lowBalanceThreshold ?? null;
+  const goalMilestoneEnabled = input.goalMilestoneAlertsEnabled ?? null;
+  const goalMilestones = input.goalMilestonePercentages
+    ? normalizeGoalMilestonePercentages(input.goalMilestonePercentages)
+    : null;
+  const subscriptionPriceEnabled = input.subscriptionPriceAlertsEnabled ?? null;
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     UPDATE "Profile"
     SET "billRemindersEnabled" = COALESCE(${enabled}::boolean, "billRemindersEnabled"),
         "billReminderLeadDays" = COALESCE(${leadDays}::int, "billReminderLeadDays"),
+        "budgetOverspendAlertsEnabled" = COALESCE(
+          ${budgetOverspendEnabled}::boolean, "budgetOverspendAlertsEnabled"
+        ),
+        "lowBalanceAlertsEnabled" = COALESCE(
+          ${lowBalanceEnabled}::boolean, "lowBalanceAlertsEnabled"
+        ),
+        "lowBalanceThreshold" = COALESCE(${lowBalanceThreshold}::decimal, "lowBalanceThreshold"),
+        "goalMilestoneAlertsEnabled" = COALESCE(
+          ${goalMilestoneEnabled}::boolean, "goalMilestoneAlertsEnabled"
+        ),
+        "goalMilestonePercentages" = COALESCE(
+          ${goalMilestones}::int[], "goalMilestonePercentages"
+        ),
+        "subscriptionPriceAlertsEnabled" = COALESCE(
+          ${subscriptionPriceEnabled}::boolean, "subscriptionPriceAlertsEnabled"
+        ),
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "userId" = ${userId}
     RETURNING "userId", "firstName", "lastName", "username", "email",
@@ -358,6 +442,12 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
               "avatarColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
+              "budgetOverspendAlertsEnabled",
+              "lowBalanceAlertsEnabled",
+              "lowBalanceThreshold",
+              "goalMilestoneAlertsEnabled",
+              "goalMilestonePercentages",
+              "subscriptionPriceAlertsEnabled",
               "createdAt", "updatedAt"
   `;
 
@@ -384,12 +474,60 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
     existingProfile.billReminderLeadDays,
     updatedProfile.billReminderLeadDays
   );
+  pushActivityFieldChange(
+    changes,
+    "budgetOverspendAlertsEnabled",
+    "Budget overspend alerts",
+    "text",
+    existingProfile.budgetOverspendAlertsEnabled ? "On" : "Off",
+    updatedProfile.budgetOverspendAlertsEnabled ? "On" : "Off"
+  );
+  pushActivityFieldChange(
+    changes,
+    "lowBalanceAlertsEnabled",
+    "Low balance alerts",
+    "text",
+    existingProfile.lowBalanceAlertsEnabled ? "On" : "Off",
+    updatedProfile.lowBalanceAlertsEnabled ? "On" : "Off"
+  );
+  pushActivityFieldChange(
+    changes,
+    "lowBalanceThreshold",
+    "Low balance threshold",
+    "currency",
+    existingProfile.lowBalanceThreshold,
+    updatedProfile.lowBalanceThreshold
+  );
+  pushActivityFieldChange(
+    changes,
+    "goalMilestoneAlertsEnabled",
+    "Savings goal milestone alerts",
+    "text",
+    existingProfile.goalMilestoneAlertsEnabled ? "On" : "Off",
+    updatedProfile.goalMilestoneAlertsEnabled ? "On" : "Off"
+  );
+  pushActivityFieldChange(
+    changes,
+    "goalMilestonePercentages",
+    "Savings goal milestones",
+    "text",
+    existingProfile.goalMilestonePercentages.join(", "),
+    updatedProfile.goalMilestonePercentages.join(", ")
+  );
+  pushActivityFieldChange(
+    changes,
+    "subscriptionPriceAlertsEnabled",
+    "Subscription price alerts",
+    "text",
+    existingProfile.subscriptionPriceAlertsEnabled ? "On" : "Off",
+    updatedProfile.subscriptionPriceAlertsEnabled ? "On" : "Off"
+  );
 
   if (changes.length > 0) {
     logActivity(
       userId,
       "PROFILE_REMINDERS_UPDATED",
-      `Updated reminder preferences: ${describeActivityFieldChanges(changes, "no changes")}`,
+      `Updated notification preferences: ${describeActivityFieldChanges(changes, "no changes")}`,
       { changes }
     );
   }
@@ -447,6 +585,12 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
               "avatarColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
+              "budgetOverspendAlertsEnabled",
+              "lowBalanceAlertsEnabled",
+              "lowBalanceThreshold",
+              "goalMilestoneAlertsEnabled",
+              "goalMilestonePercentages",
+              "subscriptionPriceAlertsEnabled",
               "createdAt", "updatedAt"
   `;
 

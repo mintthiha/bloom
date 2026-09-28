@@ -21,6 +21,22 @@ vi.mock("./budgetService", () => budgetMock);
 vi.mock("./savingsGoalService", () => goalMock);
 vi.mock("./subscriptionService", () => subscriptionMock);
 
+const ALL_PREFERENCES_ON = {
+  billRemindersEnabled: true,
+  billReminderLeadDays: 3,
+  budgetOverspendAlertsEnabled: true,
+  lowBalanceAlertsEnabled: true,
+  lowBalanceThreshold: 100,
+  goalMilestoneAlertsEnabled: true,
+  goalMilestonePercentages: [50, 75, 100],
+  subscriptionPriceAlertsEnabled: true,
+};
+
+/** Builds a preferences object with specific fields overridden for one test. */
+function preferences(overrides: Partial<typeof ALL_PREFERENCES_ON> = {}) {
+  return { ...ALL_PREFERENCES_ON, ...overrides };
+}
+
 describe("reminderService", () => {
   beforeEach(() => {
     prismaMock.$queryRaw.mockReset();
@@ -30,33 +46,46 @@ describe("reminderService", () => {
     subscriptionMock.getSubscriptionSummary.mockReset();
   });
 
-  it("skips generation when the user has no profile", async () => {
-    const { generateBillReminders } = await import("./reminderService");
+  it("falls back to the no-profile preferences when the user has no profile", async () => {
+    const { getNotificationPreferences } = await import("./reminderService");
     prismaMock.$queryRaw.mockResolvedValueOnce([]);
 
-    const result = await generateBillReminders("user-1");
+    const result = await getNotificationPreferences("user-1");
 
-    expect(result).toEqual({ createdCount: 0 });
-    // Only the preferences lookup should have run — no rule scan, no inserts.
-    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+    // Bill reminders need a saved profile; the data-derived alerts stay on.
+    expect(result).toMatchObject({
+      billRemindersEnabled: false,
+      lowBalanceAlertsEnabled: true,
+      lowBalanceThreshold: 100,
+    });
   });
 
-  it("skips generation when reminders are disabled", async () => {
-    const { generateBillReminders } = await import("./reminderService");
+  it("converts the stored decimal low-balance threshold to a number", async () => {
+    const { getNotificationPreferences } = await import("./reminderService");
     prismaMock.$queryRaw.mockResolvedValueOnce([
-      { billRemindersEnabled: false, billReminderLeadDays: 3 },
+      { ...ALL_PREFERENCES_ON, lowBalanceThreshold: "250.0000" },
     ]);
 
-    const result = await generateBillReminders("user-1");
+    const result = await getNotificationPreferences("user-1");
+
+    expect(result.lowBalanceThreshold).toBe(250);
+  });
+
+  it("skips bill reminders when they are disabled", async () => {
+    const { generateBillReminders } = await import("./reminderService");
+
+    const result = await generateBillReminders(
+      "user-1",
+      preferences({ billRemindersEnabled: false })
+    );
 
     expect(result).toEqual({ createdCount: 0 });
-    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
   });
 
   it("inserts one reminder per due rule and counts only newly created rows", async () => {
     const { generateBillReminders } = await import("./reminderService");
     prismaMock.$queryRaw
-      .mockResolvedValueOnce([{ billRemindersEnabled: true, billReminderLeadDays: 3 }])
       .mockResolvedValueOnce([
         {
           id: "rule-1",
@@ -76,10 +105,11 @@ describe("reminderService", () => {
       .mockResolvedValueOnce([{ id: "notif-1" }]) // rule-1 inserted
       .mockResolvedValueOnce([]); // rule-2 already existed (deduped)
 
-    const result = await generateBillReminders("user-1");
+    const result = await generateBillReminders("user-1", preferences());
 
     expect(result).toEqual({ createdCount: 1 });
-    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(4);
+    // One rule scan plus one insert attempt per due rule.
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(3);
   });
 
   it("lists non-dismissed notifications with an unread count", async () => {
@@ -206,10 +236,45 @@ describe("reminderService", () => {
     // Only a1 qualifies, so createNotification runs once.
     prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-a1" }]);
 
-    const result = await generateLowBalanceAlerts("user-1");
+    const result = await generateLowBalanceAlerts("user-1", preferences());
 
     expect(result).toEqual({ createdCount: 1 });
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the user's own low-balance threshold", async () => {
+    const { generateLowBalanceAlerts } = await import("./reminderService");
+    accountMock.listAccounts.mockResolvedValue([
+      {
+        id: "a1",
+        nickname: "Everyday",
+        ownerName: "Me",
+        accountType: "CHEQUING",
+        balance: 400,
+        frozen: false,
+      },
+    ]);
+    prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-a1" }]);
+
+    // $400 is fine at the default $100 limit but low against a $500 limit.
+    const result = await generateLowBalanceAlerts(
+      "user-1",
+      preferences({ lowBalanceThreshold: 500 })
+    );
+
+    expect(result).toEqual({ createdCount: 1 });
+  });
+
+  it("skips low-balance alerts when they are disabled", async () => {
+    const { generateLowBalanceAlerts } = await import("./reminderService");
+
+    const result = await generateLowBalanceAlerts(
+      "user-1",
+      preferences({ lowBalanceAlertsEnabled: false })
+    );
+
+    expect(result).toEqual({ createdCount: 0 });
+    expect(accountMock.listAccounts).not.toHaveBeenCalled();
   });
 
   it("alerts for budgets that are over their limit", async () => {
@@ -220,24 +285,68 @@ describe("reminderService", () => {
     ]);
     prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-b1" }]);
 
-    const result = await generateBudgetOverspendAlerts("user-1");
+    const result = await generateBudgetOverspendAlerts("user-1", preferences());
 
     expect(result).toEqual({ createdCount: 1 });
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it("alerts for goals that reached 100%", async () => {
-    const { generateGoalReachedAlerts } = await import("./reminderService");
+  it("skips budget-overspend alerts when they are disabled", async () => {
+    const { generateBudgetOverspendAlerts } = await import("./reminderService");
+
+    const result = await generateBudgetOverspendAlerts(
+      "user-1",
+      preferences({ budgetOverspendAlertsEnabled: false })
+    );
+
+    expect(result).toEqual({ createdCount: 0 });
+    expect(budgetMock.listBudgets).not.toHaveBeenCalled();
+  });
+
+  it("raises a completion alert at 100% and a milestone alert part-way", async () => {
+    const { generateGoalMilestoneAlerts } = await import("./reminderService");
     goalMock.listSavingsGoals.mockResolvedValue([
       { id: "g1", name: "Emergency fund", percentageReached: 100 },
       { id: "g2", name: "Vacation", percentageReached: 60 },
+      { id: "g3", name: "Laptop", percentageReached: 20 },
+    ]);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "notif-g1" }])
+      .mockResolvedValueOnce([{ id: "notif-g2" }]);
+
+    const result = await generateGoalMilestoneAlerts("user-1", preferences());
+
+    // g3 is below the lowest milestone, so only g1 and g2 alert.
+    expect(result).toEqual({ createdCount: 2 });
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips goal milestones when they are disabled", async () => {
+    const { generateGoalMilestoneAlerts } = await import("./reminderService");
+
+    const result = await generateGoalMilestoneAlerts(
+      "user-1",
+      preferences({ goalMilestoneAlertsEnabled: false })
+    );
+
+    expect(result).toEqual({ createdCount: 0 });
+    expect(goalMock.listSavingsGoals).not.toHaveBeenCalled();
+  });
+
+  it("respects a custom milestone list", async () => {
+    const { generateGoalMilestoneAlerts } = await import("./reminderService");
+    goalMock.listSavingsGoals.mockResolvedValue([
+      { id: "g1", name: "Vacation", percentageReached: 30 },
     ]);
     prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-g1" }]);
 
-    const result = await generateGoalReachedAlerts("user-1");
+    // 30% clears a 25% milestone even though it misses the default 50%.
+    const result = await generateGoalMilestoneAlerts(
+      "user-1",
+      preferences({ goalMilestonePercentages: [25, 100] })
+    );
 
     expect(result).toEqual({ createdCount: 1 });
-    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
   it("alerts only for subscriptions whose price increased", async () => {
@@ -251,15 +360,27 @@ describe("reminderService", () => {
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-netflix" }]);
 
-    const result = await generateSubscriptionPriceAlerts("user-1");
+    const result = await generateSubscriptionPriceAlerts("user-1", preferences());
 
     expect(result).toEqual({ createdCount: 1 });
     expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
+  it("skips subscription price alerts when they are disabled", async () => {
+    const { generateSubscriptionPriceAlerts } = await import("./reminderService");
+
+    const result = await generateSubscriptionPriceAlerts(
+      "user-1",
+      preferences({ subscriptionPriceAlertsEnabled: false })
+    );
+
+    expect(result).toEqual({ createdCount: 0 });
+    expect(subscriptionMock.getSubscriptionSummary).not.toHaveBeenCalled();
+  });
+
   it("sums all generators and survives one generator throwing", async () => {
     const { generateNotifications } = await import("./reminderService");
-    // Bills: no profile -> 0 (one preferences lookup).
+    // No profile row -> bill reminders stay off, the other generators still run.
     prismaMock.$queryRaw.mockResolvedValueOnce([]);
     accountMock.listAccounts.mockResolvedValue([
       {
@@ -279,6 +400,31 @@ describe("reminderService", () => {
     const result = await generateNotifications("user-1");
 
     expect(result).toEqual({ createdCount: 1 });
+  });
+
+  it("reads preferences once and skips every generator the user turned off", async () => {
+    const { generateNotifications } = await import("./reminderService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      {
+        ...ALL_PREFERENCES_ON,
+        lowBalanceThreshold: "100.0000",
+        billRemindersEnabled: false,
+        budgetOverspendAlertsEnabled: false,
+        lowBalanceAlertsEnabled: false,
+        goalMilestoneAlertsEnabled: false,
+        subscriptionPriceAlertsEnabled: false,
+      },
+    ]);
+
+    const result = await generateNotifications("user-1");
+
+    expect(result).toEqual({ createdCount: 0 });
+    // Only the single preferences read — no generator touched the database.
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(accountMock.listAccounts).not.toHaveBeenCalled();
+    expect(budgetMock.listBudgets).not.toHaveBeenCalled();
+    expect(goalMock.listSavingsGoals).not.toHaveBeenCalled();
+    expect(subscriptionMock.getSubscriptionSummary).not.toHaveBeenCalled();
   });
 
   it("marks all unread notifications read and returns the updated count", async () => {

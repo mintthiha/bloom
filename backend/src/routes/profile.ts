@@ -64,6 +64,36 @@ function parseOptionalNonNegativeFloat(value: unknown, field: string): number | 
 }
 
 /**
+ * Parses an optional boolean body field, returning undefined when it is absent
+ * so the service leaves the stored value untouched.
+ */
+function parseOptionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") {
+    throw new AppError(400, `${field} must be a boolean`);
+  }
+  return value;
+}
+
+/**
+ * Parses an optional array of integer percentages, rejecting anything that is
+ * not an array of finite integers before the service sees it.
+ */
+function parseOptionalIntegerArray(value: unknown, field: string): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new AppError(400, `${field} must be an array`);
+  }
+  return value.map((entry) => {
+    const parsed = Number(entry);
+    if (!Number.isInteger(parsed)) {
+      throw new AppError(400, `${field} must contain only integers`);
+    }
+    return parsed;
+  });
+}
+
+/**
  * Returns the current user's saved profile, or `null` when none exists yet.
  */
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
@@ -121,29 +151,57 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Updates only the current user's bill-reminder preferences.
- * Both fields are optional; omitted fields keep their current value.
+ * Updates only the current user's notification preferences (bill reminders plus
+ * the budget, balance, goal and subscription alert toggles).
+ * Every field is optional; omitted fields keep their current value.
  */
 router.patch("/reminder-preferences", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = requireObject(req.body);
-    let billRemindersEnabled: boolean | undefined;
-    if (body.billRemindersEnabled !== undefined) {
-      if (typeof body.billRemindersEnabled !== "boolean") {
-        throw new AppError(400, "billRemindersEnabled must be a boolean");
-      }
-      billRemindersEnabled = body.billRemindersEnabled;
-    }
+    const billRemindersEnabled = parseOptionalBoolean(
+      body.billRemindersEnabled,
+      "billRemindersEnabled"
+    );
     const billReminderLeadDays = parseOptionalInt(
       body.billReminderLeadDays,
       "billReminderLeadDays",
       0,
       30
     );
+    const budgetOverspendAlertsEnabled = parseOptionalBoolean(
+      body.budgetOverspendAlertsEnabled,
+      "budgetOverspendAlertsEnabled"
+    );
+    const lowBalanceAlertsEnabled = parseOptionalBoolean(
+      body.lowBalanceAlertsEnabled,
+      "lowBalanceAlertsEnabled"
+    );
+    const lowBalanceThreshold = parseOptionalNonNegativeFloat(
+      body.lowBalanceThreshold,
+      "lowBalanceThreshold"
+    );
+    const goalMilestoneAlertsEnabled = parseOptionalBoolean(
+      body.goalMilestoneAlertsEnabled,
+      "goalMilestoneAlertsEnabled"
+    );
+    const goalMilestonePercentages = parseOptionalIntegerArray(
+      body.goalMilestonePercentages,
+      "goalMilestonePercentages"
+    );
+    const subscriptionPriceAlertsEnabled = parseOptionalBoolean(
+      body.subscriptionPriceAlertsEnabled,
+      "subscriptionPriceAlertsEnabled"
+    );
     res.json(
       await profileService.updateReminderPreferences(uid(req), {
         billRemindersEnabled,
         billReminderLeadDays: billReminderLeadDays ?? undefined,
+        budgetOverspendAlertsEnabled,
+        lowBalanceAlertsEnabled,
+        lowBalanceThreshold: lowBalanceThreshold ?? undefined,
+        goalMilestoneAlertsEnabled,
+        goalMilestonePercentages,
+        subscriptionPriceAlertsEnabled,
       })
     );
   } catch (err) {

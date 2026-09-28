@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma";
 
 /** Bumped whenever the export payload's shape changes, so an old file can be recognised later. */
-export const USER_DATA_EXPORT_VERSION = 1;
+export const USER_DATA_EXPORT_VERSION = 2;
 
 type ProfileRow = {
   firstName: string;
@@ -18,6 +18,12 @@ type ProfileRow = {
   primaryFinancialGoal: string | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
+  budgetOverspendAlertsEnabled: boolean;
+  lowBalanceAlertsEnabled: boolean;
+  lowBalanceThreshold: string | number | null;
+  goalMilestoneAlertsEnabled: boolean;
+  goalMilestonePercentages: number[];
+  subscriptionPriceAlertsEnabled: boolean;
   createdAt: Date;
 };
 
@@ -105,11 +111,16 @@ export type UserDataExport = {
   profile:
     | (Omit<
         ProfileRow,
-        "tfsaRoomUsedElsewhere" | "rrspContributionRoom" | "monthlyTakeHomeIncome" | "nextPayday"
+        | "tfsaRoomUsedElsewhere"
+        | "rrspContributionRoom"
+        | "monthlyTakeHomeIncome"
+        | "lowBalanceThreshold"
+        | "nextPayday"
       > & {
         tfsaRoomUsedElsewhere: number | null;
         rrspContributionRoom: number | null;
         monthlyTakeHomeIncome: number | null;
+        lowBalanceThreshold: number | null;
         nextPayday: string | null;
       })
     | null;
@@ -166,7 +177,9 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       SELECT "firstName", "lastName", "username", "email", "province", "tfsaBirthYear",
              "tfsaRoomUsedElsewhere", "rrspContributionRoom", "monthlyTakeHomeIncome",
              "payFrequency", "nextPayday", "primaryFinancialGoal", "billRemindersEnabled",
-             "billReminderLeadDays", "createdAt"
+             "billReminderLeadDays", "budgetOverspendAlertsEnabled", "lowBalanceAlertsEnabled",
+             "lowBalanceThreshold", "goalMilestoneAlertsEnabled", "goalMilestonePercentages",
+             "subscriptionPriceAlertsEnabled", "createdAt"
       FROM "Profile"
       WHERE "userId" = ${userId}
     `,
@@ -249,6 +262,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
           tfsaRoomUsedElsewhere: toNullableNumber(profileRow.tfsaRoomUsedElsewhere),
           rrspContributionRoom: toNullableNumber(profileRow.rrspContributionRoom),
           monthlyTakeHomeIncome: toNullableNumber(profileRow.monthlyTakeHomeIncome),
+          lowBalanceThreshold: toNullableNumber(profileRow.lowBalanceThreshold),
           nextPayday: toDateOnly(profileRow.nextPayday),
         }
       : null,

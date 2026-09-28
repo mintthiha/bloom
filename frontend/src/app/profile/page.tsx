@@ -7,7 +7,7 @@ import { ProfileFormPanel } from "@/components/profile-form-panel";
 import { ProfileIdentityHeader } from "./_components/_profileHeader/ProfileIdentityHeader";
 import { GlanceStatsStrip } from "./_components/_glanceStats/GlanceStatsStrip";
 import { FinancialProfilePanel } from "./_components/_financialProfile/FinancialProfilePanel";
-import { ReminderSettings } from "./_components/_reminderSettings/ReminderSettings";
+import { NotificationSettings } from "./_components/_notificationSettings/NotificationSettings";
 import { AccountDataPanel } from "./_components/_accountData/AccountDataPanel";
 
 export default function ProfilePage() {
@@ -53,7 +53,7 @@ export default function ProfilePage() {
         onSaved={setSavedProfile}
       />
       <FinancialProfilePanel />
-      <ReminderSettings />
+      <NotificationSettings />
       <AccountDataPanel email={savedProfile?.email ?? session?.user?.email ?? null} />
     </div>
   );

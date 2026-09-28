@@ -5,16 +5,16 @@ import { listAccounts } from "./accountService";
 import { listBudgets } from "./budgetService";
 import { listSavingsGoals } from "./savingsGoalService";
 import { getSubscriptionSummary } from "./subscriptionService";
+import { highestMilestoneReached } from "./goalMilestones";
+import { NotificationPreferences, PREFERENCES_WITHOUT_PROFILE } from "./notificationPreferences";
 
 export type NotificationKind =
   | "BILL_REMINDER"
   | "LOW_BALANCE"
   | "BUDGET_OVERSPEND"
   | "GOAL_REACHED"
+  | "GOAL_MILESTONE"
   | "SUBSCRIPTION_PRICE";
-
-/** Cash accounts at or below this balance raise a low-balance alert. */
-const LOW_BALANCE_THRESHOLD = 100;
 
 type NotificationRecord = {
   id: string;
@@ -28,11 +28,6 @@ type NotificationRecord = {
   status: string;
   createdAt: Date;
   readAt: Date | null;
-};
-
-type ReminderPreferenceRecord = {
-  billRemindersEnabled: boolean;
-  billReminderLeadDays: number;
 };
 
 type DueRuleRecord = {
@@ -103,25 +98,40 @@ async function createNotification(
   return inserted.length > 0;
 }
 
-/** Reads the user's reminder preferences, or null when no profile exists yet. */
-async function getReminderPreferences(userId: string): Promise<ReminderPreferenceRecord | null> {
-  const rows = await prisma.$queryRaw<ReminderPreferenceRecord[]>`
-    SELECT "billRemindersEnabled", "billReminderLeadDays"
+type PreferenceRecord = Omit<NotificationPreferences, "lowBalanceThreshold"> & {
+  lowBalanceThreshold: string;
+};
+
+/**
+ * Reads the user's notification preferences, falling back to the no-profile
+ * defaults so every generator can run off one consistent object.
+ */
+export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+  const rows = await prisma.$queryRaw<PreferenceRecord[]>`
+    SELECT "billRemindersEnabled", "billReminderLeadDays",
+           "budgetOverspendAlertsEnabled",
+           "lowBalanceAlertsEnabled", "lowBalanceThreshold",
+           "goalMilestoneAlertsEnabled", "goalMilestonePercentages",
+           "subscriptionPriceAlertsEnabled"
     FROM "Profile"
     WHERE "userId" = ${userId}
     LIMIT 1
   `;
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return PREFERENCES_WITHOUT_PROFILE;
+  return { ...row, lowBalanceThreshold: Number(row.lowBalanceThreshold) };
 }
 
 /**
  * Generates bill-reminder notifications for the user's active withdrawal rules
  * whose next occurrence falls within the lead window (or is already overdue).
- * No-ops when the user has disabled reminders or has no profile yet.
  */
-export async function generateBillReminders(userId: string, now = new Date()) {
-  const preferences = await getReminderPreferences(userId);
-  if (!preferences || !preferences.billRemindersEnabled) {
+export async function generateBillReminders(
+  userId: string,
+  preferences: NotificationPreferences,
+  now = new Date()
+) {
+  if (!preferences.billRemindersEnabled) {
     return { createdCount: 0 };
   }
 
@@ -158,18 +168,27 @@ export async function generateBillReminders(userId: string, now = new Date()) {
   return { createdCount };
 }
 
-/** Alerts when a chequing or savings account balance falls to the low threshold. */
-export async function generateLowBalanceAlerts(userId: string) {
+/** Alerts when a chequing or savings account balance falls below the user's threshold. */
+export async function generateLowBalanceAlerts(
+  userId: string,
+  preferences: NotificationPreferences
+) {
+  if (!preferences.lowBalanceAlertsEnabled) {
+    return { createdCount: 0 };
+  }
+
   const accounts = await listAccounts(userId);
   let createdCount = 0;
   for (const account of accounts) {
     const isCashAccount = account.accountType === "CHEQUING" || account.accountType === "SAVINGS";
     if (!isCashAccount || account.frozen) continue;
-    if (account.balance >= LOW_BALANCE_THRESHOLD) continue;
+    if (account.balance >= preferences.lowBalanceThreshold) continue;
 
     const created = await createNotification(userId, {
       kind: "LOW_BALANCE",
-      dedupeKey: `LOW_BALANCE:${account.id}`,
+      // The threshold is part of the key so raising it can re-alert an account
+      // the user was already warned about at a lower limit.
+      dedupeKey: `LOW_BALANCE:${account.id}:${preferences.lowBalanceThreshold}`,
       title: account.nickname ?? account.ownerName,
       body: `Balance is low: ${formatMoney(account.balance)}`,
       linkHref: `/account/${account.id}`,
@@ -180,7 +199,14 @@ export async function generateLowBalanceAlerts(userId: string) {
 }
 
 /** Alerts when a category budget is over its limit for the current month. */
-export async function generateBudgetOverspendAlerts(userId: string) {
+export async function generateBudgetOverspendAlerts(
+  userId: string,
+  preferences: NotificationPreferences
+) {
+  if (!preferences.budgetOverspendAlertsEnabled) {
+    return { createdCount: 0 };
+  }
+
   const budgets = await listBudgets(userId);
   let createdCount = 0;
   for (const budget of budgets) {
@@ -198,18 +224,36 @@ export async function generateBudgetOverspendAlerts(userId: string) {
   return { createdCount };
 }
 
-/** Alerts once when a savings goal reaches (or passes) 100%. */
-export async function generateGoalReachedAlerts(userId: string) {
+/**
+ * Alerts once per savings-goal milestone the user tracks. Completion keeps the
+ * original GOAL_REACHED kind and dedupe key so goals already announced as
+ * finished are not announced a second time.
+ */
+export async function generateGoalMilestoneAlerts(
+  userId: string,
+  preferences: NotificationPreferences
+) {
+  if (!preferences.goalMilestoneAlertsEnabled) {
+    return { createdCount: 0 };
+  }
+
   const goals = await listSavingsGoals(userId);
   let createdCount = 0;
   for (const goal of goals) {
-    if (goal.percentageReached < 100) continue;
+    const milestone = highestMilestoneReached(
+      goal.percentageReached,
+      preferences.goalMilestonePercentages
+    );
+    if (milestone === null) continue;
 
+    const isComplete = milestone >= 100;
     const created = await createNotification(userId, {
-      kind: "GOAL_REACHED",
-      dedupeKey: `GOAL_REACHED:${goal.id}`,
+      kind: isComplete ? "GOAL_REACHED" : "GOAL_MILESTONE",
+      dedupeKey: isComplete ? `GOAL_REACHED:${goal.id}` : `GOAL_MILESTONE:${goal.id}:${milestone}`,
       title: goal.name,
-      body: "You reached your savings goal!",
+      body: isComplete
+        ? "You reached your savings goal!"
+        : `You're ${milestone}% of the way to this goal`,
       linkHref: "/goals",
     });
     if (created) createdCount += 1;
@@ -218,7 +262,14 @@ export async function generateGoalReachedAlerts(userId: string) {
 }
 
 /** Alerts when a detected subscription's price has increased. */
-export async function generateSubscriptionPriceAlerts(userId: string) {
+export async function generateSubscriptionPriceAlerts(
+  userId: string,
+  preferences: NotificationPreferences
+) {
+  if (!preferences.subscriptionPriceAlertsEnabled) {
+    return { createdCount: 0 };
+  }
+
   const summary = await getSubscriptionSummary(userId);
   let createdCount = 0;
   for (const subscription of summary.subscriptions) {
@@ -238,22 +289,24 @@ export async function generateSubscriptionPriceAlerts(userId: string) {
 }
 
 /**
- * Runs every notification generator for the user. Each generator is isolated so
- * one failing source (e.g. a slow subscription scan) never blocks the others.
+ * Runs every notification generator for the user against one preferences read,
+ * so each kind the user has switched off is skipped. Each generator is isolated
+ * so one failing source (e.g. a slow subscription scan) never blocks the others.
  */
 export async function generateNotifications(userId: string) {
+  const preferences = await getNotificationPreferences(userId);
   const generators = [
     generateBillReminders,
     generateLowBalanceAlerts,
     generateBudgetOverspendAlerts,
-    generateGoalReachedAlerts,
+    generateGoalMilestoneAlerts,
     generateSubscriptionPriceAlerts,
   ];
 
   let createdCount = 0;
   for (const generate of generators) {
     try {
-      const result = await generate(userId);
+      const result = await generate(userId, preferences);
       createdCount += result.createdCount;
     } catch {
       // A single generator failing must not break the notifications fetch.

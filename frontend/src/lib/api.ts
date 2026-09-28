@@ -124,15 +124,35 @@ export type Profile = {
   avatarColor: AvatarColor | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
+  budgetOverspendAlertsEnabled: boolean;
+  lowBalanceAlertsEnabled: boolean;
+  lowBalanceThreshold: number;
+  goalMilestoneAlertsEnabled: boolean;
+  goalMilestonePercentages: number[];
+  subscriptionPriceAlertsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 };
+
+/** The Profile fields the notification-settings card owns. */
+export type NotificationPreferences = Pick<
+  Profile,
+  | "billRemindersEnabled"
+  | "billReminderLeadDays"
+  | "budgetOverspendAlertsEnabled"
+  | "lowBalanceAlertsEnabled"
+  | "lowBalanceThreshold"
+  | "goalMilestoneAlertsEnabled"
+  | "goalMilestonePercentages"
+  | "subscriptionPriceAlertsEnabled"
+>;
 
 export type NotificationKind =
   | "BILL_REMINDER"
   | "LOW_BALANCE"
   | "BUDGET_OVERSPEND"
   | "GOAL_REACHED"
+  | "GOAL_MILESTONE"
   | "SUBSCRIPTION_PRICE";
 export type NotificationStatus = "UNREAD" | "READ" | "DISMISSED";
 
@@ -716,10 +736,7 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(input),
     }),
-  updateReminderPreferences: (input: {
-    billRemindersEnabled?: boolean;
-    billReminderLeadDays?: number;
-  }) =>
+  updateReminderPreferences: (input: Partial<NotificationPreferences>) =>
     request<Profile>("/profile/reminder-preferences", {
       method: "PATCH",
       body: JSON.stringify(input),

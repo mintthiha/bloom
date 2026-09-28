@@ -73,6 +73,12 @@ model Profile {
   avatarColor             String?
   billRemindersEnabled    Boolean  @default(true)
   billReminderLeadDays    Int      @default(3)
+  budgetOverspendAlertsEnabled   Boolean  @default(true)
+  lowBalanceAlertsEnabled        Boolean  @default(true)
+  lowBalanceThreshold            Decimal  @default(100) @db.Decimal(19, 4)
+  goalMilestoneAlertsEnabled     Boolean  @default(true)
+  goalMilestonePercentages       Int[]    @default([50, 75, 100])
+  subscriptionPriceAlertsEnabled Boolean  @default(true)
   createdAt               DateTime @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @db.Timestamptz(3)
 }
