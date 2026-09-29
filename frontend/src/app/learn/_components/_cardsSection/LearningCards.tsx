@@ -28,7 +28,7 @@ export const CARDS = [
   {
     icon: TrendingUp,
     title: "RRSP — Registered Retirement Savings Plan",
-    color: "#3b82f6",
+    color: "var(--brand-accent)",
     summary:
       "Reduce your taxable income today. Pay tax only when you withdraw in retirement (typically at a lower rate).",
     points: [
@@ -42,7 +42,7 @@ export const CARDS = [
   {
     icon: BookOpen,
     title: "FHSA — First Home Savings Account",
-    color: "#3b82f6",
+    color: "var(--brand-accent)",
     summary:
       "The best of both worlds: RRSP-like deductions on contributions and TFSA-like tax-free withdrawals for a first home.",
     points: [

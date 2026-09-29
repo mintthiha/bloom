@@ -58,10 +58,10 @@ export function RefreshLinkedAccountsButton({
         gap: "6px",
         padding: "8px 16px",
         background: "transparent",
-        color: syncing ? "var(--text-muted)" : "#3b82f6",
+        color: syncing ? "var(--text-muted)" : "var(--brand-accent)",
         fontWeight: 700,
         fontSize: "13px",
-        border: `1px solid ${syncing ? "var(--border)" : "#3b82f655"}`,
+        border: `1px solid ${syncing ? "var(--border)" : "color-mix(in srgb, var(--brand-accent) 33%, transparent)"}`,
         borderRadius: "8px",
         cursor: syncing ? "not-allowed" : "pointer",
         opacity: syncing ? 0.5 : 1,
@@ -70,10 +70,12 @@ export function RefreshLinkedAccountsButton({
         flexShrink: 0,
       }}
       onMouseEnter={(e) => {
-        if (!syncing) e.currentTarget.style.borderColor = "#3b82f6";
+        if (!syncing) e.currentTarget.style.borderColor = "var(--brand-accent)";
       }}
       onMouseLeave={(e) => {
-        if (!syncing) e.currentTarget.style.borderColor = "#3b82f655";
+        if (!syncing)
+          e.currentTarget.style.borderColor =
+            "color-mix(in srgb, var(--brand-accent) 33%, transparent)";
       }}
     >
       <RefreshCw size={13} className={syncing ? "spin" : undefined} />

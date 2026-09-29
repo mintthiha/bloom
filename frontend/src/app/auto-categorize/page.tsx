@@ -23,7 +23,7 @@ export default function AutoCategorizePage() {
             height="22"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#f59e0b"
+            stroke="var(--brand-accent)"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"

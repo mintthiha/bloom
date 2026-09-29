@@ -71,7 +71,7 @@ export function AccountFilters({
           className="nav-item"
           onClick={onClearTypes}
           aria-pressed={allActive}
-          style={chipStyle(allActive, "#3b82f6")}
+          style={chipStyle(allActive, "var(--brand-accent)")}
         >
           All
         </button>
@@ -107,7 +107,7 @@ export function AccountFilters({
             className="nav-item"
             onClick={onToggleShowHidden}
             aria-pressed={showHidden}
-            style={{ ...chipStyle(showHidden, "#3b82f6"), marginLeft: "auto" }}
+            style={{ ...chipStyle(showHidden, "var(--brand-accent)"), marginLeft: "auto" }}
           >
             {showHidden ? <EyeOff size={13} /> : <Eye size={13} />}
             {showHidden ? "Hide hidden" : `Show hidden (${hiddenCount})`}

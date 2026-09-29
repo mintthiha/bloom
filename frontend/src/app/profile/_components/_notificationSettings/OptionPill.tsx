@@ -23,9 +23,11 @@ export function OptionPill({
         minWidth: "56px",
         padding: "8px 14px",
         borderRadius: "10px",
-        border: `1px solid ${isSelected ? "#3b82f666" : "var(--border)"}`,
-        background: isSelected ? "#3b82f61a" : "var(--surface-2)",
-        color: isSelected ? "#3b82f6" : "var(--text-secondary)",
+        border: `1px solid ${isSelected ? "color-mix(in srgb, var(--brand-accent) 40%, transparent)" : "var(--border)"}`,
+        background: isSelected
+          ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
+          : "var(--surface-2)",
+        color: isSelected ? "var(--brand-accent)" : "var(--text-secondary)",
         fontSize: "13px",
         fontWeight: 600,
         cursor: isDisabled ? "default" : "pointer",

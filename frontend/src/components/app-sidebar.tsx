@@ -105,7 +105,7 @@ export function AppSidebar() {
         >
           <div style={{ position: "relative", flexShrink: 0 }}>
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="6" fill="#3b82f6" />
+              <rect width="28" height="28" rx="6" fill="var(--brand-accent)" />
               <path
                 d="M8 20V8h5.5a4 4 0 0 1 0 8H8"
                 stroke="#000"
@@ -176,9 +176,13 @@ export function AppSidebar() {
                       gap: "8px",
                       minHeight: "44px",
                       borderRadius: "10px",
-                      border: active ? "1px solid #3b82f666" : "1px solid var(--border)",
-                      background: active ? "#3b82f61a" : "var(--surface-1)",
-                      color: active ? "#3b82f6" : "var(--text-secondary)",
+                      border: active
+                        ? "1px solid color-mix(in srgb, var(--brand-accent) 40%, transparent)"
+                        : "1px solid var(--border)",
+                      background: active
+                        ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
+                        : "var(--surface-1)",
+                      color: active ? "var(--brand-accent)" : "var(--text-secondary)",
                       fontSize: "12px",
                       fontWeight: 600,
                       cursor: "pointer",

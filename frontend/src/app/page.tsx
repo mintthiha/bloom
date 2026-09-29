@@ -267,7 +267,7 @@ function Home() {
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#3b82f6",
+              color: "var(--brand-accent)",
               marginBottom: "10px",
             }}
           >
@@ -300,7 +300,7 @@ function Home() {
             className="fade-up fade-up-1"
             style={{
               background: "var(--surface-1)",
-              border: "1px solid #3b82f622",
+              border: "1px solid color-mix(in srgb, var(--brand-accent) 13%, transparent)",
               borderRadius: "16px",
               padding: "24px",
             }}
@@ -311,7 +311,7 @@ function Home() {
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
-                color: "#3b82f6",
+                color: "var(--brand-accent)",
                 marginBottom: "12px",
               }}
             >
@@ -638,7 +638,7 @@ function Home() {
                 title: "Total Cash",
                 value: <AnimatedCurrency value={totalCash} />,
                 flashKey: totalCash,
-                color: "#3b82f6",
+                color: "var(--brand-accent)",
                 targetAccount: cashAccounts[0],
                 staggerIndex: 1,
               })}
@@ -743,7 +743,7 @@ function Home() {
                 gap: "4px",
                 fontSize: "12px",
                 fontWeight: 600,
-                color: "#3b82f6",
+                color: "var(--brand-accent)",
                 textDecoration: "none",
                 whiteSpace: "nowrap",
                 flexShrink: 0,

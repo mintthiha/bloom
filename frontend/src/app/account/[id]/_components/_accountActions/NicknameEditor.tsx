@@ -112,7 +112,7 @@ export function NicknameEditor({ accountId, nickname, onUpdated, onError }: Nick
             disabled={saving}
             style={{
               padding: "10px 16px",
-              background: "#3b82f6",
+              background: "var(--brand-accent)",
               color: "#000",
               fontWeight: 700,
               fontSize: "14px",

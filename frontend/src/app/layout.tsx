@@ -9,6 +9,7 @@ import { SessionProvider } from "next-auth/react";
 import { DashboardViewProvider } from "@/components/dashboard-view-provider";
 import { DashboardVisibilityProvider } from "@/components/dashboard-visibility-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AccentProvider } from "@/components/accent-provider";
 import { AppShell } from "@/components/app-shell";
 import { ACTIVE_USER_STORAGE_KEY, PER_USER_STORAGE_KEYS } from "@/lib/per-user-storage";
 
@@ -44,19 +45,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: `(function(){try{var t=localStorage.getItem('bloom-theme');var isLight=t==='light'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: light)').matches);if(isLight)document.documentElement.classList.remove('dark')}catch(e){}})();`,
           }}
         />
+        {/* Applies the cached app accent colour before first paint to avoid a flash of the default amber */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var a=localStorage.getItem('bloom-accent');if(a)document.documentElement.style.setProperty('--brand-accent',a)}catch(e){}})();`,
+          }}
+        />
         {/* Resets per-user preferences before providers hydrate when the account has changed */}
         {userId && <script dangerouslySetInnerHTML={{ __html: buildPerUserResetScript(userId) }} />}
       </head>
       <body>
         <ThemeProvider>
           <SessionProvider>
-            <TooltipProvider>
-              <DashboardViewProvider>
-                <DashboardVisibilityProvider>
-                  <AppShell>{children}</AppShell>
-                </DashboardVisibilityProvider>
-              </DashboardViewProvider>
-            </TooltipProvider>
+            <AccentProvider>
+              <TooltipProvider>
+                <DashboardViewProvider>
+                  <DashboardVisibilityProvider>
+                    <AppShell>{children}</AppShell>
+                  </DashboardVisibilityProvider>
+                </DashboardViewProvider>
+              </TooltipProvider>
+            </AccentProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

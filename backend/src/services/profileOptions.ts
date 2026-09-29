@@ -31,10 +31,14 @@ export const PRIMARY_FINANCIAL_GOALS = [
 /** Accent colours a user can pick for their initials avatar. */
 export const AVATAR_COLORS = ["AMBER", "BLUE", "GREEN", "VIOLET", "PINK", "CYAN"] as const;
 
+/** App-wide accent colours a user can pick to theme buttons, links, and highlights. Kept separate from AVATAR_COLORS so the two settings can diverge. */
+export const ACCENT_COLORS = ["AMBER", "BLUE", "GREEN", "VIOLET", "PINK", "CYAN"] as const;
+
 export type ProvinceCode = (typeof PROVINCE_CODES)[number];
 export type PayFrequency = (typeof PAY_FREQUENCIES)[number];
 export type PrimaryFinancialGoal = (typeof PRIMARY_FINANCIAL_GOALS)[number];
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
+export type AccentColor = (typeof ACCENT_COLORS)[number];
 
 /**
  * Validates that an optional code belongs to the allowed set, uppercasing it first

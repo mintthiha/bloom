@@ -223,7 +223,7 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
               disabled={isSubmitting}
               style={{
                 padding: "10px 18px",
-                background: "#3b82f6",
+                background: "var(--brand-accent)",
                 border: "none",
                 borderRadius: "10px",
                 color: "#000",

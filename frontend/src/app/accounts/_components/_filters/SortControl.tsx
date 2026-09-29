@@ -35,9 +35,13 @@ export function SortControl({ value, onChange }: SortControlProps) {
               minHeight: "32px",
               padding: "0 12px",
               borderRadius: "8px",
-              border: active ? "1px solid #3b82f666" : "1px solid var(--border)",
-              background: active ? "#3b82f61a" : "var(--surface-1)",
-              color: active ? "#3b82f6" : "var(--text-secondary)",
+              border: active
+                ? "1px solid color-mix(in srgb, var(--brand-accent) 40%, transparent)"
+                : "1px solid var(--border)",
+              background: active
+                ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
+                : "var(--surface-1)",
+              color: active ? "var(--brand-accent)" : "var(--text-secondary)",
               fontSize: "12px",
               fontWeight: 600,
               cursor: "pointer",

@@ -350,7 +350,7 @@ export function CategorizationRulesManager({
           disabled={!isFormValid || isSaving || isLoading}
           style={{
             padding: "10px 20px",
-            background: "#3b82f6",
+            background: "var(--brand-accent)",
             color: "#000",
             border: "none",
             borderRadius: "8px",
@@ -421,7 +421,7 @@ export function CategorizationRulesManager({
                   style={{
                     padding: "10px 14px",
                     background: "var(--surface-2)",
-                    border: "1px solid #3b82f660",
+                    border: "1px solid color-mix(in srgb, var(--brand-accent) 38%, transparent)",
                     borderRadius: "10px",
                   }}
                 >
@@ -467,7 +467,7 @@ export function CategorizationRulesManager({
                       disabled={!isEditFormValid || isSavingEdit}
                       style={{
                         padding: "8px 14px",
-                        background: "#3b82f6",
+                        background: "var(--brand-accent)",
                         color: "#000",
                         border: "none",
                         borderRadius: "7px",
@@ -513,9 +513,11 @@ export function CategorizationRulesManager({
                     alignItems: "center",
                     gap: "10px",
                     padding: "10px 14px",
-                    background: selectedIds.has(rule.id) ? "#3b82f608" : "var(--surface-2)",
+                    background: selectedIds.has(rule.id)
+                      ? "color-mix(in srgb, var(--brand-accent) 3%, transparent)"
+                      : "var(--surface-2)",
                     border: selectedIds.has(rule.id)
-                      ? "1px solid #3b82f640"
+                      ? "1px solid color-mix(in srgb, var(--brand-accent) 25%, transparent)"
                       : "1px solid var(--border)",
                     borderRadius: "10px",
                     transition: "background 0.15s, border-color 0.15s",

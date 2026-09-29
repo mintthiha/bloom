@@ -56,7 +56,7 @@ export function NotificationToggleRow({
             height: "24px",
             borderRadius: "999px",
             border: "none",
-            background: isEnabled ? "#3b82f6" : "var(--surface-3)",
+            background: isEnabled ? "var(--brand-accent)" : "var(--surface-3)",
             cursor: isDisabled ? "default" : "pointer",
             flexShrink: 0,
             transition: "background 0.15s ease",

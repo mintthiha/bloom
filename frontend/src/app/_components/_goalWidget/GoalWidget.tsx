@@ -52,7 +52,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
           onClick={() => router.push("/goals")}
           style={{
             padding: "10px 20px",
-            background: "#3b82f6",
+            background: "var(--brand-accent)",
             border: "none",
             borderRadius: "10px",
             color: "#000",
@@ -70,7 +70,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? goals[0]!;
   const typeMeta = ACCOUNT_TYPE_META[selectedGoal.accountType as AccountType];
   const isComplete = selectedGoal.percentageReached >= 100;
-  const progressColor = isComplete ? "#22c55e" : "#3b82f6";
+  const progressColor = isComplete ? "#22c55e" : "var(--brand-accent)";
 
   return (
     <CollapsibleCard
@@ -116,7 +116,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
             cursor: "pointer",
             fontSize: "12px",
             fontWeight: 600,
-            color: "#3b82f6",
+            color: "var(--brand-accent)",
             marginLeft: goals.length > 1 ? "auto" : "0",
           }}
         >

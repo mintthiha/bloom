@@ -7,7 +7,7 @@ import Link from "next/link";
 function BloomMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="6" fill="#3b82f6" />
+      <rect width="28" height="28" rx="6" fill="var(--brand-accent)" />
       <path
         d="M8 20V8h5.5a4 4 0 0 1 0 8H8"
         stroke="#000"
@@ -222,7 +222,7 @@ export default function RegisterPage() {
             style={{
               width: "100%",
               padding: "12px 20px",
-              background: "#3b82f6",
+              background: "var(--brand-accent)",
               color: "#fff",
               border: "none",
               borderRadius: "10px",
@@ -246,7 +246,10 @@ export default function RegisterPage() {
           }}
         >
           Already have an account?{" "}
-          <Link href="/login" style={{ color: "#3b82f6", fontWeight: 600, textDecoration: "none" }}>
+          <Link
+            href="/login"
+            style={{ color: "var(--brand-accent)", fontWeight: 600, textDecoration: "none" }}
+          >
             Sign in
           </Link>
         </p>

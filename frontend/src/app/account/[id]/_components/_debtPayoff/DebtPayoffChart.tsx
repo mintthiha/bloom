@@ -72,7 +72,7 @@ export function DebtPayoffChart({ data, showUserPayment, showBoosted }: DebtPayo
         />
         <Line
           dataKey="minimum"
-          stroke="#3b82f6"
+          stroke="var(--brand-accent)"
           strokeWidth={2}
           dot={false}
           strokeDasharray="5 3"

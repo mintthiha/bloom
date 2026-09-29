@@ -15,29 +15,28 @@ const BOUNCE = 0.6; // energy kept after bouncing off an edge or another orb (0 
 type Orb = {
   size: number; // rendered diameter in px
   radius: number; // collision radius (roughly the visible core)
-  color: string; // "r,g,b" blue tint
   alphaDark: number; // opacity on the dark theme
-  alphaLight: number; // opacity on the light theme — higher, since blue washes out on white
+  alphaLight: number; // opacity on the light theme — higher, since the accent washes out on white
 };
 
 /** The ambient orbs. Each is repelled by the cursor and bounces off the others and the edges. */
 const ORBS: Orb[] = [
-  { size: 360, radius: 108, color: "59,130,246", alphaDark: 0.12, alphaLight: 0.26 },
-  { size: 260, radius: 78, color: "96,165,250", alphaDark: 0.1, alphaLight: 0.24 },
-  { size: 200, radius: 60, color: "37,99,235", alphaDark: 0.09, alphaLight: 0.22 },
-  { size: 320, radius: 96, color: "59,130,246", alphaDark: 0.1, alphaLight: 0.24 },
-  { size: 150, radius: 45, color: "96,165,250", alphaDark: 0.11, alphaLight: 0.26 },
-  { size: 290, radius: 87, color: "37,99,235", alphaDark: 0.08, alphaLight: 0.2 },
-  { size: 180, radius: 54, color: "59,130,246", alphaDark: 0.11, alphaLight: 0.26 },
-  { size: 230, radius: 69, color: "96,165,250", alphaDark: 0.09, alphaLight: 0.22 },
-  { size: 130, radius: 39, color: "37,99,235", alphaDark: 0.12, alphaLight: 0.28 },
-  { size: 340, radius: 102, color: "59,130,246", alphaDark: 0.08, alphaLight: 0.2 },
+  { size: 360, radius: 108, alphaDark: 0.12, alphaLight: 0.26 },
+  { size: 260, radius: 78, alphaDark: 0.1, alphaLight: 0.24 },
+  { size: 200, radius: 60, alphaDark: 0.09, alphaLight: 0.22 },
+  { size: 320, radius: 96, alphaDark: 0.1, alphaLight: 0.24 },
+  { size: 150, radius: 45, alphaDark: 0.11, alphaLight: 0.26 },
+  { size: 290, radius: 87, alphaDark: 0.08, alphaLight: 0.2 },
+  { size: 180, radius: 54, alphaDark: 0.11, alphaLight: 0.26 },
+  { size: 230, radius: 69, alphaDark: 0.09, alphaLight: 0.22 },
+  { size: 130, radius: 39, alphaDark: 0.12, alphaLight: 0.28 },
+  { size: 340, radius: 102, alphaDark: 0.08, alphaLight: 0.2 },
 ];
 
-/** Builds an orb's radial-gradient fill for the current theme. */
+/** Builds an orb's radial-gradient fill for the current theme, tinted with the user's app accent. */
 function orbBackground(orb: Orb, isDark: boolean): string {
   const alpha = isDark ? orb.alphaDark : orb.alphaLight;
-  return `radial-gradient(circle, rgba(${orb.color},${alpha}), transparent 70%)`;
+  return `radial-gradient(circle, color-mix(in srgb, var(--brand-accent) ${alpha * 100}%, transparent), transparent 70%)`;
 }
 
 type PlayArea = { left: number; top: number; width: number; height: number };

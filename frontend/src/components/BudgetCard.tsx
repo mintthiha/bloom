@@ -91,7 +91,7 @@ export function BudgetCard({
             style={{
               width: `${progress}%`,
               height: "100%",
-              background: budget.isOverBudget ? "#ef4444" : "#3b82f6",
+              background: budget.isOverBudget ? "#ef4444" : "var(--brand-accent)",
               transition: "width 0.2s ease",
             }}
           />

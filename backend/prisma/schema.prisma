@@ -76,6 +76,7 @@ model Profile {
   nextPayday              DateTime? @db.Date
   primaryFinancialGoal    String?
   avatarColor             String?
+  accentColor             String?
   billRemindersEnabled    Boolean  @default(true)
   billReminderLeadDays    Int      @default(3)
   budgetOverspendAlertsEnabled   Boolean  @default(true)

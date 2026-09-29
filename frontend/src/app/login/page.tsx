@@ -27,7 +27,8 @@ const ORBS: Orb[] = [
   {
     size: 440,
     radius: 130,
-    background: "radial-gradient(circle, rgba(59,130,246,0.16), transparent 70%)",
+    background:
+      "radial-gradient(circle, color-mix(in srgb, var(--brand-accent) 16%, transparent), transparent 70%)",
     entranceDelay: "0s",
     anchor: { top: "-140px", right: "-120px" },
     rest: (rect) => ({ x: rect.width - 100, y: 80 }),
@@ -60,7 +61,7 @@ const ACCOUNT_TAGS = ["Chequing", "Savings", "TFSA", "RRSP", "FHSA", "Credit"];
 function BloomMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="6" fill="#3b82f6" />
+      <rect width="28" height="28" rx="6" fill="var(--brand-accent)" />
       <path
         d="M8 20V8h5.5a4 4 0 0 1 0 8H8"
         stroke="#000"
@@ -528,9 +529,9 @@ export default function LoginPage() {
                     width: "22px",
                     height: "22px",
                     borderRadius: "999px",
-                    background: "#3b82f61f",
-                    border: "1px solid #3b82f644",
-                    color: "#3b82f6",
+                    background: "color-mix(in srgb, var(--brand-accent) 12%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--brand-accent) 27%, transparent)",
+                    color: "var(--brand-accent)",
                     flexShrink: 0,
                     marginTop: "1px",
                   }}
@@ -697,9 +698,9 @@ export default function LoginPage() {
                 justifyContent: "center",
                 gap: "8px",
                 padding: "12px 20px",
-                background: "#f59e0b1a",
-                color: "#f59e0b",
-                border: "1px solid #f59e0b40",
+                background: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
+                color: "var(--brand-accent)",
+                border: "1px solid color-mix(in srgb, var(--brand-accent) 25%, transparent)",
                 borderRadius: "10px",
                 fontSize: "14px",
                 fontWeight: 600,
@@ -771,14 +772,14 @@ export default function LoginPage() {
                       width: "28px",
                       height: "28px",
                       borderRadius: "50%",
-                      background: "#3b82f620",
-                      border: "1px solid #3b82f640",
+                      background: "color-mix(in srgb, var(--brand-accent) 13%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--brand-accent) 25%, transparent)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: "12px",
                       fontWeight: 700,
-                      color: "#3b82f6",
+                      color: "var(--brand-accent)",
                       flexShrink: 0,
                     }}
                   >
@@ -907,7 +908,12 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ width: "14px", height: "14px", accentColor: "#3b82f6", cursor: "pointer" }}
+                style={{
+                  width: "14px",
+                  height: "14px",
+                  accentColor: "var(--brand-accent)",
+                  cursor: "pointer",
+                }}
               />
               Remember me for 30 days
             </label>
@@ -960,7 +966,7 @@ export default function LoginPage() {
             No account?{" "}
             <Link
               href="/register"
-              style={{ color: "#3b82f6", fontWeight: 600, textDecoration: "none" }}
+              style={{ color: "var(--brand-accent)", fontWeight: 600, textDecoration: "none" }}
             >
               Create one
             </Link>

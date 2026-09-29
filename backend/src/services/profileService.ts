@@ -1,6 +1,7 @@
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../lib/prisma";
 import type {
+  AccentColor,
   AvatarColor,
   PayFrequency,
   PrimaryFinancialGoal,
@@ -29,6 +30,7 @@ type ProfileInput = {
   tfsaRoomUsedElsewhere?: number | null;
   rrspContributionRoom?: number | null;
   avatarColor?: AvatarColor | null;
+  accentColor?: AccentColor | null;
 };
 
 type ReminderPreferenceInput = {
@@ -64,6 +66,7 @@ type ProfileRecord = {
   nextPayday: Date | null;
   primaryFinancialGoal: string | null;
   avatarColor: string | null;
+  accentColor: string | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   budgetOverspendAlertsEnabled: boolean;
@@ -110,6 +113,7 @@ export async function getProfile(userId: string) {
            "nextPayday",
            "primaryFinancialGoal",
            "avatarColor",
+           "accentColor",
            "billRemindersEnabled",
            "billReminderLeadDays",
            "budgetOverspendAlertsEnabled",
@@ -212,15 +216,16 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   const tfsaRoomUsedElsewhere = input.tfsaRoomUsedElsewhere ?? null;
   const rrspContributionRoom = input.rrspContributionRoom ?? null;
   const avatarColor = input.avatarColor ?? null;
+  const accentColor = input.accentColor ?? null;
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email",
                            "province", "tfsaBirthYear", "tfsaRoomUsedElsewhere",
-                           "rrspContributionRoom", "avatarColor",
+                           "rrspContributionRoom", "avatarColor", "accentColor",
                            "createdAt", "updatedAt")
     VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email},
             ${province}, ${tfsaBirthYear}, ${tfsaRoomUsedElsewhere}, ${rrspContributionRoom},
-            ${avatarColor},
+            ${avatarColor}, ${accentColor},
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId")
     DO UPDATE SET
@@ -233,6 +238,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
       "tfsaRoomUsedElsewhere" = EXCLUDED."tfsaRoomUsedElsewhere",
       "rrspContributionRoom" = EXCLUDED."rrspContributionRoom",
       "avatarColor" = EXCLUDED."avatarColor",
+      "accentColor" = EXCLUDED."accentColor",
       "updatedAt" = CURRENT_TIMESTAMP
     RETURNING "userId", "firstName", "lastName", "username", "email",
               "province",
@@ -244,6 +250,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "nextPayday",
               "primaryFinancialGoal",
               "avatarColor",
+              "accentColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "budgetOverspendAlertsEnabled",
@@ -329,6 +336,14 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     "text",
     existingProfile?.avatarColor ?? null,
     updatedProfile.avatarColor
+  );
+  pushActivityFieldChange(
+    changes,
+    "accentColor",
+    "App accent colour",
+    "text",
+    existingProfile?.accentColor ?? null,
+    updatedProfile.accentColor
   );
 
   if (changes.length > 0) {
@@ -440,6 +455,7 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
               "nextPayday",
               "primaryFinancialGoal",
               "avatarColor",
+              "accentColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "budgetOverspendAlertsEnabled",
@@ -583,6 +599,7 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
               "nextPayday",
               "primaryFinancialGoal",
               "avatarColor",
+              "accentColor",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "budgetOverspendAlertsEnabled",

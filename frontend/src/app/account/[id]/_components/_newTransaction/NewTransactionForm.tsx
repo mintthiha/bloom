@@ -285,7 +285,7 @@ export function NewTransactionForm({
               fontWeight: 600,
               letterSpacing: "0.02em",
               transition: "all 0.15s",
-              background: op === o ? "#3b82f6" : "transparent",
+              background: op === o ? "var(--brand-accent)" : "transparent",
               color: op === o ? "#000" : "var(--text-secondary)",
             }}
           >
@@ -378,7 +378,7 @@ export function NewTransactionForm({
               }
               style={{
                 padding: "10px 24px",
-                background: "#3b82f6",
+                background: "var(--brand-accent)",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",

@@ -198,8 +198,8 @@ export function FinancialProfilePanel() {
           {payCycleSummary && (
             <p
               style={{
-                background: "#f59e0b1a",
-                border: "1px solid #f59e0b33",
+                background: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)",
                 borderRadius: "10px",
                 padding: "12px 14px",
                 fontSize: "13px",
@@ -217,7 +217,7 @@ export function FinancialProfilePanel() {
               disabled={saving}
               style={{
                 padding: "12px 20px",
-                background: "#3b82f6",
+                background: "var(--brand-accent)",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",

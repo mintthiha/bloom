@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_GROUPS, sumSignedBalances, accountDisplayName } from "@/lib/account-view";
 import { EmptyState } from "@/components/EmptyState";
 
-const PIN_COLOR = "#f59e0b";
+const PIN_COLOR = "var(--brand-accent)";
 const NEGATIVE_COLOR = "#ef4444";
 
 interface AccountsTableProps {
@@ -97,7 +97,7 @@ export function AccountsTable({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
-                    color: "#3b82f6",
+                    color: "var(--brand-accent)",
                     marginBottom: "4px",
                   }}
                 >
@@ -168,12 +168,14 @@ export function AccountsTable({
                     display: "flex",
                     alignItems: "center",
                     background: isDragOver ? "var(--surface-2)" : "var(--surface-1)",
-                    border: `1px solid ${isDragOver ? "#3b82f666" : "var(--border)"}`,
+                    border: `1px solid ${isDragOver ? "color-mix(in srgb, var(--brand-accent) 40%, transparent)" : "var(--border)"}`,
                     borderRadius: "12px",
                     transition:
                       "border-color 0.2s, background 0.2s, opacity 0.15s, box-shadow 0.2s",
                     opacity: isDragging ? 0.4 : isHidden ? 0.55 : 1,
-                    outline: isDragOver ? "1px solid #3b82f644" : "none",
+                    outline: isDragOver
+                      ? "1px solid color-mix(in srgb, var(--brand-accent) 27%, transparent)"
+                      : "none",
                   }}
                 >
                   <button
@@ -322,8 +324,9 @@ export function AccountsTable({
                                 letterSpacing: "0.04em",
                                 padding: "2px 6px",
                                 borderRadius: "4px",
-                                background: "#3b82f618",
-                                color: "#3b82f6",
+                                background:
+                                  "color-mix(in srgb, var(--brand-accent) 9%, transparent)",
+                                color: "var(--brand-accent)",
                               }}
                             >
                               Linked · {account.institutionName}

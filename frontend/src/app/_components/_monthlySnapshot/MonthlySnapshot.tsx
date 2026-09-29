@@ -101,7 +101,7 @@ export function MonthlySnapshot({
           >
             Top Spend
           </p>
-          <p style={{ fontSize: "13px", fontWeight: 700, color: "#3b82f6" }}>
+          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--brand-accent)" }}>
             {monthlySummary.topExpenseCategory}
           </p>
         </div>
@@ -114,9 +114,15 @@ export function MonthlySnapshot({
           style={{
             padding: "5px 12px",
             borderRadius: "8px",
-            border: snapshotView === viewOption ? "1px solid #3b82f666" : "1px solid var(--border)",
-            background: snapshotView === viewOption ? "#3b82f61a" : "var(--surface-2)",
-            color: snapshotView === viewOption ? "#3b82f6" : "var(--text-secondary)",
+            border:
+              snapshotView === viewOption
+                ? "1px solid color-mix(in srgb, var(--brand-accent) 40%, transparent)"
+                : "1px solid var(--border)",
+            background:
+              snapshotView === viewOption
+                ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
+                : "var(--surface-2)",
+            color: snapshotView === viewOption ? "var(--brand-accent)" : "var(--text-secondary)",
             fontSize: "11px",
             fontWeight: 600,
             cursor: "pointer",

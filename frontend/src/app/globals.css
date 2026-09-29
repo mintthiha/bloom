@@ -5,8 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --amber: #3b82f6;
-  --amber-light: #60a5fa;
+  /* App-wide accent the user picks on their profile; overridden inline per-user by AccentProvider. */
+  --brand-accent: #f59e0b;
+  --brand-accent-light: color-mix(in srgb, var(--brand-accent) 75%, white);
   --surface-0: #eef2fb;
   --surface-1: #ffffff;
   --surface-2: #e6ecf8;
@@ -21,8 +22,12 @@
   --chart-grid: rgba(20, 40, 90, 0.07);
   --chart-cursor: rgba(20, 40, 90, 0.04);
   --scrollbar-thumb: #b3c1da;
-  --shadow-hover: 0 6px 20px -8px rgba(0, 0, 0, 0.16), inset 0 0 0 1px #3b82f62e;
-  --shadow-pressed: 0 2px 6px -3px rgba(0, 0, 0, 0.12), inset 0 0 0 1px #3b82f61f;
+  --shadow-hover:
+    0 6px 20px -8px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 18%, transparent);
+  --shadow-pressed:
+    0 2px 6px -3px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 12%, transparent);
   --hover-overlay: rgba(0, 0, 0, 0.04);
   /* "Featured card" accent — a soft light-blue on light, deep navy on dark. */
   --snapshot-gradient: linear-gradient(135deg, #dbe8ff 0%, var(--surface-1) 58%);
@@ -71,8 +76,12 @@
   --chart-grid: rgba(150, 180, 255, 0.06);
   --chart-cursor: rgba(150, 180, 255, 0.05);
   --scrollbar-thumb: #37415a;
-  --shadow-hover: 0 8px 24px -10px rgba(0, 0, 0, 0.6), inset 0 0 0 1px #3b82f633;
-  --shadow-pressed: 0 2px 8px -4px rgba(0, 0, 0, 0.5), inset 0 0 0 1px #3b82f626;
+  --shadow-hover:
+    0 8px 24px -10px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 20%, transparent);
+  --shadow-pressed:
+    0 2px 8px -4px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 15%, transparent);
   --hover-overlay: rgba(255, 255, 255, 0.05);
   --snapshot-gradient: linear-gradient(135deg, #0f1a2e 0%, var(--surface-1) 58%);
 
@@ -152,8 +161,8 @@ body {
 }
 
 ::selection {
-  background: #3b82f628;
-  color: var(--amber-light);
+  background: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  color: var(--brand-accent-light);
 }
 ::-webkit-scrollbar {
   width: 3px;
@@ -176,7 +185,7 @@ body {
  * Wrapped in :where() so it has zero specificity — any component that defines
  * its own focus style (e.g. shadcn Button/Input rings) overrides this, while
  * every raw <button>, <a>, <input>, select, or role-based control that would
- * otherwise show no focus indicator gets a consistent amber ring.
+ * otherwise show no focus indicator gets a consistent accent ring.
  */
 :where(
   a[href],
@@ -192,7 +201,7 @@ body {
   [role="switch"],
   [tabindex]:not([tabindex="-1"])
 ):focus-visible {
-  outline: 2px solid var(--amber);
+  outline: 2px solid var(--brand-accent);
   outline-offset: 2px;
 }
 
@@ -237,8 +246,8 @@ body {
   opacity: 1;
 }
 .card-drag-handle:hover {
-  color: #3b82f6;
-  border-color: #3b82f666;
+  color: var(--brand-accent);
+  border-color: color-mix(in srgb, var(--brand-accent) 40%, transparent);
 }
 
 /* Account-balance list rows — subtle surface + border lift on hover, mirroring the stat cards. */
@@ -343,13 +352,13 @@ body {
 }
 .value-prop:hover .value-prop-icon {
   transform: scale(1.15);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--brand-accent) 40%, transparent);
 }
 .value-prop:hover .value-prop-text {
   transform: translateX(3px);
 }
 .value-prop:hover .value-prop-title {
-  color: #60a5fa;
+  color: var(--brand-accent-light);
 }
 
 /*
@@ -484,9 +493,9 @@ body {
     transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .rule-edit-button:not(:disabled):hover {
-  border-color: #3b82f666;
-  color: #3b82f6;
-  background: #3b82f614;
+  border-color: color-mix(in srgb, var(--brand-accent) 40%, transparent);
+  color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
 }
 .rule-edit-button:not(:disabled):active {
   transform: scale(0.97);
@@ -510,18 +519,18 @@ body {
     transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .budget-action-pill:not(:disabled):hover {
-  border-color: #3b82f666;
-  color: #3b82f6;
-  background: #3b82f614;
+  border-color: color-mix(in srgb, var(--brand-accent) 40%, transparent);
+  color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 8%, transparent);
 }
 .budget-action-pill.is-on {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: #3b82f61a;
+  border-color: var(--brand-accent);
+  color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 10%, transparent);
 }
 .budget-action-pill.is-on:not(:disabled):hover {
-  border-color: #3b82f6;
-  background: #3b82f62e;
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 18%, transparent);
 }
 .budget-action-pill:not(:disabled):active {
   transform: scale(0.97);
@@ -574,7 +583,7 @@ body {
     transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .budget-card:hover {
-  border-color: #3b82f666;
+  border-color: color-mix(in srgb, var(--brand-accent) 40%, transparent);
   box-shadow: var(--shadow-hover);
   transform: translateY(-2px);
 }
@@ -582,12 +591,12 @@ body {
 /*
  * Split-transaction dialog footer buttons. The shared shadcn Button's default
  * focus-visible ring uses a neutral gray that reads as a stray halo against
- * this dialog's dark surface, so a tight amber ring replaces it here instead —
- * consistent with the rest of the app's amber accent.
+ * this dialog's dark surface, so a tight accent ring replaces it here instead —
+ * consistent with the rest of the app's accent.
  */
 .dialog-footer-button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--amber);
+  box-shadow: 0 0 0 2px var(--brand-accent);
 }
 
 /*
@@ -604,8 +613,8 @@ body {
   border-color: var(--border-hover);
 }
 .login-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 15%, transparent);
   outline: none;
 }
 
@@ -770,9 +779,9 @@ body {
   }
   15% {
     text-shadow:
-      0 0 4px rgba(59, 130, 246, 1),
-      0 0 16px rgba(59, 130, 246, 0.7),
-      0 0 32px rgba(59, 130, 246, 0.3);
+      0 0 4px var(--brand-accent),
+      0 0 16px color-mix(in srgb, var(--brand-accent) 70%, transparent),
+      0 0 32px color-mix(in srgb, var(--brand-accent) 30%, transparent);
   }
   100% {
     text-shadow: none;
@@ -785,31 +794,31 @@ body {
 @keyframes cardReenabledGlowIn {
   from {
     box-shadow:
-      0 0 0 0px rgba(59, 130, 246, 0),
-      0 0 0px 0px rgba(59, 130, 246, 0);
+      0 0 0 0px transparent,
+      0 0 0px 0px transparent;
   }
   to {
     box-shadow:
-      0 0 0 2px rgba(59, 130, 246, 0.3),
-      0 0 18px 5px rgba(59, 130, 246, 0.1);
+      0 0 0 2px color-mix(in srgb, var(--brand-accent) 30%, transparent),
+      0 0 18px 5px color-mix(in srgb, var(--brand-accent) 10%, transparent);
   }
 }
 
 .card-reenabled-glow {
   box-shadow:
-    0 0 0 2px rgba(59, 130, 246, 0.3),
-    0 0 18px 5px rgba(59, 130, 246, 0.1);
+    0 0 0 2px color-mix(in srgb, var(--brand-accent) 30%, transparent),
+    0 0 18px 5px color-mix(in srgb, var(--brand-accent) 10%, transparent);
   animation: cardReenabledGlowIn 0.55s ease forwards;
 }
 
 @keyframes newAccountGlow {
   0% {
-    background: rgba(59, 130, 246, 0.13);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5) inset;
+    background: color-mix(in srgb, var(--brand-accent) 13%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-accent) 50%, transparent) inset;
   }
   60% {
-    background: rgba(59, 130, 246, 0.06);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15) inset;
+    background: color-mix(in srgb, var(--brand-accent) 6%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-accent) 15%, transparent) inset;
   }
   100% {
     background: transparent;
@@ -894,9 +903,9 @@ body::before {
 }
 .chat-suggestion:hover {
   background: var(--surface-3);
-  border-color: #f59e0b;
+  border-color: var(--brand-accent);
   transform: translateX(4px);
-  box-shadow: -3px 0 0 0 #f59e0b;
+  box-shadow: -3px 0 0 0 var(--brand-accent);
 }
 .chat-suggestion:active {
   transform: translateX(2px) scale(0.99);
@@ -912,7 +921,7 @@ body::before {
 .chat-send:not(:disabled):hover {
   transform: translateY(-1px);
   filter: brightness(1.05);
-  box-shadow: 0 6px 16px -4px #f59e0baa;
+  box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--brand-accent) 67%, transparent);
 }
 .chat-send:not(:disabled):active {
   transform: translateY(0) scale(0.94);
@@ -1014,7 +1023,7 @@ body::before {
   margin: 12px 0 6px;
 }
 .chat-markdown a {
-  color: #f59e0b;
+  color: var(--brand-accent);
   text-decoration: underline;
 }
 .chat-markdown code {

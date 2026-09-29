@@ -11,7 +11,7 @@ export default function CategoriesPage() {
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 24px" }}>
       <div className="fade-up" style={{ marginBottom: "32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-          <Tag size={22} color="#f59e0b" strokeWidth={2} />
+          <Tag size={22} color="var(--brand-accent)" strokeWidth={2} />
           <h1 style={{ fontSize: "32px", fontWeight: 800, letterSpacing: "-0.5px" }}>Categories</h1>
         </div>
         <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>

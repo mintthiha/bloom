@@ -105,7 +105,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
           height="18"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#f59e0b"
+          stroke="var(--brand-accent)"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -159,7 +159,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
         disabled={!canSuggest}
         style={{
           padding: "10px 20px",
-          background: "#f59e0b",
+          background: "var(--brand-accent)",
           color: "#000",
           border: "none",
           borderRadius: "8px",
@@ -280,7 +280,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
                   <span
                     style={{
                       fontSize: "13px",
-                      color: "#f59e0b",
+                      color: "var(--brand-accent)",
                       fontWeight: 600,
                       flexShrink: 0,
                     }}

@@ -133,7 +133,9 @@ export function DraggableCardGrid({ cards, columns }: DraggableCardGridProps) {
               position: "relative",
               borderRadius: "16px",
               opacity: isDragging ? 0.4 : 1,
-              outline: isDragOver ? "2px dashed #3b82f699" : "2px dashed transparent",
+              outline: isDragOver
+                ? "2px dashed color-mix(in srgb, var(--brand-accent) 60%, transparent)"
+                : "2px dashed transparent",
               outlineOffset: "5px",
               transition: "opacity 0.15s ease, outline-color 0.15s ease, box-shadow 0.5s ease",
             }}

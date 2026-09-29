@@ -3,6 +3,7 @@ import * as profileService from "../services/profileService";
 import { AppError } from "../middleware/errorHandler";
 import { requireObject, requireString } from "../lib/validation";
 import {
+  ACCENT_COLORS,
   AVATAR_COLORS,
   PAY_FREQUENCIES,
   PRIMARY_FINANCIAL_GOALS,
@@ -132,6 +133,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
       "rrspContributionRoom"
     );
     const avatarColor = normalizeEnumValue(body.avatarColor, "avatarColor", AVATAR_COLORS);
+    const accentColor = normalizeEnumValue(body.accentColor, "accentColor", ACCENT_COLORS);
     res.json(
       await profileService.upsertProfile(uid(req), {
         firstName,
@@ -143,6 +145,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
         tfsaRoomUsedElsewhere,
         rrspContributionRoom,
         avatarColor,
+        accentColor,
       })
     );
   } catch (err) {

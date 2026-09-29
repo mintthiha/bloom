@@ -37,8 +37,8 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
     <div
       className="fade-up fade-up-2"
       style={{
-        border: "1px solid #3b82f630",
-        background: "#3b82f606",
+        border: "1px solid color-mix(in srgb, var(--brand-accent) 19%, transparent)",
+        background: "color-mix(in srgb, var(--brand-accent) 2%, transparent)",
         borderRadius: "16px",
         padding: "24px",
         marginBottom: "16px",
@@ -53,7 +53,7 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "#3b82f6",
+          color: "var(--brand-accent)",
           margin: 0,
         }}
       >
@@ -75,20 +75,22 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           alignSelf: "flex-start",
           padding: "10px 20px",
           background: "transparent",
-          color: resyncing ? "var(--text-muted)" : "#3b82f6",
+          color: resyncing ? "var(--text-muted)" : "var(--brand-accent)",
           fontWeight: 700,
           fontSize: "14px",
-          border: `1px solid ${resyncing ? "var(--border)" : "#3b82f655"}`,
+          border: `1px solid ${resyncing ? "var(--border)" : "color-mix(in srgb, var(--brand-accent) 33%, transparent)"}`,
           borderRadius: "8px",
           cursor: resyncing ? "not-allowed" : "pointer",
           opacity: resyncing ? 0.5 : 1,
           transition: "opacity 0.15s, border-color 0.15s",
         }}
         onMouseEnter={(e) => {
-          if (!resyncing) e.currentTarget.style.borderColor = "#3b82f6";
+          if (!resyncing) e.currentTarget.style.borderColor = "var(--brand-accent)";
         }}
         onMouseLeave={(e) => {
-          if (!resyncing) e.currentTarget.style.borderColor = "#3b82f655";
+          if (!resyncing)
+            e.currentTarget.style.borderColor =
+              "color-mix(in srgb, var(--brand-accent) 33%, transparent)";
         }}
       >
         {resyncing ? "Syncing..." : "Re-sync"}

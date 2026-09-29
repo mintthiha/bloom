@@ -284,9 +284,9 @@ export function CollapsibleCard({
                 width: "36px",
                 height: "36px",
                 borderRadius: "10px",
-                background: "#3b82f614",
-                border: "1px solid #3b82f633",
-                color: "#3b82f6",
+                background: "color-mix(in srgb, var(--brand-accent) 8%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)",
+                color: "var(--brand-accent)",
                 marginBottom: "12px",
               }}
             >
@@ -299,7 +299,7 @@ export function CollapsibleCard({
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#3b82f6",
+              color: "var(--brand-accent)",
               marginBottom: title ? "8px" : "0",
             }}
           >

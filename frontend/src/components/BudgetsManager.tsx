@@ -220,7 +220,7 @@ export function BudgetsManager({
             style={{
               flex: "0 0 auto",
               padding: "10px 18px",
-              background: "#3b82f6",
+              background: "var(--brand-accent)",
               color: "#000",
               fontWeight: 700,
               fontSize: "14px",

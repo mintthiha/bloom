@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfileFormPanel } from "./profile-form-panel";
 
@@ -71,7 +71,8 @@ describe("ProfileFormPanel", () => {
     render(<ProfileFormPanel {...PANEL_TEXT} />);
     await screen.findByLabelText("First Name");
 
-    fireEvent.click(screen.getByRole("radio", { name: "Pink" }));
+    const avatarPicker = screen.getByRole("radiogroup", { name: "Avatar colour" });
+    fireEvent.click(within(avatarPicker).getByRole("radio", { name: "Pink" }));
     fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
     await waitFor(() =>
@@ -103,9 +104,12 @@ describe("ProfileFormPanel", () => {
     render(<ProfileFormPanel {...PANEL_TEXT} />);
     await screen.findByLabelText("First Name");
 
-    expect(screen.getByRole("radio", { name: "Green" })).toBeChecked();
+    const avatarPicker = screen.getByRole("radiogroup", { name: "Avatar colour" });
+    expect(within(avatarPicker).getByRole("radio", { name: "Green" })).toBeChecked();
 
-    fireEvent.click(screen.getByRole("radio", { name: "Auto colour from your name" }));
+    fireEvent.click(
+      within(avatarPicker).getByRole("radio", { name: "Auto colour from your name" })
+    );
     fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
     await waitFor(() =>

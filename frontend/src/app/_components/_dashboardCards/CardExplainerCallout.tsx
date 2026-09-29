@@ -21,7 +21,7 @@ export function CardExplainerCallout({
         maxWidth: "360px",
         zIndex: 5,
         background: "var(--surface-1)",
-        border: "1px solid #3b82f6",
+        border: "1px solid var(--brand-accent)",
         borderRadius: "12px",
         padding: "14px 16px",
         boxShadow: "0 12px 32px -12px rgba(0, 0, 0, 0.55)",
@@ -33,7 +33,7 @@ export function CardExplainerCallout({
             width: "7px",
             height: "7px",
             borderRadius: "999px",
-            background: "#3b82f6",
+            background: "var(--brand-accent)",
             flexShrink: 0,
           }}
         />
@@ -44,7 +44,7 @@ export function CardExplainerCallout({
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.06em",
-            color: "#3b82f6",
+            color: "var(--brand-accent)",
           }}
         >
           New card
@@ -60,7 +60,7 @@ export function CardExplainerCallout({
           onClick={onDismiss}
           style={{
             padding: "6px 14px",
-            background: "#3b82f6",
+            background: "var(--brand-accent)",
             color: "#000",
             fontWeight: 700,
             fontSize: "12px",

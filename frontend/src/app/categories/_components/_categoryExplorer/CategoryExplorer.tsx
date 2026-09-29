@@ -379,7 +379,7 @@ export function CategoryExplorer({ categories, isLoading, onChanged }: CategoryE
                 padding: "6px 10px",
                 borderRadius: "8px",
                 border: "none",
-                background: "#3b82f6",
+                background: "var(--brand-accent)",
                 color: "#fff",
                 fontSize: "13px",
                 fontWeight: 600,

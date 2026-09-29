@@ -59,7 +59,7 @@ function ViewAllLink() {
         gap: "4px",
         fontSize: "12px",
         fontWeight: 600,
-        color: "#3b82f6",
+        color: "var(--brand-accent)",
         textDecoration: "none",
         whiteSpace: "nowrap",
       }}

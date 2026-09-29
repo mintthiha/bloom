@@ -9,6 +9,8 @@ import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import { PROVINCE_OPTIONS } from "@/lib/provinces";
 import { AvatarColorPicker } from "@/components/AvatarColorPicker";
 import { AvatarColor, parseAvatarColor } from "@/lib/initials-avatar";
+import { AppAccentColorPicker } from "@/components/AppAccentColorPicker";
+import { AccentColor, DEFAULT_ACCENT_COLOR, parseAccentColor } from "@/lib/app-accent";
 import { publishProfileUpdate } from "@/lib/profile-updates";
 
 type ProfileFormPanelProps = {
@@ -68,6 +70,7 @@ export function ProfileFormPanel({
   const [email, setEmail] = useState("");
   const [province, setProvince] = useState<ProvinceCode | "">("");
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
+  const [accentColor, setAccentColor] = useState<AccentColor>(DEFAULT_ACCENT_COLOR);
   const [tfsaBirthYear, setTfsaBirthYear] = useState("");
   const [tfsaRoomUsedElsewhere, setTfsaRoomUsedElsewhere] = useState("");
   const [rrspContributionRoom, setRrspContributionRoom] = useState("");
@@ -104,6 +107,7 @@ export function ProfileFormPanel({
         setEmail(profile?.email ?? session?.user?.email ?? "");
         setProvince(profile?.province ?? "");
         setAvatarColor(parseAvatarColor(profile?.avatarColor));
+        setAccentColor(parseAccentColor(profile?.accentColor) ?? DEFAULT_ACCENT_COLOR);
         setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
         setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");
         setRrspContributionRoom(profile?.rrspContributionRoom?.toString() ?? "");
@@ -150,6 +154,7 @@ export function ProfileFormPanel({
         email: email.trim(),
         province: province === "" ? null : province,
         avatarColor,
+        accentColor,
         tfsaBirthYear: parsedBirthYear,
         tfsaRoomUsedElsewhere: parsedRoomUsedElsewhere,
         rrspContributionRoom: parsedRrspRoom,
@@ -160,6 +165,7 @@ export function ProfileFormPanel({
       setEmail(profile.email);
       setProvince(profile.province ?? "");
       setAvatarColor(parseAvatarColor(profile.avatarColor));
+      setAccentColor(parseAccentColor(profile.accentColor) ?? DEFAULT_ACCENT_COLOR);
       setTfsaBirthYear(profile.tfsaBirthYear?.toString() ?? "");
       setTfsaRoomUsedElsewhere(profile.tfsaRoomUsedElsewhere?.toString() ?? "");
       setRrspContributionRoom(profile.rrspContributionRoom?.toString() ?? "");
@@ -301,6 +307,15 @@ export function ProfileFormPanel({
             </p>
           </div>
 
+          <div>
+            <span style={sectionLabelStyle}>App Accent Colour</span>
+            <AppAccentColorPicker value={accentColor} onChange={setAccentColor} />
+            <p style={hintStyle}>
+              Colours buttons, links, and highlights across Bloom. Separate from your avatar colour
+              above.
+            </p>
+          </div>
+
           {/* Contribution Room section */}
           <div
             style={{
@@ -395,7 +410,7 @@ export function ProfileFormPanel({
               disabled={saving}
               style={{
                 padding: "12px 20px",
-                background: "#3b82f6",
+                background: "var(--brand-accent)",
                 color: "#000",
                 fontWeight: 700,
                 fontSize: "14px",

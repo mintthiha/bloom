@@ -188,7 +188,7 @@ function EntryRow({
             onClick={handleSave}
             disabled={isSubmitting}
             style={{
-              background: "#3b82f6",
+              background: "var(--brand-accent)",
               color: "#fff",
               border: "none",
               borderRadius: "8px",
@@ -442,7 +442,7 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "#3b82f6",
+          color: "var(--brand-accent)",
           marginBottom: "16px",
         }}
       >
@@ -551,7 +551,7 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
             className="press"
             disabled={isSubmitting}
             style={{
-              background: "#3b82f6",
+              background: "var(--brand-accent)",
               color: "#fff",
               border: "none",
               borderRadius: "8px",
@@ -714,7 +714,7 @@ export default function ManualEntriesPage() {
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
-            color: "#3b82f6",
+            color: "var(--brand-accent)",
             marginBottom: "8px",
           }}
         >
@@ -760,14 +760,14 @@ export default function ManualEntriesPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            background: "#3b82f614",
-            border: "1px solid #3b82f633",
+            background: "color-mix(in srgb, var(--brand-accent) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)",
             borderRadius: "10px",
             padding: "12px 16px",
             marginBottom: "16px",
           }}
         >
-          <span style={{ fontSize: "13px", fontWeight: 600, color: "#3b82f6" }}>
+          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--brand-accent)" }}>
             {selectedIds.size} {selectedIds.size === 1 ? "entry" : "entries"} selected
           </span>
           <div style={{ display: "flex", gap: "8px" }}>

@@ -42,8 +42,8 @@ function CardToggle({
         width: "36px",
         height: "20px",
         borderRadius: "999px",
-        background: checked ? "#3b82f6" : "var(--surface-2)",
-        border: `1px solid ${checked ? "#3b82f6" : "var(--border)"}`,
+        background: checked ? "var(--brand-accent)" : "var(--surface-2)",
+        border: `1px solid ${checked ? "var(--brand-accent)" : "var(--border)"}`,
         position: "relative",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.4 : 1,
@@ -126,7 +126,7 @@ function CardToggleRow({ cardId, lockedHint }: { cardId: CardId; lockedHint?: st
     <SettingRow
       title={meta.label}
       description={lockedHint ?? meta.description}
-      descriptionColor={isLocked ? "#3b82f6" : undefined}
+      descriptionColor={isLocked ? "var(--brand-accent)" : undefined}
       interactive={!isLocked}
       dimmed={isLocked}
       control={
@@ -161,9 +161,13 @@ function DensityButton({
         gap: "6px",
         minHeight: "40px",
         borderRadius: "10px",
-        border: active ? "1px solid #3b82f666" : "1px solid var(--border)",
-        background: active ? "#3b82f61a" : "var(--surface-1)",
-        color: active ? "#3b82f6" : "var(--text-secondary)",
+        border: active
+          ? "1px solid color-mix(in srgb, var(--brand-accent) 40%, transparent)"
+          : "1px solid var(--border)",
+        background: active
+          ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
+          : "var(--surface-1)",
+        color: active ? "var(--brand-accent)" : "var(--text-secondary)",
         fontSize: "12px",
         fontWeight: 600,
         cursor: "pointer",
@@ -315,10 +319,10 @@ export function DashboardCustomizePanel() {
               fontWeight: 700,
               padding: "1px 5px",
               borderRadius: "999px",
-              background: "#3b82f622",
-              /* blue-400 (not blue-500 #3b82f6) to clear WCAG AA on the faint same-hue tint at 10px */
-              color: "#60a5fa",
-              border: "1px solid #3b82f644",
+              background: "color-mix(in srgb, var(--brand-accent) 13%, transparent)",
+              /* The lighter accent tint clears WCAG AA on the faint same-hue background tint. */
+              color: "var(--brand-accent-light)",
+              border: "1px solid color-mix(in srgb, var(--brand-accent) 27%, transparent)",
             }}
           >
             {hiddenCount} hidden

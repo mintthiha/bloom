@@ -21,7 +21,7 @@ export function SubscriptionsHeader({ summary }: { summary: SubscriptionSummary 
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "#3b82f6",
+          color: "var(--brand-accent)",
           marginBottom: "8px",
         }}
       >
@@ -56,7 +56,10 @@ export function SubscriptionsHeader({ summary }: { summary: SubscriptionSummary 
 
         <div style={{ display: "flex", gap: "28px" }}>
           <div>
-            <p className="num" style={{ fontSize: "20px", fontWeight: 700, color: "#f59e0b" }}>
+            <p
+              className="num"
+              style={{ fontSize: "20px", fontWeight: 700, color: "var(--brand-accent)" }}
+            >
               {formatCurrency(summary.annualTotal)}
             </p>
             <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>

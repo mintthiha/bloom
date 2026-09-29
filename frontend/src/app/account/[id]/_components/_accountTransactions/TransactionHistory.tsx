@@ -565,7 +565,7 @@ export function TransactionHistory({
                           disabled={savingTransaction}
                           style={{
                             padding: "8px 12px",
-                            background: "#3b82f6",
+                            background: "var(--brand-accent)",
                             color: "#000",
                             border: "none",
                             borderRadius: "8px",

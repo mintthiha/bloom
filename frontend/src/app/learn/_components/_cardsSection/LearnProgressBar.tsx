@@ -60,7 +60,7 @@ export function LearnProgressBar({ exploredCount, totalCount, nextCardTitle }: P
           style={{
             height: "100%",
             width: `${percentage}%`,
-            background: isComplete ? "#22c55e" : "#3b82f6",
+            background: isComplete ? "#22c55e" : "var(--brand-accent)",
             borderRadius: "999px",
             transition: "width 0.3s ease",
           }}

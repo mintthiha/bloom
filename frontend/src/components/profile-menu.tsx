@@ -127,7 +127,7 @@ export function ProfileMenu() {
           colorChoice={avatarColor}
           imageUrl={session.user.image}
           size={32}
-          borderColor={isOpen ? "#3b82f6" : undefined}
+          borderColor={isOpen ? "var(--brand-accent)" : undefined}
           label={displayName}
         />
       </button>

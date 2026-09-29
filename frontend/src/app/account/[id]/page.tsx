@@ -201,7 +201,7 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
         <p className="num" style={{ color: "#f87171", fontSize: "14px", marginBottom: "16px" }}>
           {error}
         </p>
-        <Link href="/" style={{ color: "#3b82f6", fontSize: "14px" }}>
+        <Link href="/" style={{ color: "var(--brand-accent)", fontSize: "14px" }}>
           ← Back to accounts
         </Link>
       </div>

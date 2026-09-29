@@ -1,4 +1,5 @@
 import type { AvatarColor } from "./initials-avatar";
+import type { AccentColor } from "./app-accent";
 
 const BASE = "/api/bloom";
 
@@ -122,6 +123,7 @@ export type Profile = {
   nextPayday: string | null;
   primaryFinancialGoal: PrimaryFinancialGoal | null;
   avatarColor: AvatarColor | null;
+  accentColor: AccentColor | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   budgetOverspendAlertsEnabled: boolean;
@@ -469,7 +471,7 @@ export type ActivityLogQuery = {
 export type UserDataExport = {
   exportVersion: number;
   exportedAt: string;
-  profile: Omit<Profile, "userId" | "avatarColor" | "updatedAt"> | null;
+  profile: Omit<Profile, "userId" | "avatarColor" | "accentColor" | "updatedAt"> | null;
   accounts: Array<{
     id: string;
     ownerName: string;
@@ -746,6 +748,7 @@ export const api = {
     tfsaRoomUsedElsewhere?: number | null;
     rrspContributionRoom?: number | null;
     avatarColor?: AvatarColor | null;
+    accentColor?: AccentColor | null;
   }) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
   updateFinancialProfile: (input: {
     monthlyTakeHomeIncome: number | null;
