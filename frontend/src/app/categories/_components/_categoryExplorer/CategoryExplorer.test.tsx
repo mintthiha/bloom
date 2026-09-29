@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Category } from "@/lib/api";
-import { CategoryManagerCard } from "./CategoryManagerCard";
+import { CategoryExplorer } from "./CategoryExplorer";
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: { createCategory: vi.fn(), updateCategory: vi.fn(), deleteCategory: vi.fn() },
@@ -31,49 +31,102 @@ function makeCategory(overrides: Partial<Category> = {}): Category {
   };
 }
 
-/** Renders the card with default props, overriding only what a test needs. */
-function renderCard(overrides: Partial<React.ComponentProps<typeof CategoryManagerCard>> = {}) {
+/** Renders the explorer with default props, overriding only what a test needs. */
+function renderExplorer(overrides: Partial<React.ComponentProps<typeof CategoryExplorer>> = {}) {
   const onChanged = vi.fn();
   const props = {
-    eyebrow: "Expenses",
-    title: "Expense categories",
-    description: "desc",
-    type: "EXPENSE" as const,
     categories: [makeCategory()],
     isLoading: false,
     onChanged,
     ...overrides,
   };
-  return { onChanged, ...render(<CategoryManagerCard {...props} />) };
+  return { onChanged, ...render(<CategoryExplorer {...props} />) };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("CategoryManagerCard", () => {
+describe("CategoryExplorer", () => {
   it("shows the empty state when there are no categories", () => {
-    renderCard({ categories: [] });
+    renderExplorer({ categories: [] });
     expect(screen.getByText("No categories yet.")).toBeInTheDocument();
   });
 
   it("shows a loading message while categories are loading", () => {
-    renderCard({ isLoading: true, categories: [] });
+    renderExplorer({ isLoading: true, categories: [] });
     expect(screen.getByText("Loading categories…")).toBeInTheDocument();
   });
 
-  it("lists categories with edit and delete controls", () => {
-    renderCard();
+  it("lists both expense and income categories together with type tags", () => {
+    renderExplorer({
+      categories: [
+        makeCategory({ id: "1", name: "Groceries", type: "EXPENSE" }),
+        makeCategory({ id: "2", name: "Salary", type: "INCOME" }),
+      ],
+    });
     expect(screen.getByText("Groceries")).toBeInTheDocument();
-    expect(screen.getByLabelText("Edit Groceries")).toBeInTheDocument();
-    expect(screen.getByLabelText("Delete Groceries")).toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    // "Expense"/"Income" also appear on the filter pills, so each row tag is one of several matches.
+    expect(screen.getAllByText("Expense").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Income").length).toBeGreaterThan(0);
   });
 
-  it("creates a new category and reports success", async () => {
-    apiMock.createCategory.mockResolvedValue(makeCategory({ id: "cat-2", name: "Hobbies" }));
-    const { onChanged } = renderCard();
+  it("filters by search text", () => {
+    renderExplorer({
+      categories: [
+        makeCategory({ id: "1", name: "Groceries", type: "EXPENSE" }),
+        makeCategory({ id: "2", name: "Salary", type: "INCOME" }),
+      ],
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /add/i }));
+    fireEvent.change(screen.getByLabelText("Search categories"), {
+      target: { value: "sal" },
+    });
+
+    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+  });
+
+  it("hides a type when its filter pill is toggled off, and keeps at least one active", () => {
+    renderExplorer({
+      categories: [
+        makeCategory({ id: "1", name: "Groceries", type: "EXPENSE" }),
+        makeCategory({ id: "2", name: "Salary", type: "INCOME" }),
+      ],
+    });
+
+    fireEvent.click(screen.getByLabelText("Hide expense categories"));
+    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+
+    // The remaining active pill can't be turned off, since at least one type must stay visible.
+    fireEvent.click(screen.getByLabelText("Hide income categories"));
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+  });
+
+  it("paginates beyond the first page", () => {
+    const categories = Array.from({ length: 10 }, (_, index) =>
+      makeCategory({ id: `cat-${index}`, name: `Category ${String(index).padStart(2, "0")}` })
+    );
+    renderExplorer({ categories });
+
+    expect(screen.getByText("Category 00")).toBeInTheDocument();
+    expect(screen.queryByText("Category 09")).not.toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.queryByText("Category 00")).not.toBeInTheDocument();
+    expect(screen.getByText("Category 09")).toBeInTheDocument();
+  });
+
+  it("creates a new category with the selected type and reports success", async () => {
+    apiMock.createCategory.mockResolvedValue(makeCategory({ id: "cat-2", name: "Hobbies" }));
+    const { onChanged } = renderExplorer();
+
+    fireEvent.click(screen.getByRole("button", { name: /add category/i }));
+    fireEvent.click(screen.getByRole("radio", { name: "Income" }));
     fireEvent.change(screen.getByLabelText("New category name"), {
       target: { value: "Hobbies" },
     });
@@ -82,7 +135,7 @@ describe("CategoryManagerCard", () => {
     await waitFor(() =>
       expect(apiMock.createCategory).toHaveBeenCalledWith({
         name: "Hobbies",
-        type: "EXPENSE",
+        type: "INCOME",
         color: expect.any(String),
         icon: null,
       })
@@ -92,9 +145,9 @@ describe("CategoryManagerCard", () => {
   });
 
   it("rejects creating a category with a blank name", async () => {
-    renderCard();
+    renderExplorer();
 
-    fireEvent.click(screen.getByRole("button", { name: /add/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add category/i }));
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Name is required"));
@@ -103,7 +156,7 @@ describe("CategoryManagerCard", () => {
 
   it("edits a category's name and reports success", async () => {
     apiMock.updateCategory.mockResolvedValue(makeCategory({ name: "Food" }));
-    const { onChanged } = renderCard();
+    const { onChanged } = renderExplorer();
 
     fireEvent.click(screen.getByLabelText("Edit Groceries"));
     fireEvent.change(screen.getByLabelText("Category name"), { target: { value: "Food" } });
@@ -121,7 +174,7 @@ describe("CategoryManagerCard", () => {
   });
 
   it("cancels an in-progress edit without saving", () => {
-    renderCard();
+    renderExplorer();
 
     fireEvent.click(screen.getByLabelText("Edit Groceries"));
     fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
@@ -131,7 +184,7 @@ describe("CategoryManagerCard", () => {
   });
 
   it("deletes a category after confirmation and reports success", async () => {
-    const { onChanged } = renderCard();
+    const { onChanged } = renderExplorer();
 
     fireEvent.click(screen.getByLabelText("Delete Groceries"));
     fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
@@ -143,7 +196,7 @@ describe("CategoryManagerCard", () => {
 
   it("shows an error toast when delete fails", async () => {
     apiMock.deleteCategory.mockRejectedValue(new Error("boom"));
-    renderCard();
+    renderExplorer();
 
     fireEvent.click(screen.getByLabelText("Delete Groceries"));
     fireEvent.click(await screen.findByRole("button", { name: "Delete" }));

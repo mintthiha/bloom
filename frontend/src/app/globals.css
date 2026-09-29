@@ -528,6 +528,38 @@ body {
 }
 
 /*
+ * Category type filter pill (Expense / Income toggle on the categories page). Takes its accent
+ * from a `--pill-accent` custom property set inline per type, so one class covers both colors.
+ */
+.category-type-pill {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.category-type-pill:not(:disabled):hover {
+  border-color: var(--pill-accent);
+  color: var(--pill-accent);
+  background: var(--pill-tint);
+}
+.category-type-pill.is-on {
+  border-color: var(--pill-accent);
+  color: var(--pill-accent);
+  background: var(--pill-tint);
+}
+.category-type-pill.is-on:not(:disabled):hover {
+  background: var(--pill-tint-hover);
+}
+.category-type-pill:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/*
  * Budget card. In multi-column layouts it's hard to tell which budget you're
  * pointing at, so hover lifts the card and lights its border with the accent to
  * mark the one you're about to choose.
@@ -662,6 +694,7 @@ body {
   .danger-action-button:not(:disabled):active,
   .rule-edit-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
+  .category-type-pill:not(:disabled):active,
   .budget-card:hover,
   .login-google-button:active,
   .chat-suggestion:hover,

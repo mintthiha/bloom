@@ -4,8 +4,9 @@ import type { Category } from "@/lib/api";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import { CategoryColorPicker } from "./CategoryColorPicker";
 import { CategoryIconPicker } from "./CategoryIconPicker";
+import { CATEGORY_TYPE_META } from "./category-explorer";
 
-type CategoryRowProps = {
+type CategoryListRowProps = {
   category: Category;
   isEditing: boolean;
   editName: string;
@@ -21,8 +22,8 @@ type CategoryRowProps = {
   onRequestDelete: (category: Category) => void;
 };
 
-/** One category in the list: a read-only row, or an inline edit form when it's the active edit target. */
-export function CategoryRow({
+/** One category in the unified list: a read-only row with a type tag, or an inline edit form when active. */
+export function CategoryListRow({
   category,
   isEditing,
   editName,
@@ -36,7 +37,9 @@ export function CategoryRow({
   onCancelEdit,
   onSaveEdit,
   onRequestDelete,
-}: CategoryRowProps) {
+}: CategoryListRowProps) {
+  const typeMeta = CATEGORY_TYPE_META[category.type];
+
   if (isEditing) {
     return (
       <li
@@ -136,7 +139,25 @@ export function CategoryRow({
       >
         {category.icon ?? ""}
       </span>
-      <span style={{ flex: 1, fontSize: "14px", fontWeight: 500 }}>{category.name}</span>
+      <span style={{ flex: 1, fontSize: "14px", fontWeight: 500, minWidth: 0 }}>
+        {category.name}
+      </span>
+      <span
+        style={{
+          fontSize: "10px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
+          padding: "3px 7px",
+          borderRadius: "999px",
+          color: typeMeta.color,
+          background: `${typeMeta.color}1a`,
+          border: `1px solid ${typeMeta.color}55`,
+          flexShrink: 0,
+        }}
+      >
+        {typeMeta.label}
+      </span>
       <button
         type="button"
         className="rule-edit-button"
