@@ -1,16 +1,31 @@
 "use client";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "./theme-provider";
 
-/** Header button that toggles between light and dark mode. */
+const THEME_LABELS = {
+  system: "Using system theme",
+  light: "Using light mode",
+  dark: "Using dark mode",
+} as const;
+
+const NEXT_THEME_LABELS = {
+  system: "light",
+  light: "dark",
+  dark: "system",
+} as const;
+
+/** Header button that cycles the theme preference: system -> light -> dark -> system. */
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, cycleTheme } = useTheme();
+
+  const Icon = theme === "system" ? Monitor : theme === "dark" ? Moon : Sun;
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={cycleTheme}
+      aria-label={`${THEME_LABELS[theme]}. Switch to ${NEXT_THEME_LABELS[theme]} mode.`}
+      title={THEME_LABELS[theme]}
       style={{
         display: "flex",
         alignItems: "center",
@@ -34,7 +49,7 @@ export function ThemeToggle() {
         e.currentTarget.style.color = "var(--text-secondary)";
       }}
     >
-      {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+      <Icon size={14} />
     </button>
   );
 }

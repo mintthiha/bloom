@@ -38,10 +38,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={cn("dark font-sans", geist.variable)} suppressHydrationWarning>
       <head>
-        {/* Removes the dark class before first paint if the user has saved light mode */}
+        {/* Removes the dark class before first paint if the resolved theme (saved preference, or system when unset/"system") is light */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(localStorage.getItem('bloom-theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('bloom-theme');var isLight=t==='light'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: light)').matches);if(isLight)document.documentElement.classList.remove('dark')}catch(e){}})();`,
           }}
         />
         {/* Resets per-user preferences before providers hydrate when the account has changed */}
