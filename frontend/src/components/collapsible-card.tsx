@@ -27,6 +27,9 @@ type CollapsibleCardProps = {
 /** Uniform height every card snaps to while collapsed so the dashboard grid reads as an even set of tiles. */
 export const COLLAPSED_CARD_HEIGHT = 204;
 
+/** Total time the collapse animation takes (opacity fade + delay + grid-row shrink), in ms. Used to defer the hard height/overflow snap until the shrink has actually finished. */
+const COLLAPSE_ANIMATION_DURATION_MS = 550;
+
 /** Line-clamp styles applied to header text while collapsed so long titles/descriptions can't break the uniform height. */
 function clampLines(lines: number): CSSProperties {
   return {
@@ -51,7 +54,7 @@ function CollapseChevron({ isCollapsed }: { isCollapsed: boolean }) {
       strokeLinejoin="round"
       style={{
         transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-        transition: "transform 0.25s ease",
+        transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         display: "block",
       }}
     >
@@ -82,6 +85,10 @@ export function CollapsibleCard({
   const isAction = variant === "action";
   const { allCollapsed } = useDashboardVisibility();
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed || allCollapsed);
+  // Tracks whether the tile is allowed to snap to the fixed collapsed height/overflow/clamped
+  // header. Kept a beat behind `isCollapsed` on collapse so the outer tile doesn't clip its
+  // content before the inner shrink animation has actually finished playing.
+  const [isHeightLocked, setIsHeightLocked] = useState(defaultCollapsed || allCollapsed);
   const isFirstRender = useRef(true);
   const isMobile = useIsMobile();
 
@@ -93,6 +100,16 @@ export function CollapsibleCard({
     }
     setIsCollapsed(allCollapsed);
   }, [allCollapsed]);
+
+  /** Expanding unlocks the tile height immediately so it can grow; collapsing only locks it once the shrink animation has finished playing, avoiding an instant clip. */
+  useEffect(() => {
+    if (!isCollapsed) {
+      setIsHeightLocked(false);
+      return;
+    }
+    const timeout = setTimeout(() => setIsHeightLocked(true), COLLAPSE_ANIMATION_DURATION_MS);
+    return () => clearTimeout(timeout);
+  }, [isCollapsed]);
 
   /** Opens the card whenever an external caller signals that new content needs to be visible. */
   useEffect(() => {
@@ -115,8 +132,8 @@ export function CollapsibleCard({
         padding: "24px",
         // While collapsed, every card locks to one height so the grid reads as an even set of tiles.
         // Skip on mobile, where cards stack full-width and the header wraps to its own column.
-        height: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
-        overflow: isCollapsed && !isMobile ? "hidden" : undefined,
+        height: isHeightLocked && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
+        overflow: isHeightLocked && !isMobile ? "hidden" : undefined,
         ...style,
       }}
     >
@@ -134,8 +151,8 @@ export function CollapsibleCard({
           paddingRight: "32px",
           // While collapsed on desktop, cap the header to the tile's inner height (minus the 24px
           // top+bottom padding) so long text clips above the bottom padding instead of touching the edge.
-          maxHeight: isCollapsed && !isMobile ? `${COLLAPSED_CARD_HEIGHT - 48}px` : undefined,
-          overflow: isCollapsed && !isMobile ? "hidden" : undefined,
+          maxHeight: isHeightLocked && !isMobile ? `${COLLAPSED_CARD_HEIGHT - 48}px` : undefined,
+          overflow: isHeightLocked && !isMobile ? "hidden" : undefined,
         }}
       >
         <div style={{ flex: "1 1 240px", minWidth: 0 }}>
@@ -177,7 +194,7 @@ export function CollapsibleCard({
                 fontWeight: 800,
                 letterSpacing: "-0.3px",
                 marginBottom: description ? "6px" : "0",
-                ...(isCollapsed ? clampLines(2) : {}),
+                ...(isHeightLocked ? clampLines(2) : {}),
               }}
             >
               {title}
@@ -188,7 +205,7 @@ export function CollapsibleCard({
               style={{
                 color: "var(--text-secondary)",
                 fontSize: "13px",
-                ...(isCollapsed ? clampLines(2) : {}),
+                ...(isHeightLocked ? clampLines(2) : {}),
               }}
             >
               {description}
@@ -239,7 +256,11 @@ export function CollapsibleCard({
         style={{
           display: "grid",
           gridTemplateRows: isCollapsed ? "0fr" : "1fr",
-          transition: "grid-template-rows 0.28s ease",
+          // On collapse, wait for the content to fade out (below) before shrinking the row, mirroring
+          // the expand sequencing so open and close read as the same animation in reverse.
+          transition: isCollapsed
+            ? "grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s"
+            : "grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         <div style={{ overflow: isCollapsed ? "hidden" : "visible", minHeight: 0 }}>
@@ -247,7 +268,9 @@ export function CollapsibleCard({
             style={{
               paddingTop: "18px",
               opacity: isCollapsed ? 0 : 1,
-              transition: "opacity 0.2s ease",
+              // Fade in only after the tile has mostly opened, and fade out immediately on collapse,
+              // so content never appears to pop in/out ahead of the grid animation finishing.
+              transition: isCollapsed ? "opacity 0.15s ease" : "opacity 0.25s ease 0.15s",
             }}
           >
             {children}
