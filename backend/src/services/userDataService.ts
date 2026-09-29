@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma";
 
 /** Bumped whenever the export payload's shape changes, so an old file can be recognised later. */
-export const USER_DATA_EXPORT_VERSION = 2;
+export const USER_DATA_EXPORT_VERSION = 3;
 
 type ProfileRow = {
   firstName: string;
@@ -95,6 +95,14 @@ type CategorizationRuleRow = {
   createdAt: Date;
 };
 
+type CustomCategoryRow = {
+  name: string;
+  type: string;
+  color: string;
+  icon: string | null;
+  createdAt: Date;
+};
+
 type NetWorthSnapshotRow = {
   month: string;
   netWorth: string | number;
@@ -136,6 +144,7 @@ export type UserDataExport = {
     }
   >;
   categorizationRules: CategorizationRuleRow[];
+  customCategories: CustomCategoryRow[];
   netWorthSnapshots: Array<{
     month: string;
     netWorth: number;
@@ -171,6 +180,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     recurringRows,
     manualEntryRows,
     categorizationRuleRows,
+    customCategoryRows,
     netWorthSnapshotRows,
   ] = await Promise.all([
     prisma.$queryRaw<ProfileRow[]>`
@@ -243,6 +253,12 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       WHERE "userId" = ${userId} AND "deletedAt" IS NULL
       ORDER BY "merchant" ASC
     `,
+    prisma.$queryRaw<CustomCategoryRow[]>`
+      SELECT "name", "type"::text AS "type", "color", "icon", "createdAt"
+      FROM "Category"
+      WHERE "userId" = ${userId}
+      ORDER BY "type" ASC, "name" ASC
+    `,
     prisma.$queryRaw<NetWorthSnapshotRow[]>`
       SELECT "month", "netWorth", "totalAssets", "totalDebt", "manualAssets", "manualLiabilities"
       FROM "NetWorthSnapshot"
@@ -280,6 +296,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       date: toDateOnly(row.date),
     })),
     categorizationRules: categorizationRuleRows,
+    customCategories: customCategoryRows,
     netWorthSnapshots: netWorthSnapshotRows.map((row) => ({
       month: row.month,
       netWorth: Number(row.netWorth),
@@ -314,6 +331,7 @@ export async function deleteAllUserData(userId: string): Promise<void> {
     prisma.$executeRaw`DELETE FROM "NetWorthSnapshot" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "ManualEntry" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "AutoCategorizationRule" WHERE "userId" = ${userId}`,
+    prisma.$executeRaw`DELETE FROM "Category" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "ActivityLog" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "PlaidItem" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "Account" WHERE "userId" = ${userId}`,

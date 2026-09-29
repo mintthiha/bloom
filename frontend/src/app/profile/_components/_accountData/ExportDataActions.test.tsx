@@ -39,6 +39,7 @@ const exportBundle: UserDataExport = {
   recurringTransactions: [],
   manualEntries: [],
   categorizationRules: [],
+  customCategories: [],
   netWorthSnapshots: [],
 };
 

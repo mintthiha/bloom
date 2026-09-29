@@ -515,6 +515,13 @@ export type UserDataExport = {
     createdAt: string;
   }>;
   categorizationRules: Array<{ merchant: string; category: string; createdAt: string }>;
+  customCategories: Array<{
+    name: string;
+    type: CategoryType;
+    color: string;
+    icon: string | null;
+    createdAt: string;
+  }>;
   netWorthSnapshots: Array<{
     month: string;
     netWorth: number;

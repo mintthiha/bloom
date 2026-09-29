@@ -20,6 +20,7 @@ function makeExport(overrides: Partial<UserDataExport> = {}): UserDataExport {
     recurringTransactions: [],
     manualEntries: [],
     categorizationRules: [],
+    customCategories: [],
     netWorthSnapshots: [],
     ...overrides,
   };
@@ -61,6 +62,24 @@ describe("summarizeUserDataExport", () => {
       { label: "accounts", count: 2 },
       { label: "transaction", count: 1 },
     ]);
+  });
+
+  it("includes custom categories when present", () => {
+    const rows = summarizeUserDataExport(
+      makeExport({
+        customCategories: [
+          {
+            name: "Groceries",
+            type: "EXPENSE",
+            color: "#22c55e",
+            icon: "🛒",
+            createdAt: "2026-01-01",
+          },
+        ] as UserDataExport["customCategories"],
+      })
+    );
+
+    expect(rows).toEqual([{ label: "custom category", count: 1 }]);
   });
 
   it("returns nothing at all for a completely empty account", () => {

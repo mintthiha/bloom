@@ -34,6 +34,7 @@ function queueExportRows(overrides: Partial<Record<string, unknown[]>> = {}) {
     "recurringTransactions",
     "manualEntries",
     "categorizationRules",
+    "customCategories",
     "netWorthSnapshots",
   ];
   for (const section of sections) {
@@ -92,6 +93,15 @@ describe("userDataService", () => {
         manualEntries: [
           { name: "Car", type: "ASSET", amount: "5000.0000", date: new Date("2026-02-03") },
         ],
+        customCategories: [
+          {
+            name: "Groceries",
+            type: "EXPENSE",
+            color: "#22c55e",
+            icon: "🛒",
+            createdAt: new Date("2026-01-05T00:00:00.000Z"),
+          },
+        ],
         netWorthSnapshots: [
           {
             month: "2026-01",
@@ -118,6 +128,7 @@ describe("userDataService", () => {
       expect(data.savingsGoals[0]?.targetAmount).toBe(10000);
       expect(data.recurringTransactions[0]?.amount).toBe(1500);
       expect(data.manualEntries[0]).toMatchObject({ amount: 5000, date: "2026-02-03" });
+      expect(data.customCategories[0]).toMatchObject({ name: "Groceries", type: "EXPENSE" });
       expect(data.netWorthSnapshots[0]).toEqual({
         month: "2026-01",
         netWorth: 1000,
@@ -148,11 +159,11 @@ describe("userDataService", () => {
       await exportUserData("u-1");
 
       const statements = prismaMock.$queryRaw.mock.calls.map((call) => String(call[0]));
-      expect(statements).toHaveLength(9);
+      expect(statements).toHaveLength(10);
       for (const statement of statements) {
         expect(statement).toContain("userId");
       }
-      // Every table that has a deletedAt column filters on it; Profile and
+      // Every table that has a deletedAt column filters on it; Profile, Category, and
       // NetWorthSnapshot do not have one.
       const softDeletable = statements.filter((statement) => statement.includes("deletedAt"));
       expect(softDeletable).toHaveLength(7);
@@ -179,6 +190,7 @@ describe("userDataService", () => {
         "NetWorthSnapshot",
         "ManualEntry",
         "AutoCategorizationRule",
+        "Category",
         "ActivityLog",
         "PlaidItem",
         "Account",

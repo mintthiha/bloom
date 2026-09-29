@@ -40,6 +40,11 @@ const SUMMARY_SECTIONS: Array<{
     countOf: (data) => data.categorizationRules.length,
   },
   {
+    singularLabel: "custom category",
+    pluralLabel: "custom categories",
+    countOf: (data) => data.customCategories.length,
+  },
+  {
     singularLabel: "net worth snapshot",
     pluralLabel: "net worth snapshots",
     countOf: (data) => data.netWorthSnapshots.length,
