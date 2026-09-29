@@ -1,5 +1,5 @@
 "use client";
-import { CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 
@@ -92,6 +92,13 @@ export function CollapsibleCard({
   const isFirstRender = useRef(true);
   const isMobile = useIsMobile();
 
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [explicitHeight, setExplicitHeight] = useState<number | undefined>(() =>
+    !isMobile && (defaultCollapsed || allCollapsed) ? COLLAPSED_CARD_HEIGHT : undefined
+  );
+  const isFirstHeightRender = useRef(true);
+  const frameRef = useRef(0);
+
   /** Bulk-collapses or expands this card when the dashboard-wide toggle changes, leaving the initial mount to honor defaultCollapsed. */
   useEffect(() => {
     if (isFirstRender.current) {
@@ -101,7 +108,7 @@ export function CollapsibleCard({
     setIsCollapsed(allCollapsed);
   }, [allCollapsed]);
 
-  /** Expanding unlocks the tile height immediately so it can grow; collapsing only locks it once the shrink animation has finished playing, avoiding an instant clip. */
+  /** Expanding unlocks the header's clamp/clip immediately so it can grow; collapsing only locks it once the shrink animation has finished playing, avoiding an instant clip. */
   useEffect(() => {
     if (!isCollapsed) {
       setIsHeightLocked(false);
@@ -110,6 +117,42 @@ export function CollapsibleCard({
     const timeout = setTimeout(() => setIsHeightLocked(true), COLLAPSE_ANIMATION_DURATION_MS);
     return () => clearTimeout(timeout);
   }, [isCollapsed]);
+
+  /**
+   * Drives the tile's explicit pixel height: collapsing measures the tile's real current height
+   * (right before any collapse-driven style changes take visual effect, thanks to the CSS
+   * transition-delay below) and animates smoothly down to the fixed collapsed height. Expanding
+   * releases back to "auto" so it can grow with its content.
+   *
+   * The height is measured fresh here rather than tracked in a background ref, because the
+   * expand growth is a pure CSS animation — no React render fires while it plays, so a
+   * ref updated only on render would go stale at whatever height the tile had at the instant
+   * it started expanding, not its true final height.
+   */
+  useLayoutEffect(() => {
+    if (isMobile) {
+      setExplicitHeight(undefined);
+      return;
+    }
+    if (isFirstHeightRender.current) {
+      isFirstHeightRender.current = false;
+      return;
+    }
+    if (isCollapsed) {
+      const startHeight = cardRef.current?.getBoundingClientRect().height ?? COLLAPSED_CARD_HEIGHT;
+      setExplicitHeight(startHeight);
+      // A single rAF can land before the browser has actually painted the starting height, which
+      // collapses both updates into one frame and skips the transition entirely. Waiting for a
+      // second rAF guarantees a real paint of the starting value happens first.
+      const outerFrame = requestAnimationFrame(() => {
+        const innerFrame = requestAnimationFrame(() => setExplicitHeight(COLLAPSED_CARD_HEIGHT));
+        frameRef.current = innerFrame;
+      });
+      frameRef.current = outerFrame;
+      return () => cancelAnimationFrame(frameRef.current);
+    }
+    setExplicitHeight(undefined);
+  }, [isCollapsed, isMobile]);
 
   /** Opens the card whenever an external caller signals that new content needs to be visible. */
   useEffect(() => {
@@ -121,6 +164,7 @@ export function CollapsibleCard({
 
   return (
     <div
+      ref={cardRef}
       className={["lift", className].filter(Boolean).join(" ")}
       style={{
         position: "relative",
@@ -132,8 +176,16 @@ export function CollapsibleCard({
         padding: "24px",
         // While collapsed, every card locks to one height so the grid reads as an even set of tiles.
         // Skip on mobile, where cards stack full-width and the header wraps to its own column.
-        height: isHeightLocked && !isMobile ? `${COLLAPSED_CARD_HEIGHT}px` : undefined,
-        overflow: isHeightLocked && !isMobile ? "hidden" : undefined,
+        // `explicitHeight` carries a real pixel value only while collapsed (or mid-collapse), so it
+        // can be transitioned smoothly instead of snapping straight to the fixed height.
+        height: explicitHeight !== undefined ? `${explicitHeight}px` : undefined,
+        // Keep the height transition in lockstep with the inner content's delayed shrink so the
+        // tile's bottom edge glides straight down to the collapsed height instead of overshooting.
+        transition:
+          explicitHeight !== undefined
+            ? "height 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s"
+            : undefined,
+        overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         ...style,
       }}
     >
