@@ -18,16 +18,17 @@ export type AvatarPalette = {
 };
 
 /**
- * Each palette pairs a translucent fill with a solid accent so the initials stay
- * readable in both light and dark themes.
+ * Each palette pairs a translucent fill with a solid accent for the border, plus a darkened
+ * variant of that same hue for the initials text — the full-brightness hue reads well as a
+ * border/fill but fails WCAG AA contrast as text against its own faint tint.
  */
 const AVATAR_PALETTES: Record<AvatarColor, AvatarPalette> = {
-  AMBER: { background: "#f59e0b22", border: "#f59e0b55", text: "#f59e0b" },
-  BLUE: { background: "#3b82f622", border: "#3b82f655", text: "#3b82f6" },
-  GREEN: { background: "#10b98122", border: "#10b98155", text: "#10b981" },
-  VIOLET: { background: "#a855f722", border: "#a855f755", text: "#a855f7" },
-  PINK: { background: "#ec489922", border: "#ec489955", text: "#ec4899" },
-  CYAN: { background: "#06b6d422", border: "#06b6d455", text: "#06b6d4" },
+  AMBER: { background: "#f59e0b22", border: "#f59e0b55", text: "#8a5a06" },
+  BLUE: { background: "#3b82f622", border: "#3b82f655", text: "#1d4ed8" },
+  GREEN: { background: "#10b98122", border: "#10b98155", text: "#047857" },
+  VIOLET: { background: "#a855f722", border: "#a855f755", text: "#7e22ce" },
+  PINK: { background: "#ec489922", border: "#ec489955", text: "#be185d" },
+  CYAN: { background: "#06b6d422", border: "#06b6d455", text: "#0e7490" },
 };
 
 /** Human-readable swatch list for the profile colour picker, in palette order. */

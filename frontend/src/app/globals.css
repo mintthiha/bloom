@@ -7,7 +7,9 @@
 :root {
   /* App-wide accent the user picks on their profile; overridden inline per-user by AccentProvider. */
   --brand-accent: #f59e0b;
-  --brand-accent-light: color-mix(in srgb, var(--brand-accent) 75%, white);
+  /* Darkened (not lightened) so the accent stays readable as text on this theme's light
+     surfaces — mixing toward white (as the dark theme does) would push contrast the wrong way. */
+  --brand-accent-light: color-mix(in srgb, var(--brand-accent) 60%, black);
   --surface-0: #eef2fb;
   --surface-1: #ffffff;
   --surface-2: #e6ecf8;
@@ -17,7 +19,8 @@
   --border-hover: #b8c7e0;
   --text-primary: #0c1320;
   --text-secondary: #5c6480;
-  --text-muted: #9098aa;
+  /* Clears WCAG AA on every surface it sits on, worst case --surface-2 (#e6ecf8, 4.6:1). */
+  --text-muted: #5b6472;
   --header-bg: rgba(238, 242, 251, 0.88);
   --chart-grid: rgba(20, 40, 90, 0.07);
   --chart-cursor: rgba(20, 40, 90, 0.04);
@@ -60,6 +63,8 @@
 }
 
 .dark {
+  /* Here the readable-on-surface direction flips: lighten toward white against dark surfaces. */
+  --brand-accent-light: color-mix(in srgb, var(--brand-accent) 75%, white);
   --surface-0: #060a14;
   --surface-1: #0d131f;
   --surface-2: #141b2b;

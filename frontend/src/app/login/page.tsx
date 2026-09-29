@@ -699,7 +699,7 @@ export default function LoginPage() {
                 gap: "8px",
                 padding: "12px 20px",
                 background: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
-                color: "var(--brand-accent)",
+                color: "var(--brand-accent-light)",
                 border: "1px solid color-mix(in srgb, var(--brand-accent) 25%, transparent)",
                 borderRadius: "10px",
                 fontSize: "14px",
@@ -966,7 +966,11 @@ export default function LoginPage() {
             No account?{" "}
             <Link
               href="/register"
-              style={{ color: "var(--brand-accent)", fontWeight: 600, textDecoration: "none" }}
+              style={{
+                color: "var(--brand-accent-light)",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
             >
               Create one
             </Link>

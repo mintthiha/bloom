@@ -248,7 +248,7 @@ export default function RegisterPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            style={{ color: "var(--brand-accent)", fontWeight: 600, textDecoration: "none" }}
+            style={{ color: "var(--brand-accent-light)", fontWeight: 600, textDecoration: "none" }}
           >
             Sign in
           </Link>

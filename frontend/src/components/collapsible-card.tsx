@@ -299,7 +299,7 @@ export function CollapsibleCard({
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "var(--brand-accent)",
+              color: "var(--brand-accent-light)",
               marginBottom: title ? "8px" : "0",
             }}
           >

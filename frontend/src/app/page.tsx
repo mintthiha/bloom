@@ -267,7 +267,7 @@ function Home() {
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "var(--brand-accent)",
+              color: "var(--brand-accent-light)",
               marginBottom: "10px",
             }}
           >
@@ -311,7 +311,7 @@ function Home() {
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
-                color: "var(--brand-accent)",
+                color: "var(--brand-accent-light)",
                 marginBottom: "12px",
               }}
             >
@@ -638,7 +638,7 @@ function Home() {
                 title: "Total Cash",
                 value: <AnimatedCurrency value={totalCash} />,
                 flashKey: totalCash,
-                color: "var(--brand-accent)",
+                color: "var(--brand-accent-light)",
                 targetAccount: cashAccounts[0],
                 staggerIndex: 1,
               })}
@@ -743,7 +743,7 @@ function Home() {
                 gap: "4px",
                 fontSize: "12px",
                 fontWeight: 600,
-                color: "var(--brand-accent)",
+                color: "var(--brand-accent-light)",
                 textDecoration: "none",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
