@@ -30,6 +30,9 @@ export const COLLAPSED_CARD_HEIGHT = 204;
 /** Total time the collapse animation takes (opacity fade + delay + grid-row shrink), in ms. Used to defer the hard height/overflow snap until the shrink has actually finished. */
 const COLLAPSE_ANIMATION_DURATION_MS = 550;
 
+/** Time to wait before releasing the tile's explicit height back to "auto" after expanding — the 0.4s grow transition plus a small buffer for the double-rAF start delay. */
+const EXPAND_ANIMATION_DURATION_MS = 450;
+
 /** Line-clamp styles applied to header text while collapsed so long titles/descriptions can't break the uniform height. */
 function clampLines(lines: number): CSSProperties {
   return {
@@ -93,11 +96,13 @@ export function CollapsibleCard({
   const isMobile = useIsMobile();
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const contentRowRef = useRef<HTMLDivElement>(null);
   const [explicitHeight, setExplicitHeight] = useState<number | undefined>(() =>
     !isMobile && (defaultCollapsed || allCollapsed) ? COLLAPSED_CARD_HEIGHT : undefined
   );
   const isFirstHeightRender = useRef(true);
   const frameRef = useRef(0);
+  const releaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   /** Bulk-collapses or expands this card when the dashboard-wide toggle changes, leaving the initial mount to honor defaultCollapsed. */
   useEffect(() => {
@@ -108,8 +113,14 @@ export function CollapsibleCard({
     setIsCollapsed(allCollapsed);
   }, [allCollapsed]);
 
-  /** Expanding unlocks the header's clamp/clip immediately so it can grow; collapsing only locks it once the shrink animation has finished playing, avoiding an instant clip. */
-  useEffect(() => {
+  /**
+   * Expanding unlocks the header's clamp/clip immediately so it can grow; collapsing only locks it
+   * once the shrink animation has finished playing, avoiding an instant clip. This runs as a
+   * layout effect (not a passive one) so the header is already unclamped, synchronously, before
+   * the height-measurement effect below reads the tile's natural expanded height — otherwise that
+   * measurement would run one render too early, against the still-clamped header.
+   */
+  useLayoutEffect(() => {
     if (!isCollapsed) {
       setIsHeightLocked(false);
       return;
@@ -119,17 +130,23 @@ export function CollapsibleCard({
   }, [isCollapsed]);
 
   /**
-   * Drives the tile's explicit pixel height: collapsing measures the tile's real current height
-   * (right before any collapse-driven style changes take visual effect, thanks to the CSS
-   * transition-delay below) and animates smoothly down to the fixed collapsed height. Expanding
-   * releases back to "auto" so it can grow with its content.
+   * Drives the tile's explicit pixel height so both directions animate as one continuous motion
+   * instead of an instant jump followed by a correction:
+   *  - Collapsing measures the tile's real current height (right before any collapse-driven style
+   *    changes take visual effect, thanks to the CSS transition-delay below) and animates smoothly
+   *    down to the fixed collapsed height.
+   *  - Expanding briefly forces the content row open (with transitions suppressed) to measure the
+   *    tile's true final height, then animates from the current collapsed height straight to that
+   *    value, finally releasing back to "auto" once the animation finishes so the tile stays
+   *    responsive to later content/window changes.
    *
-   * The height is measured fresh here rather than tracked in a background ref, because the
-   * expand growth is a pure CSS animation — no React render fires while it plays, so a
-   * ref updated only on render would go stale at whatever height the tile had at the instant
-   * it started expanding, not its true final height.
+   * Heights are measured fresh here rather than tracked in a background ref, because both the
+   * expand growth and collapse shrink are pure CSS animations — no React render fires while they
+   * play, so a ref updated only on render would go stale at whatever height the tile had at the
+   * instant the animation started, not its true target height.
    */
   useLayoutEffect(() => {
+    clearTimeout(releaseTimeoutRef.current);
     if (isMobile) {
       setExplicitHeight(undefined);
       return;
@@ -151,8 +168,53 @@ export function CollapsibleCard({
       frameRef.current = outerFrame;
       return () => cancelAnimationFrame(frameRef.current);
     }
-    setExplicitHeight(undefined);
-  }, [isCollapsed, isMobile]);
+
+    // The header's clamp/clip unlocks in the layout effect above, one render ahead of this one.
+    // Bail out on the transitional render where that hasn't landed yet — it'll fire again, with
+    // `isHeightLocked` in the dependency array, once the header has actually unclamped, so the
+    // measurement below reads its true final size instead of the still-clamped one.
+    if (isHeightLocked) return;
+
+    const cardEl = cardRef.current;
+    const rowEl = contentRowRef.current;
+    let targetHeight = cardEl?.getBoundingClientRect().height ?? COLLAPSED_CARD_HEIGHT;
+    if (cardEl && rowEl) {
+      // Momentarily let both the tile and its content row size to "auto"/"1fr" with no transition
+      // to read the tile's true expanded height, then put everything right back — this all happens
+      // within one synchronous pass, so nothing paints in between and there's no visible flash.
+      // (The tile's own height is normally pinned to an explicit pixel value, which would otherwise
+      // stop it from growing to fit the forced-open row.)
+      const previousCardTransition = cardEl.style.transition;
+      const previousCardHeight = cardEl.style.height;
+      const previousRowTransition = rowEl.style.transition;
+      const previousRowGridTemplateRows = rowEl.style.gridTemplateRows;
+      cardEl.style.transition = "none";
+      cardEl.style.height = "auto";
+      rowEl.style.transition = "none";
+      rowEl.style.gridTemplateRows = "1fr";
+      targetHeight = cardEl.getBoundingClientRect().height;
+      cardEl.style.height = previousCardHeight;
+      cardEl.style.transition = previousCardTransition;
+      rowEl.style.gridTemplateRows = previousRowGridTemplateRows;
+      rowEl.style.transition = previousRowTransition;
+      void rowEl.offsetHeight;
+    }
+
+    setExplicitHeight(COLLAPSED_CARD_HEIGHT);
+    const outerFrame = requestAnimationFrame(() => {
+      const innerFrame = requestAnimationFrame(() => setExplicitHeight(targetHeight));
+      frameRef.current = innerFrame;
+    });
+    frameRef.current = outerFrame;
+    releaseTimeoutRef.current = setTimeout(
+      () => setExplicitHeight(undefined),
+      EXPAND_ANIMATION_DURATION_MS
+    );
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      clearTimeout(releaseTimeoutRef.current);
+    };
+  }, [isCollapsed, isMobile, isHeightLocked]);
 
   /** Opens the card whenever an external caller signals that new content needs to be visible. */
   useEffect(() => {
@@ -179,11 +241,15 @@ export function CollapsibleCard({
         // `explicitHeight` carries a real pixel value only while collapsed (or mid-collapse), so it
         // can be transitioned smoothly instead of snapping straight to the fixed height.
         height: explicitHeight !== undefined ? `${explicitHeight}px` : undefined,
-        // Keep the height transition in lockstep with the inner content's delayed shrink so the
-        // tile's bottom edge glides straight down to the collapsed height instead of overshooting.
+        // Keep the height transition in lockstep with the inner content's grid-row animation so
+        // the tile's bottom edge moves as one continuous motion in both directions: delayed to
+        // match the content fading out first on collapse, immediate to match the row growing
+        // right away on expand.
         transition:
           explicitHeight !== undefined
-            ? "height 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s"
+            ? isCollapsed
+              ? "height 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s"
+              : "height 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
             : undefined,
         overflow: isCollapsed && !isMobile ? "hidden" : undefined,
         ...style,
@@ -305,6 +371,7 @@ export function CollapsibleCard({
       </button>
 
       <div
+        ref={contentRowRef}
         style={{
           display: "grid",
           gridTemplateRows: isCollapsed ? "0fr" : "1fr",
