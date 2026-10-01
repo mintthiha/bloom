@@ -1,6 +1,7 @@
 "use client";
 import { NetWorthSnapshot } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 
 type Props = {
   history: NetWorthSnapshot[];
@@ -8,6 +9,7 @@ type Props = {
 
 /** Renders a contextual empathy note below the net worth chart when the user's net worth is negative. */
 export function NetWorthEmpathyNote({ history }: Props) {
+  const { hideCents } = useDisplayPreferences();
   if (history.length === 0) return null;
 
   const currentSnapshot = history[history.length - 1]!;
@@ -52,8 +54,8 @@ export function NetWorthEmpathyNote({ history }: Props) {
             fontWeight: 600,
           }}
         >
-          ↑ Up {formatCurrency(monthlyDelta)} from last month. You&apos;re moving in the right
-          direction.
+          ↑ Up <span className="balance-value">{formatCurrency(monthlyDelta, { hideCents })}</span>{" "}
+          from last month. You&apos;re moving in the right direction.
         </p>
       )}
     </div>

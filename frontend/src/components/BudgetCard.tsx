@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Budget } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { BudgetRolloverToggle } from "@/components/BudgetRolloverToggle";
 import { MoveBudgetMoneyDialog } from "@/components/MoveBudgetMoneyDialog";
 
@@ -14,9 +15,9 @@ type Props = {
 };
 
 /** Signed currency, e.g. "+$40.00" / "-$12.00", for carry-in and rollover lines. */
-function formatSigned(value: number): string {
+function formatSigned(value: number, hideCents: boolean): string {
   const sign = value < 0 ? "-" : "+";
-  return `${sign}${formatCurrency(Math.abs(value))}`;
+  return `${sign}${formatCurrency(Math.abs(value), { hideCents })}`;
 }
 
 /**
@@ -32,6 +33,7 @@ export function BudgetCard({
   onRequestDelete,
   onChanged,
 }: Props) {
+  const { hideCents } = useDisplayPreferences();
   const progress = Math.min(budget.percentageUsed, 100);
   const isDeleting = deletingBudgetId === budget.id;
 
@@ -54,7 +56,11 @@ export function BudgetCard({
             {budget.category}
           </p>
           <p className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            {formatCurrency(budget.currentSpending)} spent of {formatCurrency(budget.available)}{" "}
+            <span className="balance-value">
+              {formatCurrency(budget.currentSpending, { hideCents })}
+            </span>{" "}
+            spent of{" "}
+            <span className="balance-value">{formatCurrency(budget.available, { hideCents })}</span>{" "}
             available
           </p>
         </Link>
@@ -108,9 +114,10 @@ export function BudgetCard({
             className="num"
             style={{ color: budget.isOverBudget ? "#f87171" : "var(--text-secondary)" }}
           >
-            {budget.isOverBudget
-              ? `${formatCurrency(Math.abs(budget.remaining))} over budget`
-              : `${formatCurrency(budget.remaining)} remaining`}
+            <span className="balance-value">
+              {formatCurrency(Math.abs(budget.remaining), { hideCents })}
+            </span>{" "}
+            {budget.isOverBudget ? "over budget" : "remaining"}
           </span>
           <span className="num" style={{ color: "var(--text-muted)" }}>
             {budget.percentageUsed.toFixed(0)}% used
@@ -132,11 +139,21 @@ export function BudgetCard({
           }}
         >
           <span className="num">
-            {formatSigned(budget.carryIn)} rolled in
-            {budget.adjustment !== 0 ? ` · ${formatSigned(budget.adjustment)} moved` : ""}
+            <span className="balance-value">{formatSigned(budget.carryIn, hideCents)}</span> rolled
+            in
+            {budget.adjustment !== 0 && (
+              <>
+                {" · "}
+                <span className="balance-value">
+                  {formatSigned(budget.adjustment, hideCents)}
+                </span>{" "}
+                moved
+              </>
+            )}
           </span>
           <span className="num" style={{ color: budget.carryOut < 0 ? "#f87171" : "#4ade80" }}>
-            {formatSigned(budget.carryOut)} to next month
+            <span className="balance-value">{formatSigned(budget.carryOut, hideCents)}</span> to
+            next month
           </span>
         </div>
       )}

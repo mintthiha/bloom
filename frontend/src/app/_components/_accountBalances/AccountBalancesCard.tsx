@@ -6,6 +6,7 @@ import { Account } from "@/lib/api";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { toSignedBalance, accountDisplayName } from "@/lib/account-view";
 import {
   readPinnedAccountIds,
@@ -26,11 +27,11 @@ const NEGATIVE_COLOR = "#ef4444";
 const FALLBACK_COUNT = 3;
 
 /** Header pill showing the combined total of the shown accounts, kept visible while the card is collapsed. */
-function TotalBadge({ total }: { total: number }) {
+function TotalBadge({ total, hideCents }: { total: number; hideCents: boolean }) {
   const color = total >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR;
   return (
     <span
-      className="num"
+      className="num balance-value"
       style={{
         fontSize: "15px",
         fontWeight: 800,
@@ -42,7 +43,7 @@ function TotalBadge({ total }: { total: number }) {
       }}
     >
       {total < 0 ? "−" : ""}
-      {formatCurrency(Math.abs(total))}
+      {formatCurrency(Math.abs(total), { hideCents })}
     </span>
   );
 }
@@ -78,6 +79,7 @@ function ViewAllLink() {
  */
 export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
   const router = useRouter();
+  const { hideCents } = useDisplayPreferences();
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
 
@@ -145,7 +147,7 @@ export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
       className="fade-up fade-up-1"
       headerRight={
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <TotalBadge total={total} />
+          <TotalBadge total={total} hideCents={hideCents} />
           <ViewAllLink />
         </div>
       }
@@ -221,7 +223,7 @@ export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
                   </span>
                 </div>
                 <span
-                  className="num"
+                  className="num balance-value"
                   style={{
                     fontSize: "14px",
                     fontWeight: 500,
@@ -229,7 +231,7 @@ export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
                     flexShrink: 0,
                   }}
                 >
-                  {formatCurrency(row.balance)}
+                  {formatCurrency(row.balance, { hideCents })}
                 </span>
               </div>
               <div

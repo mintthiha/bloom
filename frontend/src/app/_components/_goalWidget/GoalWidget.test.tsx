@@ -51,7 +51,14 @@ describe("GoalWidget", () => {
     render(<GoalWidget goals={[makeGoal()]} />);
     expect(screen.getByText("Emergency Fund")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
-    expect(screen.getByText("$2,500.00 of $5,000.00")).toBeInTheDocument();
+    // The two amounts are each wrapped in their own span (for privacy-mode blurring), so the
+    // text is split across elements — match on the containing span's combined textContent.
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "SPAN" && element.textContent === "$2,500.00 of $5,000.00"
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText("1 saved")).toBeInTheDocument();
   });
 

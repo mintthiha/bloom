@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { NetWorthSnapshot } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { ChartTooltip } from "@/components/chart-tooltip";
 import { NetWorthEmpathyNote } from "./NetWorthEmpathyNote";
@@ -29,6 +30,7 @@ const NET_WORTH_NAME_MAP = {
 
 /** Net worth history card showing assets, debt, and net worth over the last 12 months. */
 export function NetWorthHistory({ history }: Props) {
+  const { hideCents } = useDisplayPreferences();
   const headerRight = (() => {
     if (history.length < 2) return null;
     const first = history[0]!;
@@ -49,7 +51,7 @@ export function NetWorthHistory({ history }: Props) {
           Since {first.month}
         </p>
         <p
-          className="num"
+          className="num balance-value"
           style={{
             fontSize: "14px",
             fontWeight: 700,
@@ -57,7 +59,7 @@ export function NetWorthHistory({ history }: Props) {
           }}
         >
           {delta >= 0 ? "+" : ""}
-          {formatCurrency(delta)}
+          {formatCurrency(delta, { hideCents })}
         </p>
       </div>
     );

@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { RecurringTransaction } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import {
   computeUpcomingOccurrences,
@@ -35,6 +36,7 @@ const FREQUENCY_LABEL: Record<string, string> = {
 
 /** Calendar timeline card showing upcoming recurring transaction occurrences grouped by month. */
 export function RecurringCalendar({ rules }: Props) {
+  const { hideCents } = useDisplayPreferences();
   const activeRules = useMemo(() => rules.filter((rule) => rule.active), [rules]);
   const occurrences = useMemo(() => computeUpcomingOccurrences(rules), [rules]);
   const monthGroups = useMemo(() => groupOccurrencesByMonth(occurrences), [occurrences]);
@@ -165,7 +167,7 @@ export function RecurringCalendar({ rules }: Props) {
                               {occurrence.rule.merchant || occurrence.rule.name}
                             </p>
                             <span
-                              className="num"
+                              className="num balance-value"
                               style={{
                                 fontSize: "13px",
                                 fontWeight: 700,
@@ -174,7 +176,7 @@ export function RecurringCalendar({ rules }: Props) {
                               }}
                             >
                               {isDeposit ? "+" : "−"}
-                              {formatCurrency(occurrence.rule.amount)}
+                              {formatCurrency(occurrence.rule.amount, { hideCents })}
                             </span>
                           </div>
                           <div

@@ -38,7 +38,14 @@ describe("NetWorthEmpathyNote", () => {
         history={[makeSnapshot("2026-06", -800), makeSnapshot("2026-07", -500)]}
       />
     );
-    expect(screen.getByText(/Up \$300\.00 from last month/)).toBeInTheDocument();
+    // The amount is wrapped in its own span (for privacy-mode blurring), so the text is split
+    // across elements — match on the paragraph's combined textContent instead.
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" && /Up \$300\.00 from last month/.test(element.textContent ?? "")
+      )
+    ).toBeInTheDocument();
   });
 
   it("omits the improvement line when net worth fell", () => {

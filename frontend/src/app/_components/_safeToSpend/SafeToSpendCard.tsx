@@ -4,6 +4,7 @@ import { Account, Profile, RecurringTransaction } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { computePaydayContext } from "@/lib/payday-context";
 import { computeSafeToSpend, SafeToSpendResult } from "@/lib/safe-to-spend";
 import { formatRelativeDate } from "../_recurringCalendar/recurring-calendar-utils";
@@ -27,11 +28,13 @@ function LedgerRow({
   amount,
   sign,
   emphasis,
+  hideCents,
 }: {
   label: string;
   amount: number;
   sign: "+" | "−" | "";
   emphasis?: boolean;
+  hideCents: boolean;
 }) {
   return (
     <div
@@ -53,7 +56,7 @@ function LedgerRow({
         {label}
       </span>
       <span
-        className="num"
+        className="num balance-value"
         style={{
           fontSize: emphasis ? "15px" : "13px",
           fontWeight: emphasis ? 800 : 600,
@@ -62,7 +65,7 @@ function LedgerRow({
         }}
       >
         {sign}
-        {formatCurrency(Math.abs(amount))}
+        {formatCurrency(Math.abs(amount), { hideCents })}
       </span>
     </div>
   );
@@ -86,11 +89,17 @@ function formatPaydayCountdown(daysUntilPayday: number): string {
 }
 
 /** Header badge showing the headline safe-to-spend figure, kept visible while the card is collapsed. */
-function SafeToSpendBadge({ result }: { result: SafeToSpendResult }) {
+function SafeToSpendBadge({
+  result,
+  hideCents,
+}: {
+  result: SafeToSpendResult;
+  hideCents: boolean;
+}) {
   const color = result.safeToSpend >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR;
   return (
     <span
-      className="num"
+      className="num balance-value"
       style={{
         fontSize: "15px",
         fontWeight: 800,
@@ -102,13 +111,14 @@ function SafeToSpendBadge({ result }: { result: SafeToSpendResult }) {
       }}
     >
       {result.safeToSpend < 0 ? "−" : ""}
-      {formatCurrency(Math.abs(result.safeToSpend))}
+      {formatCurrency(Math.abs(result.safeToSpend), { hideCents })}
     </span>
   );
 }
 
 /** Dashboard card showing how much cash is free to spend for the rest of the month, with a full breakdown. */
 export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
+  const { hideCents } = useDisplayPreferences();
   const result = useMemo(
     () => computeSafeToSpend(accounts, recurringRules),
     [accounts, recurringRules]
@@ -133,7 +143,7 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
       // right above the headline figure that already shows the same number — only show it
       // there while collapsed, when the badge is the sole visible figure.
       headerRight={(isCollapsed) =>
-        !isMobile || isCollapsed ? <SafeToSpendBadge result={result} /> : null
+        !isMobile || isCollapsed ? <SafeToSpendBadge result={result} hideCents={hideCents} /> : null
       }
     >
       {/* Prominent headline figure */}
@@ -146,7 +156,7 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
         }}
       >
         <div
-          className="num"
+          className="num balance-value"
           style={{
             fontSize: "44px",
             fontWeight: 800,
@@ -156,13 +166,16 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
           }}
         >
           {result.safeToSpend < 0 ? "−" : ""}
-          {formatCurrency(Math.abs(result.safeToSpend))}
+          {formatCurrency(Math.abs(result.safeToSpend), { hideCents })}
         </div>
         {isPositive ? (
           <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "8px" }}>
             ≈{" "}
-            <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-              {formatCurrency(result.perDay)}
+            <span
+              className="num balance-value"
+              style={{ fontWeight: 700, color: "var(--text-primary)" }}
+            >
+              {formatCurrency(result.perDay, { hideCents })}
             </span>{" "}
             a day for the {result.daysRemaining} day{result.daysRemaining !== 1 ? "s" : ""} left
             this month
@@ -200,15 +213,18 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
               "No bills due this month"
             ) : (
               <>
-                <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>
-                  {formatCurrency(paydayContext.billsBeforePayday)}
+                <span
+                  className="num balance-value"
+                  style={{ fontWeight: 700, color: "var(--text-primary)" }}
+                >
+                  {formatCurrency(paydayContext.billsBeforePayday, { hideCents })}
                 </span>{" "}
                 due before then
                 {paydayContext.billsAfterPayday > 0 && (
                   <>
                     ,{" "}
-                    <span className="num" style={{ fontWeight: 700 }}>
-                      {formatCurrency(paydayContext.billsAfterPayday)}
+                    <span className="num balance-value" style={{ fontWeight: 700 }}>
+                      {formatCurrency(paydayContext.billsAfterPayday, { hideCents })}
                     </span>{" "}
                     after
                   </>
@@ -221,17 +237,34 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
 
       {/* Breakdown ledger */}
       <div style={{ marginBottom: result.billItems.length > 0 ? "18px" : 0 }}>
-        <LedgerRow label="Available cash" amount={result.availableCash} sign="+" />
+        <LedgerRow
+          label="Available cash"
+          amount={result.availableCash}
+          sign="+"
+          hideCents={hideCents}
+        />
         {result.expectedIncome > 0 && (
           <LedgerRow
             label="Expected income (rest of month)"
             amount={result.expectedIncome}
             sign="+"
+            hideCents={hideCents}
           />
         )}
-        <LedgerRow label="Bills due before month-end" amount={result.upcomingBills} sign="−" />
+        <LedgerRow
+          label="Bills due before month-end"
+          amount={result.upcomingBills}
+          sign="−"
+          hideCents={hideCents}
+        />
         <div style={{ borderTop: "1px solid var(--border)", marginTop: "4px", paddingTop: "2px" }}>
-          <LedgerRow label="Safe to spend" amount={result.safeToSpend} sign="" emphasis />
+          <LedgerRow
+            label="Safe to spend"
+            amount={result.safeToSpend}
+            sign=""
+            emphasis
+            hideCents={hideCents}
+          />
         </div>
       </div>
 
@@ -281,8 +314,11 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
                     {formatRelativeDate(bill.date)}
                   </span>
                 </div>
-                <span className="num" style={{ fontSize: "13px", fontWeight: 700, flexShrink: 0 }}>
-                  −{formatCurrency(bill.amount)}
+                <span
+                  className="num balance-value"
+                  style={{ fontSize: "13px", fontWeight: 700, flexShrink: 0 }}
+                >
+                  −{formatCurrency(bill.amount, { hideCents })}
                 </span>
               </div>
             ))}

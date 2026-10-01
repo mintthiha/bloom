@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { api, CategoryBreakdownItem, DateRangeQuery, MonthlySummary } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 
 const NEEDS_CATEGORIES = new Set(["Groceries", "Rent", "Utilities", "Transport", "Healthcare"]);
 
@@ -50,6 +51,7 @@ type BucketRowProps = {
   insightText: string;
   categories: CategoryRow[];
   loading: boolean;
+  hideCents: boolean;
 };
 
 /** A single 50/30/20 bucket with a progress bar, target marker, and expandable category+account drilldown. */
@@ -63,6 +65,7 @@ function BucketRow({
   insightText,
   categories,
   loading,
+  hideCents,
 }: BucketRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [scrollbarVisible, setScrollbarVisible] = useState(false);
@@ -103,8 +106,11 @@ function BucketRow({
           <span className="num" style={{ fontSize: "14px", fontWeight: 700, color }}>
             {pct.toFixed(0)}%
           </span>
-          <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            {formatCurrency(amount)}
+          <span
+            className="num balance-value"
+            style={{ fontSize: "12px", color: "var(--text-secondary)" }}
+          >
+            {formatCurrency(amount, { hideCents })}
           </span>
         </div>
       </div>
@@ -234,10 +240,10 @@ function BucketRow({
                     {categoryRow.category}
                   </span>
                   <span
-                    className="num"
+                    className="num balance-value"
                     style={{ fontSize: "12px", color: "var(--text-secondary)" }}
                   >
-                    {formatCurrency(categoryRow.spending)}
+                    {formatCurrency(categoryRow.spending, { hideCents })}
                   </span>
                 </div>
                 <div
@@ -266,13 +272,13 @@ function BucketRow({
                         {accountRow.accountNickname ?? accountRow.accountOwnerName}
                       </span>
                       <span
-                        className="num"
+                        className="num balance-value"
                         style={{
                           fontSize: "11px",
                           color: "var(--text-muted)",
                         }}
                       >
-                        {formatCurrency(accountRow.spending)}
+                        {formatCurrency(accountRow.spending, { hideCents })}
                       </span>
                     </div>
                   ))}
@@ -288,6 +294,7 @@ function BucketRow({
 
 /** Collapsible card visualizing how the user's spending maps to the 50/30/20 budgeting rule. */
 export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
+  const { hideCents } = useDisplayPreferences();
   const { income, spending, netCashFlow, categories } = monthlySummary;
   const [breakdown, setBreakdown] = useState<CategoryBreakdownItem[]>([]);
   const [breakdownLoading, setBreakdownLoading] = useState(false);
@@ -394,11 +401,12 @@ export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
             color={needsColor}
             insightText={
               largestNeed
-                ? `Largest: ${largestNeed.category} (${formatCurrency(largestNeed.spending)})`
+                ? `Largest: ${largestNeed.category} (${formatCurrency(largestNeed.spending, { hideCents })})`
                 : "No needs spending recorded this month."
             }
             categories={needsCategoryRows}
             loading={breakdownLoading}
+            hideCents={hideCents}
           />
           <BucketRow
             label="Wants"
@@ -409,11 +417,12 @@ export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
             color={wantsColor}
             insightText={
               largestWant
-                ? `Largest: ${largestWant.category} (${formatCurrency(largestWant.spending)})`
+                ? `Largest: ${largestWant.category} (${formatCurrency(largestWant.spending, { hideCents })})`
                 : "No wants spending recorded this month."
             }
             categories={wantsCategoryRows}
             loading={breakdownLoading}
+            hideCents={hideCents}
           />
           <BucketRow
             label="Savings"
@@ -431,6 +440,7 @@ export function BudgetRuleCard({ monthlySummary, rangeQuery }: Props) {
             }
             categories={[]}
             loading={false}
+            hideCents={hideCents}
           />
         </div>
       )}

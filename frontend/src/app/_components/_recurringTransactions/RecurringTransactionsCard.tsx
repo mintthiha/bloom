@@ -11,6 +11,7 @@ import {
 import { Repeat } from "lucide-react";
 import { deleteWithUndo } from "@/lib/undoableDelete";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { formatLocalDate } from "@/lib/date-range";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { CollapsibleFormSection } from "./CollapsibleFormSection";
@@ -72,6 +73,7 @@ function makeEmptyForm() {
 
 /** Recurring transactions card: create/edit/pause/delete recurring rules. */
 export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props) {
+  const { hideCents } = useDisplayPreferences();
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState(makeEmptyForm);
@@ -736,7 +738,10 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
                       </p>
                     )}
                     <p className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      {formatCurrency(rule.amount)} · {rule.frequency.toLowerCase()} ·{" "}
+                      <span className="balance-value">
+                        {formatCurrency(rule.amount, { hideCents })}
+                      </span>{" "}
+                      · {rule.frequency.toLowerCase()} ·{" "}
                       {rule.accountNickname ?? rule.accountOwnerName}
                     </p>
                     {(rule.category || rule.description) && (

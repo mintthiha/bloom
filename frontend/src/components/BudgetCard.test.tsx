@@ -12,6 +12,16 @@ vi.mock("next/link", () => ({
 vi.mock("@/components/BudgetRolloverToggle", () => ({ BudgetRolloverToggle: () => <div /> }));
 vi.mock("@/components/MoveBudgetMoneyDialog", () => ({ MoveBudgetMoneyDialog: () => <div /> }));
 
+/**
+ * Matches an element by tag whose combined textContent satisfies the pattern. Several amounts are
+ * wrapped in their own span (for privacy-mode blurring), splitting the visible text across
+ * elements, so the default string/regex matcher can't find it on a single text node.
+ */
+function byTextContent(tagName: string, pattern: RegExp) {
+  return (_: string, element: Element | null) =>
+    element?.tagName === tagName && pattern.test(element.textContent ?? "");
+}
+
 /** Builds a Budget fixture. */
 function makeBudget(overrides: Partial<Budget> = {}): Budget {
   return {
@@ -54,21 +64,23 @@ describe("BudgetCard", () => {
   it("shows the category, spend line, and remaining amount when under budget", () => {
     renderCard(makeBudget());
     expect(screen.getByText("Groceries")).toBeInTheDocument();
-    expect(screen.getByText(/\$120\.00 spent of \$400\.00 available/)).toBeInTheDocument();
-    expect(screen.getByText(/\$280\.00 remaining/)).toBeInTheDocument();
+    expect(
+      screen.getByText(byTextContent("P", /\$120\.00 spent of \$400\.00 available/))
+    ).toBeInTheDocument();
+    expect(screen.getByText(byTextContent("SPAN", /\$280\.00 remaining/))).toBeInTheDocument();
     expect(screen.getByText("30% used")).toBeInTheDocument();
   });
 
   it("shows an over-budget message when spending exceeds the limit", () => {
     renderCard(makeBudget({ isOverBudget: true, remaining: -50, percentageUsed: 112 }));
-    expect(screen.getByText(/\$50\.00 over budget/)).toBeInTheDocument();
+    expect(screen.getByText(byTextContent("SPAN", /\$50\.00 over budget/))).toBeInTheDocument();
     expect(screen.getByText("112% used")).toBeInTheDocument();
   });
 
   it("renders the rollover line only when rollover is on and there is carry activity", () => {
     renderCard(makeBudget({ rolloverEnabled: true, carryIn: 40, carryOut: 25 }));
-    expect(screen.getByText(/\+\$40\.00 rolled in/)).toBeInTheDocument();
-    expect(screen.getByText(/\+\$25\.00 to next month/)).toBeInTheDocument();
+    expect(screen.getByText(byTextContent("SPAN", /\+\$40\.00 rolled in/))).toBeInTheDocument();
+    expect(screen.getByText(byTextContent("SPAN", /\+\$25\.00 to next month/))).toBeInTheDocument();
   });
 
   it("requests deletion and reflects the deleting state", () => {

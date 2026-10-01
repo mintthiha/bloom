@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ManualEntry } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { CollapsibleCard } from "@/components/collapsible-card";
 
 interface ManualEntriesCardProps {
@@ -18,7 +19,7 @@ function topEntries(entries: ManualEntry[], type: "ASSET" | "LIABILITY", limit: 
 }
 
 /** Single display row for a manual entry — no editing on the dashboard card. */
-function EntryPreviewRow({ entry }: { entry: ManualEntry }) {
+function EntryPreviewRow({ entry, hideCents }: { entry: ManualEntry; hideCents: boolean }) {
   const accentColor = entry.type === "ASSET" ? "#22c55e" : "#ef4444";
   return (
     <div
@@ -54,10 +55,10 @@ function EntryPreviewRow({ entry }: { entry: ManualEntry }) {
         </span>
       </div>
       <span
-        className="num"
+        className="num balance-value"
         style={{ fontSize: "14px", fontWeight: 700, color: accentColor, flexShrink: 0 }}
       >
-        {formatCurrency(entry.amount)}
+        {formatCurrency(entry.amount, { hideCents })}
       </span>
     </div>
   );
@@ -65,6 +66,7 @@ function EntryPreviewRow({ entry }: { entry: ManualEntry }) {
 
 /** Dashboard summary card showing top 2 assets and top 2 liabilities, linking to the full management page. */
 export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
+  const { hideCents } = useDisplayPreferences();
   const topAssets = topEntries(entries, "ASSET", 2);
   const topLiabilities = topEntries(entries, "LIABILITY", 2);
   const totalAssets = entries
@@ -106,7 +108,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
               Net manual
             </p>
             <p
-              className="num"
+              className="num balance-value"
               style={{
                 fontSize: "16px",
                 fontWeight: 800,
@@ -115,7 +117,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
               }}
             >
               {net >= 0 ? "+" : ""}
-              {formatCurrency(net)}
+              {formatCurrency(net, { hideCents })}
             </p>
           </div>
         </div>
@@ -163,7 +165,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
                 Liabilities
               </p>
               {topLiabilities.map((e) => (
-                <EntryPreviewRow key={e.id} entry={e} />
+                <EntryPreviewRow key={e.id} entry={e} hideCents={hideCents} />
               ))}
             </div>
           )}
@@ -183,7 +185,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
                 Assets
               </p>
               {topAssets.map((e) => (
-                <EntryPreviewRow key={e.id} entry={e} />
+                <EntryPreviewRow key={e.id} entry={e} hideCents={hideCents} />
               ))}
             </div>
           )}

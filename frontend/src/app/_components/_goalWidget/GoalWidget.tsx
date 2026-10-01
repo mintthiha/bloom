@@ -4,6 +4,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { CollapsibleCard } from "@/components/collapsible-card";
 
@@ -12,6 +13,7 @@ const STORAGE_KEY = "bloom_goal_widget_id";
 /** Compact dashboard card showing one selected savings goal with a progress bar. Clicking navigates to /goals. */
 export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const router = useRouter();
+  const { hideCents } = useDisplayPreferences();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const seededRef = useRef(false);
 
@@ -199,8 +201,13 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
           }}
         >
           <span className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            {formatCurrency(selectedGoal.currentBalance)} of{" "}
-            {formatCurrency(selectedGoal.targetAmount)}
+            <span className="balance-value">
+              {formatCurrency(selectedGoal.currentBalance, { hideCents })}
+            </span>{" "}
+            of{" "}
+            <span className="balance-value">
+              {formatCurrency(selectedGoal.targetAmount, { hideCents })}
+            </span>
           </span>
           {isComplete && (
             <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>

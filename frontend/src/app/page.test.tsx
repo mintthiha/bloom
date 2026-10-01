@@ -220,7 +220,13 @@ describe("home page", () => {
     render(<Page />);
 
     expect(await screen.findByText("Set monthly limits by category")).toBeInTheDocument();
-    expect(screen.getByText("$120.00 remaining")).toBeInTheDocument();
+    // The amount is wrapped in its own span (for privacy-mode blurring), splitting the text
+    // across elements — match on the containing span's combined textContent instead.
+    expect(
+      screen.getByText(
+        (_, element) => element?.tagName === "SPAN" && element.textContent === "$120.00 remaining"
+      )
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 

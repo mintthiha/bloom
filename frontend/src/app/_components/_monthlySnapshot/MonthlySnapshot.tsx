@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { MonthlySummary, MonthlyTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { ChartTooltip } from "@/components/chart-tooltip";
 import { FlashOnChange } from "@/components/flash-on-change";
@@ -42,6 +43,7 @@ export function MonthlySnapshot({
 }: Props) {
   const [snapshotView, setSnapshotView] = useState<SnapshotView>("snapshot");
   const isMobile = useIsMobile();
+  const { hideCents } = useDisplayPreferences();
 
   const incomeDelta =
     previousMonthlySummary != null ? monthlySummary.income - previousMonthlySummary.income : null;
@@ -174,9 +176,12 @@ export function MonthlySnapshot({
               >
                 Income
               </p>
-              <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}>
+              <p
+                className="num balance-value"
+                style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}
+              >
                 <FlashOnChange watchKey={monthlySummary.income}>
-                  {formatCurrency(monthlySummary.income)}
+                  {formatCurrency(monthlySummary.income, { hideCents })}
                 </FlashOnChange>
               </p>
               {incomeDelta !== null && incomeDelta !== 0 && (
@@ -188,8 +193,11 @@ export function MonthlySnapshot({
                     color: incomeDelta > 0 ? "#22c55e" : "#f97316",
                   }}
                 >
-                  {incomeDelta > 0 ? "+" : ""}
-                  {formatCurrency(incomeDelta)} vs prior
+                  <span className="balance-value">
+                    {incomeDelta > 0 ? "+" : ""}
+                    {formatCurrency(incomeDelta, { hideCents })}
+                  </span>{" "}
+                  vs prior
                 </p>
               )}
             </div>
@@ -215,9 +223,12 @@ export function MonthlySnapshot({
               >
                 Spending
               </p>
-              <p className="num" style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}>
+              <p
+                className="num balance-value"
+                style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}
+              >
                 <FlashOnChange watchKey={monthlySummary.spending}>
-                  {formatCurrency(monthlySummary.spending)}
+                  {formatCurrency(monthlySummary.spending, { hideCents })}
                 </FlashOnChange>
               </p>
               {spendingDelta !== null && spendingDelta !== 0 && (
@@ -229,8 +240,11 @@ export function MonthlySnapshot({
                     color: spendingDelta < 0 ? "#22c55e" : "#f97316",
                   }}
                 >
-                  {spendingDelta > 0 ? "+" : ""}
-                  {formatCurrency(spendingDelta)} vs prior
+                  <span className="balance-value">
+                    {spendingDelta > 0 ? "+" : ""}
+                    {formatCurrency(spendingDelta, { hideCents })}
+                  </span>{" "}
+                  vs prior
                 </p>
               )}
             </div>
@@ -257,7 +271,7 @@ export function MonthlySnapshot({
                 Net
               </p>
               <p
-                className="num"
+                className="num balance-value"
                 style={{
                   fontSize: "18px",
                   fontWeight: 600,
@@ -265,7 +279,7 @@ export function MonthlySnapshot({
                 }}
               >
                 <FlashOnChange watchKey={monthlySummary.netCashFlow}>
-                  {formatCurrency(monthlySummary.netCashFlow)}
+                  {formatCurrency(monthlySummary.netCashFlow, { hideCents })}
                 </FlashOnChange>
               </p>
               {netDelta !== null && netDelta !== 0 && (
@@ -277,8 +291,11 @@ export function MonthlySnapshot({
                     color: netDelta > 0 ? "#22c55e" : "#f97316",
                   }}
                 >
-                  {netDelta > 0 ? "+" : ""}
-                  {formatCurrency(netDelta)} vs prior
+                  <span className="balance-value">
+                    {netDelta > 0 ? "+" : ""}
+                    {formatCurrency(netDelta, { hideCents })}
+                  </span>{" "}
+                  vs prior
                 </p>
               )}
             </div>
@@ -358,8 +375,11 @@ export function MonthlySnapshot({
                 />
                 <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                   On track to spend{" "}
-                  <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>
-                    {formatCurrency(spendingForecast.projected)}
+                  <span
+                    className="num balance-value"
+                    style={{ color: "var(--text-primary)", fontWeight: 700 }}
+                  >
+                    {formatCurrency(spendingForecast.projected, { hideCents })}
                   </span>{" "}
                   by end of month
                 </span>
@@ -374,8 +394,11 @@ export function MonthlySnapshot({
                     flexShrink: 0,
                   }}
                 >
-                  {spendingForecast.vsLastMonth > 0 ? "+" : ""}
-                  {formatCurrency(spendingForecast.vsLastMonth)} vs last month
+                  <span className="balance-value">
+                    {spendingForecast.vsLastMonth > 0 ? "+" : ""}
+                    {formatCurrency(spendingForecast.vsLastMonth, { hideCents })}
+                  </span>{" "}
+                  vs last month
                 </span>
               )}
             </div>
