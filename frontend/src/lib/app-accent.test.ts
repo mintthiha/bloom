@@ -19,8 +19,8 @@ describe("getAccentHex", () => {
     expect(getAccentHex("GREEN")).toBe("#10b981");
   });
 
-  it("falls back to the default amber when unset or unrecognized", () => {
-    expect(getAccentHex(null)).toBe("#f59e0b");
-    expect(getAccentHex("NOT_A_COLOUR")).toBe("#f59e0b");
+  it("falls back to the default blue when unset or unrecognized", () => {
+    expect(getAccentHex(null)).toBe("#3b82f6");
+    expect(getAccentHex("NOT_A_COLOUR")).toBe("#3b82f6");
   });
 });

@@ -19,7 +19,7 @@ const ACCENT_HEX: Record<AccentColor, string> = {
 };
 
 /** The accent applied when the user has not chosen one. */
-export const DEFAULT_ACCENT_COLOR: AccentColor = "AMBER";
+export const DEFAULT_ACCENT_COLOR: AccentColor = "BLUE";
 
 /** Human-readable swatch list for the profile accent-colour picker, in palette order. */
 export const ACCENT_COLOR_OPTIONS: { value: AccentColor; label: string; hex: string }[] =
