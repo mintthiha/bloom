@@ -5,6 +5,7 @@ import { DeleteAccount } from "../_accountActions/DeleteAccount";
 import { FreezeButton } from "../_accountActions/FreezeButton";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 
 type AccountCardProps = {
   account: Account | null;
@@ -13,6 +14,7 @@ type AccountCardProps = {
 
 /** Displays account summary info, balance, freeze toggle, and delete action. */
 export function AccountCard({ account, onRefresh }: AccountCardProps) {
+  const { hideCents } = useDisplayPreferences();
   if (!account) return null;
 
   const accentColor = ACCOUNT_TYPE_META[account.accountType].color;
@@ -143,14 +145,14 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
               {account.accountType === "CREDIT" ? "Outstanding Balance" : "Available Balance"}
             </p>
             <p
-              className="num"
+              className="num balance-value"
               style={{
                 fontSize: "30px",
                 fontWeight: 500,
                 color: accentColor,
               }}
             >
-              {formatCurrency(account.balance)}
+              {formatCurrency(account.balance, { hideCents })}
             </p>
           </div>
           <FreezeButton accountId={account.id} frozen={account.frozen} onToggled={onRefresh} />

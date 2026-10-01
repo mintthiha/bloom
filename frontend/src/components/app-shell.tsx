@@ -8,6 +8,8 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { HeaderSearch } from "@/components/header-search";
 import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HideCentsToggle } from "@/components/hide-cents-toggle";
+import { PrivacyModeToggle } from "@/components/privacy-mode-toggle";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { AmbientOrb } from "@/components/ambient-orb";
 import { DashboardCustomizePanel } from "@/app/_components/_dashboardCustomize/DashboardCustomizePanel";
@@ -76,6 +78,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             {isMobile && <HeaderSearch />}
             <NotificationBell />
             <DashboardCustomizePanel />
+            <PrivacyModeToggle />
+            <HideCentsToggle />
             <ThemeToggle />
             <ProfileMenu />
           </div>

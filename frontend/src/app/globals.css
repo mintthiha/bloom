@@ -289,6 +289,18 @@ body {
   transition-duration: 0.09s;
 }
 
+/* Privacy mode: blurs balances until hovered/focused, toggled via [data-privacy-mode] on <html>. */
+.balance-value {
+  transition: filter 0.15s ease;
+}
+[data-privacy-mode="on"] .balance-value {
+  filter: blur(6px);
+}
+[data-privacy-mode="on"] .balance-value:hover,
+[data-privacy-mode="on"] .balance-value:focus-within {
+  filter: none;
+}
+
 /* Spins the refresh icon while the activity list is reloading. */
 @keyframes activity-refresh-spin {
   to {
@@ -690,6 +702,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .balance-value,
   .press:hover,
   .press:active,
   .balance-row:hover,

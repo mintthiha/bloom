@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { useDisplayPreferences } from "@/components/display-preferences-provider";
 
 interface AnimatedCurrencyProps {
   value: number;
@@ -11,6 +12,7 @@ interface AnimatedCurrencyProps {
 export function AnimatedCurrency({ value, duration = 700 }: AnimatedCurrencyProps) {
   const [displayed, setDisplayed] = useState(0);
   const rafRef = useRef<number>(0);
+  const { hideCents } = useDisplayPreferences();
 
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,5 +40,5 @@ export function AnimatedCurrency({ value, duration = 700 }: AnimatedCurrencyProp
     return () => cancelAnimationFrame(rafRef.current);
   }, [value, duration]);
 
-  return <>{formatCurrency(displayed)}</>;
+  return <span className="balance-value">{formatCurrency(displayed, { hideCents })}</span>;
 }

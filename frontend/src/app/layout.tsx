@@ -9,6 +9,7 @@ import { SessionProvider } from "next-auth/react";
 import { DashboardViewProvider } from "@/components/dashboard-view-provider";
 import { DashboardVisibilityProvider } from "@/components/dashboard-visibility-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DisplayPreferencesProvider } from "@/components/display-preferences-provider";
 import { AccentProvider } from "@/components/accent-provider";
 import { AppShell } from "@/components/app-shell";
 import { ACTIVE_USER_STORAGE_KEY, PER_USER_STORAGE_KEYS } from "@/lib/per-user-storage";
@@ -53,20 +54,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         {/* Resets per-user preferences before providers hydrate when the account has changed */}
         {userId && <script dangerouslySetInnerHTML={{ __html: buildPerUserResetScript(userId) }} />}
+        {/* Applies the cached privacy-mode attribute before first paint to avoid a flash of unblurred balances */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem('bloom-privacy-mode');document.documentElement.setAttribute('data-privacy-mode',p==='true'?'on':'off')}catch(e){}})();`,
+          }}
+        />
       </head>
       <body>
         <ThemeProvider>
-          <SessionProvider>
-            <AccentProvider>
-              <TooltipProvider>
-                <DashboardViewProvider>
-                  <DashboardVisibilityProvider>
-                    <AppShell>{children}</AppShell>
-                  </DashboardVisibilityProvider>
-                </DashboardViewProvider>
-              </TooltipProvider>
-            </AccentProvider>
-          </SessionProvider>
+          <DisplayPreferencesProvider>
+            <SessionProvider>
+              <AccentProvider>
+                <TooltipProvider>
+                  <DashboardViewProvider>
+                    <DashboardVisibilityProvider>
+                      <AppShell>{children}</AppShell>
+                    </DashboardVisibilityProvider>
+                  </DashboardViewProvider>
+                </TooltipProvider>
+              </AccentProvider>
+            </SessionProvider>
+          </DisplayPreferencesProvider>
         </ThemeProvider>
       </body>
     </html>
