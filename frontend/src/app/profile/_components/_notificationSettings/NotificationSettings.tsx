@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, NotificationPreferences } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
-import { NotificationToggleRow } from "./NotificationToggleRow";
+import { ToggleRow } from "@/components/ToggleRow";
 import { LeadDaySelector } from "./LeadDaySelector";
 import { MilestoneSelector } from "./MilestoneSelector";
 import { LowBalanceThresholdInput } from "./LowBalanceThresholdInput";
@@ -90,7 +90,7 @@ export function NotificationSettings() {
       style={{ marginTop: "20px", opacity: isLoading ? 0.6 : 1 }}
     >
       <div style={{ display: "grid", gap: "16px" }}>
-        <NotificationToggleRow
+        <ToggleRow
           label="Bill reminders"
           description="A heads-up before recurring payments are due."
           isEnabled={preferences.billRemindersEnabled}
@@ -103,9 +103,9 @@ export function NotificationSettings() {
             isDisabled={isBusy || !preferences.billRemindersEnabled}
             onChange={(days) => savePreferences({ billReminderLeadDays: days })}
           />
-        </NotificationToggleRow>
+        </ToggleRow>
 
-        <NotificationToggleRow
+        <ToggleRow
           label="Budget overspend"
           description="When a category goes over its monthly limit."
           isEnabled={preferences.budgetOverspendAlertsEnabled}
@@ -113,7 +113,7 @@ export function NotificationSettings() {
           onToggle={(next) => savePreferences({ budgetOverspendAlertsEnabled: next })}
         />
 
-        <NotificationToggleRow
+        <ToggleRow
           label="Low balance"
           description="When a cash account runs low."
           isEnabled={preferences.lowBalanceAlertsEnabled}
@@ -125,9 +125,9 @@ export function NotificationSettings() {
             isDisabled={isBusy || !preferences.lowBalanceAlertsEnabled}
             onCommit={(threshold) => savePreferences({ lowBalanceThreshold: threshold })}
           />
-        </NotificationToggleRow>
+        </ToggleRow>
 
-        <NotificationToggleRow
+        <ToggleRow
           label="Savings goal milestones"
           description="Progress updates as a goal fills up."
           isEnabled={preferences.goalMilestoneAlertsEnabled}
@@ -139,9 +139,9 @@ export function NotificationSettings() {
             isDisabled={isBusy || !preferences.goalMilestoneAlertsEnabled}
             onChange={(percentages) => savePreferences({ goalMilestonePercentages: percentages })}
           />
-        </NotificationToggleRow>
+        </ToggleRow>
 
-        <NotificationToggleRow
+        <ToggleRow
           label="Subscription price rises"
           description="When a detected subscription costs more than before."
           isEnabled={preferences.subscriptionPriceAlertsEnabled}

@@ -59,6 +59,8 @@ describe("AppSidebar", () => {
       ["Goals", "/goals"],
       ["Learn", "/learn"],
       ["Auto-categorize", "/auto-categorize"],
+      ["Activity", "/activity"],
+      ["Settings", "/profile"],
     ];
     for (const [label, href] of expected) {
       expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);

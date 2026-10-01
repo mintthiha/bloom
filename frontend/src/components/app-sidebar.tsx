@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Receipt,
   RefreshCw,
+  Settings,
   Sparkles,
   Tag,
   Target,
@@ -37,6 +38,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/learn", label: "Learn", icon: BookOpen },
   { href: "/auto-categorize", label: "Auto-categorize", icon: Sparkles },
   { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/profile", label: "Settings", icon: Settings },
 ];
 
 export function AppSidebar() {

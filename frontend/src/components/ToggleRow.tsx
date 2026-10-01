@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * One labelled on/off row in the notification settings card. Fully controlled:
- * the card owns the value so it can save and roll back in one place.
+ * One labelled on/off row for a settings card. Fully controlled: the parent owns the value so it
+ * can save (and roll back on failure) in one place.
  */
-export function NotificationToggleRow({
+export function ToggleRow({
   label,
   description,
   isEnabled,
