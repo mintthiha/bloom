@@ -1,7 +1,7 @@
 /**
  * Derivation helpers for the display currency (CAD/USD/EUR) a user can pick on their profile.
- * This only changes the symbol/locale `formatCurrency` renders amounts with — no conversion is
- * applied, so the underlying numbers are unchanged across currencies.
+ * Every amount is stored in CAD; picking USD or EUR converts amounts for display using a cached
+ * CAD-to-target exchange rate (see `getRateForCurrency` and `exchangeRateService` on the backend).
  */
 
 /** The currencies a user can pick as their display currency. Stored on the profile as `currency`. */
@@ -35,4 +35,22 @@ export function parseCurrency(value: string | null | undefined): Currency | null
 /** Resolves the `Intl.NumberFormat` locale for a currency. */
 export function getCurrencyLocale(currency: Currency): string {
   return CURRENCY_LOCALE[currency];
+}
+
+/** The CAD-to-target rates `getRateForCurrency` picks from; shaped to match `ExchangeRates` from `@/lib/api`. */
+export type CadExchangeRates = {
+  cadToUsd: number;
+  cadToEur: number;
+};
+
+/** Resolves the CAD-to-`currency` conversion multiplier. CAD is always 1 since amounts are stored in CAD. */
+export function getRateForCurrency(currency: Currency, rates: CadExchangeRates): number {
+  switch (currency) {
+    case "CAD":
+      return 1;
+    case "USD":
+      return rates.cadToUsd;
+    case "EUR":
+      return rates.cadToEur;
+  }
 }

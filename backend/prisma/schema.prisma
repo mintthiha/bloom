@@ -90,6 +90,16 @@ model Profile {
   updatedAt               DateTime @updatedAt @db.Timestamptz(3)
 }
 
+/// Single cached row (id is always 1) of CAD-to-display-currency exchange rates, refreshed from
+/// Frankfurter.app when stale. All amounts are stored in CAD; these rates are only used to
+/// convert them for display in the user's chosen currency.
+model ExchangeRate {
+  id        Int      @id
+  cadToUsd  Decimal  @db.Decimal(12, 6)
+  cadToEur  Decimal  @db.Decimal(12, 6)
+  fetchedAt DateTime @db.Timestamptz(3)
+}
+
 model CategoryBudget {
   id              String    @id
   userId          String

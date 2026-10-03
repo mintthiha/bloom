@@ -9,8 +9,8 @@ type CurrencyPickerProps = {
 };
 
 /**
- * Dropdown for the display currency, shown on the profile page. Only changes how amounts are
- * formatted (symbol/locale) — it does not convert any underlying values between currencies.
+ * Dropdown for the display currency, shown on the profile page. Amounts are stored in CAD and
+ * converted to the chosen currency for display only, using a cached daily exchange rate.
  */
 export function CurrencyPicker({ value, onChange }: CurrencyPickerProps) {
   return (

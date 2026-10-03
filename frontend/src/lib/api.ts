@@ -138,6 +138,13 @@ export type Profile = {
   updatedAt: string;
 };
 
+/** Cached CAD-to-USD/EUR rates used to display amounts in a non-CAD currency. */
+export type ExchangeRates = {
+  cadToUsd: number;
+  cadToEur: number;
+  fetchedAt: string;
+};
+
 /** The Profile fields the notification-settings card owns. */
 export type NotificationPreferences = Pick<
   Profile,
@@ -739,6 +746,7 @@ export const api = {
     }),
   resyncPlaidItem: (itemId: string) =>
     request<{ accountsLinked: number }>(`/plaid/sync/${itemId}`, { method: "POST" }),
+  getExchangeRates: () => request<ExchangeRates>("/exchange-rates"),
   getProfile: () => request<Profile | null>("/profile"),
   saveProfile: (input: {
     firstName: string;

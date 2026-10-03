@@ -18,6 +18,7 @@ import credentialsAuthRouter from "./routes/credentialsAuth";
 import activityRouter from "./routes/activity";
 import manualEntriesRouter from "./routes/manualEntries";
 import userDataRouter from "./routes/userData";
+import exchangeRatesRouter from "./routes/exchangeRates";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireInternalSecret } from "./middleware/internalAuth";
 import logger from "./lib/logger";
@@ -63,6 +64,7 @@ app.use("/api/categories", categoriesRouter);
 app.use("/api/activity", activityRouter);
 app.use("/api/manual-entries", manualEntriesRouter);
 app.use("/api/user-data", userDataRouter);
+app.use("/api/exchange-rates", exchangeRatesRouter);
 app.use(
   "/api/auto-categorize",
   rateLimit({

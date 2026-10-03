@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCurrencyLocale, parseCurrency } from "./currency";
+import { getCurrencyLocale, getRateForCurrency, parseCurrency } from "./currency";
 
 describe("parseCurrency", () => {
   it("returns the matching currency for a valid code", () => {
@@ -30,5 +30,21 @@ describe("getCurrencyLocale", () => {
     expect(getCurrencyLocale("CAD")).toBe("en-CA");
     expect(getCurrencyLocale("USD")).toBe("en-US");
     expect(getCurrencyLocale("EUR")).toBe("en-IE");
+  });
+});
+
+describe("getRateForCurrency", () => {
+  const rates = { cadToUsd: 0.73, cadToEur: 0.68 };
+
+  it("returns 1 for CAD regardless of the cached rates", () => {
+    expect(getRateForCurrency("CAD", rates)).toBe(1);
+  });
+
+  it("returns the CAD-to-USD rate for USD", () => {
+    expect(getRateForCurrency("USD", rates)).toBe(0.73);
+  });
+
+  it("returns the CAD-to-EUR rate for EUR", () => {
+    expect(getRateForCurrency("EUR", rates)).toBe(0.68);
   });
 });

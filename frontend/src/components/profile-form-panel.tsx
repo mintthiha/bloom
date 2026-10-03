@@ -328,8 +328,8 @@ export function ProfileFormPanel({
             </label>
             <CurrencyPicker value={currency} onChange={setCurrency} />
             <p style={hintStyle}>
-              Changes the currency symbol shown on amounts across Bloom. Does not convert any
-              balances or transactions.
+              Converts amounts shown across Bloom using a daily exchange rate. Balances and
+              transactions are still stored in CAD.
             </p>
           </div>
 
