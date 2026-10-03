@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Account } from "@/lib/api";
-import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { resolveAccountAppearance } from "@/lib/account-identity";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
 import { useDisplayPreferences } from "@/components/display-preferences-provider";
@@ -123,7 +123,7 @@ export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
       .map((account) => ({
         id: account.id,
         name: accountDisplayName(account),
-        type: account.accountType,
+        appearance: resolveAccountAppearance(account),
         balance: toSignedBalance(account),
       }))
       .sort((first, second) => second.balance - first.balance);
@@ -154,7 +154,7 @@ export function AccountBalancesCard({ accounts, newlyCreatedId }: Props) {
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {rows.map((row) => {
-          const meta = ACCOUNT_TYPE_META[row.type];
+          const meta = row.appearance;
           const isNegative = row.balance < 0;
           const fillWidth = `${(Math.abs(row.balance) / maxMagnitude) * 100}%`;
           return (

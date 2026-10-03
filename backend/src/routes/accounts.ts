@@ -3,6 +3,7 @@ import * as accountService from "../services/accountService";
 import { AccountType, TransactionType } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
 import { parseDateRangeQuery } from "../lib/date-range";
+import { normalizeAccountColor, normalizeAccountIcon } from "../services/accountOptions";
 import {
   optionalString,
   requireObject,
@@ -446,6 +447,25 @@ router.patch("/:id/nickname", async (req: Request, res: Response, next: NextFunc
       extractUserId(req),
       extractParamId(req),
       nickname
+    );
+    res.json(account);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Updates or clears an account's custom colour and/or icon.
+ */
+router.patch("/:id/appearance", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const color = normalizeAccountColor(body.color);
+    const icon = normalizeAccountIcon(body.icon);
+    const account = await accountService.updateAccountAppearance(
+      extractUserId(req),
+      extractParamId(req),
+      { color, icon }
     );
     res.json(account);
   } catch (err) {

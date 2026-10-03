@@ -51,6 +51,8 @@ export type Account = {
   id: string;
   ownerName: string;
   nickname: string | null;
+  color: string | null;
+  icon: string | null;
   accountType: AccountType;
   balance: number;
   frozen: boolean;
@@ -716,6 +718,14 @@ export const api = {
     request<Account>(`/accounts/${id}/nickname`, {
       method: "PATCH",
       body: JSON.stringify({ nickname }),
+    }),
+  updateAccountAppearance: (
+    id: string,
+    appearance: { color: string | null; icon: string | null }
+  ) =>
+    request<Account>(`/accounts/${id}/appearance`, {
+      method: "PATCH",
+      body: JSON.stringify(appearance),
     }),
   deleteAccount: (id: string) => request<void>(`/accounts/${id}`, { method: "DELETE" }),
   restoreAccount: (id: string) => request<Account>(`/accounts/${id}/restore`, { method: "POST" }),

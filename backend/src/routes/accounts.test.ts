@@ -16,6 +16,7 @@ const { serviceMock } = vi.hoisted(() => ({
     deleteAccount: vi.fn(),
     restoreAccount: vi.fn(),
     setTransactionSplits: vi.fn(),
+    updateAccountAppearance: vi.fn(),
   },
 }));
 
@@ -34,6 +35,7 @@ describe("account routes", () => {
     serviceMock.deleteAccount.mockReset();
     serviceMock.restoreAccount.mockReset();
     serviceMock.setTransactionSplits.mockReset();
+    serviceMock.updateAccountAppearance.mockReset();
   });
 
   it("returns 401 for monthly summary when x-user-id is missing", async () => {
@@ -206,6 +208,33 @@ describe("account routes", () => {
       description: "Coffee shop",
       effectiveAt: new Date("2026-04-08T12:00:00.000Z"),
     });
+  });
+
+  it("normalizes and forwards a valid colour/icon to the service", async () => {
+    serviceMock.updateAccountAppearance.mockResolvedValue({ id: "account-1", color: "BLUE" });
+
+    const response = await request(app)
+      .patch("/api/accounts/account-1/appearance")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ color: "blue", icon: "🏦" });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.updateAccountAppearance).toHaveBeenCalledWith("user-1", "account-1", {
+      color: "BLUE",
+      icon: "🏦",
+    });
+  });
+
+  it("rejects an appearance update with an unknown colour", async () => {
+    const response = await request(app)
+      .patch("/api/accounts/account-1/appearance")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ color: "ORANGE" });
+
+    expect(response.status).toBe(400);
+    expect(serviceMock.updateAccountAppearance).not.toHaveBeenCalled();
   });
 
   it("sanitizes merchant input on deposits before calling the service", async () => {

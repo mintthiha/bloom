@@ -44,6 +44,8 @@ model Account {
   userId          String
   ownerName       String
   nickname        String?
+  color           String?
+  icon            String?
   accountType     AccountType @default(CHEQUING)
   balance         Decimal     @default(0) @db.Decimal(19, 4)
   frozen          Boolean     @default(false)

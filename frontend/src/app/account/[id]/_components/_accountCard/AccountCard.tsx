@@ -3,7 +3,7 @@
 import { Account } from "@/lib/api";
 import { DeleteAccount } from "../_accountActions/DeleteAccount";
 import { FreezeButton } from "../_accountActions/FreezeButton";
-import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { resolveAccountAppearance } from "@/lib/account-identity";
 import { formatCurrency } from "@/lib/format";
 import { useDisplayPreferences } from "@/components/display-preferences-provider";
 
@@ -17,7 +17,8 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
   const { hideCents } = useDisplayPreferences();
   if (!account) return null;
 
-  const accentColor = ACCOUNT_TYPE_META[account.accountType].color;
+  const appearance = resolveAccountAppearance(account);
+  const accentColor = appearance.color;
   const displayName = account.nickname ?? account.ownerName;
 
   return (
@@ -66,6 +67,7 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
               flexWrap: "wrap",
             }}
           >
+            {appearance.icon && <span style={{ fontSize: "22px" }}>{appearance.icon}</span>}
             <h1
               style={{
                 fontSize: "22px",
@@ -87,7 +89,7 @@ export function AccountCard({ account, onRefresh }: AccountCardProps) {
                 color: accentColor,
               }}
             >
-              {ACCOUNT_TYPE_META[account.accountType].label}
+              {appearance.label}
             </span>
             {account.frozen && (
               <span

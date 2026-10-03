@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Star, Eye, EyeOff, SlidersHorizontal } from "lucide-react";
 import { Account } from "@/lib/api";
-import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { resolveAccountAppearance } from "@/lib/account-identity";
 import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_GROUPS, sumSignedBalances, accountDisplayName } from "@/lib/account-view";
 import { EmptyState } from "@/components/EmptyState";
@@ -119,7 +119,7 @@ export function AccountsTable({
             </div>
 
             {group.accounts.map((account) => {
-              const meta = ACCOUNT_TYPE_META[account.accountType];
+              const meta = resolveAccountAppearance(account);
               const isDragging = draggingId === account.id;
               const isDragOver = dragOverId === account.id;
               const isPinned = pinnedIds.has(account.id);
@@ -259,7 +259,7 @@ export function AccountsTable({
                           flexShrink: 0,
                         }}
                       >
-                        {accountDisplayName(account)[0].toUpperCase()}
+                        {meta.icon ?? accountDisplayName(account)[0].toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <p

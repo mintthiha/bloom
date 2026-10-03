@@ -5,6 +5,7 @@ import {
   createAccount,
   getAccount,
   updateNickname,
+  updateAccountAppearance,
   getMonthlySummary,
   getCategoryBreakdown,
   getMonthlyTrends,
@@ -58,6 +59,8 @@ type AccountRow = {
   userId: string;
   ownerName: string;
   nickname: string | null;
+  color: string | null;
+  icon: string | null;
   accountType: AccountType;
   balance: string;
   frozen: boolean;
@@ -72,6 +75,8 @@ function makeAccountRow(overrides?: Partial<AccountRow>): AccountRow {
     userId: "u-1",
     ownerName: "Test User",
     nickname: null,
+    color: null,
+    icon: null,
     accountType: AccountType.CHEQUING,
     balance: "100.00",
     frozen: false,
@@ -186,6 +191,33 @@ describe("updateNickname", () => {
       .mockResolvedValueOnce([makeAccountRow({ nickname: "Everyday" })]); // UPDATE RETURNING
     const account = await updateNickname("u-1", "a-1", "Everyday");
     expect(account.nickname).toBe("Everyday");
+  });
+});
+
+describe("updateAccountAppearance", () => {
+  it("propagates the 404 from the ownership check", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(
+      updateAccountAppearance("u-1", "a-1", { color: "BLUE", icon: null })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("updates and returns the account's colour and icon when it exists", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()]) // getAccount
+      .mockResolvedValueOnce([makeAccountRow({ color: "BLUE", icon: "🏦" })]); // UPDATE RETURNING
+    const account = await updateAccountAppearance("u-1", "a-1", { color: "BLUE", icon: "🏦" });
+    expect(account.color).toBe("BLUE");
+    expect(account.icon).toBe("🏦");
+  });
+
+  it("clears the colour and icon when both are null", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow({ color: "BLUE", icon: "🏦" })]) // getAccount
+      .mockResolvedValueOnce([makeAccountRow({ color: null, icon: null })]); // UPDATE RETURNING
+    const account = await updateAccountAppearance("u-1", "a-1", { color: null, icon: null });
+    expect(account.color).toBeNull();
+    expect(account.icon).toBeNull();
   });
 });
 

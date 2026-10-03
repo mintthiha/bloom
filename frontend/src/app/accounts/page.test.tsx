@@ -50,6 +50,8 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     plaidAccountId: null,
     plaidItemId: null,
     institutionName: null,
+    color: null,
+    icon: null,
     createdAt: "2026-04-04T00:00:00.000Z",
     updatedAt: "2026-04-04T00:00:00.000Z",
     ...overrides,

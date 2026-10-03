@@ -19,6 +19,8 @@ function makeAccount(accountType: Account["accountType"], balance: number, id = 
     plaidAccountId: null,
     plaidItemId: null,
     institutionName: null,
+    color: null,
+    icon: null,
     createdAt: "",
     updatedAt: "",
   };

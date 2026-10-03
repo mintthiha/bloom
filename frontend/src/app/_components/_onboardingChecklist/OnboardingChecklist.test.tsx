@@ -28,6 +28,8 @@ const sampleAccount: Account = {
   plaidAccountId: null,
   plaidItemId: null,
   institutionName: null,
+  color: null,
+  icon: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };

@@ -7,6 +7,7 @@ import { BackToAccounts } from "@/components/BackToAccounts";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { AccountCard } from "./_components/_accountCard/AccountCard";
 import { NicknameEditor } from "./_components/_accountActions/NicknameEditor";
+import { AccountAppearanceEditor } from "./_components/_accountActions/AccountAppearanceEditor";
 import { DeleteTransaction } from "./_components/_accountTransactions/DeleteTransaction";
 import { TransactionHistory } from "./_components/_accountTransactions/TransactionHistory";
 import { SplitTransactionDialog } from "./_components/_accountTransactions/SplitTransactionDialog";
@@ -251,12 +252,21 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
       >
         <AccountCard account={account} onRefresh={refresh} />
 
-        <NicknameEditor
-          accountId={id}
-          nickname={account.nickname}
-          onUpdated={setAccount}
-          onError={(msg) => toast.error(msg)}
-        />
+        <div>
+          <NicknameEditor
+            accountId={id}
+            nickname={account.nickname}
+            onUpdated={setAccount}
+            onError={(msg) => toast.error(msg)}
+          />
+          <AccountAppearanceEditor
+            accountId={id}
+            color={account.color}
+            icon={account.icon}
+            onUpdated={setAccount}
+            onError={(msg) => toast.error(msg)}
+          />
+        </div>
       </div>
 
       {REGISTERED_ACCOUNT_TYPES.has(account.accountType) && (

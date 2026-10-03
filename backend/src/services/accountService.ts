@@ -15,6 +15,8 @@ type AccountRecord = {
   userId: string;
   ownerName: string;
   nickname: string | null;
+  color: string | null;
+  icon: string | null;
   accountType: AccountType;
   balance: string;
   frozen: boolean;
@@ -138,7 +140,7 @@ async function selectSplitsByTransactionIds(transactionIds: string[]) {
 
 async function selectAccountByUserId(userId: string, id: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "color", "icon", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "id" = ${id} AND "userId" = ${userId} AND "deletedAt" IS NULL
     LIMIT 1
@@ -606,7 +608,7 @@ export async function getNetWorthHistory(userId: string, months: number = 12) {
  */
 export async function listAccounts(userId: string) {
   const rows = await prisma.$queryRaw<AccountRecord[]>`
-    SELECT "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
+    SELECT "id", "userId", "ownerName", "nickname", "color", "icon", "accountType", "balance", "frozen", "isLinked", "plaidAccountId", "plaidItemId", "institutionName", "createdAt", "updatedAt"
     FROM "Account"
     WHERE "userId" = ${userId} AND "deletedAt" IS NULL
     ORDER BY "createdAt" DESC
@@ -636,7 +638,7 @@ export async function createAccount(
   const rows = await prisma.$queryRaw<AccountRecord[]>`
     INSERT INTO "Account" ("id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt")
     VALUES (${id}, ${userId}, ${ownerName.trim()}, ${nickname?.trim() ? nickname.trim() : null}, ${accountType}::"AccountType", 0, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "ownerName", "nickname", "color", "icon", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
   const account = normalizeAccount(rows[0]);
   logActivity(
@@ -670,13 +672,43 @@ export async function updateNickname(userId: string, id: string, nickname?: stri
     SET "nickname" = ${nickname?.trim() ? nickname.trim() : null},
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "id" = ${id} AND "userId" = ${userId}
-    RETURNING "id", "userId", "ownerName", "nickname", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+    RETURNING "id", "userId", "ownerName", "nickname", "color", "icon", "accountType", "balance", "frozen", "createdAt", "updatedAt"
   `;
   const account = normalizeAccount(rows[0]);
   const description = account.nickname
     ? `Renamed account to "${account.nickname}"`
     : `Cleared nickname on account "${account.ownerName}"`;
   logActivity(userId, "ACCOUNT_RENAMED", description, { accountId: account.id });
+  return account;
+}
+
+/**
+ * Updates an account's custom colour and/or icon, used to tell visually similar accounts
+ * (e.g. several chequing accounts) apart at a glance. Passing null for either field clears
+ * it back to the account type's default appearance.
+ * Throws 404 if the account does not exist.
+ */
+export async function updateAccountAppearance(
+  userId: string,
+  id: string,
+  { color, icon }: { color: string | null; icon: string | null }
+) {
+  await getAccount(userId, id);
+  const rows = await prisma.$queryRaw<AccountRecord[]>`
+    UPDATE "Account"
+    SET "color" = ${color},
+        "icon" = ${icon},
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${id} AND "userId" = ${userId}
+    RETURNING "id", "userId", "ownerName", "nickname", "color", "icon", "accountType", "balance", "frozen", "createdAt", "updatedAt"
+  `;
+  const account = normalizeAccount(rows[0]);
+  logActivity(
+    userId,
+    "ACCOUNT_APPEARANCE_UPDATED",
+    `Updated appearance for account "${accountLabel(account.ownerName, account.nickname)}"`,
+    { accountId: account.id }
+  );
   return account;
 }
 

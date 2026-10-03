@@ -15,6 +15,8 @@ function makeAccount(id = "a-1"): Account {
     plaidAccountId: null,
     plaidItemId: null,
     institutionName: null,
+    color: null,
+    icon: null,
     createdAt: "",
     updatedAt: "",
   };
