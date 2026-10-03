@@ -11,6 +11,8 @@ import { AvatarColorPicker } from "@/components/AvatarColorPicker";
 import { AvatarColor, parseAvatarColor } from "@/lib/initials-avatar";
 import { AppAccentColorPicker } from "@/components/AppAccentColorPicker";
 import { AccentColor, DEFAULT_ACCENT_COLOR, parseAccentColor } from "@/lib/app-accent";
+import { CurrencyPicker } from "@/components/CurrencyPicker";
+import { Currency, DEFAULT_CURRENCY, parseCurrency } from "@/lib/currency";
 import { publishProfileUpdate } from "@/lib/profile-updates";
 
 type ProfileFormPanelProps = {
@@ -71,6 +73,7 @@ export function ProfileFormPanel({
   const [province, setProvince] = useState<ProvinceCode | "">("");
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
   const [accentColor, setAccentColor] = useState<AccentColor>(DEFAULT_ACCENT_COLOR);
+  const [currency, setCurrency] = useState<Currency>(DEFAULT_CURRENCY);
   const [tfsaBirthYear, setTfsaBirthYear] = useState("");
   const [tfsaRoomUsedElsewhere, setTfsaRoomUsedElsewhere] = useState("");
   const [rrspContributionRoom, setRrspContributionRoom] = useState("");
@@ -108,6 +111,7 @@ export function ProfileFormPanel({
         setProvince(profile?.province ?? "");
         setAvatarColor(parseAvatarColor(profile?.avatarColor));
         setAccentColor(parseAccentColor(profile?.accentColor) ?? DEFAULT_ACCENT_COLOR);
+        setCurrency(parseCurrency(profile?.currency) ?? DEFAULT_CURRENCY);
         setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
         setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");
         setRrspContributionRoom(profile?.rrspContributionRoom?.toString() ?? "");
@@ -155,6 +159,7 @@ export function ProfileFormPanel({
         province: province === "" ? null : province,
         avatarColor,
         accentColor,
+        currency,
         tfsaBirthYear: parsedBirthYear,
         tfsaRoomUsedElsewhere: parsedRoomUsedElsewhere,
         rrspContributionRoom: parsedRrspRoom,
@@ -166,6 +171,7 @@ export function ProfileFormPanel({
       setProvince(profile.province ?? "");
       setAvatarColor(parseAvatarColor(profile.avatarColor));
       setAccentColor(parseAccentColor(profile.accentColor) ?? DEFAULT_ACCENT_COLOR);
+      setCurrency(parseCurrency(profile.currency) ?? DEFAULT_CURRENCY);
       setTfsaBirthYear(profile.tfsaBirthYear?.toString() ?? "");
       setTfsaRoomUsedElsewhere(profile.tfsaRoomUsedElsewhere?.toString() ?? "");
       setRrspContributionRoom(profile.rrspContributionRoom?.toString() ?? "");
@@ -313,6 +319,17 @@ export function ProfileFormPanel({
             <p style={hintStyle}>
               Colours buttons, links, and highlights across Bloom. Separate from your avatar colour
               above.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="profile-currency" style={sectionLabelStyle}>
+              Display Currency
+            </label>
+            <CurrencyPicker value={currency} onChange={setCurrency} />
+            <p style={hintStyle}>
+              Changes the currency symbol shown on amounts across Bloom. Does not convert any
+              balances or transactions.
             </p>
           </div>
 

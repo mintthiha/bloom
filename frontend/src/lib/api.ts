@@ -1,5 +1,6 @@
 import type { AvatarColor } from "./initials-avatar";
 import type { AccentColor } from "./app-accent";
+import type { Currency } from "./currency";
 
 const BASE = "/api/bloom";
 
@@ -124,6 +125,7 @@ export type Profile = {
   primaryFinancialGoal: PrimaryFinancialGoal | null;
   avatarColor: AvatarColor | null;
   accentColor: AccentColor | null;
+  currency: Currency | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   budgetOverspendAlertsEnabled: boolean;
@@ -749,6 +751,7 @@ export const api = {
     rrspContributionRoom?: number | null;
     avatarColor?: AvatarColor | null;
     accentColor?: AccentColor | null;
+    currency?: Currency | null;
   }) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(input) }),
   updateFinancialProfile: (input: {
     monthlyTakeHomeIncome: number | null;

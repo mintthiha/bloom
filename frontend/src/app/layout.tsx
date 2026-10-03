@@ -11,6 +11,7 @@ import { DashboardVisibilityProvider } from "@/components/dashboard-visibility-p
 import { ThemeProvider } from "@/components/theme-provider";
 import { DisplayPreferencesProvider } from "@/components/display-preferences-provider";
 import { AccentProvider } from "@/components/accent-provider";
+import { CurrencyProvider } from "@/components/currency-provider";
 import { AppShell } from "@/components/app-shell";
 import { ACTIVE_USER_STORAGE_KEY, PER_USER_STORAGE_KEYS } from "@/lib/per-user-storage";
 
@@ -66,13 +67,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <DisplayPreferencesProvider>
             <SessionProvider>
               <AccentProvider>
-                <TooltipProvider>
-                  <DashboardViewProvider>
-                    <DashboardVisibilityProvider>
-                      <AppShell>{children}</AppShell>
-                    </DashboardVisibilityProvider>
-                  </DashboardViewProvider>
-                </TooltipProvider>
+                <CurrencyProvider>
+                  <TooltipProvider>
+                    <DashboardViewProvider>
+                      <DashboardVisibilityProvider>
+                        <AppShell>{children}</AppShell>
+                      </DashboardVisibilityProvider>
+                    </DashboardViewProvider>
+                  </TooltipProvider>
+                </CurrencyProvider>
               </AccentProvider>
             </SessionProvider>
           </DisplayPreferencesProvider>

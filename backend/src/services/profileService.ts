@@ -3,6 +3,7 @@ import prisma from "../lib/prisma";
 import type {
   AccentColor,
   AvatarColor,
+  CurrencyCode,
   PayFrequency,
   PrimaryFinancialGoal,
   ProvinceCode,
@@ -31,6 +32,7 @@ type ProfileInput = {
   rrspContributionRoom?: number | null;
   avatarColor?: AvatarColor | null;
   accentColor?: AccentColor | null;
+  currency?: CurrencyCode | null;
 };
 
 type ReminderPreferenceInput = {
@@ -67,6 +69,7 @@ type ProfileRecord = {
   primaryFinancialGoal: string | null;
   avatarColor: string | null;
   accentColor: string | null;
+  currency: string | null;
   billRemindersEnabled: boolean;
   billReminderLeadDays: number;
   budgetOverspendAlertsEnabled: boolean;
@@ -114,6 +117,7 @@ export async function getProfile(userId: string) {
            "primaryFinancialGoal",
            "avatarColor",
            "accentColor",
+           "currency",
            "billRemindersEnabled",
            "billReminderLeadDays",
            "budgetOverspendAlertsEnabled",
@@ -217,15 +221,16 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
   const rrspContributionRoom = input.rrspContributionRoom ?? null;
   const avatarColor = input.avatarColor ?? null;
   const accentColor = input.accentColor ?? null;
+  const currency = input.currency ?? null;
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     INSERT INTO "Profile" ("userId", "firstName", "lastName", "username", "email",
                            "province", "tfsaBirthYear", "tfsaRoomUsedElsewhere",
-                           "rrspContributionRoom", "avatarColor", "accentColor",
+                           "rrspContributionRoom", "avatarColor", "accentColor", "currency",
                            "createdAt", "updatedAt")
     VALUES (${userId}, ${firstName}, ${lastName}, ${username}, ${email},
             ${province}, ${tfsaBirthYear}, ${tfsaRoomUsedElsewhere}, ${rrspContributionRoom},
-            ${avatarColor}, ${accentColor},
+            ${avatarColor}, ${accentColor}, ${currency},
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT ("userId")
     DO UPDATE SET
@@ -239,6 +244,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
       "rrspContributionRoom" = EXCLUDED."rrspContributionRoom",
       "avatarColor" = EXCLUDED."avatarColor",
       "accentColor" = EXCLUDED."accentColor",
+      "currency" = EXCLUDED."currency",
       "updatedAt" = CURRENT_TIMESTAMP
     RETURNING "userId", "firstName", "lastName", "username", "email",
               "province",
@@ -251,6 +257,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "primaryFinancialGoal",
               "avatarColor",
               "accentColor",
+              "currency",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "budgetOverspendAlertsEnabled",
@@ -344,6 +351,14 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
     "text",
     existingProfile?.accentColor ?? null,
     updatedProfile.accentColor
+  );
+  pushActivityFieldChange(
+    changes,
+    "currency",
+    "Display currency",
+    "text",
+    existingProfile?.currency ?? null,
+    updatedProfile.currency
   );
 
   if (changes.length > 0) {
@@ -456,6 +471,7 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
               "primaryFinancialGoal",
               "avatarColor",
               "accentColor",
+              "currency",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "budgetOverspendAlertsEnabled",
@@ -600,6 +616,7 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
               "primaryFinancialGoal",
               "avatarColor",
               "accentColor",
+              "currency",
               "billRemindersEnabled",
               "billReminderLeadDays",
               "budgetOverspendAlertsEnabled",

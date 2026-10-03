@@ -32,6 +32,7 @@ const savedProfile = {
   primaryFinancialGoal: null,
   avatarColor: null,
   accentColor: null,
+  currency: null,
   billRemindersEnabled: true,
   billReminderLeadDays: 3,
   budgetOverspendAlertsEnabled: true,

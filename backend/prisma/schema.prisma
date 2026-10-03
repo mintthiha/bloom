@@ -77,6 +77,7 @@ model Profile {
   primaryFinancialGoal    String?
   avatarColor             String?
   accentColor             String?
+  currency                String?
   billRemindersEnabled    Boolean  @default(true)
   billReminderLeadDays    Int      @default(3)
   budgetOverspendAlertsEnabled   Boolean  @default(true)

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { formatCurrency } from "./format";
+import { afterEach, describe, expect, it } from "vitest";
+import { formatCurrency, setActiveCurrency } from "./format";
 
 describe("formatCurrency", () => {
   it("formats a positive amount as CAD with cents by default", () => {
@@ -24,5 +24,29 @@ describe("formatCurrency", () => {
 
   it("keeps cents when hideCents is explicitly false", () => {
     expect(formatCurrency(1234.56, { hideCents: false })).toBe("$1,234.56");
+  });
+
+  it("formats in USD when currency is passed explicitly", () => {
+    expect(formatCurrency(1234.56, { currency: "USD" })).toBe("$1,234.56");
+  });
+
+  it("formats in EUR when currency is passed explicitly", () => {
+    expect(formatCurrency(1234.56, { currency: "EUR" })).toBe("€1,234.56");
+  });
+
+  describe("with an active currency set", () => {
+    afterEach(() => {
+      setActiveCurrency("CAD");
+    });
+
+    it("uses the active currency set by setActiveCurrency when no currency is passed", () => {
+      setActiveCurrency("EUR");
+      expect(formatCurrency(1234.56)).toBe("€1,234.56");
+    });
+
+    it("lets an explicit currency override the active currency", () => {
+      setActiveCurrency("EUR");
+      expect(formatCurrency(1234.56, { currency: "USD" })).toBe("$1,234.56");
+    });
   });
 });

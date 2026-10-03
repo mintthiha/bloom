@@ -5,6 +5,7 @@ import { requireObject, requireString } from "../lib/validation";
 import {
   ACCENT_COLORS,
   AVATAR_COLORS,
+  CURRENCY_CODES,
   PAY_FREQUENCIES,
   PRIMARY_FINANCIAL_GOALS,
   PROVINCE_CODES,
@@ -134,6 +135,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
     );
     const avatarColor = normalizeEnumValue(body.avatarColor, "avatarColor", AVATAR_COLORS);
     const accentColor = normalizeEnumValue(body.accentColor, "accentColor", ACCENT_COLORS);
+    const currency = normalizeEnumValue(body.currency, "currency", CURRENCY_CODES);
     res.json(
       await profileService.upsertProfile(uid(req), {
         firstName,
@@ -146,6 +148,7 @@ router.put("/", async (req: Request, res: Response, next: NextFunction) => {
         rrspContributionRoom,
         avatarColor,
         accentColor,
+        currency,
       })
     );
   } catch (err) {
