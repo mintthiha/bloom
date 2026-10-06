@@ -22,6 +22,13 @@ export default defineConfig({
     baseURL: "http://localhost:3100",
     storageState: "./e2e/.auth/state.json",
     trace: "on-first-retry",
+    // The app's `fade-up` entrance animation (globals.css) fades elements in from opacity 0;
+    // without this, axe can scan mid-fade and flag a false-positive color-contrast violation
+    // from the interpolated near-transparent foreground. The app already disables this animation
+    // under reduced motion, so emulating it here matches real accessible behavior.
+    contextOptions: {
+      reducedMotion: "reduce",
+    },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
