@@ -49,6 +49,7 @@ import { DraggableCardGrid, DashboardCard } from "./_components/_dashboardCards/
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 import { OnboardingChecklist } from "./_components/_onboardingChecklist/OnboardingChecklist";
 import { LinkBankAccountCard } from "./_components/_linkAccount/LinkBankAccountCard";
+import { GreetingHighlight } from "./_components/_greetingHighlight/GreetingHighlight";
 
 function Home() {
   const { effectiveView } = useDashboardView();
@@ -586,9 +587,15 @@ function Home() {
             >
               {cachedFirstName ? `${getGreeting()}, ${cachedFirstName}.` : `${getGreeting()}.`}
             </h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: "15px" }}>
-              Here&apos;s your financial overview.
-            </p>
+            <GreetingHighlight
+              accounts={accounts}
+              budgets={budgets}
+              goals={goals}
+              monthlySummary={loading ? null : monthlySummary}
+              previousMonthlySummary={previousMonthlySummary}
+              recurringRules={recurringRules}
+              primaryFinancialGoal={profile?.primaryFinancialGoal ?? null}
+            />
             <p
               style={{
                 color: "var(--text-muted)",
