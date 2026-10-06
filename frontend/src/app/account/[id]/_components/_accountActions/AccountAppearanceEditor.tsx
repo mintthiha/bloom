@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Ban } from "lucide-react";
 import { api, Account } from "@/lib/api";
 import { ACCOUNT_COLOR_PALETTES, ACCOUNT_ICONS, AccountColor } from "@/lib/constants/account";
 import { parseAccountColor } from "@/lib/account-identity";
@@ -74,6 +74,12 @@ export function AccountAppearanceEditor({
     handleSave(selectedColor, next);
   }
 
+  /** Clears the icon back to no icon (the account's initial letter is shown instead) and saves immediately. */
+  function handleIconClear() {
+    setSelectedIcon(null);
+    handleSave(selectedColor, null);
+  }
+
   return (
     <div
       className="fade-up fade-up-2"
@@ -141,6 +147,19 @@ export function AccountAppearanceEditor({
           aria-label="Account icon"
           style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
         >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={selectedIcon === null}
+            aria-label="No icon"
+            title="No icon — show the initial letter instead"
+            disabled={saving}
+            className="avatar-swatch"
+            onClick={handleIconClear}
+            style={swatchButtonStyle(selectedIcon === null)}
+          >
+            <Ban size={15} color="var(--text-muted)" />
+          </button>
           {ACCOUNT_ICONS.map((option) => {
             const isSelected = selectedIcon === option;
             return (

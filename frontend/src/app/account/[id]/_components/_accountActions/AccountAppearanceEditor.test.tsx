@@ -122,6 +122,41 @@ describe("AccountAppearanceEditor", () => {
     );
   });
 
+  it("marks the explicit 'No icon' option as selected when no icon is saved", () => {
+    render(
+      <AccountAppearanceEditor
+        accountId="a-1"
+        color={null}
+        icon={null}
+        onUpdated={vi.fn()}
+        onError={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("radio", { name: "No icon" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("clears a saved icon via the explicit 'No icon' option", async () => {
+    apiMock.updateAccountAppearance.mockResolvedValue(makeAccount({ icon: null }));
+    render(
+      <AccountAppearanceEditor
+        accountId="a-1"
+        color="GREEN"
+        icon="🏦"
+        onUpdated={vi.fn()}
+        onError={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "No icon" }));
+
+    await waitFor(() =>
+      expect(apiMock.updateAccountAppearance).toHaveBeenCalledWith("a-1", {
+        color: "GREEN",
+        icon: null,
+      })
+    );
+  });
+
   it("reports the error message when saving fails", async () => {
     apiMock.updateAccountAppearance.mockRejectedValue(new Error("Server exploded"));
     const onError = vi.fn();
