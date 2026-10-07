@@ -1,4 +1,4 @@
-import type { PayFrequency, PrimaryFinancialGoal } from "@/lib/api";
+import type { BudgetHighlightRanking, PayFrequency, PrimaryFinancialGoal } from "@/lib/api";
 
 export const PAY_FREQUENCY_OPTIONS: { value: PayFrequency; label: string }[] = [
   { value: "WEEKLY", label: "Every week" },
@@ -33,6 +33,57 @@ export const PRIMARY_FINANCIAL_GOAL_OPTIONS: {
     hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
   },
 ];
+
+/** The ranking used when the profile has not set one, matching the behaviour before the setting existed. */
+export const DEFAULT_BUDGET_HIGHLIGHT_RANKING: BudgetHighlightRanking = "LARGEST_AMOUNT";
+
+export const BUDGET_HIGHLIGHT_RANKING_OPTIONS: {
+  value: BudgetHighlightRanking;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "LARGEST_AMOUNT",
+    label: "Biggest dollar cushion",
+    hint: "Names the category with the most money left, in dollars. Your largest budgets tend to win.",
+  },
+  {
+    value: "LARGEST_PERCENTAGE",
+    label: "Best-managed category",
+    hint: "Names the category with the largest share of its limit unspent, so small budgets can win too.",
+  },
+  {
+    value: "CLOSEST_TO_LIMIT",
+    label: "Closest to its limit",
+    hint: "Names the category you have the least room left in — the most actionable warning before you go over.",
+  },
+];
+
+/**
+ * What the dashboard greeting leads with ahead of the budget line, per primary goal. Used to
+ * explain, on the profile form, that the budget-highlight ranking is a tie-breaker for a line the
+ * user's goal may outrank — rather than letting the setting imply it always decides the greeting.
+ */
+const GREETING_LEAD_BY_GOAL: Record<PrimaryFinancialGoal, string | null> = {
+  EMERGENCY_FUND: "your emergency fund",
+  PAY_OFF_DEBT: "your credit payoff",
+  BIG_PURCHASE: "your savings goals",
+  // Track-spending users lead with the budget line itself, so there is nothing to warn about.
+  TRACK_SPENDING: null,
+};
+
+/**
+ * Explains when the budget-highlight ranking actually changes the greeting, given the primary
+ * goal. Returns null when the budget line already leads, so the form shows no caveat.
+ */
+export function describeBudgetHighlightApplicability(
+  primaryFinancialGoal: PrimaryFinancialGoal | null
+): string | null {
+  if (!primaryFinancialGoal) return null;
+  const lead = GREETING_LEAD_BY_GOAL[primaryFinancialGoal];
+  if (!lead) return null;
+  return `Your greeting leads with ${lead}, so this only applies once there's no update to show there. An over-budget category always wins.`;
+}
 
 /** Average number of paycheques per month for each cadence, used to split monthly income. */
 const PAYCHEQUES_PER_MONTH: Record<PayFrequency, number> = {

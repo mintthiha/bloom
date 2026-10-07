@@ -3,6 +3,7 @@ import prisma from "../lib/prisma";
 import type {
   AccentColor,
   AvatarColor,
+  BudgetHighlightRanking,
   CurrencyCode,
   PayFrequency,
   PrimaryFinancialGoal,
@@ -51,6 +52,7 @@ type FinancialProfileInput = {
   payFrequency?: PayFrequency | null;
   nextPayday?: Date | null;
   primaryFinancialGoal?: PrimaryFinancialGoal | null;
+  budgetHighlightRanking?: BudgetHighlightRanking | null;
 };
 
 type ProfileRecord = {
@@ -67,6 +69,7 @@ type ProfileRecord = {
   payFrequency: string | null;
   nextPayday: Date | null;
   primaryFinancialGoal: string | null;
+  budgetHighlightRanking: string | null;
   avatarColor: string | null;
   accentColor: string | null;
   currency: string | null;
@@ -115,6 +118,7 @@ export async function getProfile(userId: string) {
            "payFrequency",
            "nextPayday",
            "primaryFinancialGoal",
+           "budgetHighlightRanking",
            "avatarColor",
            "accentColor",
            "currency",
@@ -255,6 +259,7 @@ export async function upsertProfile(userId: string, input: ProfileInput) {
               "payFrequency",
               "nextPayday",
               "primaryFinancialGoal",
+              "budgetHighlightRanking",
               "avatarColor",
               "accentColor",
               "currency",
@@ -469,6 +474,7 @@ export async function updateReminderPreferences(userId: string, input: ReminderP
               "payFrequency",
               "nextPayday",
               "primaryFinancialGoal",
+              "budgetHighlightRanking",
               "avatarColor",
               "accentColor",
               "currency",
@@ -596,6 +602,7 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
   const payFrequency = input.payFrequency ?? null;
   const nextPayday = input.nextPayday ?? null;
   const primaryFinancialGoal = input.primaryFinancialGoal ?? null;
+  const budgetHighlightRanking = input.budgetHighlightRanking ?? null;
 
   const rows = await prisma.$queryRaw<ProfileRecord[]>`
     UPDATE "Profile"
@@ -603,6 +610,7 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
         "payFrequency" = ${payFrequency},
         "nextPayday" = ${nextPayday}::date,
         "primaryFinancialGoal" = ${primaryFinancialGoal},
+        "budgetHighlightRanking" = ${budgetHighlightRanking},
         "updatedAt" = CURRENT_TIMESTAMP
     WHERE "userId" = ${userId}
     RETURNING "userId", "firstName", "lastName", "username", "email",
@@ -614,6 +622,7 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
               "payFrequency",
               "nextPayday",
               "primaryFinancialGoal",
+              "budgetHighlightRanking",
               "avatarColor",
               "accentColor",
               "currency",
@@ -666,6 +675,14 @@ export async function updateFinancialProfile(userId: string, input: FinancialPro
     "text",
     existingProfile.primaryFinancialGoal,
     updatedProfile.primaryFinancialGoal
+  );
+  pushActivityFieldChange(
+    changes,
+    "budgetHighlightRanking",
+    "Budget highlight ranking",
+    "text",
+    existingProfile.budgetHighlightRanking,
+    updatedProfile.budgetHighlightRanking
   );
 
   if (changes.length > 0) {

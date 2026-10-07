@@ -1,11 +1,13 @@
 import {
   Account,
   Budget,
+  BudgetHighlightRanking,
   MonthlySummary,
   PrimaryFinancialGoal,
   RecurringTransaction,
   SavingsGoal,
 } from "@/lib/api";
+import { DEFAULT_BUDGET_HIGHLIGHT_RANKING } from "@/lib/financial-profile";
 import { formatCurrency } from "@/lib/format";
 import { generateInsights, InsightSeverity } from "../_insights/insights";
 
@@ -25,6 +27,8 @@ export type GreetingHighlightInput = {
   previousMonthlySummary: MonthlySummary | null;
   recurringRules: RecurringTransaction[];
   primaryFinancialGoal: PrimaryFinancialGoal | null;
+  /** Which under-budget category to name when several qualify; null falls back to the default. */
+  budgetHighlightRanking: BudgetHighlightRanking | null;
   /** Injectable clock so the "days left this month" wording is testable. */
   now?: Date;
 };
@@ -138,12 +142,31 @@ function buildOverBudgetHighlight(
 }
 
 /**
- * The category with the most room left, as encouragement. Requires some spending in it so a
- * brand-new, untouched budget is not celebrated as progress.
+ * Scores an under-budget category so the highest score wins. `CLOSEST_TO_LIMIT` negates the
+ * unspent share, which turns "largest remaining" into "smallest remaining" without a second
+ * comparison path.
+ */
+function scoreUnderBudgetCategory(budget: Budget, ranking: BudgetHighlightRanking): number {
+  const remaining = budget.monthlyLimit - budget.currentSpending;
+  switch (ranking) {
+    case "LARGEST_AMOUNT":
+      return remaining;
+    case "LARGEST_PERCENTAGE":
+      return remaining / budget.monthlyLimit;
+    case "CLOSEST_TO_LIMIT":
+      return -(remaining / budget.monthlyLimit);
+  }
+}
+
+/**
+ * The category the user's chosen ranking considers most worth naming — the biggest cushion, the
+ * best-managed proportionally, or the one closest to going over. Requires some spending in it so a
+ * brand-new, untouched budget is neither celebrated as progress nor flagged as nearly spent.
  */
 function buildUnderBudgetHighlight(
   budgets: Budget[],
-  daysLeftInMonth: number
+  daysLeftInMonth: number,
+  ranking: BudgetHighlightRanking
 ): GreetingHighlight | null {
   const activeUnderBudget = budgets.filter(
     (budget) => !budget.isOverBudget && budget.currentSpending > 0 && budget.monthlyLimit > 0
@@ -151,14 +174,15 @@ function buildUnderBudgetHighlight(
   if (activeUnderBudget.length === 0) return null;
 
   const best = activeUnderBudget.reduce((a, b) =>
-    a.monthlyLimit - a.currentSpending > b.monthlyLimit - b.currentSpending ? a : b
+    scoreUnderBudgetCategory(a, ranking) >= scoreUnderBudgetCategory(b, ranking) ? a : b
   );
   const remaining = best.monthlyLimit - best.currentSpending;
   if (remaining <= 0) return null;
 
   return {
     id: "under-budget",
-    tone: "positive",
+    // "Closest to its limit" is framed as a heads-up, so it does not get the celebratory green dot.
+    tone: ranking === "CLOSEST_TO_LIMIT" ? "neutral" : "positive",
     text: `You're ${formatWholeAmount(remaining)} under on ${best.category} this month, with ${formatDaysLeftPhrase(daysLeftInMonth)}.`,
   };
 }
@@ -352,7 +376,13 @@ export function selectGreetingHighlight(input: GreetingHighlightInput): Greeting
   }
 
   register(buildOverBudgetHighlight(budgets, daysLeftInMonth));
-  register(buildUnderBudgetHighlight(budgets, daysLeftInMonth));
+  register(
+    buildUnderBudgetHighlight(
+      budgets,
+      daysLeftInMonth,
+      input.budgetHighlightRanking ?? DEFAULT_BUDGET_HIGHLIGHT_RANKING
+    )
+  );
   register(buildEmergencyFundHighlight(accounts, monthlySummary, previousMonthlySummary));
   register(buildSavingsGoalHighlight(goals, monthlySummary));
   register(buildCreditPayoffHighlight(accounts, monthlySummary));

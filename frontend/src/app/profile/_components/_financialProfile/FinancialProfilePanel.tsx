@@ -3,12 +3,14 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api, PayFrequency, PrimaryFinancialGoal } from "@/lib/api";
+import { api, BudgetHighlightRanking, PayFrequency, PrimaryFinancialGoal } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
 import {
+  BUDGET_HIGHLIGHT_RANKING_OPTIONS,
   PAY_FREQUENCY_OPTIONS,
   PRIMARY_FINANCIAL_GOAL_OPTIONS,
+  describeBudgetHighlightApplicability,
   describePayCycle,
 } from "@/lib/financial-profile";
 
@@ -21,6 +23,9 @@ export function FinancialProfilePanel() {
   const [payFrequency, setPayFrequency] = useState<PayFrequency | "">("");
   const [nextPayday, setNextPayday] = useState("");
   const [primaryFinancialGoal, setPrimaryFinancialGoal] = useState<PrimaryFinancialGoal | "">("");
+  const [budgetHighlightRanking, setBudgetHighlightRanking] = useState<BudgetHighlightRanking | "">(
+    ""
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -35,6 +40,7 @@ export function FinancialProfilePanel() {
           setPayFrequency(profile.payFrequency ?? "");
           setNextPayday(profile.nextPayday ?? "");
           setPrimaryFinancialGoal(profile.primaryFinancialGoal ?? "");
+          setBudgetHighlightRanking(profile.budgetHighlightRanking ?? "");
         }
       } catch {
         // Leaves the form empty when the profile can't be loaded.
@@ -61,11 +67,13 @@ export function FinancialProfilePanel() {
         payFrequency: payFrequency === "" ? null : payFrequency,
         nextPayday: nextPayday.trim() ? nextPayday.trim() : null,
         primaryFinancialGoal: primaryFinancialGoal === "" ? null : primaryFinancialGoal,
+        budgetHighlightRanking: budgetHighlightRanking === "" ? null : budgetHighlightRanking,
       });
       setMonthlyTakeHomeIncome(profile.monthlyTakeHomeIncome?.toString() ?? "");
       setPayFrequency(profile.payFrequency ?? "");
       setNextPayday(profile.nextPayday ?? "");
       setPrimaryFinancialGoal(profile.primaryFinancialGoal ?? "");
+      setBudgetHighlightRanking(profile.budgetHighlightRanking ?? "");
       toast.success("Financial profile saved");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't save financial profile");
@@ -94,6 +102,13 @@ export function FinancialProfilePanel() {
 
   const selectedGoal = PRIMARY_FINANCIAL_GOAL_OPTIONS.find(
     (option) => option.value === primaryFinancialGoal
+  );
+  const selectedBudgetHighlightRanking = BUDGET_HIGHLIGHT_RANKING_OPTIONS.find(
+    (option) => option.value === budgetHighlightRanking
+  );
+  // Reads the live form value, not the saved one, so the caveat updates as the goal is changed.
+  const budgetHighlightApplicability = describeBudgetHighlightApplicability(
+    primaryFinancialGoal === "" ? null : primaryFinancialGoal
   );
   const payCycleSummary = describePayCycle(
     monthlyTakeHomeIncome.trim() ? parseFloat(monthlyTakeHomeIncome.trim()) : null,
@@ -193,6 +208,35 @@ export function FinancialProfilePanel() {
               ))}
             </select>
             {selectedGoal && <p style={hintStyle}>{selectedGoal.hint}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="financial-budget-highlight-ranking" style={sectionLabelStyle}>
+              Dashboard Budget Highlight
+            </label>
+            <select
+              id="financial-budget-highlight-ranking"
+              value={budgetHighlightRanking}
+              onChange={(e) =>
+                setBudgetHighlightRanking(e.target.value as BudgetHighlightRanking | "")
+              }
+              style={{ ...inputStyle, cursor: "pointer", appearance: "none" }}
+            >
+              <option value="">Biggest dollar cushion (default)</option>
+              {BUDGET_HIGHLIGHT_RANKING_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p style={hintStyle}>
+              {selectedBudgetHighlightRanking
+                ? selectedBudgetHighlightRanking.hint
+                : "When several budgets are under their limit, this decides which one your dashboard greeting names."}
+            </p>
+            {budgetHighlightApplicability && (
+              <p style={hintStyle}>{budgetHighlightApplicability}</p>
+            )}
           </div>
 
           {payCycleSummary && (

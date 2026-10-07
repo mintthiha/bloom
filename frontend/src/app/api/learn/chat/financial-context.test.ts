@@ -95,6 +95,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     payFrequency: null,
     nextPayday: null,
     primaryFinancialGoal: null,
+    budgetHighlightRanking: null,
     avatarColor: null,
     accentColor: null,
     currency: null,

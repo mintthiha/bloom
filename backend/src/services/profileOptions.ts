@@ -28,6 +28,17 @@ export const PRIMARY_FINANCIAL_GOALS = [
   "TRACK_SPENDING",
 ] as const;
 
+/**
+ * How the dashboard greeting picks which under-budget category to name when several qualify:
+ * the largest dollar cushion, the largest share of the limit still unspent, or the category
+ * closest to its limit without crossing it.
+ */
+export const BUDGET_HIGHLIGHT_RANKINGS = [
+  "LARGEST_AMOUNT",
+  "LARGEST_PERCENTAGE",
+  "CLOSEST_TO_LIMIT",
+] as const;
+
 /** Accent colours a user can pick for their initials avatar. */
 export const AVATAR_COLORS = ["AMBER", "BLUE", "GREEN", "VIOLET", "PINK", "CYAN"] as const;
 
@@ -40,6 +51,7 @@ export const CURRENCY_CODES = ["CAD", "USD", "EUR"] as const;
 export type ProvinceCode = (typeof PROVINCE_CODES)[number];
 export type PayFrequency = (typeof PAY_FREQUENCIES)[number];
 export type PrimaryFinancialGoal = (typeof PRIMARY_FINANCIAL_GOALS)[number];
+export type BudgetHighlightRanking = (typeof BUDGET_HIGHLIGHT_RANKINGS)[number];
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
 export type AccentColor = (typeof ACCENT_COLORS)[number];
 export type CurrencyCode = (typeof CURRENCY_CODES)[number];

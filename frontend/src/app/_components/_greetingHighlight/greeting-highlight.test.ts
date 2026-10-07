@@ -103,6 +103,7 @@ function makeInput(overrides: Partial<GreetingHighlightInput> = {}): GreetingHig
     previousMonthlySummary: null,
     recurringRules: [] as RecurringTransaction[],
     primaryFinancialGoal: null,
+    budgetHighlightRanking: null,
     ...overrides,
   };
 }
@@ -179,6 +180,73 @@ describe("selectGreetingHighlight", () => {
     expect(highlight?.id).toBe("under-budget");
     expect(highlight?.tone).toBe("positive");
     expect(highlight?.text).toBe("You're $120 under on Groceries this month, with 16 days to go.");
+  });
+
+  describe("under-budget ranking preference", () => {
+    // Rent has the most dollars left, Dining the largest share of its limit, and Groceries the
+    // smallest — so each ranking picks a different category from the same three budgets.
+    const budgets = [
+      makeBudget("Rent", 2000, 600, "b-1"),
+      makeBudget("Groceries", 400, 280, "b-2"),
+      makeBudget("Dining", 200, 20, "b-3"),
+    ];
+
+    it("names the biggest dollar cushion for LARGEST_AMOUNT", () => {
+      const highlight = selectGreetingHighlight(
+        makeInput({ budgets, budgetHighlightRanking: "LARGEST_AMOUNT" })
+      );
+
+      expect(highlight?.tone).toBe("positive");
+      expect(highlight?.text).toBe("You're $1,400 under on Rent this month, with 16 days to go.");
+    });
+
+    it("names the largest unspent share for LARGEST_PERCENTAGE", () => {
+      const highlight = selectGreetingHighlight(
+        makeInput({ budgets, budgetHighlightRanking: "LARGEST_PERCENTAGE" })
+      );
+
+      expect(highlight?.tone).toBe("positive");
+      expect(highlight?.text).toBe("You're $180 under on Dining this month, with 16 days to go.");
+    });
+
+    it("names the category with the least room left for CLOSEST_TO_LIMIT", () => {
+      const highlight = selectGreetingHighlight(
+        makeInput({ budgets, budgetHighlightRanking: "CLOSEST_TO_LIMIT" })
+      );
+
+      expect(highlight?.text).toBe(
+        "You're $120 under on Groceries this month, with 16 days to go."
+      );
+    });
+
+    it("drops the celebratory tone for CLOSEST_TO_LIMIT, since it reads as a heads-up", () => {
+      expect(
+        selectGreetingHighlight(makeInput({ budgets, budgetHighlightRanking: "CLOSEST_TO_LIMIT" }))
+          ?.tone
+      ).toBe("neutral");
+    });
+
+    it("falls back to the biggest dollar cushion when no ranking is saved", () => {
+      const withoutPreference = selectGreetingHighlight(
+        makeInput({ budgets, budgetHighlightRanking: null })
+      );
+      const withDefault = selectGreetingHighlight(
+        makeInput({ budgets, budgetHighlightRanking: "LARGEST_AMOUNT" })
+      );
+
+      expect(withoutPreference).toEqual(withDefault);
+    });
+
+    it("still leads with an over-budget category whatever the ranking", () => {
+      const highlight = selectGreetingHighlight(
+        makeInput({
+          budgets: [...budgets, makeBudget("Transport", 100, 140, "b-4")],
+          budgetHighlightRanking: "CLOSEST_TO_LIMIT",
+        })
+      );
+
+      expect(highlight?.id).toBe("over-budget");
+    });
   });
 
   it("ignores an untouched budget so a fresh limit is not reported as progress", () => {

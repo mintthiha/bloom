@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   advancePaydayToUpcoming,
+  describeBudgetHighlightApplicability,
   describePayCycle,
   estimateIncomePerPaycheque,
   getDaysUntil,
@@ -148,5 +149,27 @@ describe("describePayCycle", () => {
 
   it("returns null when there is no pay frequency", () => {
     expect(describePayCycle(3750, null, "2026-09-20", new Date(2026, 8, 15))).toBeNull();
+  });
+});
+
+describe("describeBudgetHighlightApplicability", () => {
+  it("stays silent for a track-spending user, whose greeting leads with the budget line", () => {
+    expect(describeBudgetHighlightApplicability("TRACK_SPENDING")).toBeNull();
+  });
+
+  it("stays silent when no primary goal is set", () => {
+    expect(describeBudgetHighlightApplicability(null)).toBeNull();
+  });
+
+  it("names what outranks the budget line for each other goal", () => {
+    expect(describeBudgetHighlightApplicability("EMERGENCY_FUND")).toContain("your emergency fund");
+    expect(describeBudgetHighlightApplicability("PAY_OFF_DEBT")).toContain("your credit payoff");
+    expect(describeBudgetHighlightApplicability("BIG_PURCHASE")).toContain("your savings goals");
+  });
+
+  it("warns that an over-budget category still wins", () => {
+    expect(describeBudgetHighlightApplicability("EMERGENCY_FUND")).toContain(
+      "An over-budget category always wins."
+    );
   });
 });

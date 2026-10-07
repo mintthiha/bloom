@@ -641,6 +641,7 @@ describe("updateFinancialProfile", () => {
       payFrequency: null,
       nextPayday: null,
       primaryFinancialGoal: null,
+      budgetHighlightRanking: null,
       billRemindersEnabled: true,
       billReminderLeadDays: 3,
       budgetOverspendAlertsEnabled: true,
@@ -706,6 +707,25 @@ describe("updateFinancialProfile", () => {
       "user-1",
       "PROFILE_FINANCIAL_UPDATED",
       expect.stringContaining("Updated financial profile"),
+      expect.any(Object)
+    );
+  });
+
+  it("saves the budget highlight ranking and logs the change", async () => {
+    const { updateFinancialProfile } = await import("./profileService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([buildProfileRow()])
+      .mockResolvedValueOnce([buildProfileRow({ budgetHighlightRanking: "CLOSEST_TO_LIMIT" })]);
+
+    const result = await updateFinancialProfile("user-1", {
+      budgetHighlightRanking: "CLOSEST_TO_LIMIT",
+    });
+
+    expect(result.budgetHighlightRanking).toBe("CLOSEST_TO_LIMIT");
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "PROFILE_FINANCIAL_UPDATED",
+      expect.stringContaining("Budget highlight ranking"),
       expect.any(Object)
     );
   });

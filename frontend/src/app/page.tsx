@@ -595,6 +595,7 @@ function Home() {
               previousMonthlySummary={previousMonthlySummary}
               recurringRules={recurringRules}
               primaryFinancialGoal={profile?.primaryFinancialGoal ?? null}
+              budgetHighlightRanking={profile?.budgetHighlightRanking ?? null}
             />
             <p
               style={{

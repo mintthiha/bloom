@@ -5,6 +5,7 @@ import { requireObject, requireString } from "../lib/validation";
 import {
   ACCENT_COLORS,
   AVATAR_COLORS,
+  BUDGET_HIGHLIGHT_RANKINGS,
   CURRENCY_CODES,
   PAY_FREQUENCIES,
   PRIMARY_FINANCIAL_GOALS,
@@ -233,12 +234,18 @@ router.patch("/financial-profile", async (req: Request, res: Response, next: Nex
       "primaryFinancialGoal",
       PRIMARY_FINANCIAL_GOALS
     );
+    const budgetHighlightRanking = normalizeEnumValue(
+      body.budgetHighlightRanking,
+      "budgetHighlightRanking",
+      BUDGET_HIGHLIGHT_RANKINGS
+    );
     res.json(
       await profileService.updateFinancialProfile(uid(req), {
         monthlyTakeHomeIncome,
         payFrequency,
         nextPayday,
         primaryFinancialGoal,
+        budgetHighlightRanking,
       })
     );
   } catch (err) {

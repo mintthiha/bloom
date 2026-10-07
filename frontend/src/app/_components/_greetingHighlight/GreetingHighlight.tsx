@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   Account,
   Budget,
+  BudgetHighlightRanking,
   MonthlySummary,
   PrimaryFinancialGoal,
   RecurringTransaction,
@@ -18,6 +19,7 @@ type Props = {
   previousMonthlySummary: MonthlySummary | null;
   recurringRules: RecurringTransaction[];
   primaryFinancialGoal: PrimaryFinancialGoal | null;
+  budgetHighlightRanking: BudgetHighlightRanking | null;
 };
 
 const TONE_COLOR: Record<GreetingHighlightTone, string> = {
@@ -41,6 +43,7 @@ export function GreetingHighlight({
   previousMonthlySummary,
   recurringRules,
   primaryFinancialGoal,
+  budgetHighlightRanking,
 }: Props) {
   const highlight = useMemo(
     () =>
@@ -52,6 +55,7 @@ export function GreetingHighlight({
         previousMonthlySummary,
         recurringRules,
         primaryFinancialGoal,
+        budgetHighlightRanking,
       }),
     [
       accounts,
@@ -61,6 +65,7 @@ export function GreetingHighlight({
       previousMonthlySummary,
       recurringRules,
       primaryFinancialGoal,
+      budgetHighlightRanking,
     ]
   );
 

@@ -111,6 +111,12 @@ export type PrimaryFinancialGoal =
   | "BIG_PURCHASE"
   | "TRACK_SPENDING";
 
+/**
+ * How the dashboard greeting breaks a tie between several under-budget categories: the biggest
+ * dollar cushion, the biggest share of the limit left, or the category closest to its limit.
+ */
+export type BudgetHighlightRanking = "LARGEST_AMOUNT" | "LARGEST_PERCENTAGE" | "CLOSEST_TO_LIMIT";
+
 export type Profile = {
   userId: string;
   firstName: string;
@@ -125,6 +131,7 @@ export type Profile = {
   payFrequency: PayFrequency | null;
   nextPayday: string | null;
   primaryFinancialGoal: PrimaryFinancialGoal | null;
+  budgetHighlightRanking: BudgetHighlightRanking | null;
   avatarColor: AvatarColor | null;
   accentColor: AccentColor | null;
   currency: Currency | null;
@@ -776,6 +783,7 @@ export const api = {
     payFrequency: PayFrequency | null;
     nextPayday: string | null;
     primaryFinancialGoal: PrimaryFinancialGoal | null;
+    budgetHighlightRanking: BudgetHighlightRanking | null;
   }) =>
     request<Profile>("/profile/financial-profile", {
       method: "PATCH",
