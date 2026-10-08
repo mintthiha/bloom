@@ -6,6 +6,8 @@ import { TransactionListItem } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { TRANSACTION_TYPE_META } from "@/lib/constants/transaction";
 import { EmptyState } from "@/components/EmptyState";
+import { CategoryChip } from "@/components/CategoryChip";
+import { CategoryAppearanceLookup } from "@/lib/category-appearance";
 
 /** Formats an ISO date string as "Jan 15, 2026" for the table's date column. */
 function formatTransactionDate(iso: string): string {
@@ -40,6 +42,7 @@ interface TransactionsTableProps {
   loading: boolean;
   hasActiveFilters: boolean;
   onRowClick: (row: TransactionListItem) => void;
+  categoryAppearanceLookup: CategoryAppearanceLookup;
 }
 
 /** Renders the transactions as a sortable data table, with loading skeleton and empty states. */
@@ -48,6 +51,7 @@ export function TransactionsTable({
   loading,
   hasActiveFilters,
   onRowClick,
+  categoryAppearanceLookup,
 }: TransactionsTableProps) {
   if (loading) {
     return (
@@ -122,8 +126,8 @@ export function TransactionsTable({
                     {row.merchant ?? row.description ?? "Transaction"}
                   </span>
                 </td>
-                <td style={{ ...bodyCellStyle, color: "var(--text-secondary)" }}>
-                  {row.category ?? "—"}
+                <td style={bodyCellStyle}>
+                  <CategoryChip name={row.category} lookup={categoryAppearanceLookup} />
                 </td>
                 <td style={{ ...bodyCellStyle, color: "var(--text-secondary)" }}>
                   <span

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Transaction, Account } from "@/lib/api";
 import { DateRangeControls } from "@/components/date-range-controls";
 import { DateRangeState } from "@/lib/date-range";
@@ -8,6 +8,8 @@ import { formatCurrency } from "@/lib/format";
 import { inputStyle } from "@/lib/styles/input";
 import { EmptyState } from "@/components/EmptyState";
 import { useCategories } from "@/hooks/useCategories";
+import { CategoryChip } from "@/components/CategoryChip";
+import { buildCategoryAppearanceLookup } from "@/lib/category-appearance";
 import { ExportCsvButton } from "./ExportCsvButton";
 
 const PAGE_SIZE = 4;
@@ -118,8 +120,12 @@ export function TransactionHistory({
   onRequestSplit,
 }: TransactionHistoryProps) {
   const [page, setPage] = useState(1);
-  const { incomeCategoryNames, expenseCategoryNames } = useCategories();
+  const { categories, incomeCategoryNames, expenseCategoryNames } = useCategories();
   const filterableCategoryOptions = [...incomeCategoryNames, ...expenseCategoryNames, "Transfer"];
+  const categoryAppearanceLookup = useMemo(
+    () => buildCategoryAppearanceLookup(categories),
+    [categories]
+  );
 
   /** Resets to page 1 when filters change or the result set size changes (add/delete). */
   useEffect(() => {
@@ -498,16 +504,12 @@ export function TransactionHistory({
                               </span>
                             ) : (
                               t.category && (
-                                <span
-                                  style={{
-                                    color: "var(--text-secondary)",
-                                    marginRight: "8px",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.04em",
-                                    fontSize: "10px",
-                                  }}
-                                >
-                                  {t.category}
+                                <span style={{ marginRight: "8px" }}>
+                                  <CategoryChip
+                                    name={t.category}
+                                    lookup={categoryAppearanceLookup}
+                                    size="compact"
+                                  />
                                 </span>
                               )
                             )}

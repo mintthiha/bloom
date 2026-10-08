@@ -10,6 +10,7 @@ import {
   TransactionListResult,
   TransactionSortKey,
 } from "@/lib/api";
+import { useCategoryAppearance } from "@/hooks/useCategoryAppearance";
 import { TransactionFilterBar } from "./TransactionFilterBar";
 import { TransactionsTable } from "./TransactionsTable";
 import { ExportCsvButton } from "./ExportCsvButton";
@@ -33,6 +34,7 @@ function endDateInputToIso(value: string): string {
  */
 export function TransactionsExplorer() {
   const router = useRouter();
+  const { categoryAppearanceLookup } = useCategoryAppearance();
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [searchInput, setSearchInput] = useState("");
@@ -191,6 +193,7 @@ export function TransactionsExplorer() {
         loading={loading}
         hasActiveFilters={hasActiveFilters}
         onRowClick={handleRowClick}
+        categoryAppearanceLookup={categoryAppearanceLookup}
       />
 
       {/* Pagination */}

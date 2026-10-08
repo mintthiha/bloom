@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { MonthlySummary, MonthlyTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useDisplayPreferences } from "@/components/display-preferences-provider";
@@ -8,6 +8,8 @@ import { CollapsibleCard } from "@/components/collapsible-card";
 import { ChartTooltip } from "@/components/chart-tooltip";
 import { FlashOnChange } from "@/components/flash-on-change";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCategoryAppearance } from "@/hooks/useCategoryAppearance";
+import { resolveCategoryAppearance } from "@/lib/category-appearance";
 
 type Props = {
   monthlySummary: MonthlySummary;
@@ -44,6 +46,7 @@ export function MonthlySnapshot({
   const [snapshotView, setSnapshotView] = useState<SnapshotView>("snapshot");
   const isMobile = useIsMobile();
   const { hideCents } = useDisplayPreferences();
+  const { categoryAppearanceLookup } = useCategoryAppearance();
 
   const incomeDelta =
     previousMonthlySummary != null ? monthlySummary.income - previousMonthlySummary.income : null;
@@ -424,7 +427,19 @@ export function MonthlySnapshot({
                   content={<ChartTooltip nameMap={{ spending: "Spending" }} />}
                   cursor={{ fill: "var(--chart-cursor)" }}
                 />
-                <Bar dataKey="spending" fill="#f97316" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="spending" radius={[4, 4, 0, 0]}>
+                  {expenseCategories.map((expenseCategory) => (
+                    <Cell
+                      key={expenseCategory.category}
+                      fill={
+                        resolveCategoryAppearance(
+                          expenseCategory.category,
+                          categoryAppearanceLookup
+                        ).color
+                      }
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
