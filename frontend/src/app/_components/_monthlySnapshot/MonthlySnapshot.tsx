@@ -10,6 +10,7 @@ import { FlashOnChange } from "@/components/flash-on-change";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCategoryAppearance } from "@/hooks/useCategoryAppearance";
 import { resolveCategoryAppearance } from "@/lib/category-appearance";
+import { computeCategoryChartHeight, truncateCategoryLabel } from "./category-chart-layout";
 
 type Props = {
   monthlySummary: MonthlySummary;
@@ -59,7 +60,10 @@ export function MonthlySnapshot({
       ? monthlySummary.netCashFlow - previousMonthlySummary.netCashFlow
       : null;
 
-  const expenseCategories = monthlySummary.categories.filter((category) => category.spending > 0);
+  // Sorted descending so the horizontal chart reads top-down as a spending ranking.
+  const expenseCategories = monthlySummary.categories
+    .filter((category) => category.spending > 0)
+    .sort((a, b) => b.spending - a.spending);
 
   const savingsRate =
     monthlySummary.income > 0 ? monthlySummary.netCashFlow / monthlySummary.income : null;
@@ -408,26 +412,37 @@ export function MonthlySnapshot({
           )}
 
           {expenseCategories.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={expenseCategories} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <ResponsiveContainer
+              width="100%"
+              height={computeCategoryChartHeight(expenseCategories.length)}
+            >
+              <BarChart
+                data={expenseCategories}
+                layout="vertical"
+                margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
+              >
                 <XAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: "#6b7280" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <YAxis
+                  type="category"
                   dataKey="category"
                   tick={{ fontSize: 11, fill: "#9ca3af" }}
                   tickLine={false}
                   axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "#6b7280" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => `$${v}`}
-                  width={48}
+                  tickFormatter={truncateCategoryLabel}
+                  width={isMobile ? 84 : 100}
+                  interval={0}
                 />
                 <Tooltip
                   content={<ChartTooltip nameMap={{ spending: "Spending" }} />}
                   cursor={{ fill: "var(--chart-cursor)" }}
                 />
-                <Bar dataKey="spending" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="spending" radius={[0, 4, 4, 0]} barSize={14}>
                   {expenseCategories.map((expenseCategory) => (
                     <Cell
                       key={expenseCategory.category}
