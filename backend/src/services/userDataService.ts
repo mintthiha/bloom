@@ -63,6 +63,10 @@ type BudgetRow = {
 type SavingsGoalRow = {
   name: string;
   targetAmount: string | number;
+  targetDate: Date | null;
+  icon: string | null;
+  color: string | null;
+  note: string | null;
   accountId: string;
   createdAt: Date;
 };
@@ -135,7 +139,12 @@ export type UserDataExport = {
   accounts: Array<Omit<AccountRow, "balance"> & { balance: number }>;
   transactions: Array<Omit<TransactionRow, "amount"> & { amount: number }>;
   budgets: Array<Omit<BudgetRow, "monthlyLimit"> & { monthlyLimit: number }>;
-  savingsGoals: Array<Omit<SavingsGoalRow, "targetAmount"> & { targetAmount: number }>;
+  savingsGoals: Array<
+    Omit<SavingsGoalRow, "targetAmount" | "targetDate"> & {
+      targetAmount: number;
+      targetDate: string | null;
+    }
+  >;
   recurringTransactions: Array<Omit<RecurringTransactionRow, "amount"> & { amount: number }>;
   manualEntries: Array<
     Omit<ManualEntryRow, "amount" | "date"> & {
@@ -229,7 +238,8 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       ORDER BY "category" ASC
     `,
     prisma.$queryRaw<SavingsGoalRow[]>`
-      SELECT "name", "targetAmount", "accountId", "createdAt"
+      SELECT "name", "targetAmount", "targetDate", "icon", "color", "note",
+             "accountId", "createdAt"
       FROM "SavingsGoal"
       WHERE "userId" = ${userId} AND "deletedAt" IS NULL
       ORDER BY "createdAt" ASC
@@ -288,6 +298,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     savingsGoals: savingsGoalRows.map((row) => ({
       ...row,
       targetAmount: Number(row.targetAmount),
+      targetDate: toDateOnly(row.targetDate),
     })),
     recurringTransactions: recurringRows.map((row) => ({ ...row, amount: Number(row.amount) })),
     manualEntries: manualEntryRows.map((row) => ({

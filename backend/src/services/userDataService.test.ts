@@ -88,7 +88,16 @@ describe("userDataService", () => {
         accounts: [{ id: "a-1", ownerName: "Alex Rivera", balance: "250.5000" }],
         transactions: [{ id: "t-1", amount: "19.9900" }],
         budgets: [{ category: "Groceries", monthlyLimit: "600.0000" }],
-        savingsGoals: [{ name: "Emergency Fund", targetAmount: "10000.0000" }],
+        savingsGoals: [
+          {
+            name: "Emergency Fund",
+            targetAmount: "10000.0000",
+            targetDate: new Date("2027-06-30"),
+            icon: "🛟",
+            color: "BLUE",
+            note: "Three months of expenses.",
+          },
+        ],
         recurringTransactions: [{ name: "Rent", amount: "1500.0000" }],
         manualEntries: [
           { name: "Car", type: "ASSET", amount: "5000.0000", date: new Date("2026-02-03") },
@@ -125,7 +134,13 @@ describe("userDataService", () => {
       expect(data.accounts[0]?.balance).toBe(250.5);
       expect(data.transactions[0]?.amount).toBe(19.99);
       expect(data.budgets[0]?.monthlyLimit).toBe(600);
-      expect(data.savingsGoals[0]?.targetAmount).toBe(10000);
+      expect(data.savingsGoals[0]).toMatchObject({
+        targetAmount: 10000,
+        targetDate: "2027-06-30",
+        icon: "🛟",
+        color: "BLUE",
+        note: "Three months of expenses.",
+      });
       expect(data.recurringTransactions[0]?.amount).toBe(1500);
       expect(data.manualEntries[0]).toMatchObject({ amount: 5000, date: "2026-02-03" });
       expect(data.customCategories[0]).toMatchObject({ name: "Groceries", type: "EXPENSE" });

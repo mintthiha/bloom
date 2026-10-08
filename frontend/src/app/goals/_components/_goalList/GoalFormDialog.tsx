@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, Account, AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
-import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { ACCOUNT_TYPE_META, AccountColor } from "@/lib/constants/account";
+import { parseAccountColor } from "@/lib/account-identity";
+import { SAVINGS_GOAL_NOTE_MAX_LENGTH } from "@/lib/constants/savings-goal";
+import { calculateGoalPace } from "@/lib/goal-pace";
 import { inputStyle } from "@/lib/styles/input";
+import { GoalAppearancePicker } from "./GoalAppearancePicker";
 
 type GoalFormDialogProps = {
   goal: SavingsGoal | null;
@@ -30,6 +34,8 @@ const panelStyle: React.CSSProperties = {
   padding: "28px",
   width: "420px",
   maxWidth: "90vw",
+  maxHeight: "90vh",
+  overflowY: "auto",
   boxShadow: "0 24px 80px rgba(0,0,0,0.45)",
 };
 
@@ -56,7 +62,29 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
   const [name, setName] = useState(goal?.name ?? "");
   const [selectedAccountId, setSelectedAccountId] = useState(goal?.accountId ?? "");
   const [targetAmountInput, setTargetAmountInput] = useState(goal ? String(goal.targetAmount) : "");
+  const [targetDateInput, setTargetDateInput] = useState(goal?.targetDate ?? "");
+  const [selectedColor, setSelectedColor] = useState<AccountColor | null>(
+    parseAccountColor(goal?.color)
+  );
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(goal?.icon ?? null);
+  const [note, setNote] = useState(goal?.note ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? null;
+  const previewTargetAmount = parseFloat(targetAmountInput);
+
+  /**
+   * Live preview of the pace the entered target date implies, so the user sees the monthly
+   * commitment before saving. Hidden until there is a target amount to divide up.
+   */
+  const pacePreview =
+    Number.isFinite(previewTargetAmount) && previewTargetAmount > 0
+      ? calculateGoalPace({
+          currentBalance: selectedAccount?.balance ?? 0,
+          targetAmount: previewTargetAmount,
+          targetDate: targetDateInput || null,
+        })
+      : null;
 
   /** Fetches the user's accounts to populate the account selector. */
   useEffect(() => {
@@ -88,18 +116,19 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
       return;
     }
     setIsSubmitting(true);
+    const input = {
+      accountId: selectedAccountId,
+      name: name.trim(),
+      targetAmount,
+      targetDate: targetDateInput || null,
+      icon: selectedIcon,
+      color: selectedColor,
+      note: note.trim() || null,
+    };
     try {
       const saved = goal
-        ? await api.updateSavingsGoal(goal.id, {
-            accountId: selectedAccountId,
-            name: name.trim(),
-            targetAmount,
-          })
-        : await api.createSavingsGoal({
-            accountId: selectedAccountId,
-            name: name.trim(),
-            targetAmount,
-          });
+        ? await api.updateSavingsGoal(goal.id, input)
+        : await api.createSavingsGoal(input);
       onSaved(saved);
       toast.success(goal ? "Goal updated." : "Goal created.");
     } catch (err) {
@@ -191,6 +220,58 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
               step="0.01"
               style={{ ...inputStyle, borderRadius: "10px" }}
             />
+          </div>
+
+          <div>
+            <label htmlFor="goal-target-date" style={labelStyle}>
+              Target date (optional)
+            </label>
+            <input
+              id="goal-target-date"
+              type="date"
+              value={targetDateInput}
+              onChange={(e) => setTargetDateInput(e.target.value)}
+              style={{ ...inputStyle, borderRadius: "10px" }}
+            />
+            {pacePreview && (
+              <p
+                style={{
+                  fontSize: "11.5px",
+                  fontWeight: 600,
+                  marginTop: "8px",
+                  color: pacePreview.status === "PAST_DUE" ? "#ef4444" : "var(--text-secondary)",
+                }}
+              >
+                {pacePreview.summary}
+              </p>
+            )}
+          </div>
+
+          <GoalAppearancePicker
+            selectedColor={selectedColor}
+            selectedIcon={selectedIcon}
+            onColorChange={setSelectedColor}
+            onIconChange={setSelectedIcon}
+            disabled={isSubmitting}
+          />
+
+          <div>
+            <label htmlFor="goal-note" style={labelStyle}>
+              Why this matters (optional)
+            </label>
+            <textarea
+              id="goal-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. So one surprise bill never becomes a crisis."
+              maxLength={SAVINGS_GOAL_NOTE_MAX_LENGTH}
+              rows={2}
+              style={{ ...inputStyle, borderRadius: "10px", resize: "vertical" }}
+            />
+            <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>
+              {note.length}/{SAVINGS_GOAL_NOTE_MAX_LENGTH} — shown on the goal card to remind you
+              what you are saving for.
+            </p>
           </div>
 
           <div

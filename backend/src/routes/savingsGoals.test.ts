@@ -22,6 +22,10 @@ const GOAL_FIXTURE = {
   accountId: "a-1",
   name: "Emergency Fund",
   targetAmount: 5000,
+  targetDate: "2027-06-30",
+  icon: "🛟",
+  color: "BLUE",
+  note: "Three months of expenses.",
   currentBalance: 1000,
   accountName: "Savings",
   accountNickname: null,
@@ -33,6 +37,15 @@ const GOAL_FIXTURE = {
 };
 
 const VALID_BODY = { accountId: "a-1", name: "Emergency Fund", targetAmount: 5000 };
+
+/** What the route hands the service for {@link VALID_BODY}: the optional fields normalize to null. */
+const VALID_BODY_AS_INPUT = {
+  ...VALID_BODY,
+  targetDate: null,
+  icon: null,
+  color: null,
+  note: null,
+};
 
 describe("savings goal routes", () => {
   beforeEach(() => {
@@ -152,8 +165,88 @@ describe("savings goal routes", () => {
         .send(VALID_BODY);
 
       expect(response.status).toBe(201);
-      expect(serviceMock.createSavingsGoal).toHaveBeenCalledWith("u-1", VALID_BODY);
+      expect(serviceMock.createSavingsGoal).toHaveBeenCalledWith("u-1", VALID_BODY_AS_INPUT);
       expect(response.body).toMatchObject({ name: "Emergency Fund", targetAmount: 5000 });
+    });
+
+    it("passes the target date through as a UTC date and keeps the appearance fields", async () => {
+      serviceMock.createSavingsGoal.mockResolvedValue(GOAL_FIXTURE);
+
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1")
+        .send({
+          ...VALID_BODY,
+          targetDate: "2027-06-30",
+          icon: "🛟",
+          color: "blue",
+          note: "  Three months of expenses.  ",
+        });
+
+      expect(response.status).toBe(201);
+      expect(serviceMock.createSavingsGoal).toHaveBeenCalledWith("u-1", {
+        ...VALID_BODY,
+        targetDate: new Date("2027-06-30T00:00:00.000Z"),
+        icon: "🛟",
+        color: "BLUE",
+        note: "Three months of expenses.",
+      });
+    });
+
+    it("returns 400 when targetDate is not a YYYY-MM-DD string", async () => {
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1")
+        .send({ ...VALID_BODY, targetDate: "30/06/2027" });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.createSavingsGoal).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when targetDate is not a real calendar date", async () => {
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1")
+        .send({ ...VALID_BODY, targetDate: "2027-02-31" });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.createSavingsGoal).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when the icon is not from the curated set", async () => {
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1")
+        .send({ ...VALID_BODY, icon: "🦖" });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.createSavingsGoal).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when the colour is not from the shared palette", async () => {
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1")
+        .send({ ...VALID_BODY, color: "CHARTREUSE" });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.createSavingsGoal).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when the note is longer than 280 characters", async () => {
+      const response = await request(app)
+        .post("/api/savings-goals")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "u-1")
+        .send({ ...VALID_BODY, note: "a".repeat(281) });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.createSavingsGoal).not.toHaveBeenCalled();
     });
   });
 
@@ -197,6 +290,10 @@ describe("savings goal routes", () => {
         accountId: "a-1",
         name: "Updated Fund",
         targetAmount: 8000,
+        targetDate: null,
+        icon: null,
+        color: null,
+        note: null,
       });
       expect(response.body).toMatchObject({ name: "Updated Fund", targetAmount: 8000 });
     });

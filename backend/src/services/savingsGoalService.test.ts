@@ -5,6 +5,7 @@ import {
   updateSavingsGoal,
   deleteSavingsGoal,
   restoreSavingsGoal,
+  SavingsGoalInput,
 } from "./savingsGoalService";
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -29,6 +30,10 @@ type SavingsGoalRow = {
   accountId: string;
   name: string;
   targetAmount: number | string;
+  targetDate: Date | null;
+  icon: string | null;
+  color: string | null;
+  note: string | null;
   createdAt: Date;
   updatedAt: Date;
   accountBalance: number | string;
@@ -45,12 +50,30 @@ function makeGoalRow(overrides?: Partial<SavingsGoalRow>): SavingsGoalRow {
     accountId: "a-1",
     name: "Emergency Fund",
     targetAmount: "5000",
+    targetDate: null,
+    icon: null,
+    color: null,
+    note: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     accountBalance: "1000",
     accountNickname: null,
     accountOwnerName: "Test User",
     accountType: "SAVINGS",
+    ...overrides,
+  };
+}
+
+/** Creates a create/update payload fixture; override only the fields a test cares about. */
+function makeGoalInput(overrides: Partial<SavingsGoalInput> = {}): SavingsGoalInput {
+  return {
+    accountId: "a-1",
+    name: "Emergency Fund",
+    targetAmount: 5000,
+    targetDate: null,
+    icon: null,
+    color: null,
+    note: null,
     ...overrides,
   };
 }
@@ -127,6 +150,36 @@ describe("normalizeSavingsGoalRow", () => {
     expect(goal.percentageReached).toBe(0);
   });
 
+  it("renders the targetDate column as a YYYY-MM-DD string", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ targetDate: new Date("2027-06-30T00:00:00.000Z") }),
+    ]);
+
+    const [goal] = await listSavingsGoals("u-1");
+
+    expect(goal.targetDate).toBe("2027-06-30");
+  });
+
+  it("leaves targetDate null when the goal has no deadline", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeGoalRow({ targetDate: null })]);
+
+    const [goal] = await listSavingsGoals("u-1");
+
+    expect(goal.targetDate).toBeNull();
+  });
+
+  it("passes the icon, colour, and note through untouched", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeGoalRow({ icon: "🏠", color: "GREEN", note: "Down payment." }),
+    ]);
+
+    const [goal] = await listSavingsGoals("u-1");
+
+    expect(goal.icon).toBe("🏠");
+    expect(goal.color).toBe("GREEN");
+    expect(goal.note).toBe("Down payment.");
+  });
+
   it("returns percentageReached of 0 when targetAmount is 0", async () => {
     prismaMock.$queryRaw.mockResolvedValueOnce([
       makeGoalRow({ targetAmount: "0", accountBalance: "500" }),
@@ -174,7 +227,7 @@ describe("createSavingsGoal", () => {
     prismaMock.$queryRaw.mockResolvedValueOnce([]); // account check → not found
 
     await expect(
-      createSavingsGoal("u-1", { accountId: "a-99", name: "Goal", targetAmount: 1000 })
+      createSavingsGoal("u-1", makeGoalInput({ accountId: "a-99" }))
     ).rejects.toMatchObject({ statusCode: 404, message: "Account not found" });
   });
 
@@ -185,15 +238,47 @@ describe("createSavingsGoal", () => {
       .mockResolvedValueOnce([row]); // fetchSavingsGoalWithAccount
     prismaMock.$executeRaw.mockResolvedValueOnce(1);
 
-    const goal = await createSavingsGoal("u-1", {
-      accountId: "a-1",
-      name: "New Goal",
-      targetAmount: 2000,
-    });
+    const goal = await createSavingsGoal(
+      "u-1",
+      makeGoalInput({ name: "New Goal", targetAmount: 2000 })
+    );
 
     expect(goal.name).toBe("New Goal");
     expect(goal.targetAmount).toBe(2000);
     expect(goal.currentBalance).toBe(500);
+  });
+
+  it("persists the target date, icon, colour, and note alongside the core fields", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "a-1" }]) // account check
+      .mockResolvedValueOnce([
+        makeGoalRow({
+          targetDate: new Date("2027-06-30T00:00:00.000Z"),
+          icon: "✈️",
+          color: "VIOLET",
+          note: "Two weeks in Japan.",
+        }),
+      ]); // fetchSavingsGoalWithAccount
+    prismaMock.$executeRaw.mockResolvedValueOnce(1);
+
+    const goal = await createSavingsGoal(
+      "u-1",
+      makeGoalInput({
+        targetDate: new Date("2027-06-30T00:00:00.000Z"),
+        icon: "✈️",
+        color: "VIOLET",
+        note: "Two weeks in Japan.",
+      })
+    );
+
+    const insertedValues = prismaMock.$executeRaw.mock.calls[0]!.slice(1);
+    expect(insertedValues).toContain("✈️");
+    expect(insertedValues).toContain("VIOLET");
+    expect(insertedValues).toContain("Two weeks in Japan.");
+    expect(goal.targetDate).toBe("2027-06-30");
+    expect(goal.icon).toBe("✈️");
+    expect(goal.color).toBe("VIOLET");
+    expect(goal.note).toBe("Two weeks in Japan.");
   });
 });
 
@@ -205,9 +290,9 @@ describe("updateSavingsGoal", () => {
   it("throws AppError 404 when the goal does not belong to the user", async () => {
     prismaMock.$queryRaw.mockResolvedValueOnce([]); // getSavingsGoalOrThrow → not found
 
-    await expect(
-      updateSavingsGoal("u-1", "g-99", { accountId: "a-1", name: "Goal", targetAmount: 1000 })
-    ).rejects.toMatchObject({ statusCode: 404 });
+    await expect(updateSavingsGoal("u-1", "g-99", makeGoalInput())).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 
   it("throws AppError 404 when the new account does not belong to the user", async () => {
@@ -217,7 +302,7 @@ describe("updateSavingsGoal", () => {
       .mockResolvedValueOnce([]); // account check → not found
 
     await expect(
-      updateSavingsGoal("u-1", "g-1", { accountId: "a-99", name: "Goal", targetAmount: 1000 })
+      updateSavingsGoal("u-1", "g-1", makeGoalInput({ accountId: "a-99" }))
     ).rejects.toMatchObject({ statusCode: 404, message: "Account not found" });
   });
 
@@ -230,15 +315,38 @@ describe("updateSavingsGoal", () => {
       .mockResolvedValueOnce([row]); // fetchSavingsGoalWithAccount (after update)
     prismaMock.$executeRaw.mockResolvedValueOnce(1);
 
-    const goal = await updateSavingsGoal("u-1", "g-1", {
-      accountId: "a-1",
-      name: "Updated Goal",
-      targetAmount: 3000,
-    });
+    const goal = await updateSavingsGoal(
+      "u-1",
+      "g-1",
+      makeGoalInput({ name: "Updated Goal", targetAmount: 3000 })
+    );
 
     expect(goal.name).toBe("Updated Goal");
     expect(goal.targetAmount).toBe(3000);
     expect(goal.currentBalance).toBe(1500);
+  });
+
+  it("clears the target date, icon, colour, and note when they are passed as null", async () => {
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ id: "g-1" }]) // getSavingsGoalOrThrow
+      .mockResolvedValueOnce([
+        makeGoalRow({
+          targetDate: new Date("2027-06-30T00:00:00.000Z"),
+          icon: "✈️",
+          color: "VIOLET",
+          note: "Two weeks in Japan.",
+        }),
+      ]) // fetchSavingsGoalWithAccount (before-state for the diff)
+      .mockResolvedValueOnce([{ id: "a-1" }]) // account check
+      .mockResolvedValueOnce([makeGoalRow()]); // fetchSavingsGoalWithAccount (after update)
+    prismaMock.$executeRaw.mockResolvedValueOnce(1);
+
+    const goal = await updateSavingsGoal("u-1", "g-1", makeGoalInput());
+
+    expect(goal.targetDate).toBeNull();
+    expect(goal.icon).toBeNull();
+    expect(goal.color).toBeNull();
+    expect(goal.note).toBeNull();
   });
 });
 

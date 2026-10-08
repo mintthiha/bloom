@@ -52,6 +52,9 @@ const BUDGETS: Array<{ category: string; monthlyLimit: number; rollover: boolean
   { category: "Rent", monthlyLimit: 1500, rollover: false },
 ];
 
+/** How far ahead the demo emergency-fund goal is dated, so the demo shows a live monthly pace. */
+const DEMO_GOAL_MONTHS_AHEAD = 18;
+
 /** Returns a UTC date `monthsAgo` months back on the given day, clamped to today for the current month. */
 function atMonth(monthsAgo: number, day: number): Date {
   const now = new Date();
@@ -185,6 +188,10 @@ export async function createDemoAccount(): Promise<{
     accountId: savings.id,
     name: "Emergency Fund",
     targetAmount: 10000,
+    targetDate: atMonth(-DEMO_GOAL_MONTHS_AHEAD, 1),
+    icon: "🛟",
+    color: "BLUE",
+    note: "Three months of expenses so a surprise bill never becomes a crisis.",
   });
 
   const { token, expiresAt } = await credentialsAuthService.issueRememberTokenForUserId(userId);

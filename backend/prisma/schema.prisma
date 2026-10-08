@@ -219,6 +219,10 @@ model SavingsGoal {
   accountId    String
   name         String
   targetAmount Decimal   @db.Decimal(19, 4)
+  targetDate   DateTime? @db.Date
+  icon         String?
+  color        String?
+  note         String?
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
   deletedAt    DateTime? @db.Timestamptz(3)

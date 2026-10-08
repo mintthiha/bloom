@@ -6,6 +6,8 @@ import { AccountType, SavingsGoal } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
+import { calculateGoalPace } from "@/lib/goal-pace";
+import { resolveSavingsGoalAppearance } from "@/lib/savings-goal-appearance";
 import { CollapsibleCard } from "@/components/collapsible-card";
 
 const STORAGE_KEY = "bloom_goal_widget_id";
@@ -72,7 +74,9 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
   const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? goals[0]!;
   const typeMeta = ACCOUNT_TYPE_META[selectedGoal.accountType as AccountType];
   const isComplete = selectedGoal.percentageReached >= 100;
-  const progressColor = isComplete ? "#22c55e" : "var(--brand-accent)";
+  const appearance = resolveSavingsGoalAppearance(selectedGoal);
+  const progressColor = appearance.color;
+  const pace = calculateGoalPace(selectedGoal);
 
   return (
     <CollapsibleCard
@@ -140,6 +144,11 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+          {appearance.icon && (
+            <span aria-hidden="true" style={{ fontSize: "16px" }}>
+              {appearance.icon}
+            </span>
+          )}
           <p style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "-0.01em" }}>
             {selectedGoal.name}
           </p>
@@ -215,6 +224,19 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
             </span>
           )}
         </div>
+
+        {!isComplete && (
+          <p
+            style={{
+              fontSize: "11.5px",
+              fontWeight: 600,
+              marginTop: "6px",
+              color: pace.status === "PAST_DUE" ? "#ef4444" : "var(--text-muted)",
+            }}
+          >
+            {pace.summary}
+          </p>
+        )}
       </button>
     </CollapsibleCard>
   );

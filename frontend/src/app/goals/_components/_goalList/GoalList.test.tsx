@@ -55,6 +55,10 @@ function makeGoal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
     accountId: "a-1",
     name: "Emergency Fund",
     targetAmount: 5000,
+    targetDate: null,
+    icon: null,
+    color: null,
+    note: null,
     currentBalance: 2500,
     accountName: "Rainy Day",
     accountNickname: null,
@@ -92,7 +96,34 @@ describe("GoalList", () => {
     expect(await screen.findByText("Emergency Fund")).toBeInTheDocument();
     expect(screen.getByText("New Car")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
-    expect(screen.getByText("Goal reached!")).toBeInTheDocument();
+    expect(screen.getByText("Goal reached — nothing left to save.")).toBeInTheDocument();
+  });
+
+  it("shows the target date and the monthly pace needed to reach it", async () => {
+    // The target date is far enough out to stay in the monthly branch whenever this runs; the
+    // exact figure for a given day is covered in goal-pace.test.ts, which injects `today`.
+    const targetDate = `${new Date().getUTCFullYear() + 3}-06-30`;
+    apiMock.listSavingsGoals.mockResolvedValue([
+      makeGoal({ currentBalance: 2000, targetAmount: 5000, targetDate }),
+    ]);
+
+    render(<GoalList />);
+
+    expect(await screen.findByText(/^By Jun 30, \d{4}$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Save \$[\d,]+\.\d{2}\/month to make it by Jun \d{4}\.$/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows the goal's own note and emoji when it has them", async () => {
+    apiMock.listSavingsGoals.mockResolvedValue([
+      makeGoal({ icon: "✈️", note: "Two weeks in Japan." }),
+    ]);
+
+    render(<GoalList />);
+
+    expect(await screen.findByText("Two weeks in Japan.")).toBeInTheDocument();
+    expect(screen.getByText("✈️")).toBeInTheDocument();
   });
 
   it("surfaces a toast when loading fails", async () => {
@@ -139,7 +170,7 @@ describe("GoalList", () => {
 
     // The AlertDialog opens with its own "Delete" action; both the card and dialog buttons
     // match, and the dialog action is the last one rendered.
-    await screen.findByText("Delete goal?");
+    await screen.findByText('Delete "Emergency Fund"?');
     const deleteButtons = screen.getAllByRole("button", { name: /^Delete$/ });
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
@@ -163,7 +194,7 @@ describe("GoalList", () => {
     render(<GoalList />);
     await screen.findByText("Emergency Fund");
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-    await screen.findByText("Delete goal?");
+    await screen.findByText('Delete "Emergency Fund"?');
     const deleteButtons = screen.getAllByRole("button", { name: /^Delete$/ });
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 

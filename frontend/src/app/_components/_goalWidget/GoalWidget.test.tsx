@@ -17,6 +17,10 @@ function makeGoal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
     accountId: "a-1",
     name: "Emergency Fund",
     targetAmount: 5000,
+    targetDate: null,
+    icon: null,
+    color: null,
+    note: null,
     currentBalance: 2500,
     accountName: "Savings",
     accountNickname: null,
@@ -60,6 +64,28 @@ describe("GoalWidget", () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByText("1 saved")).toBeInTheDocument();
+  });
+
+  it("shows the pace needed to hit the target date, and the goal's emoji", () => {
+    // The target date is far enough out to stay in the monthly branch whenever this runs; the
+    // exact figure for a given day is covered in goal-pace.test.ts, which injects `today`.
+    const targetDate = `${new Date().getUTCFullYear() + 3}-06-30`;
+    render(
+      <GoalWidget
+        goals={[makeGoal({ currentBalance: 2000, targetAmount: 5000, targetDate, icon: "✈️" })]}
+      />
+    );
+
+    expect(
+      screen.getByText(/^Save \$[\d,]+\.\d{2}\/month to make it by Jun \d{4}\.$/)
+    ).toBeInTheDocument();
+    expect(screen.getByText("✈️")).toBeInTheDocument();
+  });
+
+  it("drops the pace line once the goal is reached", () => {
+    render(<GoalWidget goals={[makeGoal({ percentageReached: 100, currentBalance: 5000 })]} />);
+
+    expect(screen.queryByText(/nothing left to save/)).not.toBeInTheDocument();
   });
 
   it("marks a completed goal", () => {

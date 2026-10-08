@@ -233,8 +233,16 @@ async function seedRecurring(userId: string, accountId: string) {
 /** Adds one savings goal tied to the savings account. */
 async function seedSavingsGoal(userId: string, accountId: string) {
   await prisma.$executeRaw`
-    INSERT INTO "SavingsGoal" ("id", "userId", "accountId", "name", "targetAmount", "createdAt", "updatedAt")
-    VALUES (${randomUUID()}, ${userId}, ${accountId}, ${"Emergency Fund"}, ${10000}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO "SavingsGoal" (
+      "id", "userId", "accountId", "name", "targetAmount",
+      "targetDate", "icon", "color", "note", "createdAt", "updatedAt"
+    )
+    VALUES (
+      ${randomUUID()}, ${userId}, ${accountId}, ${"Emergency Fund"}, ${10000},
+      (CURRENT_DATE + INTERVAL '18 months')::date, ${"🛟"}, ${"BLUE"},
+      ${"Three months of expenses so a surprise bill never becomes a crisis."},
+      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
   `;
 }
 

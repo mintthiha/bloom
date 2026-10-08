@@ -149,11 +149,26 @@ describe("demoService", () => {
 
     await createDemoAccount();
 
-    expect(savingsGoalMock.createSavingsGoal).toHaveBeenCalledWith("demo-user-1", {
-      accountId: "account-SAVINGS",
-      name: "Emergency Fund",
-      targetAmount: 10000,
-    });
+    expect(savingsGoalMock.createSavingsGoal).toHaveBeenCalledWith(
+      "demo-user-1",
+      expect.objectContaining({
+        accountId: "account-SAVINGS",
+        name: "Emergency Fund",
+        targetAmount: 10000,
+        icon: "🛟",
+        color: "BLUE",
+      })
+    );
+  });
+
+  it("dates the demo savings goal in the future so it shows a live monthly pace", async () => {
+    const { createDemoAccount } = await import("./demoService");
+
+    await createDemoAccount();
+
+    const [, input] = savingsGoalMock.createSavingsGoal.mock.calls[0]!;
+    expect(input.targetDate.getTime()).toBeGreaterThan(Date.now());
+    expect(input.note).toBeTruthy();
   });
 
   it("returns the remember-me token issued for the new demo user", async () => {

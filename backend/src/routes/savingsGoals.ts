@@ -1,9 +1,36 @@
 import { Router, Request, Response, NextFunction } from "express";
 import * as savingsGoalService from "../services/savingsGoalService";
 import { AppError } from "../middleware/errorHandler";
-import { requireObject, requireString, requirePositiveNumber } from "../lib/validation";
+import {
+  requireObject,
+  requireString,
+  requirePositiveNumber,
+  optionalString,
+} from "../lib/validation";
+import { parseOptionalDateOnly } from "../services/profileOptions";
+import {
+  normalizeSavingsGoalColor,
+  normalizeSavingsGoalIcon,
+  SAVINGS_GOAL_NOTE_MAX_LENGTH,
+} from "../services/savingsGoalOptions";
 
 const router = Router();
+
+/**
+ * Parses the shared create/update payload of a savings goal. The appearance, deadline, and
+ * note fields are all optional and normalize to null, so an omitted field clears it.
+ */
+function parseSavingsGoalBody(body: Record<string, unknown>) {
+  return {
+    accountId: requireString(body.accountId, "accountId"),
+    name: requireString(body.name, "name", { max: 100 }),
+    targetAmount: requirePositiveNumber(body.targetAmount, "targetAmount"),
+    targetDate: parseOptionalDateOnly(body.targetDate, "targetDate"),
+    icon: normalizeSavingsGoalIcon(body.icon),
+    color: normalizeSavingsGoalColor(body.color),
+    note: optionalString(body.note, "note", { max: SAVINGS_GOAL_NOTE_MAX_LENGTH }) ?? null,
+  };
+}
 
 /** Extracts the authenticated user id from the request headers. */
 function uid(req: Request): string {
@@ -24,33 +51,19 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
 /** Creates a new savings goal linked to the given account. */
 router.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const body = requireObject(req.body);
-    const accountId = requireString(body.accountId, "accountId");
-    const name = requireString(body.name, "name", { max: 100 });
-    const targetAmount = requirePositiveNumber(body.targetAmount, "targetAmount");
-    res
-      .status(201)
-      .json(
-        await savingsGoalService.createSavingsGoal(uid(req), { accountId, name, targetAmount })
-      );
+    const input = parseSavingsGoalBody(requireObject(req.body));
+    res.status(201).json(await savingsGoalService.createSavingsGoal(uid(req), input));
   } catch (err) {
     next(err);
   }
 });
 
-/** Replaces the name, account, and target amount of an existing savings goal. */
+/** Replaces every user-editable field of an existing savings goal. */
 router.put("/:id", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const body = requireObject(req.body);
-    const accountId = requireString(body.accountId, "accountId");
-    const name = requireString(body.name, "name", { max: 100 });
-    const targetAmount = requirePositiveNumber(body.targetAmount, "targetAmount");
+    const input = parseSavingsGoalBody(requireObject(req.body));
     res.json(
-      await savingsGoalService.updateSavingsGoal(uid(req), req.params["id"] as string, {
-        accountId,
-        name,
-        targetAmount,
-      })
+      await savingsGoalService.updateSavingsGoal(uid(req), req.params["id"] as string, input)
     );
   } catch (err) {
     next(err);

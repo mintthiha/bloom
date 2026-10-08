@@ -14,6 +14,10 @@ type SavingsGoalRow = {
   accountId: string;
   name: string;
   targetAmount: string;
+  targetDate: Date | null;
+  icon: string | null;
+  color: string | null;
+  note: string | null;
   createdAt: Date;
   updatedAt: Date;
   accountBalance: string;
@@ -21,6 +25,11 @@ type SavingsGoalRow = {
   accountOwnerName: string;
   accountType: string;
 };
+
+/** Renders a date-only column as YYYY-MM-DD, matching how the rest of the API exposes such dates. */
+function toDateOnly(value: Date | null): string | null {
+  return value ? (value.toISOString().split("T")[0] as string) : null;
+}
 
 /** Converts a raw DB row into a clean API response object with derived progress fields. */
 function normalizeSavingsGoalRow(row: SavingsGoalRow) {
@@ -35,6 +44,10 @@ function normalizeSavingsGoalRow(row: SavingsGoalRow) {
     accountId: row.accountId,
     name: row.name,
     targetAmount,
+    targetDate: toDateOnly(row.targetDate),
+    icon: row.icon,
+    color: row.color,
+    note: row.note,
     currentBalance,
     accountName: row.accountNickname ?? row.accountOwnerName,
     accountNickname: row.accountNickname,
@@ -51,6 +64,7 @@ async function fetchSavingsGoalWithAccount(goalId: string) {
   const rows = await prisma.$queryRaw<SavingsGoalRow[]>`
     SELECT
       g."id", g."userId", g."accountId", g."name", g."targetAmount",
+      g."targetDate", g."icon", g."color", g."note",
       g."createdAt", g."updatedAt",
       a."balance" AS "accountBalance",
       a."nickname"        AS "accountNickname",
@@ -80,6 +94,7 @@ export async function listSavingsGoals(userId: string) {
   const rows = await prisma.$queryRaw<SavingsGoalRow[]>`
     SELECT
       g."id", g."userId", g."accountId", g."name", g."targetAmount",
+      g."targetDate", g."icon", g."color", g."note",
       g."createdAt", g."updatedAt",
       a."balance" AS "accountBalance",
       a."nickname"        AS "accountNickname",
@@ -93,11 +108,21 @@ export async function listSavingsGoals(userId: string) {
   return rows.map(normalizeSavingsGoalRow);
 }
 
+/** The user-editable fields of a savings goal, shared by create and update. */
+export type SavingsGoalInput = {
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  /** Date the user wants to hit the target by, or null when the goal has no deadline. */
+  targetDate: Date | null;
+  icon: string | null;
+  color: string | null;
+  /** The user's short "why this matters" reminder, or null when they left it blank. */
+  note: string | null;
+};
+
 /** Creates a new savings goal linked to the specified account. */
-export async function createSavingsGoal(
-  userId: string,
-  input: { accountId: string; name: string; targetAmount: number }
-) {
+export async function createSavingsGoal(userId: string, input: SavingsGoalInput) {
   const accountRows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id" FROM "Account"
     WHERE "id" = ${input.accountId} AND "userId" = ${userId} AND "deletedAt" IS NULL
@@ -107,8 +132,15 @@ export async function createSavingsGoal(
 
   const id = randomUUID();
   await prisma.$executeRaw`
-    INSERT INTO "SavingsGoal" ("id", "userId", "accountId", "name", "targetAmount", "createdAt", "updatedAt")
-    VALUES (${id}, ${userId}, ${input.accountId}, ${input.name}, ${input.targetAmount}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    INSERT INTO "SavingsGoal" (
+      "id", "userId", "accountId", "name", "targetAmount",
+      "targetDate", "icon", "color", "note", "createdAt", "updatedAt"
+    )
+    VALUES (
+      ${id}, ${userId}, ${input.accountId}, ${input.name}, ${input.targetAmount},
+      ${input.targetDate}::date, ${input.icon}, ${input.color}, ${input.note},
+      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
   `;
 
   const goal = await fetchSavingsGoalWithAccount(id);
@@ -116,16 +148,13 @@ export async function createSavingsGoal(
   logActivity(userId, "GOAL_CREATED", `Created savings goal "${goal.name}"`, {
     goalId: id,
     targetAmount: input.targetAmount,
+    targetDate: goal.targetDate,
   });
   return goal;
 }
 
-/** Updates the name, linked account, and target amount of an existing savings goal. */
-export async function updateSavingsGoal(
-  userId: string,
-  goalId: string,
-  input: { accountId: string; name: string; targetAmount: number }
-) {
+/** Updates every user-editable field of an existing savings goal. */
+export async function updateSavingsGoal(userId: string, goalId: string, input: SavingsGoalInput) {
   await getSavingsGoalOrThrow(userId, goalId);
   const existingGoal = await fetchSavingsGoalWithAccount(goalId);
 
@@ -142,6 +171,10 @@ export async function updateSavingsGoal(
       "accountId"    = ${input.accountId},
       "name"         = ${input.name},
       "targetAmount" = ${input.targetAmount},
+      "targetDate"   = ${input.targetDate}::date,
+      "icon"         = ${input.icon},
+      "color"        = ${input.color},
+      "note"         = ${input.note},
       "updatedAt"    = CURRENT_TIMESTAMP
     WHERE "id" = ${goalId} AND "userId" = ${userId}
   `;
@@ -167,6 +200,24 @@ export async function updateSavingsGoal(
     existingGoal?.accountName ?? null,
     goal.accountName
   );
+  pushActivityFieldChange(
+    changes,
+    "targetDate",
+    "Target date",
+    "date",
+    existingGoal?.targetDate ?? null,
+    goal.targetDate
+  );
+  pushActivityFieldChange(changes, "icon", "Icon", "text", existingGoal?.icon ?? null, goal.icon);
+  pushActivityFieldChange(
+    changes,
+    "color",
+    "Colour",
+    "text",
+    existingGoal?.color ?? null,
+    goal.color
+  );
+  pushActivityFieldChange(changes, "note", "Note", "text", existingGoal?.note ?? null, goal.note);
 
   logActivity(
     userId,

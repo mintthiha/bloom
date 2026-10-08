@@ -299,6 +299,14 @@ export type SavingsGoal = {
   accountId: string;
   name: string;
   targetAmount: number;
+  /** `YYYY-MM-DD` deadline the user wants to hit the target by, or null when the goal is open-ended. */
+  targetDate: string | null;
+  /** Emoji from the curated goal icon set, or null when the user kept the default target icon. */
+  icon: string | null;
+  /** Named accent colour from the shared palette, or null when the goal uses the app accent. */
+  color: string | null;
+  /** The user's short "why this matters" reminder, or null when they left it blank. */
+  note: string | null;
   currentBalance: number;
   accountName: string;
   accountNickname: string | null;
@@ -307,6 +315,17 @@ export type SavingsGoal = {
   percentageReached: number;
   createdAt: string;
   updatedAt: string;
+};
+
+/** The user-editable fields sent when creating or updating a savings goal. */
+export type SavingsGoalInput = {
+  accountId: string;
+  name: string;
+  targetAmount: number;
+  targetDate: string | null;
+  icon: string | null;
+  color: string | null;
+  note: string | null;
 };
 
 export type RecurringTransaction = {
@@ -635,12 +654,10 @@ export const api = {
   restoreBudget: (id: string) => request<Budget>(`/budgets/${id}/restore`, { method: "POST" }),
   getSubscriptions: () => request<SubscriptionSummary>("/subscriptions"),
   listSavingsGoals: () => request<SavingsGoal[]>("/savings-goals"),
-  createSavingsGoal: (input: { accountId: string; name: string; targetAmount: number }) =>
+  createSavingsGoal: (input: SavingsGoalInput) =>
     request<SavingsGoal>("/savings-goals", { method: "POST", body: JSON.stringify(input) }),
-  updateSavingsGoal: (
-    id: string,
-    input: { accountId: string; name: string; targetAmount: number }
-  ) => request<SavingsGoal>(`/savings-goals/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  updateSavingsGoal: (id: string, input: SavingsGoalInput) =>
+    request<SavingsGoal>(`/savings-goals/${id}`, { method: "PUT", body: JSON.stringify(input) }),
   deleteSavingsGoal: (id: string) => request<void>(`/savings-goals/${id}`, { method: "DELETE" }),
   restoreSavingsGoal: (id: string) =>
     request<SavingsGoal>(`/savings-goals/${id}/restore`, { method: "POST" }),
