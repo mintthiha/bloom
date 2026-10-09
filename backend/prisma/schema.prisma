@@ -329,6 +329,21 @@ model Category {
   @@index([userId, type])
 }
 
+/// One turn of a user's conversation with Bloom AI. A question and its reply are
+/// written together once the reply has finished (or been stopped part-way), so the
+/// table only ever holds complete exchanges. `role` is "user" or "assistant" — the
+/// same strings the model API and the chat UI use. Clearing the conversation hard-
+/// deletes the rows: it is a privacy action, so there is no soft-delete column.
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+}
+
 model ActivityLog {
   id          String   @id @default(cuid())
   userId      String

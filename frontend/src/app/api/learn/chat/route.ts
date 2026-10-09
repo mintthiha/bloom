@@ -13,24 +13,10 @@ For any Canadian contribution limit or tax figure, use only the authoritative nu
 
 Format answers with simple markdown when it aids clarity — short paragraphs, bold for key figures, and bullet lists for multiple points. Keep responses under 300 words unless the user asks for a detailed explanation.`;
 
-const RATE_LIMIT_MAX = 10;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-const rateLimitStore = new Map<string, number[]>();
-
 const SERVICE_UNAVAILABLE_MESSAGE =
   "Bloom AI is temporarily unavailable. Please try again in a moment.";
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW_MS;
-  const recentTimestamps = (rateLimitStore.get(ip) ?? []).filter(
-    (timestamp) => timestamp > windowStart
-  );
-  if (recentTimestamps.length >= RATE_LIMIT_MAX) return true;
-  recentTimestamps.push(now);
-  rateLimitStore.set(ip, recentTimestamps);
-  return false;
-}
+const RATE_LIMITED_MESSAGE =
+  "You've reached the limit for Bloom AI messages. Please try again later.";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -38,23 +24,13 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
-
-  if (isRateLimited(clientIp)) {
-    return new Response("Too many requests. Please try again later.", {
-      status: 429,
-      headers: { "Retry-After": "3600" },
-    });
-  }
-
-  let messages: { role: string; content: string }[];
+  let message: string;
   try {
     const body = await req.json();
-    messages = body.messages;
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response("Invalid messages", { status: 400 });
+    if (typeof body?.message !== "string" || !body.message.trim()) {
+      return new Response("Invalid message", { status: 400 });
     }
+    message = body.message;
   } catch {
     return new Response("Invalid request body", { status: 400 });
   }
@@ -72,8 +48,9 @@ export async function POST(req: Request) {
     // Keep the prompt without personalization.
   }
 
-  // The backend owns the model call (settings, timeouts, stall detection); this route only builds
-  // the prompt and relays the reply. Forwarding the request's signal lets Stop cancel generation.
+  // The backend owns the model call, the conversation history, and the per-user rate limit; this
+  // route only builds the prompt and relays the reply. Forwarding the request's signal lets Stop
+  // cancel generation.
   let backendResponse: Response;
   try {
     backendResponse = await fetch(`${BACKEND}/api/internal/ai/chat`, {
@@ -84,14 +61,21 @@ export async function POST(req: Request) {
         "X-Internal-Secret": process.env.INTERNAL_API_SECRET ?? "",
       },
       signal: req.signal,
-      body: JSON.stringify({ systemPrompt, messages }),
+      body: JSON.stringify({ systemPrompt, message }),
     });
   } catch {
     return new Response(SERVICE_UNAVAILABLE_MESSAGE, { status: 503 });
   }
 
   if (backendResponse.status === 400) {
-    return new Response("Invalid messages", { status: 400 });
+    return new Response("Invalid message", { status: 400 });
+  }
+  if (backendResponse.status === 429) {
+    const retryAfter = backendResponse.headers.get("Retry-After");
+    return new Response(RATE_LIMITED_MESSAGE, {
+      status: 429,
+      headers: retryAfter ? { "Retry-After": retryAfter } : undefined,
+    });
   }
   if (!backendResponse.ok || !backendResponse.body) {
     return new Response(SERVICE_UNAVAILABLE_MESSAGE, { status: 503 });

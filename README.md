@@ -381,8 +381,9 @@ Credit account detail pages include a rewards estimator that projects points or 
 - **Personalized** — when available, the user's own Bloom financial snapshot (`financial-snapshot.ts` / `financial-context.ts`) is added to the prompt so answers reflect their accounts and situation; the chat degrades gracefully to a generic (but still grounded) assistant if the snapshot can't be loaded
 - The Next.js route (`/api/learn/chat`) builds the prompt and relays the reply; the model call itself goes through the backend's shared Ollama client (`backend/src/lib/ollama-client.ts`), the single place that holds the model settings and timeouts for every AI feature
 - Resilient upstream handling: a connect timeout plus a mid-stream idle watchdog abort a stalled generation, and the endpoint returns a clean 503 (surfaced in the chat) when Ollama is unreachable
-- Per-user hourly rate limit on the chat endpoint
-- Conversation persists across reloads via localStorage; supports stopping an in-progress generation while keeping partial text
+- Per-user, per-feature AI rate limits enforced in the backend (`middleware/aiRateLimit.ts`): 30 chat messages an hour and 30 categorization requests per 15 minutes, each with its own budget so one feature never locks a user out of another. Counts are held in memory and reset when the backend restarts
+- Conversation is stored server-side (`ChatMessage` table), so it follows the user across devices; each question and its reply are saved together once the reply finishes, and only the most recent turns are replayed to the model. Clearing it asks for confirmation and deletes it permanently; it is included in the data export and removed with the account
+- Supports stopping an in-progress generation while keeping (and storing) the partial text
 - Single/double layout toggle applies to the Learn page — double view shows cards and chat side by side
 
 ### Dashboard UX

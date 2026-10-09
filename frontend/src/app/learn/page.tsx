@@ -52,6 +52,7 @@ export default function LearnPage() {
 
   const {
     messages,
+    isLoadingHistory,
     input,
     setInput,
     streaming,
@@ -60,7 +61,7 @@ export default function LearnPage() {
     sendMessage,
     handleKeyDown,
     stopGeneration,
-    clearConversation,
+    resetConversation,
   } = useLearnChat();
 
   useEffect(() => {
@@ -117,6 +118,7 @@ export default function LearnPage() {
           <div style={{ position: "sticky", top: "80px" }}>
             <ChatSection
               messages={messages}
+              isLoadingHistory={isLoadingHistory}
               isDouble={isDouble}
               streaming={streaming}
               messagesContainerRef={messagesContainerRef}
@@ -126,7 +128,7 @@ export default function LearnPage() {
               sendMessage={sendMessage}
               handleKeyDown={handleKeyDown}
               onStop={stopGeneration}
-              onClear={clearConversation}
+              onCleared={resetConversation}
             />
           </div>
         </div>
@@ -146,6 +148,7 @@ export default function LearnPage() {
           />
           <ChatSection
             messages={messages}
+            isLoadingHistory={isLoadingHistory}
             isDouble={isDouble}
             streaming={streaming}
             messagesContainerRef={messagesContainerRef}
@@ -155,7 +158,7 @@ export default function LearnPage() {
             sendMessage={sendMessage}
             handleKeyDown={handleKeyDown}
             onStop={stopGeneration}
-            onClear={clearConversation}
+            onCleared={resetConversation}
           />
         </>
       )}

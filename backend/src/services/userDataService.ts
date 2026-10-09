@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma";
 
 /** Bumped whenever the export payload's shape changes, so an old file can be recognised later. */
-export const USER_DATA_EXPORT_VERSION = 3;
+export const USER_DATA_EXPORT_VERSION = 4;
 
 type ProfileRow = {
   firstName: string;
@@ -116,6 +116,12 @@ type NetWorthSnapshotRow = {
   manualLiabilities: string | number;
 };
 
+type ChatMessageRow = {
+  role: string;
+  content: string;
+  createdAt: Date;
+};
+
 /** The complete, self-contained snapshot of everything Bloom stores for one user. */
 export type UserDataExport = {
   exportVersion: number;
@@ -162,6 +168,7 @@ export type UserDataExport = {
     manualAssets: number;
     manualLiabilities: number;
   }>;
+  chatMessages: ChatMessageRow[];
 };
 
 /** Renders a nullable Postgres Decimal column as a plain number so the JSON file has no wrapper objects. */
@@ -191,6 +198,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     categorizationRuleRows,
     customCategoryRows,
     netWorthSnapshotRows,
+    chatMessageRows,
   ] = await Promise.all([
     prisma.$queryRaw<ProfileRow[]>`
       SELECT "firstName", "lastName", "username", "email", "province", "tfsaBirthYear",
@@ -275,6 +283,12 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       WHERE "userId" = ${userId}
       ORDER BY "month" ASC
     `,
+    prisma.$queryRaw<ChatMessageRow[]>`
+      SELECT "role", "content", "createdAt"
+      FROM "ChatMessage"
+      WHERE "userId" = ${userId}
+      ORDER BY "createdAt" ASC
+    `,
   ]);
 
   const profileRow = profileRows[0];
@@ -316,6 +330,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       manualAssets: Number(row.manualAssets),
       manualLiabilities: Number(row.manualLiabilities),
     })),
+    chatMessages: chatMessageRows,
   };
 }
 
@@ -344,6 +359,7 @@ export async function deleteAllUserData(userId: string): Promise<void> {
     prisma.$executeRaw`DELETE FROM "AutoCategorizationRule" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "Category" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "ActivityLog" WHERE "userId" = ${userId}`,
+    prisma.$executeRaw`DELETE FROM "ChatMessage" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "PlaidItem" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "Account" WHERE "userId" = ${userId}`,
     prisma.$executeRaw`DELETE FROM "Profile" WHERE "userId" = ${userId}`,

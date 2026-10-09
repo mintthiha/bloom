@@ -22,6 +22,7 @@ function makeExport(overrides: Partial<UserDataExport> = {}): UserDataExport {
     categorizationRules: [],
     customCategories: [],
     netWorthSnapshots: [],
+    chatMessages: [],
     ...overrides,
   };
 }
@@ -80,6 +81,19 @@ describe("summarizeUserDataExport", () => {
     );
 
     expect(rows).toEqual([{ label: "custom category", count: 1 }]);
+  });
+
+  it("counts the Bloom AI conversation when present", () => {
+    const rows = summarizeUserDataExport(
+      makeExport({
+        chatMessages: [
+          { role: "user", content: "What is a TFSA?", createdAt: "2026-10-08T12:00:00.000Z" },
+          { role: "assistant", content: "An account.", createdAt: "2026-10-08T12:00:05.000Z" },
+        ],
+      })
+    );
+
+    expect(rows).toEqual([{ label: "Bloom AI messages", count: 2 }]);
   });
 
   it("returns nothing at all for a completely empty account", () => {

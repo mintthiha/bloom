@@ -1,12 +1,15 @@
 "use client";
 
-import { Send, Square, Trash2 } from "lucide-react";
-import type { ChatMessage } from "./chat-storage";
+import { Send, Square } from "lucide-react";
+import { MAX_CHAT_MESSAGE_LENGTH, type ChatMessage } from "@/lib/api";
+import { ClearConversation } from "./ClearConversation";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 type ChatSectionProps = {
   messages: ChatMessage[];
+  /** True until the stored conversation has been fetched; sending waits for it. */
+  isLoadingHistory: boolean;
   isDouble: boolean;
   streaming: boolean;
   messagesContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -16,7 +19,7 @@ type ChatSectionProps = {
   sendMessage: (overrideText?: string) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onStop: () => void;
-  onClear: () => void;
+  onCleared: () => void;
 };
 
 /** Starter questions shown in the empty chat; the personalized ones exercise the user's own data. */
@@ -29,6 +32,7 @@ const SUGGESTED_PROMPTS = [
 
 export function ChatSection({
   messages,
+  isLoadingHistory,
   isDouble,
   streaming,
   messagesContainerRef,
@@ -38,8 +42,11 @@ export function ChatSection({
   sendMessage,
   handleKeyDown,
   onStop,
-  onClear,
+  onCleared,
 }: ChatSectionProps) {
+  const isInputDisabled = streaming || isLoadingHistory;
+  const canSend = !isLoadingHistory && Boolean(input.trim());
+
   return (
     <div
       style={{
@@ -81,28 +88,11 @@ export function ChatSection({
           Self-hosted
         </span>
         {messages.length > 0 && (
-          <button
-            type="button"
-            className="chat-danger"
-            onClick={onClear}
-            title="Clear conversation"
-            style={{
-              marginLeft: "auto",
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-              background: "transparent",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "5px 9px",
-              fontSize: "12px",
-              color: "var(--text-secondary)",
-              cursor: "pointer",
-            }}
-          >
-            <Trash2 size={13} />
-            Clear
-          </button>
+          <ClearConversation
+            messageCount={messages.length}
+            isDisabled={streaming}
+            onCleared={onCleared}
+          />
         )}
       </div>
 
@@ -119,7 +109,20 @@ export function ChatSection({
           gap: "16px",
         }}
       >
-        {messages.length === 0 && (
+        {isLoadingHistory && (
+          <div
+            role="status"
+            style={{
+              margin: "auto",
+              color: "var(--text-muted)",
+              fontSize: "13px",
+              textAlign: "center",
+            }}
+          >
+            Loading your conversation…
+          </div>
+        )}
+        {!isLoadingHistory && messages.length === 0 && (
           <div style={{ margin: "auto", display: "flex", flexDirection: "column", gap: "14px" }}>
             <div
               style={{
@@ -211,7 +214,8 @@ export function ChatSection({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={1}
-          disabled={streaming}
+          disabled={isInputDisabled}
+          maxLength={MAX_CHAT_MESSAGE_LENGTH}
           placeholder="Ask a question…"
           aria-label="Ask a financial question"
           style={{
@@ -225,7 +229,7 @@ export function ChatSection({
             color: "var(--text-primary)",
             lineHeight: 1.5,
             fontFamily: "inherit",
-            opacity: streaming ? 0.5 : 1,
+            opacity: isInputDisabled ? 0.5 : 1,
           }}
         />
         {streaming ? (
@@ -255,16 +259,16 @@ export function ChatSection({
             type="button"
             className="chat-send"
             onClick={() => sendMessage()}
-            disabled={!input.trim()}
+            disabled={!canSend}
             title="Send"
             style={{
               width: "38px",
               height: "38px",
               borderRadius: "10px",
               border: "none",
-              background: input.trim() ? "var(--brand-accent)" : "var(--surface-3)",
-              color: input.trim() ? "white" : "var(--text-muted)",
-              cursor: input.trim() ? "pointer" : "not-allowed",
+              background: canSend ? "var(--brand-accent)" : "var(--surface-3)",
+              color: canSend ? "white" : "var(--text-muted)",
+              cursor: canSend ? "pointer" : "not-allowed",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

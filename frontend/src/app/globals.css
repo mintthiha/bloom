@@ -961,6 +961,10 @@ body::before {
 .chat-danger:active {
   transform: scale(0.95);
 }
+/* A disabled one (Clear while a reply is streaming) gives no hover or press feedback. */
+.chat-danger:disabled {
+  pointer-events: none;
+}
 
 /* Animated "thinking" placeholder: a fading, rotating phrase followed by three bouncing dots. */
 .thinking-phrase {

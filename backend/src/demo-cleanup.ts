@@ -20,6 +20,7 @@ async function deleteDemoUser(userId: string) {
   await prisma.$executeRaw`DELETE FROM "ManualEntry" WHERE "userId" = ${userId}`;
   await prisma.$executeRaw`DELETE FROM "AutoCategorizationRule" WHERE "userId" = ${userId}`;
   await prisma.$executeRaw`DELETE FROM "ActivityLog" WHERE "userId" = ${userId}`;
+  await prisma.$executeRaw`DELETE FROM "ChatMessage" WHERE "userId" = ${userId}`;
   await prisma.$executeRaw`DELETE FROM "Notification" WHERE "userId" = ${userId}`;
   await prisma.$executeRaw`DELETE FROM "Account" WHERE "userId" = ${userId}`;
   await prisma.$executeRaw`DELETE FROM "Profile" WHERE "userId" = ${userId}`;

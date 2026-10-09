@@ -1,21 +1,39 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  clearStoredMessages,
-  loadStoredMessages,
-  saveStoredMessages,
-  type ChatMessage,
-} from "@/app/learn/_components/_aiChat/chat-storage";
+import { toast } from "sonner";
+import { api, type ChatMessage } from "@/lib/api";
+
+/** Where the conversation lived before it moved to the server; only ever cleaned up now. */
+const LEGACY_STORAGE_KEY = "bloom_learn_chat";
 
 export function useLearnChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    typeof window === "undefined" ? [] : loadStoredMessages()
-  );
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  /** Loads the conversation the server has stored for this user, so it follows them across devices. */
+  useEffect(() => {
+    let isUnmounted = false;
+    api
+      .listChatMessages()
+      .then((result) => {
+        if (isUnmounted) return;
+        setMessages(result.messages.map(({ role, content }) => ({ role, content })));
+      })
+      .catch(() => {
+        if (!isUnmounted) toast.error("Couldn't load your conversation");
+      })
+      .finally(() => {
+        if (!isUnmounted) setIsLoadingHistory(false);
+      });
+    return () => {
+      isUnmounted = true;
+    };
+  }, []);
 
   /**
    * Follows the streamed reply by scrolling the messages container itself — not the
@@ -32,19 +50,22 @@ export function useLearnChat() {
     }
   }, [messages]);
 
-  /** Persists the conversation once it settles (not on every streamed token) so it survives reloads. */
-  useEffect(() => {
-    if (!streaming) saveStoredMessages(messages);
-  }, [messages, streaming]);
-
-  /** Sends a message and streams the reply. Pass `overrideText` to send a suggested prompt directly. */
+  /**
+   * Sends a message and streams the reply. Pass `overrideText` to send a suggested prompt directly.
+   * Only the new message is sent: the server already holds the earlier turns and stores this
+   * exchange itself once the reply finishes.
+   */
   async function sendMessage(overrideText?: string) {
     const text = (overrideText ?? input).trim();
-    if (!text || streaming) return;
+    // Waiting for the stored conversation avoids it landing on top of a message sent meanwhile.
+    if (!text || streaming || isLoadingHistory) return;
     if (overrideText === undefined) setInput("");
 
-    const newMessages: ChatMessage[] = [...messages, { role: "user", content: text }];
-    setMessages([...newMessages, { role: "assistant", content: "" }]);
+    setMessages((previous) => [
+      ...previous,
+      { role: "user", content: text },
+      { role: "assistant", content: "" },
+    ]);
     setStreaming(true);
 
     const abortController = new AbortController();
@@ -54,7 +75,7 @@ export function useLearnChat() {
       const res = await fetch("/api/learn/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ message: text }),
         signal: abortController.signal,
       });
 
@@ -120,11 +141,18 @@ export function useLearnChat() {
     abortControllerRef.current?.abort();
   }
 
-  /** Clears the conversation from the screen and from localStorage, stopping any active stream. */
-  function clearConversation() {
+  /**
+   * Empties the chat window once the server has deleted the conversation, and removes the copy
+   * older versions of Bloom kept in this browser so nothing of it is left behind.
+   */
+  function resetConversation() {
     abortControllerRef.current?.abort();
     setMessages([]);
-    clearStoredMessages();
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch {
+      // localStorage unavailable — there is no legacy copy to remove.
+    }
   }
 
   /** Sends on Enter (Shift+Enter inserts a newline). */
@@ -137,6 +165,7 @@ export function useLearnChat() {
 
   return {
     messages,
+    isLoadingHistory,
     input,
     setInput,
     streaming,
@@ -145,6 +174,6 @@ export function useLearnChat() {
     sendMessage,
     handleKeyDown,
     stopGeneration,
-    clearConversation,
+    resetConversation,
   };
 }

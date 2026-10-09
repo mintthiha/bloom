@@ -504,6 +504,15 @@ export type ActivityLogQuery = {
   end?: string;
 };
 
+/** A single turn of the Bloom AI conversation, as the chat window renders it. */
+export type ChatMessage = { role: "user" | "assistant"; content: string };
+
+/** Longest question the chat accepts; mirrors the limit the backend enforces. */
+export const MAX_CHAT_MESSAGE_LENGTH = 4000;
+
+/** A conversation turn as the server stores it. */
+export type StoredChatMessage = ChatMessage & { id: string; createdAt: string };
+
 /** Everything Bloom stores for the signed-in user, as returned by the whole-account export. */
 export type UserDataExport = {
   exportVersion: number;
@@ -569,6 +578,7 @@ export type UserDataExport = {
     manualAssets: number;
     manualLiabilities: number;
   }>;
+  chatMessages: Array<ChatMessage & { createdAt: string }>;
 };
 
 export const api = {
@@ -872,6 +882,8 @@ export const api = {
   deleteManualEntry: (id: string) => request<void>(`/manual-entries/${id}`, { method: "DELETE" }),
   restoreManualEntry: (id: string) =>
     request<void>(`/manual-entries/${id}/restore`, { method: "POST" }),
+  listChatMessages: () => request<{ messages: StoredChatMessage[] }>("/chat-messages"),
+  clearChatMessages: () => request<void>("/chat-messages", { method: "DELETE" }),
   exportUserData: () => request<UserDataExport>("/user-data/export"),
   deleteUserAccount: () => request<void>("/user-data", { method: "DELETE" }),
 };

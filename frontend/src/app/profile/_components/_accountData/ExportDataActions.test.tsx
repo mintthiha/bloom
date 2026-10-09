@@ -41,6 +41,7 @@ const exportBundle: UserDataExport = {
   categorizationRules: [],
   customCategories: [],
   netWorthSnapshots: [],
+  chatMessages: [],
 };
 
 beforeEach(() => {

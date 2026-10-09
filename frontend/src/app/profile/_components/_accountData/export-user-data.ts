@@ -49,6 +49,11 @@ const SUMMARY_SECTIONS: Array<{
     pluralLabel: "net worth snapshots",
     countOf: (data) => data.netWorthSnapshots.length,
   },
+  {
+    singularLabel: "Bloom AI message",
+    pluralLabel: "Bloom AI messages",
+    countOf: (data) => data.chatMessages.length,
+  },
 ];
 
 /** Serializes the export bundle as indented JSON so the downloaded file is readable by a person. */

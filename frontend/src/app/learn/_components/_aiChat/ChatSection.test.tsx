@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatSection } from "./ChatSection";
-import type { ChatMessage } from "./chat-storage";
+import type { ChatMessage } from "@/lib/api";
 
 vi.mock("./MarkdownMessage", () => ({
   MarkdownMessage: ({ content }: { content: string }) => (
@@ -13,10 +13,27 @@ vi.mock("./ThinkingIndicator", () => ({
   ThinkingIndicator: () => <div data-testid="thinking" />,
 }));
 
+vi.mock("./ClearConversation", () => ({
+  ClearConversation: ({
+    messageCount,
+    isDisabled,
+    onCleared,
+  }: {
+    messageCount: number;
+    isDisabled: boolean;
+    onCleared: () => void;
+  }) => (
+    <button type="button" disabled={isDisabled} onClick={onCleared}>
+      Clear {messageCount} messages
+    </button>
+  ),
+}));
+
 /** Renders ChatSection with sensible default props, overridable per test. */
 function renderChat(overrides: Partial<React.ComponentProps<typeof ChatSection>> = {}) {
   const props = {
     messages: [] as ChatMessage[],
+    isLoadingHistory: false,
     isDouble: false,
     streaming: false,
     messagesContainerRef: { current: null },
@@ -26,7 +43,7 @@ function renderChat(overrides: Partial<React.ComponentProps<typeof ChatSection>>
     sendMessage: vi.fn(),
     handleKeyDown: vi.fn(),
     onStop: vi.fn(),
-    onClear: vi.fn(),
+    onCleared: vi.fn(),
     ...overrides,
   };
   render(<ChatSection {...props} />);
@@ -57,10 +74,34 @@ describe("ChatSection", () => {
     expect(screen.getByTestId("thinking")).toBeInTheDocument();
   });
 
-  it("shows the Clear button only when there are messages", () => {
-    const { onClear } = renderChat({ messages: [{ role: "user", content: "hi" }] });
-    fireEvent.click(screen.getByRole("button", { name: /clear/i }));
-    expect(onClear).toHaveBeenCalled();
+  it("offers Clear with the message count when there are messages", () => {
+    const { onCleared } = renderChat({
+      messages: [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Clear 2 messages" }));
+    expect(onCleared).toHaveBeenCalled();
+  });
+
+  it("disables Clear while a reply is streaming", () => {
+    renderChat({ streaming: true, messages: [{ role: "user", content: "hi" }] });
+    expect(screen.getByRole("button", { name: /clear/i })).toBeDisabled();
+  });
+
+  it("shows a loading note instead of suggested prompts while the conversation loads", () => {
+    renderChat({ isLoadingHistory: true, input: "hello" });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading your conversation…");
+    expect(screen.queryByText(/Ask me anything about your money/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Ask a financial question")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+  });
+
+  it("caps the question at 4000 characters", () => {
+    renderChat();
+    expect(screen.getByLabelText("Ask a financial question")).toHaveAttribute("maxlength", "4000");
   });
 
   it("hides the Clear button on an empty conversation", () => {

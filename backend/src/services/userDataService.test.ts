@@ -36,6 +36,7 @@ function queueExportRows(overrides: Partial<Record<string, unknown[]>> = {}) {
     "categorizationRules",
     "customCategories",
     "netWorthSnapshots",
+    "chatMessages",
   ];
   for (const section of sections) {
     prismaMock.$queryRaw.mockResolvedValueOnce(overrides[section] ?? []);
@@ -167,6 +168,19 @@ describe("userDataService", () => {
       expect(data.manualEntries[0]?.date).toBeNull();
     });
 
+    it("includes the Bloom AI conversation", async () => {
+      const { exportUserData } = await import("./userDataService");
+      const chatMessages = [
+        { role: "user", content: "What is a TFSA?", createdAt: new Date("2026-10-08T12:00:00Z") },
+        { role: "assistant", content: "An account.", createdAt: new Date("2026-10-08T12:00:05Z") },
+      ];
+      queueExportRows({ chatMessages });
+
+      const data = await exportUserData("u-1");
+
+      expect(data.chatMessages).toEqual(chatMessages);
+    });
+
     it("excludes soft-deleted rows and scopes every query to the user", async () => {
       const { exportUserData } = await import("./userDataService");
       queueExportRows();
@@ -174,12 +188,12 @@ describe("userDataService", () => {
       await exportUserData("u-1");
 
       const statements = prismaMock.$queryRaw.mock.calls.map((call) => String(call[0]));
-      expect(statements).toHaveLength(10);
+      expect(statements).toHaveLength(11);
       for (const statement of statements) {
         expect(statement).toContain("userId");
       }
       // Every table that has a deletedAt column filters on it; Profile, Category, and
-      // NetWorthSnapshot do not have one.
+      // NetWorthSnapshot do not have one, and ChatMessage is hard-deleted.
       const softDeletable = statements.filter((statement) => statement.includes("deletedAt"));
       expect(softDeletable).toHaveLength(7);
     });
@@ -207,6 +221,7 @@ describe("userDataService", () => {
         "AutoCategorizationRule",
         "Category",
         "ActivityLog",
+        "ChatMessage",
         "PlaidItem",
         "Account",
         "Profile",

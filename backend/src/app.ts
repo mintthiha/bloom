@@ -15,6 +15,7 @@ import categorizationRulesRouter from "./routes/categorizationRules";
 import categoriesRouter from "./routes/categories";
 import autoCategorizeRouter from "./routes/autoCategorize";
 import aiChatRouter from "./routes/aiChat";
+import chatMessagesRouter from "./routes/chatMessages";
 import credentialsAuthRouter from "./routes/credentialsAuth";
 import activityRouter from "./routes/activity";
 import manualEntriesRouter from "./routes/manualEntries";
@@ -22,6 +23,7 @@ import userDataRouter from "./routes/userData";
 import exchangeRatesRouter from "./routes/exchangeRates";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireInternalSecret } from "./middleware/internalAuth";
+import { createAiRateLimiter } from "./middleware/aiRateLimit";
 import logger from "./lib/logger";
 import prisma from "./lib/prisma";
 
@@ -36,9 +38,6 @@ app.use(
     message: { error: "Too many requests, please try again later." },
   })
 );
-// A chat request carries the whole conversation plus the system prompt, which can outgrow the
-// 100kb default below; registered first so the default parser sees the body as already parsed.
-app.use("/api/internal/ai", express.json({ limit: "1mb" }));
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
@@ -69,18 +68,9 @@ app.use("/api/activity", activityRouter);
 app.use("/api/manual-entries", manualEntriesRouter);
 app.use("/api/user-data", userDataRouter);
 app.use("/api/exchange-rates", exchangeRatesRouter);
-app.use(
-  "/api/auto-categorize",
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 30,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many AI requests, please try again later." },
-  }),
-  autoCategorizeRouter
-);
-app.use("/api/internal/ai", aiChatRouter);
+app.use("/api/chat-messages", chatMessagesRouter);
+app.use("/api/auto-categorize", createAiRateLimiter("categorization"), autoCategorizeRouter);
+app.use("/api/internal/ai", createAiRateLimiter("chat"), aiChatRouter);
 app.use(
   "/api/credentials-auth",
   rateLimit({
