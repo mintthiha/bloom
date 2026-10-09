@@ -1,62 +1,42 @@
 import request from "supertest";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
+import { AppError } from "../middleware/errorHandler";
 import { INTERNAL_SECRET } from "../test-setup";
 
-const { categoryServiceMock } = vi.hoisted(() => ({
-  categoryServiceMock: { listCategories: vi.fn() },
+const { serviceMock } = vi.hoisted(() => ({
+  serviceMock: { suggestCategories: vi.fn(), startCategorySuggestionStream: vi.fn() },
 }));
 
-vi.mock("../services/categoryService", () => categoryServiceMock);
-
-const DEFAULT_CATEGORY_NAMES = [
-  "Groceries",
-  "Rent",
-  "Utilities",
-  "Transport",
-  "Dining",
-  "Shopping",
-  "Healthcare",
-  "Entertainment",
-  "Other",
-  "Salary",
-  "Freelance",
-  "Gift",
-  "Investment",
-  "Other Income",
-];
-
-const fetchMock = vi.fn();
-
-beforeEach(() => {
-  vi.stubGlobal("fetch", fetchMock);
-  fetchMock.mockReset();
-  categoryServiceMock.listCategories.mockReset();
-  categoryServiceMock.listCategories.mockResolvedValue(
-    DEFAULT_CATEGORY_NAMES.map((name) => ({ name }))
-  );
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+vi.mock("../services/autoCategorizeService", () => serviceMock);
 
 const VALID_SUGGESTIONS = [
   { merchant: "Loblaws", category: "Groceries" },
   { merchant: "Netflix", category: "Entertainment" },
 ];
 
-/** Builds a mock fetch response containing Ollama's non-streaming chat completion shape. */
-function makeOllamaResponse(suggestions: { merchant: string; category: string }[]) {
-  return {
-    ok: true,
-    json: vi.fn().mockResolvedValue({
-      message: { content: JSON.stringify({ suggestions }) },
-    }),
-  };
+/** Builds the generator of suggestions the service would hand back for a streamed request. */
+async function* suggestionStreamOf(
+  suggestions: { merchant: string; category: string }[]
+): AsyncGenerator<{ merchant: string; category: string }, void, void> {
+  for (const suggestion of suggestions) yield suggestion;
 }
 
-describe("auto-categorize routes", () => {
+/** Posts to an auto-categorize endpoint as the Next.js proxy would for a signed-in user. */
+function postAsUser(path: string, body: unknown) {
+  return request(app)
+    .post(`/api/auto-categorize/${path}`)
+    .set("X-Internal-Secret", INTERNAL_SECRET)
+    .set("X-User-Id", "user-1")
+    .send(body as object);
+}
+
+beforeEach(() => {
+  serviceMock.suggestCategories.mockReset();
+  serviceMock.startCategorySuggestionStream.mockReset();
+});
+
+describe("auto-categorize suggest route", () => {
   it("returns 401 when x-user-id is missing", async () => {
     const response = await request(app)
       .post("/api/auto-categorize/suggest")
@@ -64,129 +44,115 @@ describe("auto-categorize routes", () => {
       .send({ merchants: ["Loblaws"] });
 
     expect(response.status).toBe(401);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(serviceMock.suggestCategories).not.toHaveBeenCalled();
   });
 
-  it("returns suggestions for a valid list of merchants", async () => {
-    fetchMock.mockResolvedValue(makeOllamaResponse(VALID_SUGGESTIONS));
+  it("returns the service's suggestions for a valid list of merchants", async () => {
+    serviceMock.suggestCategories.mockResolvedValue(VALID_SUGGESTIONS);
 
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: ["Loblaws", "Netflix"] });
+    const response = await postAsUser("suggest", { merchants: ["Loblaws", "Netflix"] });
 
     expect(response.status).toBe(200);
-    expect(response.body.suggestions).toHaveLength(2);
-    expect(response.body.suggestions[0]).toMatchObject({
-      merchant: "Loblaws",
-      category: "Groceries",
-    });
-    expect(response.body.suggestions[1]).toMatchObject({
-      merchant: "Netflix",
-      category: "Entertainment",
-    });
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(response.body).toEqual({ suggestions: VALID_SUGGESTIONS });
+    expect(serviceMock.suggestCategories).toHaveBeenCalledWith("user-1", ["Loblaws", "Netflix"]);
   });
 
-  it("filters out suggestions with invalid categories", async () => {
-    const withInvalid = [
-      ...VALID_SUGGESTIONS,
-      { merchant: "Unknown Corp", category: "NotACategory" },
-    ];
-    fetchMock.mockResolvedValue(makeOllamaResponse(withInvalid));
+  it("trims each merchant and caps it at 100 characters before calling the service", async () => {
+    serviceMock.suggestCategories.mockResolvedValue([]);
 
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: ["Loblaws", "Netflix", "Unknown Corp"] });
+    await postAsUser("suggest", { merchants: ["  Loblaws  ", "x".repeat(150)] });
+
+    expect(serviceMock.suggestCategories).toHaveBeenCalledWith("user-1", [
+      "Loblaws",
+      "x".repeat(100),
+    ]);
+  });
+
+  it("accepts exactly the maximum of 20 merchants", async () => {
+    serviceMock.suggestCategories.mockResolvedValue([]);
+    const merchants = Array.from({ length: 20 }, (_, index) => `Merchant ${index}`);
+
+    const response = await postAsUser("suggest", { merchants });
 
     expect(response.status).toBe(200);
-    expect(response.body.suggestions).toHaveLength(2);
-    expect(response.body.suggestions.map((s: { merchant: string }) => s.merchant)).not.toContain(
-      "Unknown Corp"
+    expect(serviceMock.suggestCategories).toHaveBeenCalledWith("user-1", merchants);
+  });
+
+  it("returns 503 when the AI service is unavailable", async () => {
+    serviceMock.suggestCategories.mockRejectedValue(new AppError(503, "AI service unavailable"));
+
+    const response = await postAsUser("suggest", { merchants: ["Loblaws"] });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ error: "AI service unavailable" });
+  });
+
+  it.each([
+    ["merchants is missing", {}],
+    ["merchants is an empty array", { merchants: [] }],
+    ["merchants is not an array", { merchants: "Loblaws" }],
+    [
+      "merchants exceeds the maximum of 20",
+      { merchants: Array.from({ length: 21 }, (_, index) => `Merchant ${index}`) },
+    ],
+    ["a merchant entry is not a string", { merchants: ["Loblaws", 42] }],
+    ["a merchant entry is blank", { merchants: ["Loblaws", "   "] }],
+  ])("returns 400 when %s", async (_description, body) => {
+    const response = await postAsUser("suggest", body);
+
+    expect(response.status).toBe(400);
+    expect(serviceMock.suggestCategories).not.toHaveBeenCalled();
+  });
+});
+
+describe("auto-categorize suggest-stream route", () => {
+  it("returns 401 when x-user-id is missing", async () => {
+    const response = await request(app)
+      .post("/api/auto-categorize/suggest-stream")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .send({ merchants: ["Loblaws"] });
+
+    expect(response.status).toBe(401);
+    expect(serviceMock.startCategorySuggestionStream).not.toHaveBeenCalled();
+  });
+
+  it("emits one SSE data event per suggestion, then a done event", async () => {
+    serviceMock.startCategorySuggestionStream.mockResolvedValue(
+      suggestionStreamOf(VALID_SUGGESTIONS)
+    );
+
+    const response = await postAsUser("suggest-stream", { merchants: ["Loblaws", "Netflix"] });
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/event-stream");
+    expect(response.text).toBe(
+      'data: {"merchant":"Loblaws","category":"Groceries"}\n\n' +
+        'data: {"merchant":"Netflix","category":"Entertainment"}\n\n' +
+        "event: done\ndata: {}\n\n"
+    );
+    expect(serviceMock.startCategorySuggestionStream).toHaveBeenCalledWith(
+      "user-1",
+      ["Loblaws", "Netflix"],
+      expect.any(AbortSignal)
     );
   });
 
-  it("returns 503 when Ollama is unreachable", async () => {
-    fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
+  it("emits an SSE error event when the AI service is unavailable", async () => {
+    serviceMock.startCategorySuggestionStream.mockRejectedValue(
+      new AppError(503, "AI service unavailable")
+    );
 
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: ["Loblaws"] });
+    const response = await postAsUser("suggest-stream", { merchants: ["Loblaws"] });
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(200);
+    expect(response.text).toBe('event: error\ndata: {"message":"AI service unavailable"}\n\n');
   });
 
-  it("returns 503 when Ollama responds with a non-ok status", async () => {
-    fetchMock.mockResolvedValue({ ok: false, json: vi.fn() });
-
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: ["Loblaws"] });
-
-    expect(response.status).toBe(503);
-  });
-
-  it("returns 400 when merchants is missing", async () => {
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({});
+  it("returns 400 before opening the stream when the payload is invalid", async () => {
+    const response = await postAsUser("suggest-stream", { merchants: [] });
 
     expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 when merchants is an empty array", async () => {
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: [] });
-
-    expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 when merchants is not an array", async () => {
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: "Loblaws" });
-
-    expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 when merchants exceeds the maximum limit of 20", async () => {
-    const tooMany = Array.from({ length: 21 }, (_, i) => `Merchant ${i}`);
-
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: tooMany });
-
-    expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 when a merchant entry is not a string", async () => {
-    const response = await request(app)
-      .post("/api/auto-categorize/suggest")
-      .set("X-Internal-Secret", INTERNAL_SECRET)
-      .set("X-User-Id", "user-1")
-      .send({ merchants: ["Loblaws", 42] });
-
-    expect(response.status).toBe(400);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.headers["content-type"]).toContain("application/json");
+    expect(serviceMock.startCategorySuggestionStream).not.toHaveBeenCalled();
   });
 });

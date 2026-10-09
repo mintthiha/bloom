@@ -1,11 +1,20 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { AppError } from "../middleware/errorHandler";
+import logger from "../lib/logger";
+import { AI_UNAVAILABLE_MESSAGE } from "../lib/ollama-client";
 import { requireObject } from "../lib/validation";
-import { listCategories } from "../services/categoryService";
+import * as autoCategorizeService from "../services/autoCategorizeService";
 
 const router = Router();
 
 const MAX_MERCHANTS = 20;
+
+/** Extracts the authenticated user id from the internal x-user-id header. */
+function requireUserId(req: Request): string {
+  const userId = req.headers["x-user-id"] as string | undefined;
+  if (!userId) throw new AppError(401, "Unauthorized");
+  return userId;
+}
 
 /**
  * Extracts and validates the list of merchants from the request body.
@@ -32,85 +41,13 @@ function parseMerchantsFromBody(body: Record<string, unknown>): string[] {
   return sanitized;
 }
 
-/** Calls Ollama to suggest a category for each merchant and returns validated suggestions. */
+/** Returns an AI-suggested category for each merchant, limited to the user's own categories. */
 router.post("/suggest", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.headers["x-user-id"] as string | undefined;
-    if (!userId) throw new AppError(401, "Unauthorized");
+    const userId = requireUserId(req);
+    const merchants = parseMerchantsFromBody(requireObject(req.body));
 
-    const body = requireObject(req.body);
-    const merchants = parseMerchantsFromBody(body);
-
-    const allowedCategories = (await listCategories(userId)).map((category) => category.name);
-    const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-    const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
-
-    const categoryList = allowedCategories.join(", ");
-    const merchantList = merchants.map((m) => `"${m}"`).join(", ");
-
-    const systemPrompt = `You are a financial categorization assistant for a Canadian personal finance app called Bloom. Given merchant names, assign each one the most fitting category from the approved list. Return a JSON object with this exact shape: {"suggestions":[{"merchant":"...","category":"..."}]}. The category must be exactly one value from: ${categoryList}. Include every merchant from the input. Return only the JSON — no explanation, no markdown.`;
-
-    let ollamaResponse: globalThis.Response;
-    try {
-      ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: ollamaModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `Categorize these merchants: [${merchantList}]` },
-          ],
-          stream: false,
-          format: "json",
-          options: { temperature: 0.1 },
-        }),
-      });
-    } catch {
-      throw new AppError(503, "AI service unavailable");
-    }
-
-    if (!ollamaResponse.ok) {
-      throw new AppError(503, "AI service unavailable");
-    }
-
-    const ollamaJson = (await ollamaResponse.json()) as { message?: { content?: string } };
-    const content = ollamaJson.message?.content;
-    if (!content) {
-      throw new AppError(502, "AI returned no content");
-    }
-
-    let rawSuggestions: unknown;
-    try {
-      const parsed: unknown = JSON.parse(content);
-      if (Array.isArray(parsed)) {
-        rawSuggestions = parsed;
-      } else if (parsed !== null && typeof parsed === "object") {
-        const asRecord = parsed as Record<string, unknown>;
-        rawSuggestions = Array.isArray(asRecord.suggestions) ? asRecord.suggestions : parsed;
-      } else {
-        rawSuggestions = [];
-      }
-    } catch {
-      throw new AppError(502, "AI returned invalid JSON");
-    }
-
-    if (!Array.isArray(rawSuggestions)) {
-      throw new AppError(502, "AI returned unexpected response format");
-    }
-
-    const suggestions = (rawSuggestions as unknown[])
-      .filter(
-        (item): item is { merchant: string; category: string } =>
-          item !== null &&
-          typeof item === "object" &&
-          typeof (item as Record<string, unknown>).merchant === "string" &&
-          typeof (item as Record<string, unknown>).category === "string" &&
-          allowedCategories.includes((item as Record<string, unknown>).category as string)
-      )
-      .map((item) => ({ merchant: item.merchant, category: item.category }));
-
-    res.json({ suggestions });
+    res.json({ suggestions: await autoCategorizeService.suggestCategories(userId, merchants) });
   } catch (err) {
     next(err);
   }
@@ -122,112 +59,46 @@ router.post("/suggest", async (req: Request, res: Response, next: NextFunction) 
  */
 router.post("/suggest-stream", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = req.headers["x-user-id"] as string | undefined;
-    if (!userId) throw new AppError(401, "Unauthorized");
+    const userId = requireUserId(req);
+    const merchants = parseMerchantsFromBody(requireObject(req.body));
 
-    const body = requireObject(req.body);
-    const merchants = parseMerchantsFromBody(body);
-
-    const allowedCategories = (await listCategories(userId)).map((category) => category.name);
-    const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-    const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
-    const categoryList = allowedCategories.join(", ");
-    const merchantList = merchants.map((m) => `"${m}"`).join(", ");
-
-    const systemPrompt = `You are a financial categorization assistant for a Canadian personal finance app called Bloom. Given merchant names, assign each one the most fitting category. Output ONLY one JSON object per line with this exact shape: {"merchant":"...","category":"..."}. No wrapper array, no markdown, no explanation. The category must be exactly one value from: ${categoryList}. Include every merchant from the input.`;
+    // Stop generating as soon as the browser cancels (e.g. the user turns AI suggestions off).
+    const abortController = new AbortController();
+    res.on("close", () => abortController.abort());
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders();
 
-    let ollamaResponse: globalThis.Response;
+    let suggestions: AsyncGenerator<autoCategorizeService.CategorySuggestion, void, void>;
     try {
-      ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: ollamaModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `Categorize these merchants: [${merchantList}]` },
-          ],
-          stream: true,
-          options: { temperature: 0.1 },
-        }),
-      });
-    } catch {
-      res.write(`event: error\ndata: ${JSON.stringify({ message: "AI service unavailable" })}\n\n`);
+      suggestions = await autoCategorizeService.startCategorySuggestionStream(
+        userId,
+        merchants,
+        abortController.signal
+      );
+    } catch (error) {
+      if (!(error instanceof AppError)) {
+        logger.error({ err: error }, "Category suggestion stream failed to start");
+      }
+      // The headers are already sent, so the failure has to travel as an SSE event, not a status.
+      res.write(`event: error\ndata: ${JSON.stringify({ message: AI_UNAVAILABLE_MESSAGE })}\n\n`);
       res.end();
       return;
     }
 
-    if (!ollamaResponse.ok || !ollamaResponse.body) {
-      res.write(`event: error\ndata: ${JSON.stringify({ message: "AI service unavailable" })}\n\n`);
-      res.end();
-      return;
-    }
-
-    /** Validates and emits a parsed suggestion line as an SSE event. */
-    function tryEmitSuggestion(line: string): void {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("{")) return;
-      try {
-        const suggestion = JSON.parse(trimmed) as { merchant?: unknown; category?: unknown };
-        if (
-          typeof suggestion.merchant === "string" &&
-          typeof suggestion.category === "string" &&
-          allowedCategories.includes(suggestion.category)
-        ) {
-          res.write(
-            `data: ${JSON.stringify({ merchant: suggestion.merchant, category: suggestion.category })}\n\n`
-          );
-        }
-      } catch {
-        // incomplete or malformed line — skip
-      }
-    }
-
-    const reader = ollamaResponse.body.getReader();
-    const decoder = new TextDecoder();
-    let ollamaBuffer = "";
-    let modelOutput = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      ollamaBuffer += decoder.decode(value, { stream: true });
-      const ollamaLines = ollamaBuffer.split("\n");
-      ollamaBuffer = ollamaLines.pop() ?? "";
-
-      for (const ollamaLine of ollamaLines) {
-        if (!ollamaLine.trim()) continue;
-        let chunk: { message?: { content?: string }; done?: boolean };
-        try {
-          chunk = JSON.parse(ollamaLine) as { message?: { content?: string }; done?: boolean };
-        } catch {
-          continue;
-        }
-
-        if (chunk.message?.content) {
-          modelOutput += chunk.message.content;
-          const outputLines = modelOutput.split("\n");
-          modelOutput = outputLines.pop() ?? "";
-          for (const outputLine of outputLines) {
-            tryEmitSuggestion(outputLine);
-          }
-        }
-
-        if (chunk.done) {
-          tryEmitSuggestion(modelOutput);
-        }
-      }
+    for await (const suggestion of suggestions) {
+      res.write(`data: ${JSON.stringify(suggestion)}\n\n`);
     }
 
     res.write("event: done\ndata: {}\n\n");
     res.end();
   } catch (err) {
+    if (res.headersSent) {
+      res.end();
+      return;
+    }
     next(err);
   }
 });

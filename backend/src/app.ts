@@ -14,6 +14,7 @@ import plaidRouter from "./routes/plaid";
 import categorizationRulesRouter from "./routes/categorizationRules";
 import categoriesRouter from "./routes/categories";
 import autoCategorizeRouter from "./routes/autoCategorize";
+import aiChatRouter from "./routes/aiChat";
 import credentialsAuthRouter from "./routes/credentialsAuth";
 import activityRouter from "./routes/activity";
 import manualEntriesRouter from "./routes/manualEntries";
@@ -35,6 +36,9 @@ app.use(
     message: { error: "Too many requests, please try again later." },
   })
 );
+// A chat request carries the whole conversation plus the system prompt, which can outgrow the
+// 100kb default below; registered first so the default parser sees the body as already parsed.
+app.use("/api/internal/ai", express.json({ limit: "1mb" }));
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
@@ -76,6 +80,7 @@ app.use(
   }),
   autoCategorizeRouter
 );
+app.use("/api/internal/ai", aiChatRouter);
 app.use(
   "/api/credentials-auth",
   rateLimit({

@@ -3,6 +3,8 @@ import { buildCanadianTaxFacts } from "./canadian-tax-facts";
 import { buildFinancialContext } from "./financial-context";
 import { fetchFinancialSnapshot } from "./financial-snapshot";
 
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 const SYSTEM_PROMPT = `You are Bloom's financial education assistant, helping Canadians understand personal finance concepts. You are knowledgeable, friendly, and concise. Focus on Canadian-specific information (TFSA, RRSP, FHSA, CRA, etc.) but also cover universal personal finance fundamentals.
 
 Keep answers focused and practical. When discussing account types, mention key limits and rules relevant to Canadians. Avoid giving specific investment advice — instead, educate on concepts and direct users to speak with a financial advisor for personalized guidance.
@@ -15,11 +17,6 @@ const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const rateLimitStore = new Map<string, number[]>();
 
-// Abort if Ollama hasn't started responding within this window — long enough to cover a cold
-// model load, short enough that a truly down service fails fast instead of hanging the request.
-const OLLAMA_CONNECT_TIMEOUT_MS = 60_000;
-// Abort mid-stream if no tokens arrive for this long, so a stalled generation can't hang forever.
-const OLLAMA_STREAM_IDLE_TIMEOUT_MS = 30_000;
 const SERVICE_UNAVAILABLE_MESSAGE =
   "Bloom AI is temporarily unavailable. Please try again in a moment.";
 
@@ -62,9 +59,6 @@ export async function POST(req: Request) {
     return new Response("Invalid request body", { status: 400 });
   }
 
-  const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-  const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:7b";
-
   // Always ground the model with Bloom's authoritative Canadian limits so it can't guess them.
   let systemPrompt = `${SYSTEM_PROMPT}\n\n${buildCanadianTaxFacts()}`;
   // Personalize with the user's own Bloom data when available; on any failure, keep going without it.
@@ -78,83 +72,32 @@ export async function POST(req: Request) {
     // Keep the prompt without personalization.
   }
 
-  // Guard the upstream call: a connect timeout while waiting for the first response, then an idle
-  // watchdog once streaming, both driven by the same AbortController.
-  const abortController = new AbortController();
-  let inactivityTimer = setTimeout(() => abortController.abort(), OLLAMA_CONNECT_TIMEOUT_MS);
-
-  let ollamaResponse: Response;
+  // The backend owns the model call (settings, timeouts, stall detection); this route only builds
+  // the prompt and relays the reply. Forwarding the request's signal lets Stop cancel generation.
+  let backendResponse: Response;
   try {
-    ollamaResponse = await fetch(`${ollamaUrl}/api/chat`, {
+    backendResponse = await fetch(`${BACKEND}/api/internal/ai/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: abortController.signal,
-      body: JSON.stringify({
-        model: ollamaModel,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-        stream: true,
-        // Keep the model resident between requests so it isn't reloaded from disk each time;
-        // overridable via OLLAMA_KEEP_ALIVE (e.g. "-1" to keep it loaded indefinitely).
-        keep_alive: process.env.OLLAMA_KEEP_ALIVE || "30m",
-        options: {
-          // Low temperature keeps answers factual and anchored to the provided figures, minimizing
-          // hallucinated numbers and off-topic drift — accuracy matters more than variety here.
-          temperature: 0.2,
-          // Enlarge the context window so the prepended financial snapshot isn't truncated
-          // by Ollama's 2048-token default.
-          num_ctx: 4096,
-        },
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Id": session.user.id,
+        "X-Internal-Secret": process.env.INTERNAL_API_SECRET ?? "",
+      },
+      signal: req.signal,
+      body: JSON.stringify({ systemPrompt, messages }),
     });
   } catch {
-    clearTimeout(inactivityTimer);
     return new Response(SERVICE_UNAVAILABLE_MESSAGE, { status: 503 });
   }
 
-  if (!ollamaResponse.ok || !ollamaResponse.body) {
-    clearTimeout(inactivityTimer);
+  if (backendResponse.status === 400) {
+    return new Response("Invalid messages", { status: 400 });
+  }
+  if (!backendResponse.ok || !backendResponse.body) {
     return new Response(SERVICE_UNAVAILABLE_MESSAGE, { status: 503 });
   }
 
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  const reader = ollamaResponse.body.getReader();
-
-  const readable = new ReadableStream({
-    async start(controller) {
-      let buffer = "";
-      try {
-        while (true) {
-          // Restart the idle watchdog before each read so a stalled stream is aborted.
-          clearTimeout(inactivityTimer);
-          inactivityTimer = setTimeout(
-            () => abortController.abort(),
-            OLLAMA_STREAM_IDLE_TIMEOUT_MS
-          );
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            const parsed = JSON.parse(line);
-            if (parsed.message?.content) {
-              controller.enqueue(encoder.encode(parsed.message.content));
-            }
-          }
-        }
-      } catch {
-        // Aborted (timeout) or a malformed chunk: stop reading and close the stream cleanly so the
-        // client keeps whatever text already arrived instead of erroring.
-      } finally {
-        clearTimeout(inactivityTimer);
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(readable, {
+  return new Response(backendResponse.body, {
     headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }

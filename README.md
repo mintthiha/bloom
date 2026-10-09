@@ -60,7 +60,7 @@ Bloom is a full-stack personal finance demo app built for Canadians that are lea
 - `frontend/` — Next.js app, auth integration, dashboard UI, profile onboarding, and account pages
 - `backend/` — Express API, Prisma schema, account/profile/budget/recurring/plaid services, and backend tests
 
-The browser never calls the backend directly. The client API layer (`src/lib/api.ts`) targets same-origin `/api/bloom/*` routes, which are served by a Next.js **Route Handler** (`app/api/bloom/[...path]/route.ts`). That handler authenticates the NextAuth session server-side, then forwards the request to the Express API, injecting an `X-User-Id` (derived from the session — never from the client) and a shared `X-Internal-Secret` header. The backend's `requireInternalSecret` middleware rejects any request missing that secret, so the API is only ever reachable server-to-server (no CORS layer) and a client cannot spoof `X-User-Id` by hitting the backend directly. `/api/auth/*` is handled by NextAuth in the frontend, and the backend exposes an unauthenticated `GET /health` endpoint that checks Postgres connectivity.
+The browser never calls the backend directly. The client API layer (`src/lib/api.ts`) targets same-origin `/api/bloom/*` routes, which are served by a Next.js **Route Handler** (`app/api/bloom/[...path]/route.ts`). That handler authenticates the NextAuth session server-side, then forwards the request to the Express API, injecting an `X-User-Id` (derived from the session — never from the client) and a shared `X-Internal-Secret` header. The backend's `requireInternalSecret` middleware rejects any request missing that secret, so the API is only ever reachable server-to-server (no CORS layer) and a client cannot spoof `X-User-Id` by hitting the backend directly. Backend routes under `/api/internal/*` trust their caller's input (the AI chat endpoint takes a system prompt), so the proxy refuses to forward to them — only the frontend's own server code calls them. `/api/auth/*` is handled by NextAuth in the frontend, and the backend exposes an unauthenticated `GET /health` endpoint that checks Postgres connectivity.
 
 ```mermaid
 flowchart LR
@@ -93,7 +93,7 @@ flowchart LR
     SEC -->|"verifies secret"| API
     API --> DB
     API -.->|"bank linking"| PLAID
-    UI -.->|"/api/learn chat"| AI
+    API -.->|"chat + categorization<br/>(lib/ollama-client.ts)"| AI
 ```
 
 ## Core Features
@@ -379,6 +379,7 @@ Credit account detail pages include a rewards estimator that projects points or 
 - AI chat assistant powered by a self-hosted Ollama model (`qwen2.5:7b`) with streaming responses; low temperature and an enlarged context window (`num_ctx`) keep answers factual and prevent the prepended context from being truncated
 - **Grounded, not guessing** — the system prompt injects Bloom's authoritative Canadian contribution limits and tax figures (`canadian-tax-facts.ts`) and instructs the model never to state a limit from memory
 - **Personalized** — when available, the user's own Bloom financial snapshot (`financial-snapshot.ts` / `financial-context.ts`) is added to the prompt so answers reflect their accounts and situation; the chat degrades gracefully to a generic (but still grounded) assistant if the snapshot can't be loaded
+- The Next.js route (`/api/learn/chat`) builds the prompt and relays the reply; the model call itself goes through the backend's shared Ollama client (`backend/src/lib/ollama-client.ts`), the single place that holds the model settings and timeouts for every AI feature
 - Resilient upstream handling: a connect timeout plus a mid-stream idle watchdog abort a stalled generation, and the endpoint returns a clean 503 (surfaced in the chat) when Ollama is unreachable
 - Per-user hourly rate limit on the chat endpoint
 - Conversation persists across reloads via localStorage; supports stopping an in-progress generation while keeping partial text
@@ -505,6 +506,7 @@ npm run test:e2e
 - Service and route tests for recurring transaction rules
 - Subscription-detection coverage (`subscription-detection.test.ts`) — cadence inference, occurrence/price-stability thresholds, rule merging, and price-change reporting
 - Route and service coverage for notifications/reminders, subscriptions, categorization rules, and AI auto-categorize (including allowed-category validation and AI-unavailable handling)
+- Shared Ollama client coverage (`ollama-client.test.ts`) — request settings and env overrides, streamed-line reassembly, connect/idle/completion timeouts, and caller-driven cancellation — plus the internal AI chat route
 - Validation coverage for profile updates plus transaction and merchant input sanitization
 
 ## Deployment
@@ -512,7 +514,7 @@ npm run test:e2e
 The app is currently self-hosted and live at **[mintbloom.duckdns.org](https://mintbloom.duckdns.org/)**.
 
 - `docker-compose.yml` builds and runs the three services — Postgres, the Express backend, and the Next.js frontend.
-- The AI features call an Ollama server running on the host; the compose file wires the frontend to it via `host.docker.internal` and sets `OLLAMA_MODEL`.
+- The AI features call an Ollama server running on the host; the compose file wires the backend to it via `host.docker.internal` and sets `OLLAMA_MODEL`.
 - Provide the required secrets (`INTERNAL_API_SECRET`, `AUTH_*`, and optional `PLAID_*`) via a root `.env` file; the production Google OAuth client must whitelist the deployed callback URL and `AUTH_URL` must match the deployed origin exactly.
 - Database migrations are applied with `prisma migrate deploy` (never `migrate dev`) in deployed environments.
 
@@ -528,7 +530,7 @@ npx prisma migrate dev
 - The app now depends on timezone-aware database timestamps for correct local-time display and filtering.
 - The frontend proxy expects the backend API to be running on `http://localhost:3001` unless `NEXT_PUBLIC_API_URL` is set.
 - The frontend and backend must share the same `INTERNAL_API_SECRET`; the Next.js proxy injects it and the backend's internal-auth middleware verifies it on every `/api/*` request.
-- The AI features (Learn chat and auto-categorization) call a self-hosted [Ollama](https://ollama.com/) server. Configure `OLLAMA_URL` (defaults to `http://localhost:11434`) and `OLLAMA_MODEL` (defaults to `qwen2.5:7b`); the Learn chat also honors `OLLAMA_KEEP_ALIVE` (defaults to `30m`) to keep the model resident between requests. Pull the model first with `ollama pull qwen2.5:7b`. When Ollama is unreachable the AI endpoints fail cleanly (503) and the rest of the app is unaffected. No third-party AI API key is required.
-  - Under Docker Compose, the frontend reaches the host's Ollama via `http://host.docker.internal:11434` (already wired in `docker-compose.yml`).
+- The AI features (Learn chat and auto-categorization) call a self-hosted [Ollama](https://ollama.com/) server. Only the backend talks to it, so configure it in `backend/.env`: `OLLAMA_URL` (defaults to `http://localhost:11434`), `OLLAMA_MODEL` (defaults to `qwen2.5:7b`), and `OLLAMA_KEEP_ALIVE` (defaults to `30m`) to keep the model resident between requests. Pull the model first with `ollama pull qwen2.5:7b`. When Ollama is unreachable the AI endpoints fail cleanly (503) and the rest of the app is unaffected. No third-party AI API key is required.
+  - Under Docker Compose, the backend reaches the host's Ollama via `http://host.docker.internal:11434` (already wired in `docker-compose.yml`).
 - Plaid bank linking is optional. Set `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `PLAID_ENV` (defaults to `sandbox`) in `backend/.env`; the Plaid client initializes lazily, so the API runs fine when they are absent and the Link card disables itself.
 - See `.env.example` (frontend) and `backend/.env.example` for the full list of required and optional environment variables.
