@@ -14,6 +14,7 @@ import plaidRouter from "./routes/plaid";
 import categorizationRulesRouter from "./routes/categorizationRules";
 import categoriesRouter from "./routes/categories";
 import autoCategorizeRouter from "./routes/autoCategorize";
+import receiptsRouter from "./routes/receipts";
 import aiChatRouter from "./routes/aiChat";
 import chatMessagesRouter from "./routes/chatMessages";
 import credentialsAuthRouter from "./routes/credentialsAuth";
@@ -70,6 +71,7 @@ app.use("/api/user-data", userDataRouter);
 app.use("/api/exchange-rates", exchangeRatesRouter);
 app.use("/api/chat-messages", chatMessagesRouter);
 app.use("/api/auto-categorize", createAiRateLimiter("categorization"), autoCategorizeRouter);
+app.use("/api/receipts", createAiRateLimiter("receipt"), receiptsRouter);
 app.use("/api/internal/ai", createAiRateLimiter("chat"), aiChatRouter);
 app.use(
   "/api/credentials-auth",

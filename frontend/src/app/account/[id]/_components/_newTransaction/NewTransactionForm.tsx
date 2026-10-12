@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Camera } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { api, Account, AutoCategorizationRule, Profile, Transaction } from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
+import { ReceiptScanPanel } from "../_receiptScan/ReceiptScanPanel";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import { useCategories } from "@/hooks/useCategories";
@@ -20,7 +22,7 @@ import {
   type OverContributionWarning,
 } from "@/lib/over-contribution";
 
-type Op = "deposit" | "withdraw" | "transfer" | "import";
+type Op = "deposit" | "withdraw" | "transfer" | "import" | "scan";
 
 const REGISTERED_ACCOUNT_TYPES = new Set(["TFSA", "RRSP", "FHSA"]);
 
@@ -241,18 +243,46 @@ export function NewTransactionForm({
         marginBottom: "16px",
       }}
     >
-      <p
+      <div
         style={{
-          fontSize: "11px",
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: "var(--text-secondary)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
           marginBottom: "16px",
         }}
       >
-        New Transaction
-      </p>
+        <p
+          style={{
+            fontSize: "11px",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            color: "var(--text-secondary)",
+          }}
+        >
+          New Transaction
+        </p>
+        <button
+          type="button"
+          className={`budget-action-pill${op === "scan" ? " is-on" : ""}`}
+          aria-pressed={op === "scan"}
+          onClick={() => setOp(op === "scan" ? "deposit" : "scan")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 12px",
+            fontSize: "12px",
+            fontWeight: 600,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Camera size={14} aria-hidden="true" />
+          Scan receipt
+        </button>
+      </div>
 
       <div
         style={{
@@ -310,7 +340,18 @@ export function NewTransactionForm({
         />
       </div>
 
-      {op !== "import" && (
+      <div style={{ display: op === "scan" ? "block" : "none" }}>
+        <ReceiptScanPanel
+          account={account}
+          expenseCategoryNames={expenseCategoryNames}
+          onCreated={async () => {
+            setOp("deposit");
+            await onSuccess();
+          }}
+        />
+      </div>
+
+      {op !== "import" && op !== "scan" && (
         <form
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: "10px" }}

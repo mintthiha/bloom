@@ -28,6 +28,7 @@ Bloom is a full-stack personal finance demo app built for Canadians that are lea
 - Lucide React
 - NextAuth v5 beta
 - Plaid Link (`react-plaid-link`)
+- tesseract.js (in-browser OCR for receipt scanning)
 - Vitest
 - Testing Library
 - jsdom
@@ -197,6 +198,16 @@ A dedicated `/auto-categorize` page pairs an AI suggester with a persistent rule
 - **Categorization rules** — accept a suggestion (individually or all at once) to save it as a merchant → category rule. Rules are unique per user + merchant (upsert), manageable in a paginated list with inline edit and confirm-to-delete.
 - **Rules are applied automatically** during CSV import and manual transaction entry: a matching merchant pre-fills its saved category, so categorization only has to happen once per merchant.
 - Merchant input is trimmed, deduplicated, and length-capped; the endpoint returns a clean 503 when the AI service is unavailable.
+
+### Receipt Scanning
+
+**Scan receipt** in an account's New Transaction card turns a photo of a receipt into one transaction, split by category:
+
+- **Text is read on the device.** The photo is downscaled and run through `tesseract.js` (WASM, English + French) in the browser, so the image never leaves it. The engine is lazy-loaded on first use; it and its language data are fetched from the jsDelivr CDN and then cached.
+- **The numbers are parsed, not generated.** A deterministic parser (`receipt-text-parser.ts`) pulls out the store, date, total, taxes (GST/HST/PST/QST), discounts, and priced line items — the AI model never produces an amount.
+- **The local model only categorizes.** Item names stream to the same Ollama model, which answers with an item number and one of the user's expense categories per line. That short output format keeps it practical on a CPU-only server, and every suggestion is validated server-side.
+- **Nothing is saved until it is reviewed.** The review form shows the store, date, total, and a category per item, usable as soon as the text is read while suggestions fill in. Tax, tips, and discounts are spread across categories in proportion, in whole cents, so the split always equals the total.
+- **One atomic write.** The transaction (a charge on a credit card, a withdrawal elsewhere), its date, and its splits are created in a single database transaction, followed by a balance replay because a receipt may be backdated.
 
 ### Registered Account Contribution Room
 

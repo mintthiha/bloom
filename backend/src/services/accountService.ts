@@ -929,6 +929,43 @@ export async function getTransactions(userId: string, id: string, filters?: Tran
 }
 
 /**
+ * Validates a full set of category splits against the transaction amount they divide up, and
+ * returns them trimmed and ready to insert.
+ * Throws 400 for fewer than two splits, a missing category, a non-positive amount, or a total
+ * that doesn't match the transaction's amount (to the cent).
+ */
+function normalizeTransactionSplits(
+  splits: TransactionSplitInput[],
+  transactionAmount: string | number
+) {
+  if (splits.length < 2) {
+    throw new AppError(400, "A split needs at least two categories");
+  }
+
+  const normalizedSplits = splits.map((split, index) => {
+    const category = split.category?.trim();
+    if (!category) throw new AppError(400, `Split ${index + 1}: category is required`);
+    if (!Number.isFinite(split.amount) || split.amount <= 0) {
+      throw new AppError(400, `Split ${index + 1}: amount must be positive`);
+    }
+    return {
+      category,
+      amount: split.amount,
+      description: split.description?.trim() || null,
+    };
+  });
+
+  const splitTotal = normalizedSplits.reduce(
+    (sum, split) => sum.plus(split.amount),
+    new Prisma.Decimal(0)
+  );
+  if (!splitTotal.equals(new Prisma.Decimal(transactionAmount))) {
+    throw new AppError(400, "Split amounts must add up to the transaction total");
+  }
+  return normalizedSplits;
+}
+
+/**
  * Replaces the full set of category splits on a manual deposit or withdrawal.
  * Splits let one transaction (e.g. a $120 grocery run) count toward multiple
  * categories for the 50/30/20 summary and budgets, instead of just one.
@@ -952,30 +989,7 @@ export async function setTransactionSplits(
   ) {
     throw new AppError(400, "Only deposits and withdrawals can be split");
   }
-  if (splits.length < 2) {
-    throw new AppError(400, "A split needs at least two categories");
-  }
-
-  const normalizedSplits = splits.map((split, index) => {
-    const category = split.category?.trim();
-    if (!category) throw new AppError(400, `Split ${index + 1}: category is required`);
-    if (!Number.isFinite(split.amount) || split.amount <= 0) {
-      throw new AppError(400, `Split ${index + 1}: amount must be positive`);
-    }
-    return {
-      category,
-      amount: split.amount,
-      description: split.description?.trim() || null,
-    };
-  });
-
-  const splitTotal = normalizedSplits.reduce(
-    (sum, split) => sum.plus(split.amount),
-    new Prisma.Decimal(0)
-  );
-  if (!splitTotal.equals(new Prisma.Decimal(transaction.amount))) {
-    throw new AppError(400, "Split amounts must add up to the transaction total");
-  }
+  const normalizedSplits = normalizeTransactionSplits(splits, transaction.amount);
 
   await prisma.$transaction(async (tx) => {
     await tx.transactionSplit.deleteMany({ where: { transactionId } });
@@ -1022,6 +1036,86 @@ export async function clearTransactionSplits(
     "TRANSACTION_UPDATED",
     `Removed the category split on a transaction on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}"`,
     { accountId, transactionId }
+  );
+  return updatedAccount;
+}
+
+export type ReceiptPurchaseInput = {
+  amount: number;
+  effectiveAt: Date;
+  merchant?: string;
+  category?: string;
+  splits?: TransactionSplitInput[];
+};
+
+/**
+ * Records a purchase read from a scanned receipt — the transaction, dated when the receipt says
+ * it happened, together with its category splits — in one database transaction, so a split
+ * purchase can never exist half-written. On a credit card the purchase is a charge (a deposit
+ * that grows the balance owed); on every other account it is a withdrawal.
+ * Balances are replayed rather than adjusted in place because the receipt may be dated before
+ * transactions already on the account.
+ * Throws 400 for a non-positive amount, invalid splits, or insufficient funds.
+ * Throws 403 if the account is frozen and 404 if it is not the user's.
+ */
+export async function recordReceiptPurchase(
+  userId: string,
+  accountId: string,
+  input: ReceiptPurchaseInput
+) {
+  if (input.amount <= 0) throw new AppError(400, "Purchase amount must be positive");
+  const rawAccount = await selectAccountByUserId(userId, accountId);
+  if (!rawAccount) throw new AppError(404, `Account ${accountId} not found`);
+  if (rawAccount.frozen) throw new AppError(403, "Account is frozen");
+  const isCreditCard = rawAccount.accountType === AccountType.CREDIT;
+  if (!isCreditCard && new Prisma.Decimal(rawAccount.balance).lessThan(input.amount)) {
+    throw new AppError(400, "Insufficient funds");
+  }
+  const normalizedSplits =
+    input.splits && input.splits.length > 0
+      ? normalizeTransactionSplits(input.splits, input.amount)
+      : [];
+
+  await prisma.$transaction(async (tx) => {
+    const transaction = await createTransaction(tx, {
+      type: isCreditCard ? TransactionType.DEPOSIT : TransactionType.WITHDRAWAL,
+      amount: input.amount,
+      // Placeholder: the replay below writes the real running balance for every transaction.
+      balanceAfter: 0,
+      category: input.category,
+      merchant: input.merchant,
+      effectiveAt: input.effectiveAt,
+      ...(isCreditCard ? { toAccountId: accountId } : { fromAccountId: accountId }),
+    });
+    if (normalizedSplits.length > 0) {
+      await tx.transactionSplit.createMany({
+        data: normalizedSplits.map((split) => ({
+          id: randomUUID(),
+          transactionId: transaction.id,
+          category: split.category,
+          amount: split.amount,
+          description: split.description,
+        })),
+      });
+    }
+    // The current balance was checked above; a backdated purchase may dip an earlier point in the
+    // history below zero, which imports allow too.
+    await replayAccountBalances(tx as Prisma.TransactionClient, accountId, { allowNegative: true });
+  });
+
+  const updatedAccount = await getAccount(userId, accountId);
+  const merchantSuffix = input.merchant?.trim() ? ` at "${input.merchant.trim()}"` : "";
+  logActivity(
+    userId,
+    isCreditCard ? "TRANSACTION_DEPOSIT" : "TRANSACTION_WITHDRAWAL",
+    `Recorded a $${input.amount.toFixed(2)} receipt purchase${merchantSuffix} on "${accountLabel(updatedAccount.ownerName, updatedAccount.nickname)}"`,
+    {
+      accountId,
+      amount: input.amount,
+      ...(normalizedSplits.length > 0
+        ? { categories: normalizedSplits.map((split) => split.category) }
+        : {}),
+    }
   );
   return updatedAccount;
 }

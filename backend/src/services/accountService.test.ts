@@ -25,6 +25,7 @@ import {
   importTransactions,
   setTransactionSplits,
   clearTransactionSplits,
+  recordReceiptPurchase,
 } from "./accountService";
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -787,6 +788,184 @@ describe("clearTransactionSplits", () => {
     expect(prismaMock.transactionSplit.deleteMany).toHaveBeenCalledWith({
       where: { transactionId: "t-1" },
     });
+  });
+});
+
+describe("recordReceiptPurchase", () => {
+  const RECEIPT_DATE = new Date("2026-10-09T16:00:00.000Z");
+
+  /** Runs the next $transaction callback against a fake tx and returns its spies for assertions. */
+  function captureTransactionClient() {
+    const transactionClient = {
+      $queryRaw: prismaMock.$queryRaw,
+      account: { update: vi.fn().mockResolvedValue({}) },
+      transaction: { update: vi.fn().mockResolvedValue({}) },
+      transactionSplit: { createMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    };
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn(transactionClient)
+    );
+    return transactionClient;
+  }
+
+  it("throws 400 for a non-positive amount", async () => {
+    await expect(
+      recordReceiptPurchase("u-1", "a-1", { amount: 0, effectiveAt: RECEIPT_DATE })
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("throws 404 when the account does not exist", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(
+      recordReceiptPurchase("u-1", "a-1", { amount: 10, effectiveAt: RECEIPT_DATE })
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("throws 403 when the account is frozen", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow({ frozen: true })]);
+    await expect(
+      recordReceiptPurchase("u-1", "a-1", { amount: 10, effectiveAt: RECEIPT_DATE })
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("throws 400 on insufficient funds for a non-credit account", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow({ balance: "5.00" })]);
+    await expect(
+      recordReceiptPurchase("u-1", "a-1", { amount: 10, effectiveAt: RECEIPT_DATE })
+    ).rejects.toMatchObject({ statusCode: 400, message: "Insufficient funds" });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("allows a purchase that spends the balance exactly", async () => {
+    captureTransactionClient();
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow({ balance: "10.00" })])
+      .mockResolvedValueOnce([makeTxnRow({ id: "t-new", type: "WITHDRAWAL", amount: "10.00" })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "0.00" })]);
+
+    const account = await recordReceiptPurchase("u-1", "a-1", {
+      amount: 10,
+      effectiveAt: RECEIPT_DATE,
+    });
+
+    expect(account.balance).toBe(0);
+  });
+
+  it("throws 400 before writing anything when the splits don't add up to the amount", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]);
+    await expect(
+      recordReceiptPurchase("u-1", "a-1", {
+        amount: 57.43,
+        effectiveAt: RECEIPT_DATE,
+        splits: [
+          { category: "Groceries", amount: 45.2 },
+          { category: "Household", amount: 12 },
+        ],
+      })
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Split amounts must add up to the transaction total",
+    });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("throws 400 for a single split, which is not a split at all", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]);
+    await expect(
+      recordReceiptPurchase("u-1", "a-1", {
+        amount: 20,
+        effectiveAt: RECEIPT_DATE,
+        splits: [{ category: "Groceries", amount: 20 }],
+      })
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("creates a dated withdrawal with its splits and replays the balance", async () => {
+    const transactionClient = captureTransactionClient();
+    const insertedRow = makeTxnRow({
+      id: "t-new",
+      type: "WITHDRAWAL",
+      amount: "57.43",
+      fromAccountId: "a-1",
+      toAccountId: null,
+    });
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow({ balance: "100.00" })])
+      .mockResolvedValueOnce([insertedRow])
+      .mockResolvedValueOnce([insertedRow])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "42.57" })]);
+
+    const account = await recordReceiptPurchase("u-1", "a-1", {
+      amount: 57.43,
+      effectiveAt: RECEIPT_DATE,
+      merchant: "Walmart",
+      category: "Groceries",
+      splits: [
+        { category: "Groceries", amount: 45.2 },
+        { category: " Household ", amount: 12.23 },
+      ],
+    });
+
+    expect(account.balance).toBe(42.57);
+    // The INSERT is a tagged template: its interpolated values follow the SQL strings.
+    const insertValues = prismaMock.$queryRaw.mock.calls[1]!.slice(1);
+    expect(insertValues).toEqual(
+      expect.arrayContaining(["WITHDRAWAL", 57.43, "Groceries", "Walmart", RECEIPT_DATE, "a-1"])
+    );
+    expect(transactionClient.transactionSplit.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ transactionId: "t-new", category: "Groceries", amount: 45.2 }),
+        expect.objectContaining({ transactionId: "t-new", category: "Household", amount: 12.23 }),
+      ],
+    });
+    // Replaying from zero, the lone $57.43 withdrawal leaves the running balance at -57.43.
+    expect(transactionClient.transaction.update).toHaveBeenCalledWith({
+      where: { id: "t-new" },
+      data: { balanceAfter: expect.objectContaining({}) },
+    });
+    const replayedBalance = transactionClient.account.update.mock.calls[0]![0].data.balance;
+    expect(replayedBalance.toString()).toBe("-57.43");
+  });
+
+  it("creates no splits for a single-category purchase", async () => {
+    const transactionClient = captureTransactionClient();
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([makeTxnRow({ id: "t-new", type: "WITHDRAWAL", amount: "20.00" })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow({ balance: "80.00" })]);
+
+    await recordReceiptPurchase("u-1", "a-1", {
+      amount: 20,
+      effectiveAt: RECEIPT_DATE,
+      category: "Dining",
+    });
+
+    expect(transactionClient.transactionSplit.createMany).not.toHaveBeenCalled();
+  });
+
+  it("records the purchase as a charge on a credit card, even above the current balance", async () => {
+    captureTransactionClient();
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow({ accountType: AccountType.CREDIT, balance: "0.00" })])
+      .mockResolvedValueOnce([makeTxnRow({ id: "t-new", type: "DEPOSIT", amount: "30.00" })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        makeAccountRow({ accountType: AccountType.CREDIT, balance: "30.00" }),
+      ]);
+
+    const account = await recordReceiptPurchase("u-1", "a-1", {
+      amount: 30,
+      effectiveAt: RECEIPT_DATE,
+    });
+
+    expect(account.balance).toBe(30);
+    const insertValues = prismaMock.$queryRaw.mock.calls[1]!.slice(1);
+    expect(insertValues).toContain(TransactionType.DEPOSIT);
+    expect(insertValues).not.toContain(TransactionType.WITHDRAWAL);
   });
 });
 

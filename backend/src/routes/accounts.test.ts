@@ -16,6 +16,7 @@ const { serviceMock } = vi.hoisted(() => ({
     deleteAccount: vi.fn(),
     restoreAccount: vi.fn(),
     setTransactionSplits: vi.fn(),
+    recordReceiptPurchase: vi.fn(),
     updateAccountAppearance: vi.fn(),
   },
 }));
@@ -35,6 +36,7 @@ describe("account routes", () => {
     serviceMock.deleteAccount.mockReset();
     serviceMock.restoreAccount.mockReset();
     serviceMock.setTransactionSplits.mockReset();
+    serviceMock.recordReceiptPurchase.mockReset();
     serviceMock.updateAccountAppearance.mockReset();
   });
 
@@ -328,6 +330,96 @@ describe("account routes", () => {
       { category: "Groceries", amount: 60, description: undefined },
       { category: "Dining", amount: 40, description: undefined },
     ]);
+  });
+
+  it("records a receipt purchase with its date and splits", async () => {
+    serviceMock.recordReceiptPurchase.mockResolvedValue({ id: "account-1", balance: 42.57 });
+
+    const response = await request(app)
+      .post("/api/accounts/account-1/receipt-purchases")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({
+        amount: 57.43,
+        effectiveAt: "2026-10-09T16:00:00.000Z",
+        merchant: "  Walmart  ",
+        category: "Groceries",
+        splits: [
+          { category: "Groceries", amount: 45.2 },
+          { category: "Household", amount: 12.23 },
+        ],
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({ id: "account-1", balance: 42.57 });
+    expect(serviceMock.recordReceiptPurchase).toHaveBeenCalledWith("user-1", "account-1", {
+      amount: 57.43,
+      effectiveAt: new Date("2026-10-09T16:00:00.000Z"),
+      merchant: "Walmart",
+      category: "Groceries",
+      splits: [
+        { category: "Groceries", amount: 45.2, description: undefined },
+        { category: "Household", amount: 12.23, description: undefined },
+      ],
+    });
+  });
+
+  it("records a single-category receipt purchase without splits, rounding the amount to cents", async () => {
+    serviceMock.recordReceiptPurchase.mockResolvedValue({ id: "account-1", balance: 0 });
+
+    const response = await request(app)
+      .post("/api/accounts/account-1/receipt-purchases")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ amount: 12.345, effectiveAt: "2026-10-09T16:00:00.000Z", category: "Dining" });
+
+    expect(response.status).toBe(201);
+    expect(serviceMock.recordReceiptPurchase).toHaveBeenCalledWith("user-1", "account-1", {
+      amount: 12.35,
+      effectiveAt: new Date("2026-10-09T16:00:00.000Z"),
+      merchant: undefined,
+      category: "Dining",
+      splits: undefined,
+    });
+  });
+
+  it.each([
+    ["the amount is missing", { effectiveAt: "2026-10-09T16:00:00.000Z" }],
+    ["the amount is not positive", { amount: 0, effectiveAt: "2026-10-09T16:00:00.000Z" }],
+    ["the date is missing", { amount: 10 }],
+    ["the date is not a real date", { amount: 10, effectiveAt: "last tuesday" }],
+    ["splits is not an array", { amount: 10, effectiveAt: "2026-10-09", splits: "Groceries" }],
+    [
+      "a split has no category",
+      { amount: 10, effectiveAt: "2026-10-09", splits: [{ amount: 5 }, { amount: 5 }] },
+    ],
+    [
+      "there are more than 10 splits",
+      {
+        amount: 110,
+        effectiveAt: "2026-10-09",
+        splits: Array.from({ length: 11 }, (_, i) => ({ category: `Category ${i}`, amount: 10 })),
+      },
+    ],
+  ])("rejects a receipt purchase when %s", async (_description, body) => {
+    const response = await request(app)
+      .post("/api/accounts/account-1/receipt-purchases")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send(body);
+
+    expect(response.status).toBe(400);
+    expect(serviceMock.recordReceiptPurchase).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for a receipt purchase when x-user-id is missing", async () => {
+    const response = await request(app)
+      .post("/api/accounts/account-1/receipt-purchases")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .send({ amount: 10, effectiveAt: "2026-10-09T16:00:00.000Z" });
+
+    expect(response.status).toBe(401);
+    expect(serviceMock.recordReceiptPurchase).not.toHaveBeenCalled();
   });
 
   it("passes account restores through to the service", async () => {

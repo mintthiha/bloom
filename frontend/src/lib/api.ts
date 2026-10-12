@@ -746,6 +746,20 @@ export const api = {
     }),
   clearTransactionSplits: (id: string, transactionId: string) =>
     request<Account>(`/accounts/${id}/transactions/${transactionId}/splits`, { method: "DELETE" }),
+  recordReceiptPurchase: (
+    id: string,
+    input: {
+      amount: number;
+      effectiveAt: string;
+      merchant?: string;
+      category?: string;
+      splits?: Array<{ category: string; amount: number }>;
+    }
+  ) =>
+    request<Account>(`/accounts/${id}/receipt-purchases`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   freeze: (id: string) => request<Account>(`/accounts/${id}/freeze`, { method: "PATCH" }),
   unfreeze: (id: string) => request<Account>(`/accounts/${id}/unfreeze`, { method: "PATCH" }),
   updateNickname: (id: string, nickname?: string) =>

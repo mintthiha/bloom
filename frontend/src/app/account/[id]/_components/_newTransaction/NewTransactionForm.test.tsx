@@ -52,6 +52,13 @@ vi.mock("@/lib/api", async () => {
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
 vi.mock("../_import/ImportTab", () => ({ ImportTab: () => <div data-testid="import-tab" /> }));
+vi.mock("../_receiptScan/ReceiptScanPanel", () => ({
+  ReceiptScanPanel: ({ onCreated }: { onCreated: () => void }) => (
+    <button data-testid="receipt-scan-panel" onClick={onCreated}>
+      Finish scan
+    </button>
+  ),
+}));
 
 import { toast } from "sonner";
 
@@ -160,6 +167,52 @@ describe("NewTransactionForm", () => {
     renderForm();
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
     expect(screen.getByTestId("import-tab")).toBeInTheDocument();
+  });
+
+  it("keeps the receipt scanner hidden until Scan receipt is chosen", () => {
+    renderForm();
+    expect(screen.getByTestId("receipt-scan-panel")).not.toBeVisible();
+    expect(screen.getByRole("button", { name: "Scan receipt" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("swaps the amount form for the receipt scanner when Scan receipt is chosen", () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Scan receipt" }));
+
+    expect(screen.getByTestId("receipt-scan-panel")).toBeVisible();
+    expect(screen.queryByPlaceholderText("0.00")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Scan receipt" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("leaves the scanner when Scan receipt is clicked again or a tab is chosen", () => {
+    renderForm();
+    const scanButton = screen.getByRole("button", { name: "Scan receipt" });
+
+    fireEvent.click(scanButton);
+    fireEvent.click(scanButton);
+    expect(screen.getByTestId("receipt-scan-panel")).not.toBeVisible();
+    expect(screen.getByPlaceholderText("0.00")).toBeInTheDocument();
+
+    fireEvent.click(scanButton);
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+    expect(screen.getByTestId("receipt-scan-panel")).not.toBeVisible();
+  });
+
+  it("returns to the amount form and refreshes once a scanned receipt is saved", async () => {
+    const { onSuccess } = renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Scan receipt" }));
+
+    fireEvent.click(screen.getByTestId("receipt-scan-panel"));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(screen.getByTestId("receipt-scan-panel")).not.toBeVisible();
+    expect(screen.getByPlaceholderText("0.00")).toBeInTheDocument();
   });
 
   it("labels the actions Charge/Payment for a credit account", () => {

@@ -26,6 +26,22 @@ const extractUserId = (req: Request): string => {
   return id;
 };
 
+/** Validates a request's list of category splits, enforcing the per-transaction cap and each split's shape. */
+function parseTransactionSplits(rawSplits: unknown): accountService.TransactionSplitInput[] {
+  if (!Array.isArray(rawSplits)) throw new AppError(400, "splits must be an array");
+  if (rawSplits.length > MAX_TRANSACTION_SPLITS) {
+    throw new AppError(400, `A transaction can have at most ${MAX_TRANSACTION_SPLITS} splits`);
+  }
+  return (rawSplits as unknown[]).map((split, i) => {
+    const s = requireObject(split, `Split ${i + 1} must be an object`);
+    return {
+      category: requireString(s.category, `Split ${i + 1} category`, { max: 50 }),
+      amount: requirePositiveNumber(s.amount, `Split ${i + 1} amount`),
+      description: optionalString(s.description, `Split ${i + 1} description`, { max: 240 }),
+    };
+  });
+}
+
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.json(await accountService.listAccounts(extractUserId(req)));
@@ -205,6 +221,34 @@ router.post("/:id/transfer", async (req: Request, res: Response, next: NextFunct
   }
 });
 
+/**
+ * Records a purchase read from a scanned receipt: a dated charge or withdrawal, optionally
+ * divided into category splits, created together so the splits can never be orphaned.
+ */
+router.post("/:id/receipt-purchases", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const amount = Math.round(requirePositiveNumber(body.amount, "amount") * 100) / 100;
+    const merchant = optionalString(body.merchant, "merchant", { max: 100 });
+    const category = optionalString(body.category, "category", { max: 50 });
+    const effectiveAt = new Date(
+      requireString(body.effectiveAt, "effectiveAt", { max: 40, collapseWhitespace: false })
+    );
+    if (Number.isNaN(effectiveAt.getTime())) {
+      throw new AppError(400, "effectiveAt must be a valid ISO date");
+    }
+    const splits = body.splits === undefined ? undefined : parseTransactionSplits(body.splits);
+    const account = await accountService.recordReceiptPurchase(
+      extractUserId(req),
+      extractParamId(req),
+      { amount, effectiveAt, merchant, category, splits }
+    );
+    res.status(201).json(account);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/:id/import", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = requireObject(req.body);
@@ -374,18 +418,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = requireObject(req.body);
-      if (!Array.isArray(body.splits)) throw new AppError(400, "splits must be an array");
-      if (body.splits.length > MAX_TRANSACTION_SPLITS) {
-        throw new AppError(400, `A transaction can have at most ${MAX_TRANSACTION_SPLITS} splits`);
-      }
-      const splits = (body.splits as unknown[]).map((split, i) => {
-        const s = requireObject(split, `Split ${i + 1} must be an object`);
-        return {
-          category: requireString(s.category, `Split ${i + 1} category`, { max: 50 }),
-          amount: requirePositiveNumber(s.amount, `Split ${i + 1} amount`),
-          description: optionalString(s.description, `Split ${i + 1} description`, { max: 240 }),
-        };
-      });
+      const splits = parseTransactionSplits(body.splits);
       const account = await accountService.setTransactionSplits(
         extractUserId(req),
         extractParamId(req),
