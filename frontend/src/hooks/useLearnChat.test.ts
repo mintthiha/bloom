@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import type { ChatReplyEvent } from "@/lib/chat-reply-events";
 import { useLearnChat } from "./useLearnChat";
 
 const { apiMock, toastMock } = vi.hoisted(() => ({
@@ -10,8 +11,15 @@ const { apiMock, toastMock } = vi.hoisted(() => ({
 vi.mock("@/lib/api", () => ({ api: apiMock }));
 vi.mock("sonner", () => ({ toast: toastMock }));
 
-/** Builds a fetch Response stub whose body streams the given text chunks. */
-function streamingResponse(chunks: string[]) {
+const GROCERIES_BUDGET_DRAFT = {
+  kind: "BUDGET" as const,
+  category: "Groceries",
+  monthlyLimit: 400,
+  currentMonthlyLimit: null,
+};
+
+/** Builds a fetch Response stub whose body streams the given reply events, one JSON line each. */
+function eventStreamResponse(replyEvents: ChatReplyEvent[]) {
   const encoder = new TextEncoder();
   let index = 0;
   return {
@@ -19,12 +27,17 @@ function streamingResponse(chunks: string[]) {
     body: {
       getReader: () => ({
         read: async () =>
-          index < chunks.length
-            ? { done: false, value: encoder.encode(chunks[index++]) }
+          index < replyEvents.length
+            ? { done: false, value: encoder.encode(`${JSON.stringify(replyEvents[index++])}\n`) }
             : { done: true, value: undefined },
       }),
     },
   };
+}
+
+/** Builds a fetch Response stub whose body streams a plain text reply in the given chunks. */
+function streamingResponse(chunks: string[]) {
+  return eventStreamResponse(chunks.map((chunk) => ({ type: "text", text: chunk })));
 }
 
 /** Renders the hook and waits until the stored conversation has finished loading. */
@@ -71,6 +84,94 @@ describe("useLearnChat", () => {
       { role: "user", content: "What is a TFSA?" },
       { role: "assistant", content: "An account." },
     ]);
+  });
+
+  it("restores a stored reply's draft along with where it stands", async () => {
+    apiMock.listChatMessages.mockResolvedValue({
+      messages: [
+        {
+          id: "m-1",
+          role: "user",
+          content: "Set a $400 grocery budget",
+          proposedAction: null,
+          proposedActionStatus: null,
+          createdAt: "2026-10-12T12:00:00Z",
+        },
+        {
+          id: "m-2",
+          role: "assistant",
+          content: "I've drafted a budget.",
+          proposedAction: GROCERIES_BUDGET_DRAFT,
+          proposedActionStatus: "CONFIRMED",
+          createdAt: "2026-10-12T12:00:05Z",
+        },
+      ],
+    });
+
+    const { result } = await renderLoadedChat();
+
+    expect(result.current.messages).toEqual([
+      { role: "user", content: "Set a $400 grocery budget" },
+      {
+        role: "assistant",
+        content: "I've drafted a budget.",
+        proposal: {
+          messageId: "m-2",
+          proposedAction: GROCERIES_BUDGET_DRAFT,
+          status: "CONFIRMED",
+        },
+      },
+    ]);
+    expect(result.current.messages[0]).not.toHaveProperty("proposal");
+  });
+
+  it("attaches a streamed draft to the reply as pending", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        eventStreamResponse([
+          { type: "text", text: "I've drafted " },
+          { type: "text", text: "a budget." },
+          { type: "proposal", messageId: "m-2", proposedAction: GROCERIES_BUDGET_DRAFT },
+        ])
+      )
+    );
+    const { result } = await renderLoadedChat();
+
+    await act(async () => {
+      await result.current.sendMessage("Set a $400 grocery budget");
+    });
+
+    expect(result.current.messages).toEqual([
+      { role: "user", content: "Set a $400 grocery budget" },
+      {
+        role: "assistant",
+        content: "I've drafted a budget.",
+        proposal: { messageId: "m-2", proposedAction: GROCERIES_BUDGET_DRAFT, status: "PENDING" },
+      },
+    ]);
+  });
+
+  it("updates only the matching draft when its status changes", async () => {
+    apiMock.listChatMessages.mockResolvedValue({
+      messages: ["m-2", "m-4"].map((id) => ({
+        id,
+        role: "assistant",
+        content: "Drafted.",
+        proposedAction: GROCERIES_BUDGET_DRAFT,
+        proposedActionStatus: "PENDING",
+        createdAt: "2026-10-12T12:00:00Z",
+      })),
+    });
+    const { result } = await renderLoadedChat();
+
+    act(() => result.current.setProposalStatus("m-4", "DISMISSED"));
+
+    expect(result.current.messages.map((message) => message.proposal?.status)).toEqual([
+      "PENDING",
+      "DISMISSED",
+    ]);
+    expect(result.current.messages[1]?.proposal?.proposedAction).toEqual(GROCERIES_BUDGET_DRAFT);
   });
 
   it("starts an empty chat and tells the user when the conversation cannot be loaded", async () => {

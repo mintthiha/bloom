@@ -2,6 +2,8 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
 import { AppError } from "../middleware/errorHandler";
+import type { ChatReplyEvent } from "../services/aiChatService";
+import type { ProposedChatAction } from "../services/chatActionProposals";
 import { INTERNAL_SECRET } from "../test-setup";
 
 const { serviceMock } = vi.hoisted(() => ({
@@ -12,9 +14,17 @@ vi.mock("../services/aiChatService", () => serviceMock);
 
 const SYSTEM_PROMPT = "You are Bloom's assistant.\n\n- TFSA limit: $7,000.";
 
-/** Builds the generator of reply chunks the chat service would hand back. */
-async function* replyOf(replyChunks: string[]): AsyncGenerator<string, void, void> {
-  for (const replyChunk of replyChunks) yield replyChunk;
+/** Builds the generator of reply events the chat service would hand back for the given text. */
+async function* replyOf(replyChunks: string[]): AsyncGenerator<ChatReplyEvent, void, void> {
+  for (const replyChunk of replyChunks) yield { type: "text", text: replyChunk };
+}
+
+/** Parses a newline-delimited JSON response body back into its events. */
+function parseReplyEvents(responseText: string): unknown[] {
+  return responseText
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
 }
 
 /** Posts a chat request as the Next.js server would, with the internal secret and a user id. */
@@ -51,16 +61,43 @@ describe("AI chat route", () => {
     expect(serviceMock.startChatReply).not.toHaveBeenCalled();
   });
 
-  it("streams the reply chunks back as plain text", async () => {
-    serviceMock.startChatReply.mockResolvedValue(
-      replyOf(["A TFSA ", "is a registered ", "account."])
-    );
+  it("streams the reply back as one JSON event per line", async () => {
+    serviceMock.startChatReply.mockResolvedValue(replyOf(["A TFSA ", "is a registered\naccount."]));
 
     const response = await postChat({ systemPrompt: SYSTEM_PROMPT, message: "What is a TFSA?" });
 
     expect(response.status).toBe(200);
-    expect(response.headers["content-type"]).toContain("text/plain");
-    expect(response.text).toBe("A TFSA is a registered account.");
+    expect(response.headers["content-type"]).toContain("application/x-ndjson");
+    expect(response.text.endsWith("\n")).toBe(true);
+    expect(parseReplyEvents(response.text)).toEqual([
+      { type: "text", text: "A TFSA " },
+      { type: "text", text: "is a registered\naccount." },
+    ]);
+  });
+
+  it("streams the draft a reply carries after its text", async () => {
+    const proposedAction: ProposedChatAction = {
+      kind: "BUDGET",
+      category: "Groceries",
+      monthlyLimit: 400,
+      currentMonthlyLimit: null,
+    };
+    /** Yields a reply that introduces a draft and then hands it over. */
+    async function* replyWithDraft(): AsyncGenerator<ChatReplyEvent, void, void> {
+      yield { type: "text", text: "I've drafted a budget." };
+      yield { type: "proposal", messageId: "m-2", proposedAction };
+    }
+    serviceMock.startChatReply.mockResolvedValue(replyWithDraft());
+
+    const response = await postChat({
+      systemPrompt: SYSTEM_PROMPT,
+      message: "Set a $400 grocery budget",
+    });
+
+    expect(parseReplyEvents(response.text)).toEqual([
+      { type: "text", text: "I've drafted a budget." },
+      { type: "proposal", messageId: "m-2", proposedAction },
+    ]);
   });
 
   it("passes the user, the untouched system prompt, and the trimmed question to the service", async () => {

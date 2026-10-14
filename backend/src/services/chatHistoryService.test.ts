@@ -52,6 +52,16 @@ describe("chatHistoryService", () => {
       expect(sql).toMatch(/WHERE "userId" = \s*,?\s*ORDER BY "createdAt" DESC\s+LIMIT/);
       expect(sql.trimEnd()).toMatch(/ORDER BY "createdAt" ASC$/);
     });
+
+    it("reads each message's draft and where that draft stands", async () => {
+      const { listRecentChatMessages } = await import("./chatHistoryService");
+      prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+      await listRecentChatMessages("u-1", 20);
+
+      const sql = String(prismaMock.$queryRaw.mock.calls[0]![0]);
+      expect(sql.match(/"proposedAction", "proposedActionStatus"/g)).toHaveLength(2);
+    });
   });
 
   describe("saveChatExchange", () => {
@@ -95,6 +105,102 @@ describe("chatHistoryService", () => {
 
       const parameters = prismaMock.$executeRaw.mock.calls[0]!.slice(1);
       expect(parameters[7]).toEqual(new Date("2026-10-08T12:00:00.001Z"));
+    });
+
+    it("returns the id the reply was stored under", async () => {
+      const { saveChatExchange } = await import("./chatHistoryService");
+
+      const replyMessageId = await saveChatExchange("u-1", {
+        question: "Hi",
+        askedAt: new Date(),
+        reply: "Hello",
+      });
+
+      const parameters = prismaMock.$executeRaw.mock.calls[0]!.slice(1);
+      expect(replyMessageId).toBe(parameters[4]);
+      expect(replyMessageId).toEqual(expect.any(String));
+    });
+
+    it("stores an ordinary reply without a draft", async () => {
+      const { saveChatExchange } = await import("./chatHistoryService");
+
+      await saveChatExchange("u-1", { question: "Hi", askedAt: new Date(), reply: "Hello" });
+
+      const parameters = prismaMock.$executeRaw.mock.calls[0]!.slice(1);
+      expect(parameters.slice(8)).toEqual([null, null]);
+    });
+
+    it("stores a reply's draft as pending, on the reply only", async () => {
+      const { saveChatExchange } = await import("./chatHistoryService");
+      const proposedAction = {
+        kind: "BUDGET" as const,
+        category: "Groceries",
+        monthlyLimit: 400,
+        currentMonthlyLimit: null,
+      };
+
+      await saveChatExchange("u-1", {
+        question: "Set a $400 grocery budget",
+        askedAt: new Date(),
+        reply: "Drafted.",
+        proposedAction,
+      });
+
+      const [sqlParts, ...parameters] = prismaMock.$executeRaw.mock.calls[0]!;
+      expect(String(sqlParts)).toMatch(/NULL, NULL\),\s+\(/);
+      expect(JSON.parse(parameters[8] as string)).toEqual(proposedAction);
+      expect(parameters[9]).toBe("PENDING");
+    });
+  });
+
+  describe("moveProposedActionStatus", () => {
+    it("moves only that user's draft, and only out of the expected status", async () => {
+      const { moveProposedActionStatus } = await import("./chatHistoryService");
+      const proposedAction = { kind: "BUDGET", category: "Groceries", monthlyLimit: 400 };
+      prismaMock.$queryRaw.mockResolvedValueOnce([{ proposedAction }]);
+
+      await expect(moveProposedActionStatus("u-1", "m-1", "PENDING", "CONFIRMED")).resolves.toEqual(
+        proposedAction
+      );
+
+      const [sqlParts, ...parameters] = prismaMock.$queryRaw.mock.calls[0]!;
+      const sql = String(sqlParts);
+      expect(parameters).toEqual(["CONFIRMED", "m-1", "u-1", "PENDING"]);
+      expect(sql).toMatch(/UPDATE "ChatMessage"\s+SET "proposedActionStatus" = /);
+      expect(sql).toMatch(/"id" = \s*,?\s*AND "userId" = \s*,?\s*AND "proposedActionStatus" = /);
+      expect(sql).toMatch(/RETURNING "proposedAction"/);
+    });
+
+    it("returns null when no draft was in the expected status", async () => {
+      const { moveProposedActionStatus } = await import("./chatHistoryService");
+      prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+      await expect(
+        moveProposedActionStatus("u-1", "m-1", "PENDING", "DISMISSED")
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("getProposedActionStatus", () => {
+    it("returns where that user's draft stands", async () => {
+      const { getProposedActionStatus } = await import("./chatHistoryService");
+      prismaMock.$queryRaw.mockResolvedValueOnce([{ proposedActionStatus: "CONFIRMED" }]);
+
+      await expect(getProposedActionStatus("u-1", "m-1")).resolves.toBe("CONFIRMED");
+
+      const [sqlParts, ...parameters] = prismaMock.$queryRaw.mock.calls[0]!;
+      expect(parameters).toEqual(["m-1", "u-1"]);
+      expect(String(sqlParts)).toMatch(/WHERE "id" = \s*,?\s*AND "userId" = /);
+    });
+
+    it.each([
+      ["the message carries no draft", [{ proposedActionStatus: null }]],
+      ["the user has no such message", []],
+    ])("returns null when %s", async (_description, rows) => {
+      const { getProposedActionStatus } = await import("./chatHistoryService");
+      prismaMock.$queryRaw.mockResolvedValueOnce(rows);
+
+      await expect(getProposedActionStatus("u-1", "m-1")).resolves.toBeNull();
     });
   });
 

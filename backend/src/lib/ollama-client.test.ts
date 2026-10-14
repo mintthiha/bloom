@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { requestChatCompletion, startChatStream } from "./ollama-client";
+import {
+  requestChatCompletion,
+  startChatEventStream,
+  startChatStream,
+  type OllamaStreamEvent,
+  type OllamaToolDefinition,
+} from "./ollama-client";
 
 const fetchMock = vi.fn();
 
@@ -29,6 +35,30 @@ function makeStreamResponse(bodyPieces: string[]): Response {
 function streamLine(content: string): string {
   return `${JSON.stringify({ message: { content } })}\n`;
 }
+
+/** Serializes one streamed NDJSON line in which the model calls the given functions. */
+function toolCallLine(toolCalls: unknown[], content = ""): string {
+  return `${JSON.stringify({ message: { content, tool_calls: toolCalls } })}
+`;
+}
+
+/** Drains a generator of stream events into an array. */
+async function collectEvents(
+  streamEvents: AsyncIterable<OllamaStreamEvent>
+): Promise<OllamaStreamEvent[]> {
+  const collected: OllamaStreamEvent[] = [];
+  for await (const streamEvent of streamEvents) collected.push(streamEvent);
+  return collected;
+}
+
+const BUDGET_TOOL: OllamaToolDefinition = {
+  type: "function",
+  function: {
+    name: "propose_budget",
+    description: "Draft a budget.",
+    parameters: { type: "object", properties: { category: { type: "string" } } },
+  },
+};
 
 /** Drains a generator of text chunks into an array. */
 async function collectChunks(chunks: AsyncIterable<string>): Promise<string[]> {
@@ -347,5 +377,110 @@ describe("startChatStream", () => {
 
     expect(await collected).toEqual(["Partial"]);
     expect(requestSignal?.aborted).toBe(true);
+  });
+});
+
+describe("startChatEventStream", () => {
+  it("offers the given tools to the model", async () => {
+    fetchMock.mockResolvedValue(makeStreamResponse([streamLine("ok")]));
+
+    await startChatEventStream({ messages: CONVERSATION, temperature: 0.2, tools: [BUDGET_TOOL] });
+
+    expect(lastRequestBody()).toMatchObject({ stream: true, tools: [BUDGET_TOOL] });
+  });
+
+  it("sends no tools field when there are no tools to offer", async () => {
+    fetchMock.mockImplementation(async () => makeStreamResponse([streamLine("ok")]));
+
+    await startChatEventStream({ messages: CONVERSATION, temperature: 0.2 });
+    expect(lastRequestBody()).not.toHaveProperty("tools");
+
+    await startChatEventStream({ messages: CONVERSATION, temperature: 0.2, tools: [] });
+    expect(lastRequestBody()).not.toHaveProperty("tools");
+  });
+
+  it("yields text and the model's function calls in the order they arrive", async () => {
+    fetchMock.mockResolvedValue(
+      makeStreamResponse([
+        streamLine("Sure. "),
+        toolCallLine([
+          { function: { name: "propose_budget", arguments: { category: "Groceries" } } },
+          { function: { name: "propose_rule", arguments: { merchant: "Tim Hortons" } } },
+        ]),
+      ])
+    );
+
+    const streamEvents = await startChatEventStream({ messages: CONVERSATION, temperature: 0.2 });
+
+    expect(await collectEvents(streamEvents)).toEqual([
+      { type: "text", text: "Sure. " },
+      { type: "toolCall", name: "propose_budget", arguments: { category: "Groceries" } },
+      { type: "toolCall", name: "propose_rule", arguments: { merchant: "Tim Hortons" } },
+    ]);
+  });
+
+  it("yields the text of a line before the function call that same line carries", async () => {
+    fetchMock.mockResolvedValue(
+      makeStreamResponse([
+        toolCallLine([{ function: { name: "propose_budget", arguments: {} } }], "One moment."),
+      ])
+    );
+
+    const streamEvents = await startChatEventStream({ messages: CONVERSATION, temperature: 0.2 });
+
+    expect(await collectEvents(streamEvents)).toEqual([
+      { type: "text", text: "One moment." },
+      { type: "toolCall", name: "propose_budget", arguments: {} },
+    ]);
+  });
+
+  it.each([
+    ["a string", '{"category":"Groceries"}'],
+    ["an array", ["Groceries"]],
+    ["null", null],
+    ["missing", undefined],
+  ])("gives a function call no arguments when they arrive as %s", async (_description, sent) => {
+    fetchMock.mockResolvedValue(
+      makeStreamResponse([
+        toolCallLine([{ function: { name: "propose_budget", arguments: sent } }]),
+      ])
+    );
+
+    const streamEvents = await startChatEventStream({ messages: CONVERSATION, temperature: 0.2 });
+
+    expect(await collectEvents(streamEvents)).toEqual([
+      { type: "toolCall", name: "propose_budget", arguments: {} },
+    ]);
+  });
+
+  it("drops function calls that name no function, and a tool_calls field that is not a list", async () => {
+    fetchMock.mockResolvedValue(
+      makeStreamResponse([
+        toolCallLine([null, {}, { function: {} }, { function: { name: "", arguments: {} } }]),
+        `${JSON.stringify({ message: { content: "", tool_calls: "propose_budget" } })}
+`,
+        streamLine("Done."),
+      ])
+    );
+
+    const streamEvents = await startChatEventStream({ messages: CONVERSATION, temperature: 0.2 });
+
+    expect(await collectEvents(streamEvents)).toEqual([{ type: "text", text: "Done." }]);
+  });
+});
+
+describe("startChatStream with a model that calls a function", () => {
+  it("forwards only the text", async () => {
+    fetchMock.mockResolvedValue(
+      makeStreamResponse([
+        streamLine("Hello"),
+        toolCallLine([{ function: { name: "propose_budget", arguments: {} } }]),
+        streamLine(" world"),
+      ])
+    );
+
+    const chunks = await startChatStream({ messages: CONVERSATION, temperature: 0.2 });
+
+    expect(await collectChunks(chunks)).toEqual(["Hello", " world"]);
   });
 });

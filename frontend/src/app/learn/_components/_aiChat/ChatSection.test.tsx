@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatSection } from "./ChatSection";
-import type { ChatMessage } from "@/lib/api";
+import type { ChatActionProposal, ChatMessage } from "@/lib/api";
 
 vi.mock("./MarkdownMessage", () => ({
   MarkdownMessage: ({ content }: { content: string }) => (
@@ -11,6 +11,20 @@ vi.mock("./MarkdownMessage", () => ({
 
 vi.mock("./ThinkingIndicator", () => ({
   ThinkingIndicator: () => <div data-testid="thinking" />,
+}));
+
+vi.mock("./ProposedActionCard", () => ({
+  ProposedActionCard: ({
+    proposal,
+    onStatusChange,
+  }: {
+    proposal: ChatActionProposal;
+    onStatusChange: (messageId: string, status: "DISMISSED") => void;
+  }) => (
+    <button type="button" onClick={() => onStatusChange(proposal.messageId, "DISMISSED")}>
+      Draft {proposal.messageId} is {proposal.status}
+    </button>
+  ),
 }));
 
 vi.mock("./ClearConversation", () => ({
@@ -44,6 +58,7 @@ function renderChat(overrides: Partial<React.ComponentProps<typeof ChatSection>>
     handleKeyDown: vi.fn(),
     onStop: vi.fn(),
     onCleared: vi.fn(),
+    onProposalStatusChange: vi.fn(),
     ...overrides,
   };
   render(<ChatSection {...props} />);
@@ -72,6 +87,47 @@ describe("ChatSection", () => {
     expect(screen.getByText("hi there")).toBeInTheDocument();
     expect(screen.getByTestId("markdown")).toHaveTextContent("**hello**");
     expect(screen.getByTestId("thinking")).toBeInTheDocument();
+  });
+
+  it("offers a prompt that asks Bloom AI to draft a budget", () => {
+    const { sendMessage } = renderChat();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Set a $400 monthly budget for groceries" })
+    );
+
+    expect(sendMessage).toHaveBeenCalledWith("Set a $400 monthly budget for groceries");
+  });
+
+  it("shows a draft card only under the reply that carries one, and reports what the user did", () => {
+    const { onProposalStatusChange } = renderChat({
+      messages: [
+        { role: "user", content: "Set a $400 grocery budget" },
+        {
+          role: "assistant",
+          content: "I've drafted a budget.",
+          proposal: {
+            messageId: "m-2",
+            status: "PENDING",
+            proposedAction: {
+              kind: "BUDGET",
+              category: "Groceries",
+              monthlyLimit: 400,
+              currentMonthlyLimit: null,
+            },
+          },
+        },
+        { role: "assistant", content: "Anything else?" },
+      ],
+    });
+
+    expect(screen.getAllByTestId("markdown")[0]).toHaveTextContent("I've drafted a budget.");
+    const draftCards = screen.getAllByRole("button", { name: /^Draft / });
+    expect(draftCards).toHaveLength(1);
+    expect(draftCards[0]).toHaveTextContent("Draft m-2 is PENDING");
+
+    fireEvent.click(draftCards[0]!);
+    expect(onProposalStatusChange).toHaveBeenCalledWith("m-2", "DISMISSED");
   });
 
   it("offers Clear with the message count when there are messages", () => {

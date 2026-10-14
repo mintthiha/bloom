@@ -31,7 +31,7 @@ function makeChatRequest(body: unknown): Request {
   });
 }
 
-/** Builds the backend's streamed plain-text reply. */
+/** Builds the backend's streamed reply from the given raw body pieces. */
 function makeBackendReply(replyChunks: string[]): Response {
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
@@ -89,14 +89,20 @@ describe("POST /api/learn/chat", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("relays the backend's streamed reply as plain text", async () => {
-    fetchMock.mockResolvedValue(makeBackendReply(["A TFSA ", "is a registered account."]));
+  it("relays the backend's stream of reply events untouched", async () => {
+    const replyEventLines = [
+      `${JSON.stringify({ type: "text", text: "A TFSA is a registered account." })}
+`,
+      `${JSON.stringify({ type: "proposal", messageId: "m-2", proposedAction: { kind: "BUDGET" } })}
+`,
+    ];
+    fetchMock.mockResolvedValue(makeBackendReply(replyEventLines));
 
     const response = await POST(makeChatRequest({ message: "What is a TFSA?" }));
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
-    expect(await response.text()).toBe("A TFSA is a registered account.");
+    expect(response.headers.get("Content-Type")).toBe("application/x-ndjson; charset=utf-8");
+    expect(await response.text()).toBe(replyEventLines.join(""));
   });
 
   it("sends the question to the backend's internal chat endpoint as the signed-in user", async () => {

@@ -29,9 +29,10 @@ function parseQuestionFromBody(body: Record<string, unknown>): string {
 }
 
 /**
- * Streams the assistant's reply to one new question as plain text; the earlier turns come from the
- * user's stored conversation. Server-to-server only: the caller owns the system prompt, so the
- * Next.js proxy refuses to forward browser requests to `/api/internal/*`.
+ * Streams the assistant's reply to one new question as newline-delimited JSON events — text as it
+ * is generated, then the draft the reply carries, if any. The earlier turns come from the user's
+ * stored conversation. Server-to-server only: the caller owns the system prompt, so the Next.js
+ * proxy refuses to forward browser requests to `/api/internal/*`.
  */
 router.post("/chat", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -47,18 +48,18 @@ router.post("/chat", async (req: Request, res: Response, next: NextFunction) => 
     res.on("close", () => abortController.abort());
 
     // Started before any header is sent, so an unreachable model still surfaces as a 503 status.
-    const replyChunks = await aiChatService.startChatReply(
+    const replyEvents = await aiChatService.startChatReply(
       userId,
       systemPrompt,
       question,
       abortController.signal
     );
 
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache");
     res.flushHeaders();
-    for await (const replyChunk of replyChunks) {
-      res.write(replyChunk);
+    for await (const replyEvent of replyEvents) {
+      res.write(`${JSON.stringify(replyEvent)}\n`);
     }
     res.end();
   } catch (err) {

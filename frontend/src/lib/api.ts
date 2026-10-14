@@ -504,14 +504,71 @@ export type ActivityLogQuery = {
   end?: string;
 };
 
+/**
+ * A write Bloom AI drafted for the user — a budget, a savings goal, or a categorization rule.
+ * Nothing is saved until the user confirms it.
+ */
+export type ProposedChatAction =
+  | {
+      kind: "BUDGET";
+      category: string;
+      monthlyLimit: number;
+      /** The limit this draft would replace, or null when the category has no budget yet. */
+      currentMonthlyLimit: number | null;
+    }
+  | {
+      kind: "SAVINGS_GOAL";
+      name: string;
+      targetAmount: number;
+      /** `YYYY-MM-DD` deadline, or null when the goal is open-ended. */
+      targetDate: string | null;
+      accountId: string;
+      /** The account the goal would track, e.g. "Rainy day (Savings)". */
+      accountLabel: string;
+    }
+  | {
+      kind: "CATEGORIZATION_RULE";
+      merchant: string;
+      category: string;
+      /** The category this merchant's existing rule points at, or null when it has none. */
+      currentCategory: string | null;
+    };
+
+export type ProposedChatActionStatus = "PENDING" | "CONFIRMED" | "DISMISSED";
+
+/** A draft as the chat window tracks it: what it is, where it stands, and the reply it belongs to. */
+export type ChatActionProposal = {
+  messageId: string;
+  proposedAction: ProposedChatAction;
+  status: ProposedChatActionStatus;
+};
+
 /** A single turn of the Bloom AI conversation, as the chat window renders it. */
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  /** Set on an assistant reply that drafted something for the user to confirm. */
+  proposal?: ChatActionProposal;
+};
 
 /** Longest question the chat accepts; mirrors the limit the backend enforces. */
 export const MAX_CHAT_MESSAGE_LENGTH = 4000;
 
 /** A conversation turn as the server stores it. */
-export type StoredChatMessage = ChatMessage & { id: string; createdAt: string };
+export type StoredChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  proposedAction: ProposedChatAction | null;
+  proposedActionStatus: ProposedChatActionStatus | null;
+  createdAt: string;
+};
+
+/** Where a draft stands after the user confirmed or dismissed it. */
+export type ProposedChatActionOutcome = {
+  id: string;
+  proposedActionStatus: ProposedChatActionStatus;
+};
 
 /** Everything Bloom stores for the signed-in user, as returned by the whole-account export. */
 export type UserDataExport = {
@@ -578,7 +635,7 @@ export type UserDataExport = {
     manualAssets: number;
     manualLiabilities: number;
   }>;
-  chatMessages: Array<ChatMessage & { createdAt: string }>;
+  chatMessages: Array<{ role: "user" | "assistant"; content: string; createdAt: string }>;
 };
 
 export const api = {
@@ -898,6 +955,14 @@ export const api = {
     request<void>(`/manual-entries/${id}/restore`, { method: "POST" }),
   listChatMessages: () => request<{ messages: StoredChatMessage[] }>("/chat-messages"),
   clearChatMessages: () => request<void>("/chat-messages", { method: "DELETE" }),
+  confirmProposedChatAction: (messageId: string) =>
+    request<ProposedChatActionOutcome>(`/chat-messages/${messageId}/proposed-action/confirm`, {
+      method: "POST",
+    }),
+  dismissProposedChatAction: (messageId: string) =>
+    request<ProposedChatActionOutcome>(`/chat-messages/${messageId}/proposed-action/dismiss`, {
+      method: "POST",
+    }),
   exportUserData: () => request<UserDataExport>("/user-data/export"),
   deleteUserAccount: () => request<void>("/user-data", { method: "DELETE" }),
 };

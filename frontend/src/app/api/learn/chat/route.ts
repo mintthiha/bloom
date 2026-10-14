@@ -49,8 +49,8 @@ export async function POST(req: Request) {
   }
 
   // The backend owns the model call, the conversation history, and the per-user rate limit; this
-  // route only builds the prompt and relays the reply. Forwarding the request's signal lets Stop
-  // cancel generation.
+  // route only builds the prompt and relays the reply — a stream of JSON events, one per line.
+  // Forwarding the request's signal lets Stop cancel generation.
   let backendResponse: Response;
   try {
     backendResponse = await fetch(`${BACKEND}/api/internal/ai/chat`, {
@@ -82,6 +82,6 @@ export async function POST(req: Request) {
   }
 
   return new Response(backendResponse.body, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: { "Content-Type": "application/x-ndjson; charset=utf-8" },
   });
 }

@@ -334,12 +334,17 @@ model Category {
 /// table only ever holds complete exchanges. `role` is "user" or "assistant" — the
 /// same strings the model API and the chat UI use. Clearing the conversation hard-
 /// deletes the rows: it is a privacy action, so there is no soft-delete column.
+/// An assistant reply may carry a `proposedAction` — a budget, savings goal, or
+/// categorization rule the model drafted — which is only saved once the user confirms
+/// it; `proposedActionStatus` is then "PENDING", "CONFIRMED", or "DISMISSED".
 model ChatMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  role      String
-  content   String
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  id                   String   @id @default(cuid())
+  userId               String
+  role                 String
+  content              String
+  proposedAction       Json?
+  proposedActionStatus String?
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId, createdAt])
 }

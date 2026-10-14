@@ -1,12 +1,33 @@
 import { AppError } from "../middleware/errorHandler";
 import logger from "./logger";
 
-export type OllamaChatRole = "system" | "user" | "assistant";
+export type OllamaChatRole = "system" | "user" | "assistant" | "tool";
 
-export type OllamaChatMessage = { role: OllamaChatRole; content: string };
+/** One function call the model asked for. The field names are Ollama's wire format. */
+export type OllamaToolCall = { function: { name: string; arguments: Record<string, unknown> } };
+
+export type OllamaChatMessage = {
+  role: OllamaChatRole;
+  content: string;
+  /** Set on a replayed assistant turn that called a function instead of answering in text. */
+  tool_calls?: OllamaToolCall[];
+};
+
+/** A function the model may call instead of answering in text, described by a JSON schema. */
+export type OllamaToolDefinition = {
+  type: "function";
+  function: { name: string; description: string; parameters: Record<string, unknown> };
+};
+
+/** One piece of a streamed reply: generated text, or a function the model chose to call. */
+export type OllamaStreamEvent =
+  | { type: "text"; text: string }
+  | { type: "toolCall"; name: string; arguments: Record<string, unknown> };
 
 export type OllamaChatRequest = {
   messages: OllamaChatMessage[];
+  /** Functions the model may call. Omit for a plain text reply. */
+  tools?: OllamaToolDefinition[];
   /** Sampling temperature; lower keeps the output more deterministic. */
   temperature: number;
   /** Constrains the reply to one valid JSON value (Ollama's `format: "json"`). */
@@ -16,7 +37,7 @@ export type OllamaChatRequest = {
 };
 
 /** The subset of Ollama's `/api/chat` response (or one streamed NDJSON line of it) that Bloom reads. */
-type OllamaChatPayload = { message?: { content?: string } };
+type OllamaChatPayload = { message?: { content?: string; tool_calls?: unknown } };
 
 export const AI_UNAVAILABLE_MESSAGE = "AI service unavailable";
 
@@ -85,6 +106,7 @@ async function postChatRequest(
         model: process.env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL,
         messages: request.messages,
         stream: shouldStream,
+        ...(request.tools?.length ? { tools: request.tools } : {}),
         ...(request.shouldReturnJson ? { format: "json" } : {}),
         keep_alive: process.env.OLLAMA_KEEP_ALIVE || DEFAULT_KEEP_ALIVE,
         options: { temperature: request.temperature, num_ctx: CONTEXT_WINDOW_TOKENS },
@@ -102,25 +124,54 @@ async function postChatRequest(
   return response;
 }
 
-/** Pulls the generated text out of one streamed NDJSON line, ignoring blank or malformed lines. */
-function extractStreamedContent(line: string): string | undefined {
-  if (!line.trim()) return undefined;
-  try {
-    return (JSON.parse(line) as OllamaChatPayload).message?.content || undefined;
-  } catch {
-    return undefined;
+/** Reads the function calls off one streamed line, dropping any that carry no function name. */
+function extractToolCallEvents(rawToolCalls: unknown): OllamaStreamEvent[] {
+  if (!Array.isArray(rawToolCalls)) return [];
+  const toolCallEvents: OllamaStreamEvent[] = [];
+  for (const rawToolCall of rawToolCalls) {
+    const calledFunction = (
+      rawToolCall as { function?: { name?: unknown; arguments?: unknown } } | null
+    )?.function;
+    if (typeof calledFunction?.name !== "string" || !calledFunction.name) continue;
+    const rawArguments = calledFunction.arguments;
+    const hasArgumentObject =
+      typeof rawArguments === "object" && rawArguments !== null && !Array.isArray(rawArguments);
+    toolCallEvents.push({
+      type: "toolCall",
+      name: calledFunction.name,
+      arguments: hasArgumentObject ? (rawArguments as Record<string, unknown>) : {},
+    });
   }
+  return toolCallEvents;
 }
 
 /**
- * Yields the generated text chunk by chunk. A stream that stalls or drops part-way simply ends
- * early, so the consumer keeps whatever text already arrived instead of losing the whole reply.
+ * Pulls the generated text and any function calls out of one streamed NDJSON line, ignoring
+ * blank or malformed lines.
  */
-async function* readStreamedContent(
+function extractStreamedEvents(line: string): OllamaStreamEvent[] {
+  if (!line.trim()) return [];
+  let message: OllamaChatPayload["message"];
+  try {
+    message = (JSON.parse(line) as OllamaChatPayload | null)?.message;
+  } catch {
+    return [];
+  }
+  const textEvents: OllamaStreamEvent[] = message?.content
+    ? [{ type: "text", text: message.content }]
+    : [];
+  return [...textEvents, ...extractToolCallEvents(message?.tool_calls)];
+}
+
+/**
+ * Yields the reply piece by piece. A stream that stalls or drops part-way simply ends early, so
+ * the consumer keeps whatever already arrived instead of losing the whole reply.
+ */
+async function* readStreamedEvents(
   body: ReadableStream<Uint8Array>,
   abortController: AbortController,
   watchdog: InactivityWatchdog
-): AsyncGenerator<string, void, void> {
+): AsyncGenerator<OllamaStreamEvent, void, void> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let pendingText = "";
@@ -134,12 +185,10 @@ async function* readStreamedContent(
       const lines = pendingText.split("\n");
       pendingText = lines.pop() ?? "";
       for (const line of lines) {
-        const content = extractStreamedContent(line);
-        if (content) yield content;
+        yield* extractStreamedEvents(line);
       }
     }
-    const trailingContent = extractStreamedContent(pendingText);
-    if (trailingContent) yield trailingContent;
+    yield* extractStreamedEvents(pendingText);
   } catch (error) {
     logger.warn({ err: error }, "Ollama stream ended early");
   } finally {
@@ -176,11 +225,11 @@ export async function requestChatCompletion(request: OllamaChatRequest): Promise
 /**
  * Opens a streamed reply. Resolves once Ollama has started answering — so a down service still
  * surfaces as a 503 before the caller commits to a streaming response — with a generator of the
- * text chunks to forward as they arrive.
+ * text chunks and function calls as they arrive.
  */
-export async function startChatStream(
+export async function startChatEventStream(
   request: OllamaChatRequest
-): Promise<AsyncGenerator<string, void, void>> {
+): Promise<AsyncGenerator<OllamaStreamEvent, void, void>> {
   const abortController = createLinkedAbortController(request.signal);
   const watchdog = createInactivityWatchdog(abortController);
   watchdog.restart(CONNECT_TIMEOUT_MS);
@@ -196,5 +245,24 @@ export async function startChatStream(
     watchdog.stop();
     throw new AppError(503, AI_UNAVAILABLE_MESSAGE);
   }
-  return readStreamedContent(response.body, abortController, watchdog);
+  return readStreamedEvents(response.body, abortController, watchdog);
+}
+
+/** Keeps only the generated text of a streamed reply. */
+async function* keepTextOnly(
+  streamEvents: AsyncIterable<OllamaStreamEvent>
+): AsyncGenerator<string, void, void> {
+  for await (const streamEvent of streamEvents) {
+    if (streamEvent.type === "text") yield streamEvent.text;
+  }
+}
+
+/**
+ * Opens a streamed reply for a caller that offers the model no tools, and so only wants the text
+ * chunks to forward as they arrive. Fails the same way `startChatEventStream` does.
+ */
+export async function startChatStream(
+  request: OllamaChatRequest
+): Promise<AsyncGenerator<string, void, void>> {
+  return keepTextOnly(await startChatEventStream(request));
 }

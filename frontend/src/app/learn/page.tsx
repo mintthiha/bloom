@@ -62,6 +62,7 @@ export default function LearnPage() {
     handleKeyDown,
     stopGeneration,
     resetConversation,
+    setProposalStatus,
   } = useLearnChat();
 
   useEffect(() => {
@@ -129,6 +130,7 @@ export default function LearnPage() {
               handleKeyDown={handleKeyDown}
               onStop={stopGeneration}
               onCleared={resetConversation}
+              onProposalStatusChange={setProposalStatus}
             />
           </div>
         </div>
@@ -159,6 +161,7 @@ export default function LearnPage() {
             handleKeyDown={handleKeyDown}
             onStop={stopGeneration}
             onCleared={resetConversation}
+            onProposalStatusChange={setProposalStatus}
           />
         </>
       )}

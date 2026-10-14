@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { AppError } from "../middleware/errorHandler";
+import * as chatActionService from "../services/chatActionService";
 import * as chatHistoryService from "../services/chatHistoryService";
 
 const router = Router();
@@ -26,6 +27,40 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     next(err);
   }
 });
+
+/** Saves the budget, savings goal, or rule that one of Bloom AI's replies drafted. */
+router.post(
+  "/:id/proposed-action/confirm",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(
+        await chatActionService.confirmProposedAction(
+          requireUserId(req),
+          req.params["id"] as string
+        )
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** Turns down the draft one of Bloom AI's replies carried, without saving anything. */
+router.post(
+  "/:id/proposed-action/dismiss",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(
+        await chatActionService.dismissProposedAction(
+          requireUserId(req),
+          req.params["id"] as string
+        )
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 /** Permanently deletes the user's whole conversation with Bloom AI. */
 router.delete("/", async (req: Request, res: Response, next: NextFunction) => {

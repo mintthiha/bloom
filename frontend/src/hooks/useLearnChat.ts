@@ -1,9 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { api, type ChatMessage } from "@/lib/api";
+import {
+  api,
+  type ChatActionProposal,
+  type ChatMessage,
+  type ProposedChatActionStatus,
+  type StoredChatMessage,
+} from "@/lib/api";
+import { readChatReplyEvents } from "@/lib/chat-reply-events";
 
 /** Where the conversation lived before it moved to the server; only ever cleaned up now. */
 const LEGACY_STORAGE_KEY = "bloom_learn_chat";
+
+/** Converts a stored turn into the shape the chat window renders, keeping any draft it carries. */
+function toChatMessage(storedMessage: StoredChatMessage): ChatMessage {
+  const message: ChatMessage = { role: storedMessage.role, content: storedMessage.content };
+  if (!storedMessage.proposedAction || !storedMessage.proposedActionStatus) return message;
+  return {
+    ...message,
+    proposal: {
+      messageId: storedMessage.id,
+      proposedAction: storedMessage.proposedAction,
+      status: storedMessage.proposedActionStatus,
+    },
+  };
+}
 
 export function useLearnChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -22,7 +43,7 @@ export function useLearnChat() {
       .listChatMessages()
       .then((result) => {
         if (isUnmounted) return;
-        setMessages(result.messages.map(({ role, content }) => ({ role, content })));
+        setMessages(result.messages.map(toChatMessage));
       })
       .catch(() => {
         if (!isUnmounted) toast.error("Couldn't load your conversation");
@@ -86,21 +107,20 @@ export function useLearnChat() {
         return;
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last && last.role === "assistant") {
-            updated[updated.length - 1] = { ...last, content: last.content + chunk };
-          }
-          return updated;
-        });
+      for await (const replyEvent of readChatReplyEvents(res.body.getReader())) {
+        if (replyEvent.type === "text") {
+          changeLastAssistantMessage((last) => ({
+            ...last,
+            content: last.content + replyEvent.text,
+          }));
+        } else {
+          const proposal: ChatActionProposal = {
+            messageId: replyEvent.messageId,
+            proposedAction: replyEvent.proposedAction,
+            status: "PENDING",
+          };
+          changeLastAssistantMessage((last) => ({ ...last, proposal }));
+        }
       }
     } catch (error) {
       const wasStopped = error instanceof DOMException && error.name === "AbortError";
@@ -124,16 +144,32 @@ export function useLearnChat() {
     }
   }
 
-  /** Replaces the current (last) assistant message's content — used for error/status text. */
-  function updateLastAssistant(content: string) {
+  /** Applies a change to the current (last) assistant message — the reply being streamed. */
+  function changeLastAssistantMessage(change: (last: ChatMessage) => ChatMessage) {
     setMessages((prev) => {
       const updated = [...prev];
       const last = updated[updated.length - 1];
       if (last && last.role === "assistant") {
-        updated[updated.length - 1] = { ...last, content };
+        updated[updated.length - 1] = change(last);
       }
       return updated;
     });
+  }
+
+  /** Replaces the current (last) assistant message's content — used for error/status text. */
+  function updateLastAssistant(content: string) {
+    changeLastAssistantMessage((last) => ({ ...last, content }));
+  }
+
+  /** Records what the user did with a reply's draft, so its card stops offering to save it. */
+  function setProposalStatus(messageId: string, status: ProposedChatActionStatus) {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.proposal?.messageId === messageId
+          ? { ...message, proposal: { ...message.proposal, status } }
+          : message
+      )
+    );
   }
 
   /** Cancels an in-progress generation, keeping any text that already streamed in. */
@@ -175,5 +211,6 @@ export function useLearnChat() {
     handleKeyDown,
     stopGeneration,
     resetConversation,
+    setProposalStatus,
   };
 }

@@ -1,9 +1,14 @@
 "use client";
 
 import { Send, Square } from "lucide-react";
-import { MAX_CHAT_MESSAGE_LENGTH, type ChatMessage } from "@/lib/api";
+import {
+  MAX_CHAT_MESSAGE_LENGTH,
+  type ChatMessage,
+  type ProposedChatActionStatus,
+} from "@/lib/api";
 import { ClearConversation } from "./ClearConversation";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { ProposedActionCard } from "./ProposedActionCard";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 type ChatSectionProps = {
@@ -20,11 +25,17 @@ type ChatSectionProps = {
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onStop: () => void;
   onCleared: () => void;
+  /** Records what the user did with the draft a reply carried (confirmed or dismissed it). */
+  onProposalStatusChange: (messageId: string, status: ProposedChatActionStatus) => void;
 };
 
-/** Starter questions shown in the empty chat; the personalized ones exercise the user's own data. */
+/**
+ * Starter prompts shown in the empty chat: the personalized questions exercise the user's own
+ * data, and the budget one shows that Bloom AI can draft changes as well as answer.
+ */
 const SUGGESTED_PROMPTS = [
   "How am I doing on my budget this month?",
+  "Set a $400 monthly budget for groceries",
   "How much TFSA room do I have left?",
   "What's my net worth right now?",
   "What's the difference between a TFSA and an RRSP?",
@@ -43,6 +54,7 @@ export function ChatSection({
   handleKeyDown,
   onStop,
   onCleared,
+  onProposalStatusChange,
 }: ChatSectionProps) {
   const isInputDisabled = streaming || isLoadingHistory;
   const canSend = !isLoadingHistory && Boolean(input.trim());
@@ -168,30 +180,45 @@ export function ChatSection({
             <div
               style={{
                 maxWidth: "75%",
-                padding: "10px 14px",
-                borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                background:
-                  msg.role === "user"
-                    ? "color-mix(in srgb, var(--brand-accent) 13%, transparent)"
-                    : "var(--surface-2)",
-                border:
-                  msg.role === "user"
-                    ? "1px solid color-mix(in srgb, var(--brand-accent) 27%, transparent)"
-                    : "1px solid var(--border)",
-                fontSize: "13px",
-                lineHeight: 1.6,
-                color: "var(--text-primary)",
-                whiteSpace: msg.role === "user" ? "pre-wrap" : "normal",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+                gap: "8px",
               }}
             >
-              {msg.role === "assistant" ? (
-                msg.content ? (
-                  <MarkdownMessage content={msg.content} />
+              <div
+                style={{
+                  padding: "10px 14px",
+                  borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                  background:
+                    msg.role === "user"
+                      ? "color-mix(in srgb, var(--brand-accent) 13%, transparent)"
+                      : "var(--surface-2)",
+                  border:
+                    msg.role === "user"
+                      ? "1px solid color-mix(in srgb, var(--brand-accent) 27%, transparent)"
+                      : "1px solid var(--border)",
+                  fontSize: "13px",
+                  lineHeight: 1.6,
+                  color: "var(--text-primary)",
+                  whiteSpace: msg.role === "user" ? "pre-wrap" : "normal",
+                }}
+              >
+                {msg.role === "assistant" ? (
+                  msg.content ? (
+                    <MarkdownMessage content={msg.content} />
+                  ) : (
+                    <ThinkingIndicator />
+                  )
                 ) : (
-                  <ThinkingIndicator />
-                )
-              ) : (
-                msg.content
+                  msg.content
+                )}
+              </div>
+              {msg.proposal && (
+                <ProposedActionCard
+                  proposal={msg.proposal}
+                  onStatusChange={onProposalStatusChange}
+                />
               )}
             </div>
           </div>

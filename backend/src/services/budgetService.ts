@@ -375,6 +375,18 @@ export async function getBudgetActivity(
 }
 
 /**
+ * Returns just the category and monthly limit of each live budget — a cheap lookup for callers
+ * that need to know what budgets exist without computing spending or rollover.
+ */
+export async function listBudgetLimits(userId: string) {
+  const rows = await prisma.$queryRaw<{ category: string; monthlyLimit: string }[]>`
+    SELECT "category", "monthlyLimit" FROM "CategoryBudget"
+    WHERE "userId" = ${userId} AND "deletedAt" IS NULL
+  `;
+  return rows.map((row) => ({ category: row.category, monthlyLimit: Number(row.monthlyLimit) }));
+}
+
+/**
  * Creates or updates a monthly budget for a category.
  * Budgets are unique per user and category.
  */
