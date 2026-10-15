@@ -19,12 +19,34 @@ const REFERENCE_DATA: ChatActionReferenceData = {
   ],
   budgets: [{ category: "Dining", monthlyLimit: 150 }],
   rules: [{ merchant: "Tim Hortons", category: "Dining" }],
+  savingsGoals: [],
 };
 
 /** Reference data for a user with exactly one account, where a goal needs no account choice. */
 const SINGLE_ACCOUNT_DATA: ChatActionReferenceData = {
   ...REFERENCE_DATA,
   accounts: [{ id: "account-savings", name: "Rainy day", accountType: "SAVINGS" }],
+};
+
+/** Reference data for a user who already has two savings goals to change. */
+const GOAL_DATA: ChatActionReferenceData = {
+  ...REFERENCE_DATA,
+  savingsGoals: [
+    {
+      id: "goal-japan",
+      name: "Japan trip",
+      targetAmount: 3000,
+      targetDate: "2027-06-30",
+      accountId: "account-savings",
+    },
+    {
+      id: "goal-emergency",
+      name: "Emergency fund",
+      targetAmount: 5000,
+      targetDate: null,
+      accountId: "account-chequing",
+    },
+  ],
 };
 
 /** A question that states every amount these tests draft with, so each counts as user-given. */
@@ -632,6 +654,213 @@ describe("interpretToolCall — categorization rules", () => {
   });
 });
 
+describe("interpretToolCall — savings goal changes", () => {
+  /** Interprets a goal change against the user who has goals, given what they typed. */
+  function interpretGoalChange(toolArguments: Record<string, unknown>, question: string) {
+    return interpret("propose_savings_goal_change", toolArguments, GOAL_DATA, { question });
+  }
+
+  it("drafts a new target the user typed, recording what it replaces and changing nothing else", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Japan trip", targetAmount: 4000 },
+      "Change my Japan trip goal target to $4,000"
+    );
+
+    expect(interpretation.proposedAction).toEqual({
+      kind: "SAVINGS_GOAL_CHANGE",
+      goalId: "goal-japan",
+      currentName: "Japan trip",
+      name: null,
+      targetAmount: 4000,
+      currentTargetAmount: 3000,
+      targetDate: null,
+      currentTargetDate: "2027-06-30",
+      accountId: null,
+      accountLabel: null,
+      currentAccountLabel: "Rainy day (Savings)",
+    });
+    expect(interpretation.reply).toContain('changes to your "Japan trip" goal');
+    expect(interpretation.reply).toContain("nothing is saved until you confirm");
+  });
+
+  it("drafts a rename, a new deadline, and a move to another account together", () => {
+    const interpretation = interpretGoalChange(
+      {
+        goal: "japan TRIP",
+        newGoalName: "Tokyo trip",
+        targetDate: "2027-08-31",
+        account: "Everyday (Chequing)",
+      },
+      "Rename Japan trip to Tokyo trip, push it to August 2027 and move it to Everyday"
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({
+      goalId: "goal-japan",
+      currentName: "Japan trip",
+      name: "Tokyo trip",
+      targetAmount: null,
+      targetDate: "2027-08-31",
+      currentTargetDate: "2027-06-30",
+      accountId: "account-chequing",
+      accountLabel: "Everyday (Chequing)",
+      currentAccountLabel: "Rainy day (Savings)",
+    });
+  });
+
+  it("gives an open-ended goal its first deadline", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Emergency fund", targetDate: "2027-01-31" },
+      "Give my emergency fund a deadline of January 31 2027"
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({
+      targetDate: "2027-01-31",
+      currentTargetDate: null,
+      currentAccountLabel: "Everyday (Chequing)",
+    });
+  });
+
+  it("drops an amount the user never typed but keeps the change they asked for", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Japan trip", targetAmount: 3500, targetDate: "2027-09-30" },
+      "Move my Japan trip deadline to the end of September next year"
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({
+      targetAmount: null,
+      targetDate: "2027-09-30",
+    });
+  });
+
+  it("asks for the target when the only change is an amount the user never typed", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Japan trip", targetAmount: 3500 },
+      "Raise my Japan trip target"
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe('How much should the new target for "Japan trip" be?');
+  });
+
+  it("asks what to change when every value matches the goal as it is", () => {
+    const interpretation = interpretGoalChange(
+      {
+        goal: "Japan trip",
+        newGoalName: "Japan trip",
+        targetAmount: 3000,
+        targetDate: "2027-06-30",
+        account: "Rainy day (Savings)",
+      },
+      "Set my Japan trip goal to 3000 by 2027-06-30"
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      'What would you like to change about "Japan trip"? I can change its name, target, ' +
+        "deadline, or account."
+    );
+  });
+
+  it("asks which goal when none was named, listing the user's goals", () => {
+    const interpretation = interpretGoalChange({ targetAmount: 4000 }, "Change my goal to 4000");
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      'Which goal should I change? Your goals are: "Japan trip", "Emergency fund".'
+    );
+  });
+
+  it("says when the named goal does not exist, listing the user's goals", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "House", targetAmount: 4000 },
+      "Change my house goal to 4000"
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      `I couldn't find a goal called "House". Your goals are: "Japan trip", "Emergency fund".`
+    );
+  });
+
+  it("sends the user to the Goals page when two goals share the name", () => {
+    const interpretation = interpret(
+      "propose_savings_goal_change",
+      { goal: "Japan trip", targetAmount: 4000 },
+      {
+        ...GOAL_DATA,
+        savingsGoals: [
+          ...GOAL_DATA.savingsGoals,
+          { ...GOAL_DATA.savingsGoals[0]!, id: "goal-japan-2" },
+        ],
+      },
+      { question: "Change my Japan trip goal to 4000" }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toContain('more than one goal called "Japan trip"');
+    expect(interpretation.reply).toContain("Goals page");
+  });
+
+  it("asks for another date when the new deadline has already passed", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Japan trip", targetDate: "2026-10-11" },
+      "Move Japan trip to yesterday"
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toContain("(2026-10-11) has already passed");
+  });
+
+  it("asks for the date again when the model sent one that is not a date", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Japan trip", targetDate: "next summer" },
+      "Move Japan trip to next summer"
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toContain(`couldn't work out the new deadline for "Japan trip"`);
+  });
+
+  it("asks which account when the named one matches none of the user's", () => {
+    const interpretation = interpretGoalChange(
+      { goal: "Japan trip", account: "Vacation fund" },
+      "Move Japan trip to my vacation fund"
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      `I couldn't tell which account you mean by "Vacation fund". Your accounts are: ` +
+        "Everyday (Chequing), Rainy day (Savings)."
+    );
+  });
+
+  it("explains there is nothing to change for a user with no goals", () => {
+    const interpretation = interpret("propose_savings_goal_change", { goal: "Japan trip" });
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      "You don't have any savings goals yet, so there is nothing to change."
+    );
+  });
+
+  it("turns a new goal named after an existing one into a change to that goal", () => {
+    const interpretation = interpret(
+      "propose_savings_goal",
+      { goalName: "Japan Trip", targetAmount: 4000 },
+      GOAL_DATA,
+      { question: "Change my Japan trip goal target to $4000" }
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({
+      kind: "SAVINGS_GOAL_CHANGE",
+      goalId: "goal-japan",
+      targetAmount: 4000,
+      targetDate: null,
+      accountId: null,
+    });
+  });
+});
+
 describe("interpretToolCall — unknown tools", () => {
   it("drafts nothing for a tool Bloom never offered", () => {
     const interpretation = interpret("delete_account", { accountId: "account-savings" });
@@ -740,6 +969,21 @@ describe("buildChatActionTools", () => {
 
     expect(tools.at(-1)!.function.parameters).toMatchObject({
       properties: { account: { enum: ["Thiha (Chequing)"] } },
+    });
+  });
+
+  it("offers the goal change tool, with the user's goals as the only choices, once they have one", () => {
+    const tools = buildChatActionTools(GOAL_DATA);
+
+    expect(tools.at(-1)!.function).toMatchObject({
+      name: "propose_savings_goal_change",
+      parameters: {
+        properties: {
+          goal: { enum: ["Japan trip", "Emergency fund"] },
+          account: { enum: ["Everyday (Chequing)", "Rainy day (Savings)"] },
+        },
+        required: ["goal"],
+      },
     });
   });
 
@@ -865,6 +1109,59 @@ describe("toModelMessages", () => {
     });
 
     expect(toolCallMessage!.tool_calls![0]!.function.arguments).not.toHaveProperty("targetDate");
+  });
+
+  it("replays a goal change with only the fields it changed", () => {
+    const [toolCallMessage] = toModelMessages({
+      role: "assistant",
+      content: "Drafted.",
+      proposedAction: {
+        kind: "SAVINGS_GOAL_CHANGE",
+        goalId: "goal-japan",
+        currentName: "Japan trip",
+        name: null,
+        targetAmount: 4000,
+        currentTargetAmount: 3000,
+        targetDate: null,
+        currentTargetDate: "2027-06-30",
+        accountId: "account-chequing",
+        accountLabel: "Everyday (Chequing)",
+        currentAccountLabel: "Rainy day (Savings)",
+      },
+      proposedActionStatus: "CONFIRMED",
+    });
+
+    expect(toolCallMessage!.tool_calls![0]!.function).toEqual({
+      name: "propose_savings_goal_change",
+      arguments: { goal: "Japan trip", targetAmount: 4000, account: "Everyday (Chequing)" },
+    });
+  });
+
+  it("replays a renamed goal with its new name and new deadline", () => {
+    const [toolCallMessage] = toModelMessages({
+      role: "assistant",
+      content: "Drafted.",
+      proposedAction: {
+        kind: "SAVINGS_GOAL_CHANGE",
+        goalId: "goal-japan",
+        currentName: "Japan trip",
+        name: "Tokyo trip",
+        targetAmount: null,
+        currentTargetAmount: 3000,
+        targetDate: "2027-08-31",
+        currentTargetDate: "2027-06-30",
+        accountId: null,
+        accountLabel: null,
+        currentAccountLabel: "Rainy day (Savings)",
+      },
+      proposedActionStatus: "PENDING",
+    });
+
+    expect(toolCallMessage!.tool_calls![0]!.function.arguments).toEqual({
+      goal: "Japan trip",
+      newGoalName: "Tokyo trip",
+      targetDate: "2027-08-31",
+    });
   });
 
   it("replays a categorization rule draft with its merchant and category", () => {

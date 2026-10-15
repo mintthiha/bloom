@@ -19,6 +19,7 @@ const REFERENCE_DATA: ChatActionReferenceData = {
   incomeCategoryNames: ["Salary"],
   accounts: [{ id: "account-savings", name: "Rainy day", accountType: "SAVINGS" }],
   budgets: [],
+  savingsGoals: [],
   rules: [],
 };
 

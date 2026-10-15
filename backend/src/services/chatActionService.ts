@@ -8,9 +8,10 @@ import type {
   ChatActionReferenceData,
   ProposedChatAction,
   ProposedChatActionStatus,
+  ProposedSavingsGoalChangeAction,
 } from "./chatActionProposals";
 import { getProposedActionStatus, moveProposedActionStatus } from "./chatHistoryService";
-import { createSavingsGoal } from "./savingsGoalService";
+import { createSavingsGoal, listSavingsGoals, updateSavingsGoal } from "./savingsGoalService";
 
 /** Where a draft stands after the user acted on its card. */
 export type ProposedActionOutcome = {
@@ -20,16 +21,18 @@ export type ProposedActionOutcome = {
 
 /**
  * Loads what the model's drafts are validated against: the user's categories and accounts (the
- * only values a draft may use) and their budgets and rules (what a draft would replace).
+ * only values a draft may use) and their budgets, rules, and savings goals (what a draft would
+ * replace or change).
  */
 export async function loadChatActionReferenceData(
   userId: string
 ): Promise<ChatActionReferenceData> {
-  const [categories, accounts, budgets, rules] = await Promise.all([
+  const [categories, accounts, budgets, rules, savingsGoals] = await Promise.all([
     listCategories(userId),
     listAccounts(userId),
     listBudgetLimits(userId),
     listRules(userId),
+    listSavingsGoals(userId),
   ]);
   return {
     expenseCategoryNames: categories
@@ -45,7 +48,45 @@ export async function loadChatActionReferenceData(
     })),
     budgets,
     rules: rules.map((rule) => ({ merchant: rule.merchant, category: rule.category })),
+    savingsGoals: savingsGoals.map((goal) => ({
+      id: goal.id,
+      name: goal.name,
+      targetAmount: goal.targetAmount,
+      targetDate: goal.targetDate,
+      accountId: goal.accountId,
+    })),
   };
+}
+
+/** Turns a `YYYY-MM-DD` deadline into the UTC midnight the savings goal service stores. */
+function toUtcDate(dateOnly: string): Date {
+  return new Date(`${dateOnly}T00:00:00.000Z`);
+}
+
+/**
+ * Applies a drafted goal change. Only the drafted fields change: everything else — including the
+ * icon, colour, and note the chat never touches — is taken from the goal as it stands now, since
+ * the user may have edited it on the Goals page after the draft was made.
+ */
+async function saveSavingsGoalChange(
+  userId: string,
+  goalChange: ProposedSavingsGoalChangeAction
+): Promise<void> {
+  const goal = (await listSavingsGoals(userId)).find(
+    (candidate) => candidate.id === goalChange.goalId
+  );
+  if (!goal) throw new AppError(404, "That savings goal no longer exists");
+
+  const targetDate = goalChange.targetDate ?? goal.targetDate;
+  await updateSavingsGoal(userId, goal.id, {
+    accountId: goalChange.accountId ?? goal.accountId,
+    name: goalChange.name ?? goal.name,
+    targetAmount: goalChange.targetAmount ?? goal.targetAmount,
+    targetDate: targetDate ? toUtcDate(targetDate) : null,
+    icon: goal.icon,
+    color: goal.color,
+    note: goal.note,
+  });
 }
 
 /**
@@ -87,13 +128,14 @@ async function saveProposedAction(
         accountId: proposedAction.accountId,
         name: proposedAction.name,
         targetAmount: proposedAction.targetAmount,
-        targetDate: proposedAction.targetDate
-          ? new Date(`${proposedAction.targetDate}T00:00:00.000Z`)
-          : null,
+        targetDate: proposedAction.targetDate ? toUtcDate(proposedAction.targetDate) : null,
         icon: null,
         color: null,
         note: null,
       });
+      return;
+    case "SAVINGS_GOAL_CHANGE":
+      await saveSavingsGoalChange(userId, proposedAction);
       return;
     case "CATEGORIZATION_RULE":
       await upsertRule(userId, proposedAction.merchant, proposedAction.category, "ai");

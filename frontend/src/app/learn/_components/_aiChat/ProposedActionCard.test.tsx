@@ -72,6 +72,40 @@ describe("ProposedActionCard", () => {
     expect(screen.getByRole("button", { name: "Update budget" })).toBeInTheDocument();
   });
 
+  it("shows a goal change with only what changes, and toasts the update once confirmed", async () => {
+    renderCard({
+      proposedAction: {
+        kind: "SAVINGS_GOAL_CHANGE",
+        goalId: "goal-japan",
+        currentName: "Japan trip",
+        name: null,
+        targetAmount: 4000,
+        currentTargetAmount: 3000,
+        targetDate: null,
+        currentTargetDate: "2027-06-30",
+        accountId: null,
+        accountLabel: null,
+        currentAccountLabel: "Rainy day (Savings)",
+      },
+    });
+
+    expect(
+      screen.getByRole("region", { name: "Savings goal change: Japan trip" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("$4,000.00")).toBeInTheDocument();
+    expect(screen.queryByText("Deadline")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Currently: target $3,000.00. Nothing else about the goal changes.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Update goal" }));
+
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith('Goal "Japan trip" updated')
+    );
+    expect(apiMock.confirmProposedChatAction).toHaveBeenCalledWith("m-2");
+  });
+
   it("confirms the draft, reports the new status, and toasts what was created", async () => {
     const { onStatusChange } = renderCard();
 

@@ -17,6 +17,49 @@ export type ProposedActionDetails = {
   destination: { href: string; label: string };
 };
 
+type SavingsGoalChange = Extract<ProposedChatAction, { kind: "SAVINGS_GOAL_CHANGE" }>;
+
+/**
+ * Describes a drafted change to an existing goal. The card lists only the fields that change, and
+ * the note spells out the values they replace and that nothing else about the goal moves.
+ */
+function describeSavingsGoalChange(goalChange: SavingsGoalChange): ProposedActionDetails {
+  const rows: ProposedActionDetails["rows"] = [];
+  const replacedValues: string[] = [];
+  if (goalChange.name !== null) {
+    rows.push({ label: "New name", value: goalChange.name });
+  }
+  if (goalChange.targetAmount !== null) {
+    rows.push({ label: "Target", value: formatCurrency(goalChange.targetAmount) });
+    replacedValues.push(`target ${formatCurrency(goalChange.currentTargetAmount)}`);
+  }
+  if (goalChange.targetDate !== null) {
+    rows.push({ label: "Deadline", value: formatTargetDate(goalChange.targetDate) ?? "" });
+    replacedValues.push(
+      goalChange.currentTargetDate === null
+        ? "no deadline"
+        : `deadline ${formatTargetDate(goalChange.currentTargetDate)}`
+    );
+  }
+  if (goalChange.accountLabel !== null) {
+    rows.push({ label: "Account", value: goalChange.accountLabel });
+    replacedValues.push(`account ${goalChange.currentAccountLabel}`);
+  }
+
+  const savedName = goalChange.name ?? goalChange.currentName;
+  return {
+    eyebrow: "Savings goal change",
+    title: goalChange.currentName,
+    rows,
+    replacementNote:
+      (replacedValues.length > 0 ? `Currently: ${replacedValues.join(", ")}. ` : "") +
+      "Nothing else about the goal changes.",
+    confirmLabel: "Update goal",
+    savedMessage: `Goal "${savedName}" updated`,
+    destination: { href: "/goals", label: "View goals" },
+  };
+}
+
 /**
  * Describes a draft for its confirmation card. A draft that would overwrite something the user
  * already has — a budget's limit, a merchant's rule — is worded as a change and says what it
@@ -56,6 +99,8 @@ export function describeProposedAction(proposedAction: ProposedChatAction): Prop
         savedMessage: `Goal "${proposedAction.name}" created`,
         destination: { href: "/goals", label: "View goals" },
       };
+    case "SAVINGS_GOAL_CHANGE":
+      return describeSavingsGoalChange(proposedAction);
     case "CATEGORIZATION_RULE": {
       const isNewRule = proposedAction.currentCategory === null;
       return {

@@ -79,6 +79,75 @@ describe("describeProposedAction — savings goals", () => {
   });
 });
 
+describe("describeProposedAction — savings goal changes", () => {
+  const unchangedGoal = {
+    kind: "SAVINGS_GOAL_CHANGE" as const,
+    goalId: "goal-japan",
+    currentName: "Japan trip",
+    name: null,
+    targetAmount: null,
+    currentTargetAmount: 3000,
+    targetDate: null,
+    currentTargetDate: "2027-06-30",
+    accountId: null,
+    accountLabel: null,
+    currentAccountLabel: "Rainy day (Savings)",
+  };
+
+  it("lists only the new target and says what it replaces", () => {
+    const details = describeProposedAction({ ...unchangedGoal, targetAmount: 4000 });
+
+    expect(details).toEqual({
+      eyebrow: "Savings goal change",
+      title: "Japan trip",
+      rows: [{ label: "Target", value: "$4,000.00" }],
+      replacementNote: "Currently: target $3,000.00. Nothing else about the goal changes.",
+      confirmLabel: "Update goal",
+      savedMessage: 'Goal "Japan trip" updated',
+      destination: { href: "/goals", label: "View goals" },
+    });
+  });
+
+  it("lists a rename, a new deadline, and a new account, and names the goal by its new name once saved", () => {
+    const details = describeProposedAction({
+      ...unchangedGoal,
+      name: "Tokyo trip",
+      targetDate: "2027-08-31",
+      accountId: "account-chequing",
+      accountLabel: "Everyday (Chequing)",
+    });
+
+    expect(details.rows).toEqual([
+      { label: "New name", value: "Tokyo trip" },
+      { label: "Deadline", value: "Aug 31, 2027" },
+      { label: "Account", value: "Everyday (Chequing)" },
+    ]);
+    expect(details.replacementNote).toBe(
+      "Currently: deadline Jun 30, 2027, account Rainy day (Savings). " +
+        "Nothing else about the goal changes."
+    );
+    expect(details.savedMessage).toBe('Goal "Tokyo trip" updated');
+  });
+
+  it("says an open-ended goal has no deadline yet when the change adds one", () => {
+    const details = describeProposedAction({
+      ...unchangedGoal,
+      targetDate: "2027-01-31",
+      currentTargetDate: null,
+    });
+
+    expect(details.replacementNote).toBe(
+      "Currently: no deadline. Nothing else about the goal changes."
+    );
+  });
+
+  it("only reassures that nothing else changes when the goal is just renamed", () => {
+    const details = describeProposedAction({ ...unchangedGoal, name: "Tokyo trip" });
+
+    expect(details.replacementNote).toBe("Nothing else about the goal changes.");
+  });
+});
+
 describe("describeProposedAction — categorization rules", () => {
   it("describes a rule for a merchant that has none as something new", () => {
     const details = describeProposedAction({

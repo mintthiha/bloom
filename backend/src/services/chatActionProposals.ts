@@ -23,6 +23,28 @@ export type ProposedSavingsGoalAction = {
   accountLabel: string;
 };
 
+/**
+ * Changes to one of the user's existing savings goals. Each changeable field holds its new value,
+ * or null when the draft leaves it as it is; the matching `current…` field is what it replaces.
+ */
+export type ProposedSavingsGoalChangeAction = {
+  kind: "SAVINGS_GOAL_CHANGE";
+  goalId: string;
+  /** The goal's name when the draft was made, which is how the user recognizes it. */
+  currentName: string;
+  name: string | null;
+  targetAmount: number | null;
+  currentTargetAmount: number;
+  /** New `YYYY-MM-DD` deadline, or null to keep the current one. */
+  targetDate: string | null;
+  /** The deadline it replaces, or null when the goal is open-ended. */
+  currentTargetDate: string | null;
+  accountId: string | null;
+  /** The account the goal would move to, e.g. "Rainy day (Savings)". */
+  accountLabel: string | null;
+  currentAccountLabel: string;
+};
+
 export type ProposedCategorizationRuleAction = {
   kind: "CATEGORIZATION_RULE";
   merchant: string;
@@ -35,6 +57,7 @@ export type ProposedCategorizationRuleAction = {
 export type ProposedChatAction =
   | ProposedBudgetAction
   | ProposedSavingsGoalAction
+  | ProposedSavingsGoalChangeAction
   | ProposedCategorizationRuleAction;
 
 /** What the user already has in Bloom: the values a draft must use, and what it would replace. */
@@ -44,6 +67,14 @@ export type ChatActionReferenceData = {
   accounts: { id: string; name: string; accountType: string }[];
   budgets: { category: string; monthlyLimit: number }[];
   rules: { merchant: string; category: string }[];
+  savingsGoals: {
+    id: string;
+    name: string;
+    targetAmount: number;
+    /** `YYYY-MM-DD` deadline, or null when the goal is open-ended. */
+    targetDate: string | null;
+    accountId: string;
+  }[];
 };
 
 /** Everything one tool call from the model is checked against. */
@@ -76,6 +107,7 @@ export type ReplayableChatMessage = {
 
 const PROPOSE_BUDGET_TOOL_NAME = "propose_budget";
 const PROPOSE_SAVINGS_GOAL_TOOL_NAME = "propose_savings_goal";
+const PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME = "propose_savings_goal_change";
 const PROPOSE_CATEGORIZATION_RULE_TOOL_NAME = "propose_categorization_rule";
 
 // The same length limits the budget, savings goal, and categorization rule routes enforce.
@@ -265,11 +297,17 @@ function resolveGoalAccount(
   return null;
 }
 
-/** Validates a drafted savings goal: its name, amount, deadline, and the account it tracks. */
+/**
+ * Validates a drafted savings goal: its name, amount, deadline, and the account it tracks. A goal
+ * named after one the user already has is treated as a change to that goal: asked to change a
+ * goal, the model often reaches for this tool, and a second goal by the same name is never what
+ * the user meant.
+ */
 function interpretSavingsGoalProposal(
   toolArguments: Record<string, unknown>,
-  { referenceData, today, question, earlierUserMessages }: ToolCallContext
+  context: ToolCallContext
 ): ToolCallInterpretation {
+  const { referenceData, today, question, earlierUserMessages } = context;
   if (referenceData.accounts.length === 0) {
     return withoutProposal(
       "A savings goal tracks the balance of one of your accounts, and you don't have an account " +
@@ -278,6 +316,23 @@ function interpretSavingsGoalProposal(
   }
   // Both are asked for in one go: every extra round-trip costs the user a slow model reply.
   const name = readTextArgument(toolArguments.goalName, MAX_GOAL_NAME_LENGTH);
+  if (
+    name &&
+    findMatchingName(
+      referenceData.savingsGoals.map((goal) => goal.name),
+      name
+    )
+  ) {
+    return interpretSavingsGoalChangeProposal(
+      {
+        goal: name,
+        targetAmount: toolArguments.targetAmount,
+        targetDate: toolArguments.targetDate,
+        account: toolArguments.account,
+      },
+      context
+    );
+  }
   const targetAmount = readAmountArgument(
     toolArguments.targetAmount,
     extractStatedAmounts([question, ...earlierUserMessages])
@@ -331,6 +386,118 @@ function interpretSavingsGoalProposal(
       accountLabel: describeAccount(account),
     },
     reply: `I've drafted a savings goal called "${name}". ${REVIEW_REMINDER}`,
+  };
+}
+
+/**
+ * Validates drafted changes to an existing savings goal, keeping only what actually differs from
+ * the goal. A new amount must be one the user typed; one that isn't is dropped rather than asked
+ * about, because the model tends to restate a goal's target (or make one up) when the user only
+ * asked to move its deadline or account.
+ */
+function interpretSavingsGoalChangeProposal(
+  toolArguments: Record<string, unknown>,
+  { referenceData, today, question, earlierUserMessages }: ToolCallContext
+): ToolCallInterpretation {
+  if (referenceData.savingsGoals.length === 0) {
+    return withoutProposal("You don't have any savings goals yet, so there is nothing to change.");
+  }
+  const goalList = referenceData.savingsGoals.map((goal) => `"${goal.name}"`).join(", ");
+  const requestedGoal = readTextArgument(toolArguments.goal, MAX_GOAL_NAME_LENGTH);
+  const matchingGoals = requestedGoal
+    ? referenceData.savingsGoals.filter(
+        (goal) => toComparableText(goal.name) === toComparableText(requestedGoal)
+      )
+    : [];
+  if (matchingGoals.length === 0) {
+    return withoutProposal(
+      requestedGoal
+        ? `I couldn't find a goal called "${requestedGoal}". Your goals are: ${goalList}.`
+        : `Which goal should I change? Your goals are: ${goalList}.`
+    );
+  }
+  if (matchingGoals.length > 1) {
+    return withoutProposal(
+      `You have more than one goal called "${matchingGoals[0]!.name}", so I can't tell which ` +
+        `one to change. You can edit it on the Goals page.`
+    );
+  }
+  const goal = matchingGoals[0]!;
+
+  const requestedName = readTextArgument(toolArguments.newGoalName, MAX_GOAL_NAME_LENGTH);
+  const name = requestedName !== null && requestedName !== goal.name ? requestedName : null;
+
+  const requestedAmount = readAmountArgument(
+    toolArguments.targetAmount,
+    extractStatedAmounts([question, ...earlierUserMessages])
+  );
+  const targetAmount =
+    requestedAmount !== null && requestedAmount !== goal.targetAmount ? requestedAmount : null;
+
+  let requestedTargetDate: string | null;
+  try {
+    const parsedTargetDate = parseOptionalDateOnly(toolArguments.targetDate, "targetDate");
+    requestedTargetDate = parsedTargetDate ? toDateOnly(parsedTargetDate) : null;
+  } catch {
+    return withoutProposal(
+      `I couldn't work out the new deadline for "${goal.name}". Tell me the date you're aiming ` +
+        `for, like 2027-06-30.`
+    );
+  }
+  const targetDate = requestedTargetDate !== goal.targetDate ? requestedTargetDate : null;
+  if (targetDate !== null && targetDate < toDateOnly(today)) {
+    return withoutProposal(
+      `The deadline I worked out for "${goal.name}" (${targetDate}) has already passed. What ` +
+        `date are you aiming for?`
+    );
+  }
+
+  const requestedAccount = readTextArgument(toolArguments.account, MAX_ACCOUNT_REFERENCE_LENGTH);
+  let account: ChatActionReferenceData["accounts"][number] | null = null;
+  if (requestedAccount) {
+    const resolvedAccount = resolveGoalAccount(requestedAccount, referenceData.accounts, [
+      question,
+      ...[...earlierUserMessages].reverse(),
+    ]);
+    if (!resolvedAccount) {
+      const accountList = referenceData.accounts.map(describeAccount).join(", ");
+      return withoutProposal(
+        `I couldn't tell which account you mean by "${requestedAccount}". Your accounts are: ` +
+          `${accountList}.`
+      );
+    }
+    if (resolvedAccount.id !== goal.accountId) account = resolvedAccount;
+  }
+
+  if (name === null && targetAmount === null && targetDate === null && account === null) {
+    const wasGivenUnstatedAmount =
+      toolArguments.targetAmount !== undefined && requestedAmount === null;
+    return withoutProposal(
+      wasGivenUnstatedAmount
+        ? `How much should the new target for "${goal.name}" be?`
+        : `What would you like to change about "${goal.name}"? I can change its name, target, ` +
+            `deadline, or account.`
+    );
+  }
+
+  const currentAccount = referenceData.accounts.find(
+    (candidate) => candidate.id === goal.accountId
+  );
+  return {
+    proposedAction: {
+      kind: "SAVINGS_GOAL_CHANGE",
+      goalId: goal.id,
+      currentName: goal.name,
+      name,
+      targetAmount,
+      currentTargetAmount: goal.targetAmount,
+      targetDate,
+      currentTargetDate: goal.targetDate,
+      accountId: account?.id ?? null,
+      accountLabel: account ? describeAccount(account) : null,
+      currentAccountLabel: currentAccount ? describeAccount(currentAccount) : "Unknown account",
+    },
+    reply: `I've drafted changes to your "${goal.name}" goal. ${REVIEW_REMINDER}`,
   };
 }
 
@@ -389,6 +556,8 @@ export function interpretToolCall(
       return interpretBudgetProposal(toolArguments, context);
     case PROPOSE_SAVINGS_GOAL_TOOL_NAME:
       return interpretSavingsGoalProposal(toolArguments, context);
+    case PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME:
+      return interpretSavingsGoalChangeProposal(toolArguments, context);
     case PROPOSE_CATEGORIZATION_RULE_TOOL_NAME:
       return interpretCategorizationRuleProposal(toolArguments, context);
     default:
@@ -414,8 +583,8 @@ export function selectUserMessagesSinceLastDraft(messages: ReplayableChatMessage
 
 /**
  * Describes the write actions to the model. Categories and accounts are offered as fixed choices
- * so the model picks from what the user really has; the savings goal tool is left out entirely
- * for a user with no account to attach a goal to.
+ * so the model picks from what the user really has. The savings goal tool is left out for a user
+ * with no account to attach a goal to, and the goal change tool for a user with no goals.
  */
 export function buildChatActionTools(
   referenceData: ChatActionReferenceData
@@ -466,7 +635,8 @@ export function buildChatActionTools(
       type: "function",
       function: {
         name: PROPOSE_SAVINGS_GOAL_TOOL_NAME,
-        description: "Draft a savings goal that tracks the balance of one of the user's accounts.",
+        description:
+          "Draft a new savings goal that tracks the balance of one of the user's accounts.",
         parameters: {
           type: "object",
           properties: {
@@ -495,6 +665,45 @@ export function buildChatActionTools(
       },
     });
   }
+  if (referenceData.savingsGoals.length > 0) {
+    tools.push({
+      type: "function",
+      function: {
+        name: PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME,
+        description:
+          "Draft changes to one of the user's existing savings goals: its name, target amount, " +
+          "deadline, or account. Include only what the user asked to change.",
+        parameters: {
+          type: "object",
+          properties: {
+            goal: {
+              type: "string",
+              enum: [...new Set(referenceData.savingsGoals.map((goal) => goal.name))],
+              description: "The existing goal to change.",
+            },
+            newGoalName: {
+              type: "string",
+              description: "New name for the goal. Leave out unless the user asked to rename it.",
+            },
+            targetAmount: {
+              type: "number",
+              description: "New target in dollars. Leave out unless the user gave a new one.",
+            },
+            targetDate: {
+              type: "string",
+              description: "New deadline as YYYY-MM-DD. Leave out unless the user gave a new one.",
+            },
+            account: {
+              type: "string",
+              enum: [...new Set(referenceData.accounts.map(describeAccount))],
+              description: "Account to move the goal to. Leave out unless the user named one.",
+            },
+          },
+          required: ["goal"],
+        },
+      },
+    });
+  }
   return tools;
 }
 
@@ -508,7 +717,7 @@ export function buildChatActionInstructions(
 ): string {
   const lines = [
     `ACTIONS (today is ${toDateOnly(today)}). When the user clearly asks you to set or change a ` +
-      `budget, create a savings goal, or make a categorization rule, call the matching tool ` +
+      `budget, create or change a savings goal, or make a categorization rule, call the matching tool ` +
       `instead of explaining how to do it. A tool call only shows the user a draft to confirm: ` +
       `nothing is saved until they confirm it, so never say that something was saved. Use only the ` +
       `amounts, dates, categories, and accounts the user gave, and ask for a missing one instead ` +
@@ -545,6 +754,19 @@ function toToolCall(proposedAction: ProposedChatAction): {
           targetAmount: proposedAction.targetAmount,
           ...(proposedAction.targetDate ? { targetDate: proposedAction.targetDate } : {}),
           account: proposedAction.accountLabel,
+        },
+      };
+    case "SAVINGS_GOAL_CHANGE":
+      return {
+        name: PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME,
+        arguments: {
+          goal: proposedAction.currentName,
+          ...(proposedAction.name !== null ? { newGoalName: proposedAction.name } : {}),
+          ...(proposedAction.targetAmount !== null
+            ? { targetAmount: proposedAction.targetAmount }
+            : {}),
+          ...(proposedAction.targetDate !== null ? { targetDate: proposedAction.targetDate } : {}),
+          ...(proposedAction.accountLabel !== null ? { account: proposedAction.accountLabel } : {}),
         },
       };
     case "CATEGORIZATION_RULE":

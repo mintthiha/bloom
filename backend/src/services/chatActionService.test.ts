@@ -19,7 +19,11 @@ const {
   categorizationRuleServiceMock: { listRules: vi.fn(), upsertRule: vi.fn() },
   categoryServiceMock: { listCategories: vi.fn() },
   chatHistoryMock: { moveProposedActionStatus: vi.fn(), getProposedActionStatus: vi.fn() },
-  savingsGoalServiceMock: { createSavingsGoal: vi.fn() },
+  savingsGoalServiceMock: {
+    createSavingsGoal: vi.fn(),
+    listSavingsGoals: vi.fn(),
+    updateSavingsGoal: vi.fn(),
+  },
 }));
 
 vi.mock("./accountService", () => accountServiceMock);
@@ -34,6 +38,33 @@ const BUDGET_DRAFT = {
   category: "Groceries",
   monthlyLimit: 400,
   currentMonthlyLimit: null,
+};
+
+/** A savings goal as the savings goal service lists it, with an appearance and a note set. */
+const STORED_JAPAN_GOAL = {
+  id: "g-1",
+  accountId: "a-1",
+  name: "Japan trip",
+  targetAmount: 3000,
+  targetDate: "2027-06-30",
+  icon: "plane",
+  color: "#f59e0b",
+  note: "Cherry blossom season",
+};
+
+/** A drafted goal change that leaves every field as it is; tests fill in what they change. */
+const UNCHANGED_GOAL_DRAFT = {
+  kind: "SAVINGS_GOAL_CHANGE",
+  goalId: "g-1",
+  currentName: "Japan trip",
+  name: null,
+  targetAmount: null,
+  currentTargetAmount: 3000,
+  targetDate: null,
+  currentTargetDate: "2027-06-30",
+  accountId: null,
+  accountLabel: null,
+  currentAccountLabel: "Rainy day (Savings)",
 };
 
 beforeEach(() => {
@@ -57,6 +88,9 @@ describe("loadChatActionReferenceData", () => {
     categorizationRuleServiceMock.listRules.mockResolvedValue([
       { id: "r-1", userId: "u-1", merchant: "Tim Hortons", category: "Dining" },
     ]);
+    savingsGoalServiceMock.listSavingsGoals.mockResolvedValue([
+      { ...STORED_JAPAN_GOAL, currentBalance: 1200, percentageReached: 40 },
+    ]);
 
     await expect(loadChatActionReferenceData("u-1")).resolves.toEqual({
       expenseCategoryNames: ["Groceries", "Dining"],
@@ -67,12 +101,22 @@ describe("loadChatActionReferenceData", () => {
       ],
       budgets: [{ category: "Dining", monthlyLimit: 150 }],
       rules: [{ merchant: "Tim Hortons", category: "Dining" }],
+      savingsGoals: [
+        {
+          id: "g-1",
+          name: "Japan trip",
+          targetAmount: 3000,
+          targetDate: "2027-06-30",
+          accountId: "a-1",
+        },
+      ],
     });
     for (const listMock of [
       categoryServiceMock.listCategories,
       accountServiceMock.listAccounts,
       budgetServiceMock.listBudgetLimits,
       categorizationRuleServiceMock.listRules,
+      savingsGoalServiceMock.listSavingsGoals,
     ]) {
       expect(listMock).toHaveBeenCalledWith("u-1");
     }
@@ -141,6 +185,90 @@ describe("confirmProposedAction", () => {
     expect(savingsGoalServiceMock.createSavingsGoal).toHaveBeenCalledWith(
       "u-1",
       expect.objectContaining({ targetDate: null })
+    );
+  });
+
+  it("changes only the drafted fields of a goal, keeping its deadline, appearance, and note", async () => {
+    chatHistoryMock.moveProposedActionStatus.mockResolvedValue({
+      ...UNCHANGED_GOAL_DRAFT,
+      targetAmount: 4000,
+    });
+    savingsGoalServiceMock.listSavingsGoals.mockResolvedValue([STORED_JAPAN_GOAL]);
+
+    await confirmProposedAction("u-1", "m-1");
+
+    expect(savingsGoalServiceMock.listSavingsGoals).toHaveBeenCalledWith("u-1");
+    expect(savingsGoalServiceMock.updateSavingsGoal).toHaveBeenCalledWith("u-1", "g-1", {
+      accountId: "a-1",
+      name: "Japan trip",
+      targetAmount: 4000,
+      targetDate: new Date("2027-06-30T00:00:00.000Z"),
+      icon: "plane",
+      color: "#f59e0b",
+      note: "Cherry blossom season",
+    });
+    expect(savingsGoalServiceMock.createSavingsGoal).not.toHaveBeenCalled();
+  });
+
+  it("applies a drafted rename, deadline, and account move", async () => {
+    chatHistoryMock.moveProposedActionStatus.mockResolvedValue({
+      ...UNCHANGED_GOAL_DRAFT,
+      name: "Tokyo trip",
+      targetDate: "2027-08-31",
+      accountId: "a-2",
+      accountLabel: "Everyday (Chequing)",
+    });
+    savingsGoalServiceMock.listSavingsGoals.mockResolvedValue([STORED_JAPAN_GOAL]);
+
+    await confirmProposedAction("u-1", "m-1");
+
+    expect(savingsGoalServiceMock.updateSavingsGoal).toHaveBeenCalledWith(
+      "u-1",
+      "g-1",
+      expect.objectContaining({
+        accountId: "a-2",
+        name: "Tokyo trip",
+        targetAmount: 3000,
+        targetDate: new Date("2027-08-31T00:00:00.000Z"),
+      })
+    );
+  });
+
+  it("keeps an open-ended goal open-ended when the change leaves its deadline alone", async () => {
+    chatHistoryMock.moveProposedActionStatus.mockResolvedValue({
+      ...UNCHANGED_GOAL_DRAFT,
+      targetAmount: 4000,
+    });
+    savingsGoalServiceMock.listSavingsGoals.mockResolvedValue([
+      { ...STORED_JAPAN_GOAL, targetDate: null },
+    ]);
+
+    await confirmProposedAction("u-1", "m-1");
+
+    expect(savingsGoalServiceMock.updateSavingsGoal).toHaveBeenCalledWith(
+      "u-1",
+      "g-1",
+      expect.objectContaining({ targetDate: null })
+    );
+  });
+
+  it("returns 404 and hands the draft back to pending when the goal was deleted since", async () => {
+    chatHistoryMock.moveProposedActionStatus.mockResolvedValue({
+      ...UNCHANGED_GOAL_DRAFT,
+      targetAmount: 4000,
+    });
+    savingsGoalServiceMock.listSavingsGoals.mockResolvedValue([]);
+
+    await expect(confirmProposedAction("u-1", "m-1")).rejects.toMatchObject({
+      statusCode: 404,
+      message: "That savings goal no longer exists",
+    });
+    expect(savingsGoalServiceMock.updateSavingsGoal).not.toHaveBeenCalled();
+    expect(chatHistoryMock.moveProposedActionStatus).toHaveBeenLastCalledWith(
+      "u-1",
+      "m-1",
+      "CONFIRMED",
+      "PENDING"
     );
   });
 

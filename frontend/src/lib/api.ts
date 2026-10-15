@@ -505,7 +505,8 @@ export type ActivityLogQuery = {
 };
 
 /**
- * A write Bloom AI drafted for the user — a budget, a savings goal, or a categorization rule.
+ * A write Bloom AI drafted for the user — a budget, a new or changed savings goal, or a
+ * categorization rule.
  * Nothing is saved until the user confirms it.
  */
 export type ProposedChatAction =
@@ -525,6 +526,27 @@ export type ProposedChatAction =
       accountId: string;
       /** The account the goal would track, e.g. "Rainy day (Savings)". */
       accountLabel: string;
+    }
+  | {
+      /**
+       * Changes to an existing savings goal. Each changeable field holds its new value, or null
+       * when the draft leaves it as it is; the matching `current…` field is what it replaces.
+       */
+      kind: "SAVINGS_GOAL_CHANGE";
+      goalId: string;
+      /** The goal's name when the draft was made, which is how the user recognizes it. */
+      currentName: string;
+      name: string | null;
+      targetAmount: number | null;
+      currentTargetAmount: number;
+      /** New `YYYY-MM-DD` deadline, or null to keep the current one. */
+      targetDate: string | null;
+      /** The deadline it replaces, or null when the goal is open-ended. */
+      currentTargetDate: string | null;
+      accountId: string | null;
+      /** The account the goal would move to, e.g. "Rainy day (Savings)". */
+      accountLabel: string | null;
+      currentAccountLabel: string;
     }
   | {
       kind: "CATEGORIZATION_RULE";
