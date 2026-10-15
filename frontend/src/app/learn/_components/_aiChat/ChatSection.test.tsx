@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatSection } from "./ChatSection";
 import type { ChatActionProposal, ChatMessage } from "@/lib/api";
 
@@ -61,8 +61,15 @@ function renderChat(overrides: Partial<React.ComponentProps<typeof ChatSection>>
     onProposalStatusChange: vi.fn(),
     ...overrides,
   };
-  render(<ChatSection {...props} />);
+  rerenderLatestChat = render(<ChatSection {...props} />).rerender;
   return props;
+}
+
+let rerenderLatestChat: (ui: React.ReactElement) => void = () => {};
+
+/** Re-renders the chat that `renderChat` last rendered with new props, as a parent update would. */
+function rerenderChat(props: React.ComponentProps<typeof ChatSection>) {
+  rerenderLatestChat(<ChatSection {...props} />);
 }
 
 describe("ChatSection", () => {
@@ -192,5 +199,61 @@ describe("ChatSection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Stop generating" }));
     expect(onStop).toHaveBeenCalled();
+  });
+});
+
+describe("ChatSection — opening at the latest message", () => {
+  const STORED_CONVERSATION: ChatMessage[] = [
+    { role: "user", content: "hello" },
+    { role: "assistant", content: "Hi! How can I help?" },
+  ];
+
+  /**
+   * jsdom does no layout, so the container reports a fixed content height and every scroll
+   * position written to it is recorded.
+   */
+  function trackScrollPositions(): number[] {
+    const scrollPositions: number[] = [];
+    vi.spyOn(Element.prototype, "scrollHeight", "get").mockReturnValue(900);
+    vi.spyOn(Element.prototype, "scrollTop", "set").mockImplementation((position: number) => {
+      scrollPositions.push(position);
+    });
+    return scrollPositions;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("scrolls to the bottom when it mounts with the conversation already loaded", () => {
+    const scrollPositions = trackScrollPositions();
+
+    renderChat({ messages: STORED_CONVERSATION, messagesContainerRef: { current: null } });
+
+    expect(scrollPositions).toEqual([900]);
+  });
+
+  it("waits for the conversation to load, then scrolls to the bottom", () => {
+    const scrollPositions = trackScrollPositions();
+    const messagesContainerRef = { current: null };
+    const props = renderChat({ isLoadingHistory: true, messagesContainerRef });
+
+    expect(scrollPositions).toEqual([]);
+
+    rerenderChat({ ...props, isLoadingHistory: false, messages: STORED_CONVERSATION });
+
+    expect(scrollPositions).toEqual([900]);
+  });
+
+  it("does not jump to the bottom again when a new message arrives", () => {
+    const scrollPositions = trackScrollPositions();
+    const props = renderChat({ messages: STORED_CONVERSATION });
+
+    rerenderChat({
+      ...props,
+      messages: [...STORED_CONVERSATION, { role: "user", content: "another question" }],
+    });
+
+    expect(scrollPositions).toEqual([900]);
   });
 });

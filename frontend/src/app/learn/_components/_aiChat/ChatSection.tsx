@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Send, Square } from "lucide-react";
 import {
   MAX_CHAT_MESSAGE_LENGTH,
@@ -58,6 +59,18 @@ export function ChatSection({
 }: ChatSectionProps) {
   const isInputDisabled = streaming || isLoadingHistory;
   const canSend = !isLoadingHistory && Boolean(input.trim());
+
+  /**
+   * Opens the stored conversation at its latest message. Runs when the history finishes loading
+   * and whenever this chat mounts with it already loaded — the page shows a skeleton first, so
+   * the history often arrives before the messages container exists. Following a streamed reply
+   * afterwards is left to the chat hook.
+   */
+  useEffect(() => {
+    if (isLoadingHistory) return;
+    const container = messagesContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [isLoadingHistory, messagesContainerRef]);
 
   return (
     <div
