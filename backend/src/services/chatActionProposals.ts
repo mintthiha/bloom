@@ -53,20 +53,51 @@ export type ProposedCategorizationRuleAction = {
   currentCategory: string | null;
 };
 
+/** Deleting one of the user's budgets; the limit is shown so they know which one goes. */
+export type ProposedBudgetDeletionAction = {
+  kind: "BUDGET_DELETION";
+  budgetId: string;
+  category: string;
+  monthlyLimit: number;
+};
+
+/** Deleting one of the user's savings goals, with the details that identify it. */
+export type ProposedSavingsGoalDeletionAction = {
+  kind: "SAVINGS_GOAL_DELETION";
+  goalId: string;
+  name: string;
+  targetAmount: number;
+  /** `YYYY-MM-DD` deadline, or null when the goal is open-ended. */
+  targetDate: string | null;
+  /** The account the goal tracks, e.g. "Rainy day (Savings)". */
+  accountLabel: string;
+};
+
+/** Deleting one of the user's categorization rules. */
+export type ProposedCategorizationRuleDeletionAction = {
+  kind: "CATEGORIZATION_RULE_DELETION";
+  ruleId: string;
+  merchant: string;
+  category: string;
+};
+
 /** A write the model drafted for the user. Nothing is saved until the user confirms it. */
 export type ProposedChatAction =
   | ProposedBudgetAction
   | ProposedSavingsGoalAction
   | ProposedSavingsGoalChangeAction
-  | ProposedCategorizationRuleAction;
+  | ProposedCategorizationRuleAction
+  | ProposedBudgetDeletionAction
+  | ProposedSavingsGoalDeletionAction
+  | ProposedCategorizationRuleDeletionAction;
 
 /** What the user already has in Bloom: the values a draft must use, and what it would replace. */
 export type ChatActionReferenceData = {
   expenseCategoryNames: string[];
   incomeCategoryNames: string[];
   accounts: { id: string; name: string; accountType: string }[];
-  budgets: { category: string; monthlyLimit: number }[];
-  rules: { merchant: string; category: string }[];
+  budgets: { id: string; category: string; monthlyLimit: number }[];
+  rules: { id: string; merchant: string; category: string }[];
   savingsGoals: {
     id: string;
     name: string;
@@ -109,6 +140,14 @@ const PROPOSE_BUDGET_TOOL_NAME = "propose_budget";
 const PROPOSE_SAVINGS_GOAL_TOOL_NAME = "propose_savings_goal";
 const PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME = "propose_savings_goal_change";
 const PROPOSE_CATEGORIZATION_RULE_TOOL_NAME = "propose_categorization_rule";
+const PROPOSE_DELETION_TOOL_NAME = "propose_deletion";
+
+/** How the deletion tool names each kind of thing it can delete, for the model and the user. */
+const DELETABLE_ITEM_TYPES = {
+  budget: "budget",
+  savingsGoal: "savings goal",
+  categorizationRule: "categorization rule",
+} as const;
 
 // The same length limits the budget, savings goal, and categorization rule routes enforce.
 const MAX_CATEGORY_LENGTH = 50;
@@ -129,12 +168,15 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 const PROPOSAL_OUTCOME_BY_STATUS: Record<ProposedChatActionStatus, string> = {
   PENDING:
     "Shown to the user as a card. They have not confirmed or dismissed it yet, so nothing is saved.",
-  CONFIRMED: "The user confirmed this draft and it was saved.",
-  DISMISSED: "The user dismissed this draft. Nothing was saved.",
+  CONFIRMED: "The user confirmed this draft and it was carried out.",
+  DISMISSED: "The user dismissed this draft. Nothing was changed.",
 };
 
 /** Closes every line that introduces a draft, so the user knows the card still needs them. */
 const REVIEW_REMINDER = "Review it below — nothing is saved until you confirm.";
+
+/** Closes every line that introduces a drafted deletion. */
+const DELETION_REVIEW_REMINDER = "Review it below — nothing is deleted until you confirm.";
 
 // A number the way a user types an amount: optional thousands separators and decimals, and an
 // optional "k" for thousands ("3k", "1.5k").
@@ -143,6 +185,10 @@ const STATED_AMOUNT_PATTERN = /(\d[\d,]*(?:\.\d+)?)\s?(k(?![a-z]))?/gi;
 const UNKNOWN_TOOL_REPLY =
   "I couldn't turn that into something I can save. I can draft a budget, a savings goal, or a " +
   "categorization rule for you to confirm.";
+
+const DELETION_LIMITS_REPLY =
+  "I can delete a budget, a savings goal, or a categorization rule. Transactions, accounts, and " +
+  "anything else have to be deleted from their own page in Bloom.";
 
 /** Renders a date as the `YYYY-MM-DD` day it falls on in UTC. */
 function toDateOnly(date: Date): string {
@@ -540,6 +586,119 @@ function interpretCategorizationRuleProposal(
   };
 }
 
+/** One thing the deletion tool could point at, already shaped as the draft that deletes it. */
+type DeletionCandidate = {
+  itemType: (typeof DELETABLE_ITEM_TYPES)[keyof typeof DELETABLE_ITEM_TYPES];
+  /** What the user calls it: a budget's category, a goal's name, or a rule's merchant. */
+  name: string;
+  /** How a reply refers to it, e.g. "your Groceries budget". */
+  description: string;
+  draft: ProposedChatAction;
+};
+
+/** Lists every budget, savings goal, and categorization rule the user could ask to delete. */
+function listDeletionCandidates(referenceData: ChatActionReferenceData): DeletionCandidate[] {
+  return [
+    ...referenceData.budgets.map((budget) => ({
+      itemType: DELETABLE_ITEM_TYPES.budget,
+      name: budget.category,
+      description: `your ${budget.category} budget`,
+      draft: {
+        kind: "BUDGET_DELETION" as const,
+        budgetId: budget.id,
+        category: budget.category,
+        monthlyLimit: budget.monthlyLimit,
+      },
+    })),
+    ...referenceData.savingsGoals.map((goal) => {
+      const account = referenceData.accounts.find((candidate) => candidate.id === goal.accountId);
+      return {
+        itemType: DELETABLE_ITEM_TYPES.savingsGoal,
+        name: goal.name,
+        description: `your "${goal.name}" goal`,
+        draft: {
+          kind: "SAVINGS_GOAL_DELETION" as const,
+          goalId: goal.id,
+          name: goal.name,
+          targetAmount: goal.targetAmount,
+          targetDate: goal.targetDate,
+          accountLabel: account ? describeAccount(account) : "Unknown account",
+        },
+      };
+    }),
+    ...referenceData.rules.map((rule) => ({
+      itemType: DELETABLE_ITEM_TYPES.categorizationRule,
+      name: rule.merchant,
+      description: `your rule for ${rule.merchant}`,
+      draft: {
+        kind: "CATEGORIZATION_RULE_DELETION" as const,
+        ruleId: rule.id,
+        merchant: rule.merchant,
+        category: rule.category,
+      },
+    })),
+  ];
+}
+
+/**
+ * Works out which one budget, savings goal, or rule the model means to delete. The name decides;
+ * the type the model gave only breaks a tie, because small models mislabel things (calling the
+ * Tim Hortons rule a budget, say). Anything that doesn't point at exactly one item becomes a
+ * question instead of a draft.
+ */
+function interpretDeletionProposal(
+  toolArguments: Record<string, unknown>,
+  { referenceData }: ToolCallContext
+): ToolCallInterpretation {
+  const requestedName = readTextArgument(toolArguments.name, MAX_GOAL_NAME_LENGTH);
+  if (!requestedName) {
+    return withoutProposal("Which budget, savings goal, or categorization rule should I delete?");
+  }
+  const requestedItemType = readTextArgument(toolArguments.itemType, MAX_CATEGORY_LENGTH);
+  const isOfRequestedType = (candidate: DeletionCandidate) =>
+    requestedItemType !== null &&
+    toComparableText(candidate.itemType) === toComparableText(requestedItemType);
+
+  const allCandidates = listDeletionCandidates(referenceData);
+  const candidatesWithName = allCandidates.filter(
+    (candidate) => toComparableText(candidate.name) === toComparableText(requestedName)
+  );
+  const candidatesOfRequestedType = candidatesWithName.filter(isOfRequestedType);
+  const candidates =
+    candidatesOfRequestedType.length > 0 ? candidatesOfRequestedType : candidatesWithName;
+
+  if (candidates.length === 0) {
+    const namesOfRequestedType = allCandidates
+      .filter(isOfRequestedType)
+      .map((candidate) => candidate.name);
+    return withoutProposal(
+      namesOfRequestedType.length > 0
+        ? `You don't have a ${requestedItemType} called "${requestedName}". Yours are: ` +
+            `${namesOfRequestedType.join(", ")}.`
+        : `I couldn't find a budget, savings goal, or categorization rule called ` +
+            `"${requestedName}". ${DELETION_LIMITS_REPLY}`
+    );
+  }
+  if (candidates.length > 1) {
+    const isSameType = candidates.every(
+      (candidate) => candidate.itemType === candidates[0]!.itemType
+    );
+    return withoutProposal(
+      isSameType
+        ? `You have more than one ${candidates[0]!.itemType} called "${candidates[0]!.name}", so ` +
+            `I can't tell which one to delete. You can delete it from its page in Bloom.`
+        : `"${requestedName}" could be ` +
+            `${candidates.map((candidate) => candidate.description).join(" or ")}. ` +
+            `Which one should I delete?`
+    );
+  }
+  const candidate = candidates[0]!;
+  return {
+    proposedAction: candidate.draft,
+    reply: `I've drafted the deletion of ${candidate.description}. ${DELETION_REVIEW_REMINDER}`,
+  };
+}
+
 /**
  * Turns one tool call from the model into a draft the user can confirm. The model's arguments are
  * never trusted: every value is checked against the user's own categories and accounts, an
@@ -560,6 +719,8 @@ export function interpretToolCall(
       return interpretSavingsGoalChangeProposal(toolArguments, context);
     case PROPOSE_CATEGORIZATION_RULE_TOOL_NAME:
       return interpretCategorizationRuleProposal(toolArguments, context);
+    case PROPOSE_DELETION_TOOL_NAME:
+      return interpretDeletionProposal(toolArguments, context);
     default:
       return withoutProposal(UNKNOWN_TOOL_REPLY);
   }
@@ -584,7 +745,8 @@ export function selectUserMessagesSinceLastDraft(messages: ReplayableChatMessage
 /**
  * Describes the write actions to the model. Categories and accounts are offered as fixed choices
  * so the model picks from what the user really has. The savings goal tool is left out for a user
- * with no account to attach a goal to, and the goal change tool for a user with no goals.
+ * with no account to attach a goal to, the goal change tool for a user with no goals, and the
+ * deletion tool for a user with nothing it could delete.
  */
 export function buildChatActionTools(
   referenceData: ChatActionReferenceData
@@ -704,6 +866,33 @@ export function buildChatActionTools(
       },
     });
   }
+  const deletionCandidates = listDeletionCandidates(referenceData);
+  if (deletionCandidates.length > 0) {
+    tools.push({
+      type: "function",
+      function: {
+        name: PROPOSE_DELETION_TOOL_NAME,
+        description:
+          "Draft deleting one of the user's budgets, savings goals, or categorization rules. " +
+          "Nothing else can be deleted here.",
+        parameters: {
+          type: "object",
+          properties: {
+            itemType: {
+              type: "string",
+              enum: [...new Set(deletionCandidates.map((candidate) => candidate.itemType))],
+            },
+            name: {
+              type: "string",
+              enum: [...new Set(deletionCandidates.map((candidate) => candidate.name))],
+              description: "The budget's category, the goal's name, or the rule's merchant.",
+            },
+          },
+          required: ["itemType", "name"],
+        },
+      },
+    });
+  }
   return tools;
 }
 
@@ -717,9 +906,12 @@ export function buildChatActionInstructions(
 ): string {
   const lines = [
     `ACTIONS (today is ${toDateOnly(today)}). When the user clearly asks you to set or change a ` +
-      `budget, create or change a savings goal, or make a categorization rule, call the matching tool ` +
-      `instead of explaining how to do it. A tool call only shows the user a draft to confirm: ` +
-      `nothing is saved until they confirm it, so never say that something was saved. Use only the ` +
+      `budget, create or change a savings goal, make a categorization rule, or delete a budget, ` +
+      `savings goal, or categorization rule, call the matching tool instead of explaining how to ` +
+      `do it. A tool call only shows the user a draft to confirm: nothing is saved or deleted ` +
+      `until they confirm it, so never say that something was saved or deleted. You cannot delete ` +
+      `or change transactions or accounts: when asked to, say so plainly and tell the user to do ` +
+      `it from that page in Bloom, and never offer to do it yourself. Use only the ` +
       `amounts, dates, categories, and accounts the user gave, and ask for a missing one instead ` +
       `of guessing. Name a savings goal after what it is for. Draft one thing per reply. For ` +
       `every other question, answer in text and call no tool.`,
@@ -773,6 +965,24 @@ function toToolCall(proposedAction: ProposedChatAction): {
       return {
         name: PROPOSE_CATEGORIZATION_RULE_TOOL_NAME,
         arguments: { merchant: proposedAction.merchant, category: proposedAction.category },
+      };
+    case "BUDGET_DELETION":
+      return {
+        name: PROPOSE_DELETION_TOOL_NAME,
+        arguments: { itemType: DELETABLE_ITEM_TYPES.budget, name: proposedAction.category },
+      };
+    case "SAVINGS_GOAL_DELETION":
+      return {
+        name: PROPOSE_DELETION_TOOL_NAME,
+        arguments: { itemType: DELETABLE_ITEM_TYPES.savingsGoal, name: proposedAction.name },
+      };
+    case "CATEGORIZATION_RULE_DELETION":
+      return {
+        name: PROPOSE_DELETION_TOOL_NAME,
+        arguments: {
+          itemType: DELETABLE_ITEM_TYPES.categorizationRule,
+          name: proposedAction.merchant,
+        },
       };
   }
 }

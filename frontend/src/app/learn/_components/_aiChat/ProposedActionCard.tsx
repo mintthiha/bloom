@@ -4,8 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { api, type ChatActionProposal, type ProposedChatActionStatus } from "@/lib/api";
-import { describeProposedAction } from "./proposed-action-details";
+import { deleteWithUndo } from "@/lib/undoableDelete";
+import { describeProposedAction, type DeletionDetails } from "./proposed-action-details";
+import { restoreDeletedItem } from "./restore-deleted-item";
 
 type ProposedActionCardProps = {
   proposal: ChatActionProposal;
@@ -21,13 +24,15 @@ const actionButtonStyle: React.CSSProperties = {
 };
 
 /**
- * The card under a Bloom AI reply that drafted a budget, savings goal, or categorization rule.
- * It shows exactly what would be saved and saves it only when the user confirms; once confirmed
- * or dismissed it stays in the conversation as a record of what happened.
+ * The card under a Bloom AI reply that drafted a budget, savings goal, or categorization rule, or
+ * the deletion of one. It shows exactly what would change and acts only when the user confirms —
+ * a deletion through a second confirm dialog, as every delete in Bloom does. Once confirmed or
+ * dismissed it stays in the conversation as a record of what happened.
  */
 export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionCardProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const details = describeProposedAction(proposal.proposedAction);
   const isPending = proposal.status === "PENDING";
@@ -44,6 +49,27 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
       toast.error(error instanceof Error ? error.message : "Couldn't save that. Please try again.");
     } finally {
       setIsConfirming(false);
+    }
+  }
+
+  /**
+   * Carries out a drafted deletion once the user has confirmed it in the dialog, then reports the
+   * new status. The toast offers Undo, which restores the item the way its own page would.
+   */
+  async function handleConfirmDeletion(deletion: DeletionDetails) {
+    setIsConfirming(true);
+    try {
+      await deleteWithUndo({
+        entityLabel: deletion.entityLabel,
+        remove: () => api.confirmProposedChatAction(proposal.messageId),
+        restore: () => restoreDeletedItem(proposal.proposedAction),
+        onChange: () => onStatusChange(proposal.messageId, "CONFIRMED"),
+      });
+    } catch {
+      // deleteWithUndo already surfaced the failure toast; the draft stays pending.
+    } finally {
+      setIsConfirming(false);
+      setIsDeleteDialogOpen(false);
     }
   }
 
@@ -127,22 +153,37 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
 
       {isPending && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-          <button
-            type="button"
-            className="chat-send"
-            onClick={handleConfirm}
-            disabled={isBusy}
-            style={{
-              ...actionButtonStyle,
-              border: "none",
-              background: "var(--brand-accent)",
-              color: "white",
-              cursor: isBusy ? "not-allowed" : "pointer",
-              opacity: isBusy ? 0.6 : 1,
-            }}
-          >
-            {isConfirming ? "Saving…" : details.confirmLabel}
-          </button>
+          {details.deletion ? (
+            <button
+              type="button"
+              className="danger-action-button"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isBusy}
+              style={{
+                ...actionButtonStyle,
+                cursor: isBusy ? "not-allowed" : "pointer",
+              }}
+            >
+              {isConfirming ? "Deleting…" : details.confirmLabel}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="chat-send"
+              onClick={handleConfirm}
+              disabled={isBusy}
+              style={{
+                ...actionButtonStyle,
+                border: "none",
+                background: "var(--brand-accent)",
+                color: "white",
+                cursor: isBusy ? "not-allowed" : "pointer",
+                opacity: isBusy ? 0.6 : 1,
+              }}
+            >
+              {isConfirming ? "Saving…" : details.confirmLabel}
+            </button>
+          )}
           <button
             type="button"
             className="budget-action-pill"
@@ -171,7 +212,7 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
             }}
           >
             <Check size={14} aria-hidden />
-            Saved
+            {details.deletion ? "Deleted" : "Saved"}
           </span>
           <Link
             href={details.destination.href}
@@ -185,8 +226,19 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
 
       {proposal.status === "DISMISSED" && (
         <p style={{ margin: 0, fontSize: "12px", color: "var(--text-muted)" }}>
-          Dismissed — nothing was saved.
+          {details.deletion ? "Dismissed — nothing was deleted." : "Dismissed — nothing was saved."}
         </p>
+      )}
+
+      {details.deletion && (
+        <ConfirmDeleteDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          title={details.deletion.dialogTitle}
+          description={details.deletion.dialogDescription}
+          onConfirm={() => handleConfirmDeletion(details.deletion!)}
+          isDeleting={isConfirming}
+        />
       )}
     </section>
   );

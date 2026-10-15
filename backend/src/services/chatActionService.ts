@@ -1,8 +1,8 @@
 import { AppError } from "../middleware/errorHandler";
 import logger from "../lib/logger";
 import { listAccounts } from "./accountService";
-import { listBudgetLimits, upsertBudget } from "./budgetService";
-import { listRules, upsertRule } from "./categorizationRuleService";
+import { deleteBudget, listBudgetLimits, upsertBudget } from "./budgetService";
+import { deleteRule, listRules, upsertRule } from "./categorizationRuleService";
 import { listCategories } from "./categoryService";
 import type {
   ChatActionReferenceData,
@@ -11,7 +11,12 @@ import type {
   ProposedSavingsGoalChangeAction,
 } from "./chatActionProposals";
 import { getProposedActionStatus, moveProposedActionStatus } from "./chatHistoryService";
-import { createSavingsGoal, listSavingsGoals, updateSavingsGoal } from "./savingsGoalService";
+import {
+  createSavingsGoal,
+  deleteSavingsGoal,
+  listSavingsGoals,
+  updateSavingsGoal,
+} from "./savingsGoalService";
 
 /** Where a draft stands after the user acted on its card. */
 export type ProposedActionOutcome = {
@@ -47,7 +52,7 @@ export async function loadChatActionReferenceData(
       accountType: account.accountType,
     })),
     budgets,
-    rules: rules.map((rule) => ({ merchant: rule.merchant, category: rule.category })),
+    rules: rules.map((rule) => ({ id: rule.id, merchant: rule.merchant, category: rule.category })),
     savingsGoals: savingsGoals.map((goal) => ({
       id: goal.id,
       name: goal.name,
@@ -111,7 +116,10 @@ async function claimPendingProposedAction(
   );
 }
 
-/** Performs the drafted write through the same service the matching page in the app uses. */
+/**
+ * Performs the drafted write through the same service the matching page in the app uses. Deletes
+ * are the same soft deletes too, so the card can offer the usual Undo.
+ */
 async function saveProposedAction(
   userId: string,
   proposedAction: ProposedChatAction
@@ -139,6 +147,15 @@ async function saveProposedAction(
       return;
     case "CATEGORIZATION_RULE":
       await upsertRule(userId, proposedAction.merchant, proposedAction.category, "ai");
+      return;
+    case "BUDGET_DELETION":
+      await deleteBudget(userId, proposedAction.budgetId);
+      return;
+    case "SAVINGS_GOAL_DELETION":
+      await deleteSavingsGoal(userId, proposedAction.goalId);
+      return;
+    case "CATEGORIZATION_RULE_DELETION":
+      await deleteRule(userId, proposedAction.ruleId);
       return;
   }
 }

@@ -15,6 +15,16 @@ export type ProposedActionDetails = {
   savedMessage: string;
   /** Where the saved item can be seen in the app. */
   destination: { href: string; label: string };
+  /** For a drafted deletion, what its confirm dialog and toast say; null for every other draft. */
+  deletion: DeletionDetails | null;
+};
+
+/** The second confirmation a drafted deletion needs before anything is deleted. */
+export type DeletionDetails = {
+  /** Names the kind of thing in the toast, e.g. "Budget" for "Budget deleted". */
+  entityLabel: string;
+  dialogTitle: string;
+  dialogDescription: string;
 };
 
 type SavingsGoalChange = Extract<ProposedChatAction, { kind: "SAVINGS_GOAL_CHANGE" }>;
@@ -57,13 +67,15 @@ function describeSavingsGoalChange(goalChange: SavingsGoalChange): ProposedActio
     confirmLabel: "Update goal",
     savedMessage: `Goal "${savedName}" updated`,
     destination: { href: "/goals", label: "View goals" },
+    deletion: null,
   };
 }
 
 /**
  * Describes a draft for its confirmation card. A draft that would overwrite something the user
  * already has — a budget's limit, a merchant's rule — is worded as a change and says what it
- * replaces, so confirming never overwrites anything unannounced.
+ * replaces, so confirming never overwrites anything unannounced. A drafted deletion also carries
+ * the wording for the confirm dialog it must pass through before anything is deleted.
  */
 export function describeProposedAction(proposedAction: ProposedChatAction): ProposedActionDetails {
   switch (proposedAction.kind) {
@@ -80,6 +92,7 @@ export function describeProposedAction(proposedAction: ProposedChatAction): Prop
         confirmLabel: isNewBudget ? "Create budget" : "Update budget",
         savedMessage: `${proposedAction.category} budget ${isNewBudget ? "created" : "updated"}`,
         destination: { href: "/budgets", label: "View budgets" },
+        deletion: null,
       };
     }
     case "SAVINGS_GOAL":
@@ -98,6 +111,7 @@ export function describeProposedAction(proposedAction: ProposedChatAction): Prop
         confirmLabel: "Create goal",
         savedMessage: `Goal "${proposedAction.name}" created`,
         destination: { href: "/goals", label: "View goals" },
+        deletion: null,
       };
     case "SAVINGS_GOAL_CHANGE":
       return describeSavingsGoalChange(proposedAction);
@@ -115,7 +129,66 @@ export function describeProposedAction(proposedAction: ProposedChatAction): Prop
           `Rule ${isNewRule ? "created" : "updated"}: ` +
           `${proposedAction.merchant} → ${proposedAction.category}`,
         destination: { href: "/auto-categorize", label: "View rules" },
+        deletion: null,
       };
     }
+    case "BUDGET_DELETION":
+      return {
+        eyebrow: "Delete budget",
+        title: proposedAction.category,
+        rows: [{ label: "Monthly limit", value: formatCurrency(proposedAction.monthlyLimit) }],
+        replacementNote: null,
+        confirmLabel: "Delete budget",
+        savedMessage: "Budget deleted",
+        destination: { href: "/budgets", label: "View budgets" },
+        deletion: {
+          entityLabel: "Budget",
+          dialogTitle: `Delete the ${proposedAction.category} budget?`,
+          dialogDescription:
+            `This removes the ${formatCurrency(proposedAction.monthlyLimit)} monthly limit for ` +
+            `${proposedAction.category}. Your transactions aren't affected.`,
+        },
+      };
+    case "SAVINGS_GOAL_DELETION":
+      return {
+        eyebrow: "Delete savings goal",
+        title: proposedAction.name,
+        rows: [
+          { label: "Target", value: formatCurrency(proposedAction.targetAmount) },
+          {
+            label: "Deadline",
+            value: formatTargetDate(proposedAction.targetDate) ?? "No deadline",
+          },
+          { label: "Account", value: proposedAction.accountLabel },
+        ],
+        replacementNote: null,
+        confirmLabel: "Delete goal",
+        savedMessage: "Goal deleted",
+        destination: { href: "/goals", label: "View goals" },
+        deletion: {
+          entityLabel: "Goal",
+          dialogTitle: `Delete "${proposedAction.name}"?`,
+          dialogDescription:
+            `This removes the ${formatCurrency(proposedAction.targetAmount)} goal tracking ` +
+            `${proposedAction.accountLabel}. The account and its balance aren't affected.`,
+        },
+      };
+    case "CATEGORIZATION_RULE_DELETION":
+      return {
+        eyebrow: "Delete categorization rule",
+        title: proposedAction.merchant,
+        rows: [{ label: "Category", value: proposedAction.category }],
+        replacementNote: null,
+        confirmLabel: "Delete rule",
+        savedMessage: "Rule deleted",
+        destination: { href: "/auto-categorize", label: "View rules" },
+        deletion: {
+          entityLabel: "Rule",
+          dialogTitle: `Delete the rule for ${proposedAction.merchant}?`,
+          dialogDescription:
+            `New ${proposedAction.merchant} transactions will no longer be filed under ` +
+            `${proposedAction.category} automatically. Existing transactions keep their category.`,
+        },
+      };
   }
 }

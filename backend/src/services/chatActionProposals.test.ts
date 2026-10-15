@@ -17,8 +17,8 @@ const REFERENCE_DATA: ChatActionReferenceData = {
     { id: "account-chequing", name: "Everyday", accountType: "CHEQUING" },
     { id: "account-savings", name: "Rainy day", accountType: "SAVINGS" },
   ],
-  budgets: [{ category: "Dining", monthlyLimit: 150 }],
-  rules: [{ merchant: "Tim Hortons", category: "Dining" }],
+  budgets: [{ id: "budget-dining", category: "Dining", monthlyLimit: 150 }],
+  rules: [{ id: "rule-tim-hortons", merchant: "Tim Hortons", category: "Dining" }],
   savingsGoals: [],
 };
 
@@ -861,6 +861,149 @@ describe("interpretToolCall — savings goal changes", () => {
   });
 });
 
+describe("interpretToolCall — deletions", () => {
+  /** Interprets a deletion against the user who has a budget, two goals, and a rule. */
+  function interpretDeletion(
+    toolArguments: Record<string, unknown>,
+    referenceData: ChatActionReferenceData = GOAL_DATA
+  ) {
+    return interpret("propose_deletion", toolArguments, referenceData);
+  }
+
+  it("drafts deleting a budget, with the limit that identifies it", () => {
+    const interpretation = interpretDeletion({ itemType: "budget", name: "dining" });
+
+    expect(interpretation.proposedAction).toEqual({
+      kind: "BUDGET_DELETION",
+      budgetId: "budget-dining",
+      category: "Dining",
+      monthlyLimit: 150,
+    });
+    expect(interpretation.reply).toBe(
+      "I've drafted the deletion of your Dining budget. Review it below — nothing is deleted " +
+        "until you confirm."
+    );
+  });
+
+  it("drafts deleting a savings goal, with its target, deadline, and account", () => {
+    const interpretation = interpretDeletion({ itemType: "savings goal", name: "Japan trip" });
+
+    expect(interpretation.proposedAction).toEqual({
+      kind: "SAVINGS_GOAL_DELETION",
+      goalId: "goal-japan",
+      name: "Japan trip",
+      targetAmount: 3000,
+      targetDate: "2027-06-30",
+      accountLabel: "Rainy day (Savings)",
+    });
+    expect(interpretation.reply).toContain('deletion of your "Japan trip" goal');
+  });
+
+  it("drafts deleting a categorization rule, with the category it files into", () => {
+    const interpretation = interpretDeletion({
+      itemType: "categorization rule",
+      name: "Tim Hortons",
+    });
+
+    expect(interpretation.proposedAction).toEqual({
+      kind: "CATEGORIZATION_RULE_DELETION",
+      ruleId: "rule-tim-hortons",
+      merchant: "Tim Hortons",
+      category: "Dining",
+    });
+  });
+
+  it("finds the item by name when the model gave the wrong kind of thing", () => {
+    const interpretation = interpretDeletion({ itemType: "budget", name: "Tim Hortons" });
+
+    expect(interpretation.proposedAction).toMatchObject({ kind: "CATEGORIZATION_RULE_DELETION" });
+  });
+
+  it("finds the item by name when the model gave no kind of thing at all", () => {
+    const interpretation = interpretDeletion({ name: "Emergency fund" });
+
+    expect(interpretation.proposedAction).toMatchObject({
+      kind: "SAVINGS_GOAL_DELETION",
+      goalId: "goal-emergency",
+    });
+  });
+
+  it("uses the kind the model gave to choose between a budget and a rule with the same name", () => {
+    const sharedNameData: ChatActionReferenceData = {
+      ...GOAL_DATA,
+      rules: [{ id: "rule-dining", merchant: "Dining", category: "Dining" }],
+    };
+
+    expect(
+      interpretDeletion({ itemType: "categorization rule", name: "Dining" }, sharedNameData)
+        .proposedAction
+    ).toMatchObject({ kind: "CATEGORIZATION_RULE_DELETION", ruleId: "rule-dining" });
+    expect(
+      interpretDeletion({ itemType: "budget", name: "Dining" }, sharedNameData).proposedAction
+    ).toMatchObject({ kind: "BUDGET_DELETION", budgetId: "budget-dining" });
+  });
+
+  it("asks which one is meant when the name fits two kinds of thing and no kind was given", () => {
+    const interpretation = interpretDeletion(
+      { name: "Dining" },
+      { ...GOAL_DATA, rules: [{ id: "rule-dining", merchant: "Dining", category: "Dining" }] }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      '"Dining" could be your Dining budget or your rule for Dining. Which one should I delete?'
+    );
+  });
+
+  it("sends the user to the item's page when two of the same kind share the name", () => {
+    const interpretation = interpretDeletion(
+      { itemType: "categorization rule", name: "costco" },
+      {
+        ...GOAL_DATA,
+        rules: [
+          { id: "rule-1", merchant: "Costco", category: "Groceries" },
+          { id: "rule-2", merchant: "COSTCO", category: "Dining" },
+        ],
+      }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      'You have more than one categorization rule called "Costco", so I can\'t tell which one ' +
+        "to delete. You can delete it from its page in Bloom."
+    );
+  });
+
+  it("lists the user's items of that kind when the named one does not exist", () => {
+    const interpretation = interpretDeletion({ itemType: "savings goal", name: "House" });
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      `You don't have a savings goal called "House". Yours are: Japan trip, Emergency fund.`
+    );
+  });
+
+  it("says what can be deleted when asked to delete something else, like a transaction", () => {
+    const interpretation = interpretDeletion({ itemType: "transaction", name: "Costco $54.20" });
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      `I couldn't find a budget, savings goal, or categorization rule called "Costco $54.20". ` +
+        "I can delete a budget, a savings goal, or a categorization rule. Transactions, " +
+        "accounts, and anything else have to be deleted from their own page in Bloom."
+    );
+  });
+
+  it("asks what to delete when the model named nothing", () => {
+    const interpretation = interpretDeletion({ itemType: "budget" });
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      "Which budget, savings goal, or categorization rule should I delete?"
+    );
+  });
+});
+
 describe("interpretToolCall — unknown tools", () => {
   it("drafts nothing for a tool Bloom never offered", () => {
     const interpretation = interpret("delete_account", { accountId: "account-savings" });
@@ -943,6 +1086,7 @@ describe("buildChatActionTools", () => {
       "propose_budget",
       "propose_categorization_rule",
       "propose_savings_goal",
+      "propose_deletion",
     ]);
     expect(parametersByToolName["propose_budget"]).toMatchObject({
       properties: { category: { enum: ["Dining", "Groceries", "Health & Fitness"] } },
@@ -967,15 +1111,19 @@ describe("buildChatActionTools", () => {
       ],
     });
 
-    expect(tools.at(-1)!.function.parameters).toMatchObject({
+    const goalTool = tools.find((tool) => tool.function.name === "propose_savings_goal");
+    expect(goalTool!.function.parameters).toMatchObject({
       properties: { account: { enum: ["Thiha (Chequing)"] } },
     });
   });
 
   it("offers the goal change tool, with the user's goals as the only choices, once they have one", () => {
     const tools = buildChatActionTools(GOAL_DATA);
+    const goalChangeTool = tools.find(
+      (tool) => tool.function.name === "propose_savings_goal_change"
+    );
 
-    expect(tools.at(-1)!.function).toMatchObject({
+    expect(goalChangeTool!.function).toMatchObject({
       name: "propose_savings_goal_change",
       parameters: {
         properties: {
@@ -993,7 +1141,51 @@ describe("buildChatActionTools", () => {
     expect(tools.map((tool) => tool.function.name)).toEqual([
       "propose_budget",
       "propose_categorization_rule",
+      "propose_deletion",
     ]);
+  });
+
+  it("offers every budget, goal, and rule the user has as the only things to delete", () => {
+    const tools = buildChatActionTools(GOAL_DATA);
+    const deletionTool = tools.find((tool) => tool.function.name === "propose_deletion");
+
+    expect(deletionTool!.function.parameters).toEqual({
+      type: "object",
+      properties: {
+        itemType: { type: "string", enum: ["budget", "savings goal", "categorization rule"] },
+        name: {
+          type: "string",
+          enum: ["Dining", "Japan trip", "Emergency fund", "Tim Hortons"],
+          description: expect.any(String),
+        },
+      },
+      required: ["itemType", "name"],
+    });
+  });
+
+  it("offers only the kinds of thing the user has to delete, each name once", () => {
+    const tools = buildChatActionTools({
+      ...REFERENCE_DATA,
+      budgets: [],
+      rules: [
+        { id: "rule-1", merchant: "Costco", category: "Groceries" },
+        { id: "rule-2", merchant: "Costco", category: "Dining" },
+      ],
+    });
+    const deletionTool = tools.find((tool) => tool.function.name === "propose_deletion");
+
+    expect(deletionTool!.function.parameters).toMatchObject({
+      properties: {
+        itemType: { enum: ["categorization rule"] },
+        name: { enum: ["Costco"] },
+      },
+    });
+  });
+
+  it("leaves the deletion tool out for a user with nothing it could delete", () => {
+    const tools = buildChatActionTools({ ...REFERENCE_DATA, budgets: [], rules: [] });
+
+    expect(tools.map((tool) => tool.function.name)).not.toContain("propose_deletion");
   });
 });
 
@@ -1002,7 +1194,7 @@ describe("buildChatActionInstructions", () => {
     const instructions = buildChatActionInstructions(REFERENCE_DATA, TODAY);
 
     expect(instructions).toContain("today is 2026-10-12");
-    expect(instructions).toContain("nothing is saved until they confirm it");
+    expect(instructions).toContain("nothing is saved or deleted until they confirm it");
     expect(instructions).not.toContain("no accounts");
   });
 
@@ -1010,6 +1202,13 @@ describe("buildChatActionInstructions", () => {
     const instructions = buildChatActionInstructions({ ...REFERENCE_DATA, accounts: [] }, TODAY);
 
     expect(instructions).toContain("The user has no accounts in Bloom yet");
+  });
+
+  it("tells the model it cannot delete transactions or accounts and must not offer to", () => {
+    const instructions = buildChatActionInstructions(REFERENCE_DATA, TODAY);
+
+    expect(instructions).toContain("You cannot delete or change transactions or accounts");
+    expect(instructions).toContain("never offer to do it yourself");
   });
 });
 
@@ -1027,8 +1226,8 @@ describe("toModelMessages", () => {
 
   it.each([
     ["PENDING", "They have not confirmed or dismissed it yet, so nothing is saved."],
-    ["CONFIRMED", "The user confirmed this draft and it was saved."],
-    ["DISMISSED", "The user dismissed this draft. Nothing was saved."],
+    ["CONFIRMED", "The user confirmed this draft and it was carried out."],
+    ["DISMISSED", "The user dismissed this draft. Nothing was changed."],
   ] as const)(
     "replays a %s draft as its tool call, what became of it, then the reply",
     (status, outcome) => {
@@ -1109,6 +1308,45 @@ describe("toModelMessages", () => {
     });
 
     expect(toolCallMessage!.tool_calls![0]!.function.arguments).not.toHaveProperty("targetDate");
+  });
+
+  it.each([
+    [
+      { kind: "BUDGET_DELETION" as const, budgetId: "b", category: "Dining", monthlyLimit: 150 },
+      { itemType: "budget", name: "Dining" },
+    ],
+    [
+      {
+        kind: "SAVINGS_GOAL_DELETION" as const,
+        goalId: "g",
+        name: "Japan trip",
+        targetAmount: 3000,
+        targetDate: null,
+        accountLabel: "Rainy day (Savings)",
+      },
+      { itemType: "savings goal", name: "Japan trip" },
+    ],
+    [
+      {
+        kind: "CATEGORIZATION_RULE_DELETION" as const,
+        ruleId: "r",
+        merchant: "Tim Hortons",
+        category: "Dining",
+      },
+      { itemType: "categorization rule", name: "Tim Hortons" },
+    ],
+  ])("replays a %s draft as the deletion tool call it was", (proposedAction, expectedArguments) => {
+    const [toolCallMessage] = toModelMessages({
+      role: "assistant",
+      content: "Drafted.",
+      proposedAction,
+      proposedActionStatus: "CONFIRMED",
+    });
+
+    expect(toolCallMessage!.tool_calls![0]!.function).toEqual({
+      name: "propose_deletion",
+      arguments: expectedArguments,
+    });
   });
 
   it("replays a goal change with only the fields it changed", () => {

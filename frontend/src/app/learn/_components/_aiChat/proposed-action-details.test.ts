@@ -18,6 +18,7 @@ describe("describeProposedAction — budgets", () => {
       confirmLabel: "Create budget",
       savedMessage: "Groceries budget created",
       destination: { href: "/budgets", label: "View budgets" },
+      deletion: null,
     });
   });
 
@@ -62,6 +63,7 @@ describe("describeProposedAction — savings goals", () => {
       confirmLabel: "Create goal",
       savedMessage: 'Goal "Japan trip" created',
       destination: { href: "/goals", label: "View goals" },
+      deletion: null,
     });
   });
 
@@ -105,6 +107,7 @@ describe("describeProposedAction — savings goal changes", () => {
       confirmLabel: "Update goal",
       savedMessage: 'Goal "Japan trip" updated',
       destination: { href: "/goals", label: "View goals" },
+      deletion: null,
     });
   });
 
@@ -165,6 +168,7 @@ describe("describeProposedAction — categorization rules", () => {
       confirmLabel: "Create rule",
       savedMessage: "Rule created: Tim Hortons → Dining",
       destination: { href: "/auto-categorize", label: "View rules" },
+      deletion: null,
     });
   });
 
@@ -182,5 +186,91 @@ describe("describeProposedAction — categorization rules", () => {
       confirmLabel: "Update rule",
       savedMessage: "Rule updated: Tim Hortons → Groceries",
     });
+  });
+});
+
+describe("describeProposedAction — deletions", () => {
+  it("describes deleting a budget, with a confirm dialog that names its limit", () => {
+    expect(
+      describeProposedAction({
+        kind: "BUDGET_DELETION",
+        budgetId: "budget-dining",
+        category: "Dining",
+        monthlyLimit: 150,
+      })
+    ).toEqual({
+      eyebrow: "Delete budget",
+      title: "Dining",
+      rows: [{ label: "Monthly limit", value: "$150.00" }],
+      replacementNote: null,
+      confirmLabel: "Delete budget",
+      savedMessage: "Budget deleted",
+      destination: { href: "/budgets", label: "View budgets" },
+      deletion: {
+        entityLabel: "Budget",
+        dialogTitle: "Delete the Dining budget?",
+        dialogDescription:
+          "This removes the $150.00 monthly limit for Dining. Your transactions aren't affected.",
+      },
+    });
+  });
+
+  it("describes deleting a goal with its target, deadline, and account", () => {
+    const details = describeProposedAction({
+      kind: "SAVINGS_GOAL_DELETION",
+      goalId: "goal-emergency",
+      name: "Emergency fund",
+      targetAmount: 5000,
+      targetDate: null,
+      accountLabel: "Everyday (Chequing)",
+    });
+
+    expect(details).toMatchObject({
+      eyebrow: "Delete savings goal",
+      title: "Emergency fund",
+      rows: [
+        { label: "Target", value: "$5,000.00" },
+        { label: "Deadline", value: "No deadline" },
+        { label: "Account", value: "Everyday (Chequing)" },
+      ],
+      confirmLabel: "Delete goal",
+      destination: { href: "/goals", label: "View goals" },
+      deletion: { entityLabel: "Goal", dialogTitle: 'Delete "Emergency fund"?' },
+    });
+  });
+
+  it("describes deleting a rule and says existing transactions keep their category", () => {
+    const details = describeProposedAction({
+      kind: "CATEGORIZATION_RULE_DELETION",
+      ruleId: "rule-tim-hortons",
+      merchant: "Tim Hortons",
+      category: "Dining",
+    });
+
+    expect(details).toMatchObject({
+      eyebrow: "Delete categorization rule",
+      title: "Tim Hortons",
+      rows: [{ label: "Category", value: "Dining" }],
+      confirmLabel: "Delete rule",
+      destination: { href: "/auto-categorize", label: "View rules" },
+      deletion: {
+        entityLabel: "Rule",
+        dialogTitle: "Delete the rule for Tim Hortons?",
+        dialogDescription:
+          "New Tim Hortons transactions will no longer be filed under Dining automatically. " +
+          "Existing transactions keep their category.",
+      },
+    });
+  });
+
+  it("gives every draft that is not a deletion no delete dialog", () => {
+    expect(
+      describeProposedAction({
+        kind: "CATEGORIZATION_RULE",
+        merchant: "Tim Hortons",
+        category: "Dining",
+        currentCategory: null,
+      }).deletion
+    ).toBeNull();
   });
 });

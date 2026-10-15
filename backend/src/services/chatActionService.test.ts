@@ -15,12 +15,13 @@ const {
   savingsGoalServiceMock,
 } = vi.hoisted(() => ({
   accountServiceMock: { listAccounts: vi.fn() },
-  budgetServiceMock: { listBudgetLimits: vi.fn(), upsertBudget: vi.fn() },
-  categorizationRuleServiceMock: { listRules: vi.fn(), upsertRule: vi.fn() },
+  budgetServiceMock: { listBudgetLimits: vi.fn(), upsertBudget: vi.fn(), deleteBudget: vi.fn() },
+  categorizationRuleServiceMock: { listRules: vi.fn(), upsertRule: vi.fn(), deleteRule: vi.fn() },
   categoryServiceMock: { listCategories: vi.fn() },
   chatHistoryMock: { moveProposedActionStatus: vi.fn(), getProposedActionStatus: vi.fn() },
   savingsGoalServiceMock: {
     createSavingsGoal: vi.fn(),
+    deleteSavingsGoal: vi.fn(),
     listSavingsGoals: vi.fn(),
     updateSavingsGoal: vi.fn(),
   },
@@ -83,7 +84,7 @@ describe("loadChatActionReferenceData", () => {
       { id: "a-2", ownerName: "Thiha", nickname: null, accountType: "CHEQUING", balance: 12 },
     ]);
     budgetServiceMock.listBudgetLimits.mockResolvedValue([
-      { category: "Dining", monthlyLimit: 150 },
+      { id: "b-1", category: "Dining", monthlyLimit: 150 },
     ]);
     categorizationRuleServiceMock.listRules.mockResolvedValue([
       { id: "r-1", userId: "u-1", merchant: "Tim Hortons", category: "Dining" },
@@ -99,8 +100,8 @@ describe("loadChatActionReferenceData", () => {
         { id: "a-1", name: "Rainy day", accountType: "SAVINGS" },
         { id: "a-2", name: "Thiha", accountType: "CHEQUING" },
       ],
-      budgets: [{ category: "Dining", monthlyLimit: 150 }],
-      rules: [{ merchant: "Tim Hortons", category: "Dining" }],
+      budgets: [{ id: "b-1", category: "Dining", monthlyLimit: 150 }],
+      rules: [{ id: "r-1", merchant: "Tim Hortons", category: "Dining" }],
       savingsGoals: [
         {
           id: "g-1",
@@ -264,6 +265,68 @@ describe("confirmProposedAction", () => {
       message: "That savings goal no longer exists",
     });
     expect(savingsGoalServiceMock.updateSavingsGoal).not.toHaveBeenCalled();
+    expect(chatHistoryMock.moveProposedActionStatus).toHaveBeenLastCalledWith(
+      "u-1",
+      "m-1",
+      "CONFIRMED",
+      "PENDING"
+    );
+  });
+
+  it.each([
+    [
+      "budget",
+      { kind: "BUDGET_DELETION", budgetId: "b-1", category: "Dining", monthlyLimit: 150 },
+      budgetServiceMock.deleteBudget,
+      "b-1",
+    ],
+    [
+      "savings goal",
+      {
+        kind: "SAVINGS_GOAL_DELETION",
+        goalId: "g-1",
+        name: "Japan trip",
+        targetAmount: 3000,
+        targetDate: null,
+        accountLabel: "Rainy day (Savings)",
+      },
+      savingsGoalServiceMock.deleteSavingsGoal,
+      "g-1",
+    ],
+    [
+      "categorization rule",
+      {
+        kind: "CATEGORIZATION_RULE_DELETION",
+        ruleId: "r-1",
+        merchant: "Tim Hortons",
+        category: "Dining",
+      },
+      categorizationRuleServiceMock.deleteRule,
+      "r-1",
+    ],
+  ])("deletes a %s through its own service", async (_itemType, draft, deleteMock, itemId) => {
+    chatHistoryMock.moveProposedActionStatus.mockResolvedValue(draft);
+
+    await expect(confirmProposedAction("u-1", "m-1")).resolves.toEqual({
+      id: "m-1",
+      proposedActionStatus: "CONFIRMED",
+    });
+
+    expect(deleteMock).toHaveBeenCalledWith("u-1", itemId);
+    expect(budgetServiceMock.upsertBudget).not.toHaveBeenCalled();
+    expect(categorizationRuleServiceMock.upsertRule).not.toHaveBeenCalled();
+  });
+
+  it("hands a deletion back to pending when the item was already deleted elsewhere", async () => {
+    chatHistoryMock.moveProposedActionStatus.mockResolvedValue({
+      kind: "BUDGET_DELETION",
+      budgetId: "b-1",
+      category: "Dining",
+      monthlyLimit: 150,
+    });
+    budgetServiceMock.deleteBudget.mockRejectedValue(new AppError(404, "Budget b-1 not found"));
+
+    await expect(confirmProposedAction("u-1", "m-1")).rejects.toMatchObject({ statusCode: 404 });
     expect(chatHistoryMock.moveProposedActionStatus).toHaveBeenLastCalledWith(
       "u-1",
       "m-1",

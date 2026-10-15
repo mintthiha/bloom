@@ -165,7 +165,7 @@ describe("startChatReply — the request sent to the model", () => {
           },
         ],
       },
-      { role: "tool", content: "The user confirmed this draft and it was saved." },
+      { role: "tool", content: "The user confirmed this draft and it was carried out." },
       { role: "assistant", content: GROCERIES_BUDGET_INTRODUCTION },
       { role: "user", content: "Thanks" },
     ]);

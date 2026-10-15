@@ -505,8 +505,8 @@ export type ActivityLogQuery = {
 };
 
 /**
- * A write Bloom AI drafted for the user — a budget, a new or changed savings goal, or a
- * categorization rule.
+ * A write Bloom AI drafted for the user — a budget, a new or changed savings goal, a
+ * categorization rule, or deleting one of the user's budgets, goals, or rules.
  * Nothing is saved until the user confirms it.
  */
 export type ProposedChatAction =
@@ -554,7 +554,19 @@ export type ProposedChatAction =
       category: string;
       /** The category this merchant's existing rule points at, or null when it has none. */
       currentCategory: string | null;
-    };
+    }
+  | { kind: "BUDGET_DELETION"; budgetId: string; category: string; monthlyLimit: number }
+  | {
+      kind: "SAVINGS_GOAL_DELETION";
+      goalId: string;
+      name: string;
+      targetAmount: number;
+      /** `YYYY-MM-DD` deadline, or null when the goal is open-ended. */
+      targetDate: string | null;
+      /** The account the goal tracks, e.g. "Rainy day (Savings)". */
+      accountLabel: string;
+    }
+  | { kind: "CATEGORIZATION_RULE_DELETION"; ruleId: string; merchant: string; category: string };
 
 export type ProposedChatActionStatus = "PENDING" | "CONFIRMED" | "DISMISSED";
 

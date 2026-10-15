@@ -21,16 +21,16 @@ describe("budgetService", () => {
     logActivityMock.mockClear();
   });
 
-  it("lists just the category and numeric limit of each live budget", async () => {
+  it("lists just the id, category, and numeric limit of each live budget", async () => {
     const { listBudgetLimits } = await import("./budgetService");
     prismaMock.$queryRaw.mockResolvedValueOnce([
-      { category: "Dining", monthlyLimit: "150.0000" },
-      { category: "Groceries", monthlyLimit: "400.5000" },
+      { id: "budget-dining", category: "Dining", monthlyLimit: "150.0000" },
+      { id: "budget-groceries", category: "Groceries", monthlyLimit: "400.5000" },
     ]);
 
     await expect(listBudgetLimits("user-1")).resolves.toEqual([
-      { category: "Dining", monthlyLimit: 150 },
-      { category: "Groceries", monthlyLimit: 400.5 },
+      { id: "budget-dining", category: "Dining", monthlyLimit: 150 },
+      { id: "budget-groceries", category: "Groceries", monthlyLimit: 400.5 },
     ]);
 
     const [sqlParts, ...parameters] = prismaMock.$queryRaw.mock.calls[0]!;

@@ -28,7 +28,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-/** Saves the budget, savings goal, or rule that one of Bloom AI's replies drafted. */
+/** Carries out the budget, savings goal, or rule change (or deletion) a Bloom AI reply drafted. */
 router.post(
   "/:id/proposed-action/confirm",
   async (req: Request, res: Response, next: NextFunction) => {
