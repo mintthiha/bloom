@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  answerUnsupportedCommand,
   buildChatActionInstructions,
   buildChatActionTools,
   interpretToolCall,
+  selectToolNameOfDraftJustShown,
   selectUserMessagesSinceLastDraft,
   toModelMessages,
   type ChatActionReferenceData,
@@ -49,9 +51,13 @@ const GOAL_DATA: ChatActionReferenceData = {
   ],
 };
 
-/** A question that states every amount these tests draft with, so each counts as user-given. */
+/**
+ * A question that asks for every kind of change the tools make and states every amount these
+ * tests draft with, so each draft counts as requested and each amount as user-given.
+ */
 const QUESTION_STATING_AMOUNTS =
-  "Use one of these: 50, 60, 80, 150, 200, 400, 3000, 5000, $1,200.50 or 99.999";
+  "Set a budget, save toward a goal, make a rule, or delete one. Use one of these: 50, 60, 80, " +
+  "150, 200, 400, 3000, 5000, $1,200.50 or 99.999";
 
 /**
  * Interprets a tool call against the shared reference data as of the fixed test date. Unless a
@@ -428,7 +434,7 @@ describe("interpretToolCall — amounts must come from the user", () => {
       "propose_budget",
       { category: "Groceries", monthlyLimit: expectedLimit },
       REFERENCE_DATA,
-      { question }
+      { question, earlierUserMessages: ["Set a grocery budget"] }
     );
 
     expect(interpretation.proposedAction).toMatchObject({ monthlyLimit: expectedLimit });
@@ -452,7 +458,7 @@ describe("interpretToolCall — a goal's account in the user's own words", () =>
       "propose_savings_goal",
       { goalName: "Trip", targetAmount: 3000 },
       REFERENCE_DATA,
-      { question: "$3000, in my RAINY  day account" }
+      { question: "$3000, in my RAINY  day account", earlierUserMessages: ["Create a trip goal"] }
     );
 
     expect(interpretation.proposedAction).toMatchObject({
@@ -551,7 +557,7 @@ describe("interpretToolCall — a goal's account in the user's own words", () =>
           { id: "account-home", name: "Home (joint)", accountType: "SAVINGS" },
         ],
       },
-      { question: "3000 in home (joint) please" }
+      { question: "3000 in home (joint) please", earlierUserMessages: ["Create a trip goal"] }
     );
 
     expect(interpretation.proposedAction).toMatchObject({ accountId: "account-home" });
@@ -1004,12 +1010,288 @@ describe("interpretToolCall — deletions", () => {
   });
 });
 
+describe("interpretToolCall — drafts the user never asked for", () => {
+  const CHAT_CAPABILITIES =
+    "From the chat I can draft budgets, savings goals, and categorization rules, change them, " +
+    "or delete them.";
+
+  it("refuses a rule drafted for a request to add a transaction, and says where to add one", () => {
+    const interpretation = interpret(
+      "propose_categorization_rule",
+      { merchant: "Costco", category: "Groceries" },
+      REFERENCE_DATA,
+      { question: "Add a $50 Costco transaction to my Everyday account" }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      "I can't add, import, edit, or delete transactions from the chat. You can do that on the " +
+        `account's own page — open it from Accounts. ${CHAT_CAPABILITIES}`
+    );
+  });
+
+  it("refuses a rule drafted for a request to create a category", () => {
+    const interpretation = interpret(
+      "propose_categorization_rule",
+      { merchant: "Pets", category: "Groceries" },
+      REFERENCE_DATA,
+      { question: "Create a new category called Pets" }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toContain("I can't add or change categories from the chat");
+  });
+
+  it("refuses a goal drafted for a request to transfer money", () => {
+    const interpretation = interpret(
+      "propose_savings_goal",
+      { goalName: "Emergency fund", targetAmount: 200 },
+      REFERENCE_DATA,
+      { question: "Transfer $200 from Everyday to Rainy day" }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toContain("I can't record a transfer from the chat");
+  });
+
+  it("asks the user to rephrase when the request matches nothing it knows", () => {
+    const interpretation = interpret(
+      "propose_budget",
+      { category: "Dining", monthlyLimit: 300 },
+      REFERENCE_DATA,
+      { question: "Make dining 300" }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply).toBe(
+      `I'm not sure what you'd like me to change. ${CHAT_CAPABILITIES}`
+    );
+  });
+
+  it.each([
+    ["propose_budget", { category: "Groceries", monthlyLimit: 400 }, "Cap groceries at $400"],
+    [
+      "propose_savings_goal",
+      { goalName: "Car", targetAmount: 5000 },
+      "I want to save $5000 for a car in Rainy day",
+    ],
+    [
+      "propose_categorization_rule",
+      { merchant: "Starbucks", category: "Dining" },
+      "Put Starbucks under Dining",
+    ],
+    ["propose_deletion", { itemType: "budget", name: "Dining" }, "Get rid of my dining budget"],
+  ])(
+    "lets %s through when the user asked for that kind of change",
+    (toolName, toolArguments, question) => {
+      expect(
+        interpret(toolName, toolArguments, REFERENCE_DATA, { question }).proposedAction
+      ).not.toBeNull();
+    }
+  );
+
+  it("lets a goal change through when the user names the goal without saying goal", () => {
+    const interpretation = interpret(
+      "propose_savings_goal_change",
+      { goal: "Japan trip", targetAmount: 4500 },
+      GOAL_DATA,
+      { question: "Bump Japan trip to 4500" }
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({ targetAmount: 4500 });
+  });
+
+  it("lets a reply to the card just shown adjust the same kind of draft", () => {
+    const interpretation = interpretToolCall(
+      "propose_budget",
+      { category: "Groceries", monthlyLimit: 450 },
+      {
+        referenceData: REFERENCE_DATA,
+        today: TODAY,
+        question: "Actually make it $450",
+        earlierUserMessages: [],
+        toolNameOfDraftJustShown: "propose_budget",
+      }
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({ monthlyLimit: 450 });
+  });
+
+  it("treats a goal change after a new-goal card as the same kind of draft", () => {
+    const interpretation = interpretToolCall(
+      "propose_savings_goal_change",
+      { goal: "Emergency fund", targetAmount: 6000 },
+      {
+        referenceData: GOAL_DATA,
+        today: TODAY,
+        question: "make that 6000",
+        earlierUserMessages: [],
+        toolNameOfDraftJustShown: "propose_savings_goal",
+      }
+    );
+
+    expect(interpretation.proposedAction).toMatchObject({ targetAmount: 6000 });
+  });
+
+  it("does not let a card of another kind vouch for a new draft", () => {
+    const interpretation = interpretToolCall(
+      "propose_categorization_rule",
+      { merchant: "Costco", category: "Groceries" },
+      {
+        referenceData: REFERENCE_DATA,
+        today: TODAY,
+        question: "Add a $50 Costco transaction",
+        earlierUserMessages: [],
+        toolNameOfDraftJustShown: "propose_budget",
+      }
+    );
+
+    expect(interpretation.proposedAction).toBeNull();
+  });
+});
+
+describe("interpretToolCall — requests the chat cannot carry out", () => {
+  it.each([
+    [
+      "account",
+      "I can't open or delete accounts from the chat. You can open a new account from the Overview page",
+    ],
+    ["subscription", "I can't change subscriptions from the chat."],
+    ["setting", "I can't change settings from the chat. You can change them on the Settings page."],
+  ])("answers a %s request with the fixed reply naming its page", (request, expectedStart) => {
+    const interpretation = interpret("explain_unsupported_request", { request });
+
+    expect(interpretation.proposedAction).toBeNull();
+    expect(interpretation.reply.startsWith(expectedStart)).toBe(true);
+    expect(interpretation.reply).toContain("From the chat I can draft budgets");
+  });
+
+  it("works out the kind from the user's words when the model sent an unknown one", () => {
+    const interpretation = interpret(
+      "explain_unsupported_request",
+      { request: "money movement" },
+      REFERENCE_DATA,
+      { question: "Transfer $200 to savings" }
+    );
+
+    expect(interpretation.reply).toContain("I can't record a transfer from the chat");
+  });
+
+  it("works out the kind from the user's words when the model sent other", () => {
+    const interpretation = interpret(
+      "explain_unsupported_request",
+      { request: "other" },
+      REFERENCE_DATA,
+      { question: "Open a TFSA for me" }
+    );
+
+    expect(interpretation.reply).toContain("I can't open or delete accounts from the chat");
+  });
+
+  it("gives the general refusal when neither the model nor the user's words say what it was", () => {
+    const interpretation = interpret("explain_unsupported_request", {}, REFERENCE_DATA, {
+      question: "Do the thing",
+    });
+
+    expect(interpretation.reply).toBe(
+      "I can't do that from the chat. From the chat I can draft budgets, savings goals, and " +
+        "categorization rules, change them, or delete them."
+    );
+  });
+});
+
 describe("interpretToolCall — unknown tools", () => {
   it("drafts nothing for a tool Bloom never offered", () => {
     const interpretation = interpret("delete_account", { accountId: "account-savings" });
 
     expect(interpretation.proposedAction).toBeNull();
     expect(interpretation.reply).toContain("I can draft a budget, a savings goal, or a");
+  });
+});
+
+describe("answerUnsupportedCommand", () => {
+  it.each([
+    ["Create a TFSA account for me called Travel", "I can't open or delete accounts from the chat"],
+    ["Can you open an FHSA for me?", "I can't open or delete accounts from the chat"],
+    ["Delete my Everyday account", "I can't open or delete accounts from the chat"],
+    [
+      "Add a $50 Costco transaction to my Everyday account",
+      "I can't add, import, edit, or delete transactions",
+    ],
+    ["Transfer $200 from Everyday to Rainy day", "I can't record a transfer from the chat"],
+    ["Create a new category called Pets", "I can't add or change categories from the chat"],
+    ["Cancel my Netflix subscription", "I can't change subscriptions from the chat"],
+    ["Please change my currency setting", "I can't change settings from the chat"],
+  ])("answers %j with its fixed reply", (question, expectedStart) => {
+    const reply = answerUnsupportedCommand(question, GOAL_DATA);
+
+    expect(reply?.startsWith(expectedStart)).toBe(true);
+    expect(reply).toContain("From the chat I can draft budgets");
+  });
+
+  it.each([
+    ["a question rather than a command", "Should I open a TFSA?"],
+    ["a request for something the chat can explain", "Can you explain how a TFSA account works?"],
+    ["a command about a budget", "Change my dining budget to $200"],
+    ["a command about a goal", "Move my savings goal to my Everyday account"],
+    ["a command about a rule", "Make a rule so Costco transactions go under Groceries"],
+    ["a command naming one of the user's goals", "Move Japan trip to my Everyday account"],
+    ["a command naming one of the user's rules", "Delete the Tim Hortons one from my account"],
+    ["a command about nothing it recognizes", "Rename my car fund to road trip"],
+  ])("leaves %s to the model", (_description, question) => {
+    expect(answerUnsupportedCommand(question, GOAL_DATA)).toBeNull();
+  });
+});
+
+describe("selectToolNameOfDraftJustShown", () => {
+  it("names the tool behind a draft in the last reply", () => {
+    expect(
+      selectToolNameOfDraftJustShown([
+        {
+          role: "user",
+          content: "Set a $400 grocery budget",
+          proposedAction: null,
+          proposedActionStatus: null,
+        },
+        {
+          role: "assistant",
+          content: "Drafted.",
+          proposedAction: {
+            kind: "BUDGET",
+            category: "Groceries",
+            monthlyLimit: 400,
+            currentMonthlyLimit: null,
+          },
+          proposedActionStatus: "PENDING",
+        },
+      ])
+    ).toBe("propose_budget");
+  });
+
+  it("returns null when the last reply carried no draft, or there is no conversation", () => {
+    expect(
+      selectToolNameOfDraftJustShown([
+        {
+          role: "assistant",
+          content: "Drafted.",
+          proposedAction: {
+            kind: "BUDGET",
+            category: "Groceries",
+            monthlyLimit: 400,
+            currentMonthlyLimit: null,
+          },
+          proposedActionStatus: "CONFIRMED",
+        },
+        { role: "user", content: "Thanks", proposedAction: null, proposedActionStatus: null },
+        {
+          role: "assistant",
+          content: "You're welcome!",
+          proposedAction: null,
+          proposedActionStatus: null,
+        },
+      ])
+    ).toBeNull();
+    expect(selectToolNameOfDraftJustShown([])).toBeNull();
   });
 });
 
@@ -1086,6 +1368,7 @@ describe("buildChatActionTools", () => {
       "propose_budget",
       "propose_categorization_rule",
       "propose_savings_goal",
+      "explain_unsupported_request",
       "propose_deletion",
     ]);
     expect(parametersByToolName["propose_budget"]).toMatchObject({
@@ -1141,6 +1424,7 @@ describe("buildChatActionTools", () => {
     expect(tools.map((tool) => tool.function.name)).toEqual([
       "propose_budget",
       "propose_categorization_rule",
+      "explain_unsupported_request",
       "propose_deletion",
     ]);
   });
@@ -1194,7 +1478,7 @@ describe("buildChatActionInstructions", () => {
     const instructions = buildChatActionInstructions(REFERENCE_DATA, TODAY);
 
     expect(instructions).toContain("today is 2026-10-12");
-    expect(instructions).toContain("nothing is saved or deleted until they confirm it");
+    expect(instructions).toContain("nothing is saved or deleted until they confirm the card");
     expect(instructions).not.toContain("no accounts");
   });
 
@@ -1204,11 +1488,12 @@ describe("buildChatActionInstructions", () => {
     expect(instructions).toContain("The user has no accounts in Bloom yet");
   });
 
-  it("tells the model it cannot delete transactions or accounts and must not offer to", () => {
+  it("tells the model to decline any other change with the right tool, never in a draft of its own", () => {
     const instructions = buildChatActionInstructions(REFERENCE_DATA, TODAY);
 
-    expect(instructions).toContain("You cannot delete or change transactions or accounts");
-    expect(instructions).toContain("never offer to do it yourself");
+    expect(instructions).toContain("For any other change to their data");
+    expect(instructions).toContain("call explain_unsupported_request and no other tool");
+    expect(instructions).toContain("never write a draft out yourself");
   });
 });
 

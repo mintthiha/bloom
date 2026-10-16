@@ -1,9 +1,11 @@
 import logger from "../lib/logger";
 import { startChatEventStream, type OllamaStreamEvent } from "../lib/ollama-client";
 import {
+  answerUnsupportedCommand,
   buildChatActionInstructions,
   buildChatActionTools,
   interpretToolCall,
+  selectToolNameOfDraftJustShown,
   selectUserMessagesSinceLastDraft,
   toModelMessages,
   type ProposedChatAction,
@@ -112,9 +114,15 @@ async function* relayReplyAndStoreExchange(
   }
 }
 
+/** Streams a fixed reply as if the model had written it, so it is relayed and stored the same way. */
+async function* streamFixedReply(reply: string): AsyncGenerator<OllamaStreamEvent, void, void> {
+  yield { type: "text", text: reply };
+}
+
 /**
  * Starts a streamed assistant reply to the user's question, steered by the caller's system prompt
- * and the user's recent conversation, with the write actions offered to the model as tools.
+ * and the user's recent conversation, with the write actions offered to the model as tools. A
+ * clear command the chat can't carry out is answered with its fixed reply without asking the model.
  * Resolves once the model has begun answering, with a generator of the reply's events; the
  * exchange is stored when that generator finishes.
  */
@@ -129,6 +137,22 @@ export async function startChatReply(
     listRecentChatMessages(userId, PROMPT_HISTORY_MESSAGE_LIMIT),
     loadChatActionReferenceData(userId),
   ]);
+  const toolCallContext: ToolCallContext = {
+    referenceData,
+    today: askedAt,
+    question,
+    earlierUserMessages: selectUserMessagesSinceLastDraft(recentMessages),
+    toolNameOfDraftJustShown: selectToolNameOfDraftJustShown(recentMessages),
+  };
+
+  const unsupportedCommandReply = answerUnsupportedCommand(question, referenceData);
+  if (unsupportedCommandReply) {
+    return relayReplyAndStoreExchange(
+      userId,
+      streamFixedReply(unsupportedCommandReply),
+      toolCallContext
+    );
+  }
 
   const streamEvents = await startChatEventStream({
     messages: [
@@ -143,10 +167,5 @@ export async function startChatReply(
     temperature: CHAT_TEMPERATURE,
     signal,
   });
-  return relayReplyAndStoreExchange(userId, streamEvents, {
-    referenceData,
-    today: askedAt,
-    question,
-    earlierUserMessages: selectUserMessagesSinceLastDraft(recentMessages),
-  });
+  return relayReplyAndStoreExchange(userId, streamEvents, toolCallContext);
 }

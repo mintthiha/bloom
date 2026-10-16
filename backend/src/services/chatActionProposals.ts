@@ -120,6 +120,11 @@ export type ToolCallContext = {
    * `selectUserMessagesSinceLastDraft`.
    */
   earlierUserMessages: string[];
+  /**
+   * The tool behind the draft in the reply just before this question, when there is one — see
+   * `selectToolNameOfDraftJustShown`. Absent or null when the last reply carried no draft.
+   */
+  toolNameOfDraftJustShown?: string | null;
 };
 
 /**
@@ -141,6 +146,7 @@ const PROPOSE_SAVINGS_GOAL_TOOL_NAME = "propose_savings_goal";
 const PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME = "propose_savings_goal_change";
 const PROPOSE_CATEGORIZATION_RULE_TOOL_NAME = "propose_categorization_rule";
 const PROPOSE_DELETION_TOOL_NAME = "propose_deletion";
+const EXPLAIN_UNSUPPORTED_REQUEST_TOOL_NAME = "explain_unsupported_request";
 
 /** How the deletion tool names each kind of thing it can delete, for the model and the user. */
 const DELETABLE_ITEM_TYPES = {
@@ -189,6 +195,36 @@ const UNKNOWN_TOOL_REPLY =
 const DELETION_LIMITS_REPLY =
   "I can delete a budget, a savings goal, or a categorization rule. Transactions, accounts, and " +
   "anything else have to be deleted from their own page in Bloom.";
+
+/** Closes every refusal by saying what the chat can do instead. */
+const CHAT_CAPABILITIES =
+  "From the chat I can draft budgets, savings goals, and categorization rules, change them, or " +
+  "delete them.";
+
+/**
+ * What the chat says when asked for a change it can't make, keyed by the kind of request the
+ * model reports. Fixed wording, so the reply always names the page that really does it.
+ */
+const UNSUPPORTED_REQUEST_REPLIES = {
+  account:
+    "I can't open or delete accounts from the chat. You can open a new account from the " +
+    "Overview page, or delete one from that account's own page.",
+  transaction:
+    "I can't add, import, edit, or delete transactions from the chat. You can do that on the " +
+    "account's own page — open it from Accounts.",
+  transfer:
+    "I can't record a transfer from the chat. You can record it on the account's own page — " +
+    "open it from Accounts.",
+  category:
+    "I can't add or change categories from the chat. You can do that on the Categories page.",
+  subscription:
+    "I can't change subscriptions from the chat. The Subscriptions page shows the recurring " +
+    "payments Bloom has detected; to cancel one, contact the company that bills you.",
+  setting: "I can't change settings from the chat. You can change them on the Settings page.",
+  other: "I can't do that from the chat.",
+} as const;
+
+type UnsupportedRequestKind = keyof typeof UNSUPPORTED_REQUEST_REPLIES;
 
 /** Renders a date as the `YYYY-MM-DD` day it falls on in UTC. */
 function toDateOnly(date: Date): string {
@@ -700,16 +736,154 @@ function interpretDeletionProposal(
 }
 
 /**
+ * Answers a request the chat can't carry out — opening an account, adding a transaction, and so
+ * on — with fixed wording that names the right page. The model gets this tool so it has something
+ * to reach for besides the draft tools: without it, asked to add a transaction, it drafted a
+ * categorization rule for the merchant instead.
+ */
+function interpretUnsupportedRequest(
+  toolArguments: Record<string, unknown>,
+  { question }: ToolCallContext
+): ToolCallInterpretation {
+  const requestKind = readTextArgument(toolArguments.request, MAX_CATEGORY_LENGTH);
+  const knownRequestKind =
+    (Object.keys(UNSUPPORTED_REQUEST_REPLIES) as UnsupportedRequestKind[]).find(
+      (candidate) => candidate === requestKind && candidate !== "other"
+    ) ??
+    detectUnsupportedRequestKind(question) ??
+    "other";
+  return withoutProposal(`${UNSUPPORTED_REQUEST_REPLIES[knownRequestKind]} ${CHAT_CAPABILITIES}`);
+}
+
+// What the user's own words must touch on before each draft tool may act. A small model reaches
+// for the nearest tool when asked for something none of them do — it drafted a rule for "add a
+// $50 Costco transaction" and a goal for "transfer $200" — so a draft is made only when the user
+// actually asked for that kind of change.
+const GOAL_REQUEST_PATTERN =
+  /\b(goals?|save|saves|saving|savings|put (away|aside)|target|deadline|rename)\b/i;
+const REQUEST_PATTERN_BY_TOOL_NAME: Record<string, RegExp> = {
+  [PROPOSE_BUDGET_TOOL_NAME]: /\b(budgets?|limit|cap|spend|spending)\b/i,
+  [PROPOSE_SAVINGS_GOAL_TOOL_NAME]: GOAL_REQUEST_PATTERN,
+  [PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME]: GOAL_REQUEST_PATTERN,
+  [PROPOSE_CATEGORIZATION_RULE_TOOL_NAME]:
+    /\b(rules?|always|auto-?categori[sz]\w*|categori[sz]e\w*)\b|\b(go|goes|put|file|filed)\b[^.?!]*\b(under|into|in)\b/i,
+  [PROPOSE_DELETION_TOOL_NAME]: /\b(delete|remove|get rid of|drop|erase|cancel)\b/i,
+};
+
+// The kinds of change the chat can't make, as the user tends to word them, checked in order:
+// "add a transaction to my Everyday account" is about a transaction, not the account.
+const UNSUPPORTED_REQUEST_PATTERNS: [UnsupportedRequestKind, RegExp][] = [
+  ["transfer", /\btransfer/i],
+  ["subscription", /\bsubscriptions?\b/i],
+  ["transaction", /\b(transactions?|purchases?|expenses?|charges?)\b/i],
+  ["category", /\bcategor(y|ies)\b/i],
+  ["account", /\baccounts?\b|\b(tfsa|rrsp|fhsa|chequing|credit card)\b/i],
+  ["setting", /\b(settings?|profile|password|currency|theme|dark mode)\b/i],
+];
+
+/** Treats creating and changing a savings goal as one kind of change, since either can follow the other. */
+function toToolFamily(toolName: string): string {
+  return toolName === PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME
+    ? PROPOSE_SAVINGS_GOAL_TOOL_NAME
+    : toolName;
+}
+
+/** Names the kind of change the chat can't make that a request is about, if it is one. */
+function detectUnsupportedRequestKind(question: string): UnsupportedRequestKind | null {
+  return UNSUPPORTED_REQUEST_PATTERNS.find(([, pattern]) => pattern.test(question))?.[0] ?? null;
+}
+
+// A request worded as a command ("open a TFSA for me", "can you transfer $200") rather than a
+// question ("should I open a TFSA?"), which the model should still answer.
+const COMMAND_PATTERN =
+  /^\s*(please\s+)?((can|could|would|will) you\s+)?(please\s+)?(create|open|add|make|delete|remove|close|transfer|move|record|log|import|cancel|change|edit|update|rename|set up|enter)\b/i;
+
+// Words that put a request within what the drafts cover, so the model gets to handle it.
+const DRAFTABLE_SUBJECT_PATTERN =
+  /\b(budgets?|goals?|rules?|always|limit|save|saving|savings|auto-?categori[sz]\w*|categori[sz]e\w*)\b/i;
+
+/**
+ * Answers a command the chat can't carry out — "open a TFSA for me", "transfer $200 to savings" —
+ * with its fixed reply, before the model is asked at all. Left to the model, these sometimes came
+ * back as a made-up plan ("I'll draft the transfer for you") without any tool being called, so
+ * nothing could check them. Anything that mentions a budget, goal, or rule, or one of the user's
+ * own budgets, goals, or rules by name, still goes to the model. Returns null for those, and for
+ * anything that isn't a command.
+ */
+export function answerUnsupportedCommand(
+  question: string,
+  referenceData: ChatActionReferenceData
+): string | null {
+  if (!COMMAND_PATTERN.test(question) || DRAFTABLE_SUBJECT_PATTERN.test(question)) return null;
+  const draftableNames = [
+    ...referenceData.budgets.map((budget) => budget.category),
+    ...referenceData.savingsGoals.map((goal) => goal.name),
+    ...referenceData.rules.map((rule) => rule.merchant),
+  ];
+  if (draftableNames.some((name) => mentionsPhrase(question, name))) return null;
+  const unsupportedRequestKind = detectUnsupportedRequestKind(question);
+  return unsupportedRequestKind
+    ? `${UNSUPPORTED_REQUEST_REPLIES[unsupportedRequestKind]} ${CHAT_CAPABILITIES}`
+    : null;
+}
+
+/**
+ * Whether the user's own words ask for the kind of change a draft tool makes. Naming one of their
+ * goals counts for the goal tools, so "bump Japan trip to 4500" still reaches the goal, and so
+ * does answering the card just shown.
+ */
+function isRequestedByUser(
+  toolName: string,
+  { referenceData, question, earlierUserMessages, toolNameOfDraftJustShown }: ToolCallContext
+): boolean {
+  const requestPattern = REQUEST_PATTERN_BY_TOOL_NAME[toolName];
+  if (!requestPattern) return true;
+  // A reply to the card just shown ("actually, make it $450") is a request for the same change.
+  if (
+    toolNameOfDraftJustShown &&
+    toToolFamily(toolNameOfDraftJustShown) === toToolFamily(toolName)
+  ) {
+    return true;
+  }
+  const userMessages = [question, ...earlierUserMessages];
+  if (userMessages.some((userMessage) => requestPattern.test(userMessage))) return true;
+  const isGoalTool =
+    toolName === PROPOSE_SAVINGS_GOAL_TOOL_NAME ||
+    toolName === PROPOSE_SAVINGS_GOAL_CHANGE_TOOL_NAME;
+  return (
+    isGoalTool &&
+    referenceData.savingsGoals.some((goal) =>
+      userMessages.some((userMessage) => mentionsPhrase(userMessage, goal.name))
+    )
+  );
+}
+
+/**
+ * Answers a draft tool call the user never asked for. When the request is one the chat can't
+ * carry out, the fixed reply for it names the right page; otherwise the user is told what the
+ * chat can do so they can rephrase.
+ */
+function describeUnrequestedDraft(question: string): ToolCallInterpretation {
+  const unsupportedRequestKind = detectUnsupportedRequestKind(question);
+  return withoutProposal(
+    unsupportedRequestKind
+      ? `${UNSUPPORTED_REQUEST_REPLIES[unsupportedRequestKind]} ${CHAT_CAPABILITIES}`
+      : `I'm not sure what you'd like me to change. ${CHAT_CAPABILITIES}`
+  );
+}
+
+/**
  * Turns one tool call from the model into a draft the user can confirm. The model's arguments are
- * never trusted: every value is checked against the user's own categories and accounts, an
- * amount must be one the user typed, and a call that doesn't hold up becomes a question for the
- * user instead of a draft.
+ * never trusted: the user's own words must ask for that kind of change, every value is checked
+ * against the user's own categories and accounts, an amount must be one the user typed, and a
+ * call that doesn't hold up becomes a question for the user instead of a draft.
  */
 export function interpretToolCall(
   toolName: string,
   toolArguments: Record<string, unknown>,
   context: ToolCallContext
 ): ToolCallInterpretation {
+  if (!isRequestedByUser(toolName, context)) return describeUnrequestedDraft(context.question);
   switch (toolName) {
     case PROPOSE_BUDGET_TOOL_NAME:
       return interpretBudgetProposal(toolArguments, context);
@@ -721,6 +895,8 @@ export function interpretToolCall(
       return interpretCategorizationRuleProposal(toolArguments, context);
     case PROPOSE_DELETION_TOOL_NAME:
       return interpretDeletionProposal(toolArguments, context);
+    case EXPLAIN_UNSUPPORTED_REQUEST_TOOL_NAME:
+      return interpretUnsupportedRequest(toolArguments, context);
     default:
       return withoutProposal(UNKNOWN_TOOL_REPLY);
   }
@@ -740,6 +916,15 @@ export function selectUserMessagesSinceLastDraft(messages: ReplayableChatMessage
     .slice(lastDraftIndex + 1)
     .filter((message) => message.role === "user")
     .map((message) => message.content);
+}
+
+/**
+ * Names the tool behind the draft in the conversation's last reply, so a reply to that card counts
+ * as asking for the same kind of change. Null when the last message carried no draft.
+ */
+export function selectToolNameOfDraftJustShown(messages: ReplayableChatMessage[]): string | null {
+  const lastMessage = messages.at(-1);
+  return lastMessage?.proposedAction ? toToolCall(lastMessage.proposedAction).name : null;
 }
 
 /**
@@ -866,6 +1051,27 @@ export function buildChatActionTools(
       },
     });
   }
+  tools.push({
+    type: "function",
+    function: {
+      name: EXPLAIN_UNSUPPORTED_REQUEST_TOOL_NAME,
+      description:
+        "Use when the user asks you to change something in Bloom that no other tool does: open " +
+        "or delete an account, add, import, edit, or delete a transaction, make a transfer, add " +
+        "a category, change a subscription, or change a setting. Never use another tool for these.",
+      parameters: {
+        type: "object",
+        properties: {
+          request: {
+            type: "string",
+            enum: Object.keys(UNSUPPORTED_REQUEST_REPLIES),
+            description: "What the user asked to change.",
+          },
+        },
+        required: ["request"],
+      },
+    },
+  });
   const deletionCandidates = listDeletionCandidates(referenceData);
   if (deletionCandidates.length > 0) {
     tools.push({
@@ -905,15 +1111,16 @@ export function buildChatActionInstructions(
   today: Date
 ): string {
   const lines = [
-    `ACTIONS (today is ${toDateOnly(today)}). When the user clearly asks you to set or change a ` +
-      `budget, create or change a savings goal, make a categorization rule, or delete a budget, ` +
-      `savings goal, or categorization rule, call the matching tool instead of explaining how to ` +
-      `do it. A tool call only shows the user a draft to confirm: nothing is saved or deleted ` +
-      `until they confirm it, so never say that something was saved or deleted. You cannot delete ` +
-      `or change transactions or accounts: when asked to, say so plainly and tell the user to do ` +
-      `it from that page in Bloom, and never offer to do it yourself. Use only the ` +
+    `ACTIONS (today is ${toDateOnly(today)}). Your tools are the only way you can change ` +
+      `anything in Bloom. When the user clearly asks to set or change a budget, create or change ` +
+      `a savings goal, create or change a categorization rule, or delete one of those, call the ` +
+      `matching tool instead of explaining how to do it. A tool call only shows the user a ` +
+      `draft card: nothing is saved or deleted until they confirm the card, so never say that ` +
+      `something was saved or deleted, and never write a draft out yourself. Use only the ` +
       `amounts, dates, categories, and accounts the user gave, and ask for a missing one instead ` +
-      `of guessing. Name a savings goal after what it is for. Draft one thing per reply. For ` +
+      `of guessing. Name a savings goal after what it is for. Draft one thing per reply.`,
+    `For any other change to their data — an account, a transaction, a transfer, a category, a ` +
+      `subscription, or a setting — call explain_unsupported_request and no other tool. For ` +
       `every other question, answer in text and call no tool.`,
   ];
   if (referenceData.accounts.length === 0) {

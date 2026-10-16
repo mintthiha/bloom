@@ -120,7 +120,12 @@ describe("startChatReply — the request sent to the model", () => {
     const [chatRequest] = ollamaClientMock.startChatEventStream.mock.calls[0]!;
     expect(
       chatRequest.tools.map((tool: { function: { name: string } }) => tool.function.name)
-    ).toEqual(["propose_budget", "propose_categorization_rule", "propose_savings_goal"]);
+    ).toEqual([
+      "propose_budget",
+      "propose_categorization_rule",
+      "propose_savings_goal",
+      "explain_unsupported_request",
+    ]);
     expect(chatRequest.tools[0].function.parameters.properties.category.enum).toEqual([
       "Dining",
       "Groceries",
@@ -498,5 +503,35 @@ describe("startChatReply — a reply that calls a tool", () => {
         proposedAction: GROCERIES_BUDGET_DRAFT,
       })
     );
+  });
+});
+
+describe("startChatReply — commands the chat cannot carry out", () => {
+  it("answers with the fixed reply and stores it, without asking the model", async () => {
+    const replyEvents = await startChatReply("u-1", "Prompt", "Transfer $200 to Rainy day");
+
+    const events = await collectEvents(replyEvents);
+
+    expect(ollamaClientMock.startChatEventStream).not.toHaveBeenCalled();
+    expect(events).toEqual([
+      { type: "text", text: expect.stringContaining("I can't record a transfer") },
+    ]);
+    expect(chatHistoryMock.saveChatExchange).toHaveBeenCalledWith(
+      "u-1",
+      expect.objectContaining({
+        question: "Transfer $200 to Rainy day",
+        reply: expect.stringContaining("I can't record a transfer"),
+      })
+    );
+  });
+
+  it("still asks the model about a command that mentions a budget, goal, or rule", async () => {
+    ollamaClientMock.startChatEventStream.mockResolvedValue(streamOf([textEvent("Sure.")]));
+
+    await collectEvents(
+      await startChatReply("u-1", "Prompt", "Move my savings goal to my Rainy day account")
+    );
+
+    expect(ollamaClientMock.startChatEventStream).toHaveBeenCalledTimes(1);
   });
 });
