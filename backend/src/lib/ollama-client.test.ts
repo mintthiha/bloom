@@ -324,7 +324,7 @@ describe("startChatStream", () => {
     expect(requestInit.signal?.aborted).toBe(true);
   });
 
-  it("aborts when Ollama has not started responding within the connect timeout", async () => {
+  it("waits out a slow uncached prompt, then aborts at the connect timeout", async () => {
     vi.useFakeTimers();
     let requestSignal: AbortSignal | undefined;
     fetchMock.mockImplementation(
@@ -337,7 +337,10 @@ describe("startChatStream", () => {
 
     const stream = startChatStream({ messages: CONVERSATION, temperature: 0.2 });
     const expectation = expect(stream).rejects.toMatchObject({ statusCode: 503 });
-    await vi.advanceTimersByTimeAsync(59_999);
+    // A full context window read from scratch takes over two minutes on the CPU-only server.
+    await vi.advanceTimersByTimeAsync(140_000);
+    expect(requestSignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(39_999);
     expect(requestSignal?.aborted).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
 

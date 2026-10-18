@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import prisma from "../lib/prisma";
 import type { ProposedChatAction, ProposedChatActionStatus } from "./chatActionProposals";
+import type { SpendingLookupArguments } from "./chatSpendingLookup";
 
 export type ChatMessageRole = "user" | "assistant";
 
@@ -11,6 +12,8 @@ export type StoredChatMessage = {
   /** The write this reply drafted for the user to confirm, or null on an ordinary message. */
   proposedAction: ProposedChatAction | null;
   proposedActionStatus: ProposedChatActionStatus | null;
+  /** The spending lookup this reply answered from, or null when it did not look anything up. */
+  spendingLookup: SpendingLookupArguments | null;
   createdAt: Date;
 };
 
@@ -22,6 +25,8 @@ export type ChatExchange = {
   reply: string;
   /** The draft the reply carries, stored as pending until the user confirms or dismisses it. */
   proposedAction?: ProposedChatAction;
+  /** The spending lookup the reply answered from, kept so it is replayed as that call. */
+  spendingLookup?: SpendingLookupArguments;
 };
 
 /**
@@ -33,9 +38,11 @@ export async function listRecentChatMessages(
   limit: number
 ): Promise<StoredChatMessage[]> {
   return prisma.$queryRaw<StoredChatMessage[]>`
-    SELECT "id", "role", "content", "proposedAction", "proposedActionStatus", "createdAt"
+    SELECT "id", "role", "content", "proposedAction", "proposedActionStatus", "spendingLookup",
+        "createdAt"
     FROM (
-      SELECT "id", "role", "content", "proposedAction", "proposedActionStatus", "createdAt"
+      SELECT "id", "role", "content", "proposedAction", "proposedActionStatus", "spendingLookup",
+        "createdAt"
       FROM "ChatMessage"
       WHERE "userId" = ${userId}
       ORDER BY "createdAt" DESC
@@ -59,14 +66,18 @@ export async function saveChatExchange(userId: string, exchange: ChatExchange): 
   const proposedActionStatus: ProposedChatActionStatus | null = exchange.proposedAction
     ? "PENDING"
     : null;
+  const spendingLookupJson = exchange.spendingLookup
+    ? JSON.stringify(exchange.spendingLookup)
+    : null;
   await prisma.$executeRaw`
     INSERT INTO "ChatMessage"
-      ("id", "userId", "role", "content", "createdAt", "proposedAction", "proposedActionStatus")
+      ("id", "userId", "role", "content", "createdAt", "proposedAction", "proposedActionStatus",
+        "spendingLookup")
     VALUES
       (${randomUUID()}, ${userId}, 'user', ${exchange.question}, ${exchange.askedAt}::timestamptz,
-        NULL, NULL),
+        NULL, NULL, NULL),
       (${replyMessageId}, ${userId}, 'assistant', ${exchange.reply}, ${repliedAt}::timestamptz,
-        ${proposedActionJson}::jsonb, ${proposedActionStatus})
+        ${proposedActionJson}::jsonb, ${proposedActionStatus}, ${spendingLookupJson}::jsonb)
   `;
   return replyMessageId;
 }

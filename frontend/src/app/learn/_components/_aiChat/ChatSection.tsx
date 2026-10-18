@@ -32,13 +32,14 @@ type ChatSectionProps = {
 
 /**
  * Starter prompts shown in the empty chat: the personalized questions exercise the user's own
- * data, and the budget one shows that Bloom AI can draft changes as well as answer.
+ * data, the spending one shows that Bloom AI looks figures up from their transactions, and the
+ * budget one shows that it can draft changes as well as answer.
  */
 const SUGGESTED_PROMPTS = [
   "How am I doing on my budget this month?",
   "Set a $400 monthly budget for groceries",
   "How much TFSA room do I have left?",
-  "What's my net worth right now?",
+  "How much did I spend on dining last month?",
   "What's the difference between a TFSA and an RRSP?",
 ];
 

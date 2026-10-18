@@ -1238,6 +1238,7 @@ describe("answerUnsupportedCommand", () => {
     ["a command naming one of the user's goals", "Move Japan trip to my Everyday account"],
     ["a command naming one of the user's rules", "Delete the Tim Hortons one from my account"],
     ["a command about nothing it recognizes", "Rename my car fund to road trip"],
+    ["a spending question worded as a command", "Add up my Costco purchases this year"],
   ])("leaves %s to the model", (_description, question) => {
     expect(answerUnsupportedCommand(question, GOAL_DATA)).toBeNull();
   });

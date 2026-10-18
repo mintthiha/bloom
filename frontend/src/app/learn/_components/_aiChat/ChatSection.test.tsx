@@ -77,9 +77,11 @@ describe("ChatSection", () => {
     const { sendMessage } = renderChat();
 
     expect(screen.getByText(/Ask me anything about your money/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "What's my net worth right now?" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "How much did I spend on dining last month?" })
+    );
 
-    expect(sendMessage).toHaveBeenCalledWith("What's my net worth right now?");
+    expect(sendMessage).toHaveBeenCalledWith("How much did I spend on dining last month?");
   });
 
   it("renders user text, assistant markdown, and a thinking indicator for an empty reply", () => {

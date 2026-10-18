@@ -49,9 +49,11 @@ const DEFAULT_KEEP_ALIVE = "30m";
 // Above Ollama's 2048-token default so a long system prompt isn't truncated. Every feature shares
 // this one size because Ollama reloads the model whenever a request asks for a different one.
 const CONTEXT_WINDOW_TOKENS = 4096;
-// Abort if Ollama hasn't started responding within this window — long enough to cover a cold
-// model load, short enough that a truly down service fails fast instead of hanging the request.
-const CONNECT_TIMEOUT_MS = 60_000;
+// Abort if Ollama hasn't started responding within this window. The CPU-only server reads an
+// uncached prompt at about 30 tokens a second, so a chat prompt that fills the context window takes
+// over two minutes before the first token — which happens whenever the cached prompt was replaced
+// by another request or the system prompt changed. An unreachable server still fails at once.
+const CONNECT_TIMEOUT_MS = 180_000;
 // Abort mid-stream if no tokens arrive for this long, so a stalled generation can't hang forever.
 const STREAM_IDLE_TIMEOUT_MS = 30_000;
 // A non-streamed reply only arrives once generation has finished, so it gets a longer budget.

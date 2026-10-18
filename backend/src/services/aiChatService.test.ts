@@ -4,15 +4,19 @@ import { AppError } from "../middleware/errorHandler";
 import { startChatReply, type ChatReplyEvent } from "./aiChatService";
 import type { ChatActionReferenceData } from "./chatActionProposals";
 
-const { ollamaClientMock, chatHistoryMock, chatActionMock } = vi.hoisted(() => ({
-  ollamaClientMock: { startChatEventStream: vi.fn() },
-  chatHistoryMock: { listRecentChatMessages: vi.fn(), saveChatExchange: vi.fn() },
-  chatActionMock: { loadChatActionReferenceData: vi.fn() },
-}));
+const { ollamaClientMock, chatHistoryMock, chatActionMock, spendingLookupMock } = vi.hoisted(
+  () => ({
+    ollamaClientMock: { startChatEventStream: vi.fn() },
+    chatHistoryMock: { listRecentChatMessages: vi.fn(), saveChatExchange: vi.fn() },
+    chatActionMock: { loadChatActionReferenceData: vi.fn() },
+    spendingLookupMock: { lookUpSpending: vi.fn() },
+  })
+);
 
 vi.mock("../lib/ollama-client", () => ollamaClientMock);
 vi.mock("./chatHistoryService", () => chatHistoryMock);
 vi.mock("./chatActionService", () => chatActionMock);
+vi.mock("./spendingLookupService", () => spendingLookupMock);
 
 const REFERENCE_DATA: ChatActionReferenceData = {
   expenseCategoryNames: ["Dining", "Groceries"],
@@ -64,6 +68,7 @@ beforeEach(() => {
   chatHistoryMock.listRecentChatMessages.mockReset();
   chatHistoryMock.saveChatExchange.mockReset();
   chatActionMock.loadChatActionReferenceData.mockReset();
+  spendingLookupMock.lookUpSpending.mockReset();
   chatHistoryMock.listRecentChatMessages.mockResolvedValue([]);
   chatHistoryMock.saveChatExchange.mockResolvedValue("reply-message-1");
   chatActionMock.loadChatActionReferenceData.mockResolvedValue(REFERENCE_DATA);
@@ -125,6 +130,7 @@ describe("startChatReply — the request sent to the model", () => {
       "propose_categorization_rule",
       "propose_savings_goal",
       "explain_unsupported_request",
+      "look_up_spending",
     ]);
     expect(chatRequest.tools[0].function.parameters.properties.category.enum).toEqual([
       "Dining",
@@ -533,5 +539,148 @@ describe("startChatReply — commands the chat cannot carry out", () => {
     );
 
     expect(ollamaClientMock.startChatEventStream).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("startChatReply — spending questions", () => {
+  it("tells the model to look spending up rather than estimate it", async () => {
+    ollamaClientMock.startChatEventStream.mockResolvedValue(streamOf([]));
+
+    await startChatReply("u-1", "Prompt", "How much did I spend?");
+
+    const [chatRequest] = ollamaClientMock.startChatEventStream.mock.calls[0]!;
+    expect(chatRequest.messages[0].content).toContain(
+      "call look_up_spending instead of estimating"
+    );
+  });
+
+  it("answers from the lookup, with no card, and stores that answer", async () => {
+    ollamaClientMock.startChatEventStream.mockResolvedValue(
+      streamOf([toolCallEvent("look_up_spending", { merchant: "Tim Hortons", month: "2026-09" })])
+    );
+    spendingLookupMock.lookUpSpending.mockResolvedValue({
+      total: 19,
+      purchaseCount: 2,
+      largestPurchase: { amount: 14.5, effectiveAt: new Date("2026-09-12"), label: "Tim Hortons" },
+    });
+
+    const events = await collectEvents(
+      await startChatReply("u-1", "Prompt", "How much did I spend at Tim Hortons in September?")
+    );
+
+    const answer =
+      "You spent $19.00 at Tim Hortons in September 2026, across 2 purchases. The largest was " +
+      "$14.50 on Sep 12.";
+    expect(events).toEqual([{ type: "text", text: answer }]);
+    expect(spendingLookupMock.lookUpSpending).toHaveBeenCalledWith("u-1", {
+      merchant: "Tim Hortons",
+      category: null,
+      start: new Date("2026-09-01T00:00:00.000Z"),
+      end: new Date("2026-10-01T00:00:00.000Z"),
+      periodLabel: "in September 2026",
+    });
+    expect(chatHistoryMock.saveChatExchange).toHaveBeenCalledWith(
+      "u-1",
+      expect.objectContaining({
+        reply: answer,
+        proposedAction: undefined,
+        spendingLookup: { merchant: "Tim Hortons", month: "2026-09" },
+      })
+    );
+  });
+
+  it("stores no lookup on a reply that never looked anything up", async () => {
+    ollamaClientMock.startChatEventStream.mockResolvedValue(streamOf([textEvent("Hello!")]));
+
+    await collectEvents(await startChatReply("u-1", "Prompt", "Hi"));
+
+    expect(chatHistoryMock.saveChatExchange).toHaveBeenCalledWith(
+      "u-1",
+      expect.objectContaining({ reply: "Hello!", spendingLookup: undefined })
+    );
+  });
+
+  it("replays an earlier spending answer as the lookup call it came from", async () => {
+    const earlierAnswer = "You spent $19.00 at Tim Hortons in September 2026, across 2 purchases.";
+    chatHistoryMock.listRecentChatMessages.mockResolvedValue([
+      {
+        id: "m-1",
+        role: "user",
+        content: "How much at Tim Hortons in September?",
+        proposedAction: null,
+        proposedActionStatus: null,
+        spendingLookup: null,
+        createdAt: new Date(),
+      },
+      {
+        id: "m-2",
+        role: "assistant",
+        content: earlierAnswer,
+        proposedAction: null,
+        proposedActionStatus: null,
+        spendingLookup: { merchant: "Tim Hortons", month: "2026-09" },
+        createdAt: new Date(),
+      },
+    ]);
+    ollamaClientMock.startChatEventStream.mockResolvedValue(streamOf([]));
+
+    await startChatReply("u-1", "Prompt", "And on dining this month?");
+
+    const [chatRequest] = ollamaClientMock.startChatEventStream.mock.calls[0]!;
+    expect(chatRequest.messages.slice(1)).toEqual([
+      { role: "user", content: "How much at Tim Hortons in September?" },
+      {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          {
+            function: {
+              name: "look_up_spending",
+              arguments: { merchant: "Tim Hortons", month: "2026-09" },
+            },
+          },
+        ],
+      },
+      { role: "tool", content: earlierAnswer },
+      { role: "assistant", content: earlierAnswer },
+      { role: "user", content: "And on dining this month?" },
+    ]);
+  });
+
+  it("asks instead of looking anything up when the arguments don't hold up", async () => {
+    ollamaClientMock.startChatEventStream.mockResolvedValue(
+      streamOf([toolCallEvent("look_up_spending", { merchant: "Starbucks" })])
+    );
+
+    const events = await collectEvents(
+      await startChatReply("u-1", "Prompt", "How much do I spend on coffee?")
+    );
+
+    expect(spendingLookupMock.lookUpSpending).not.toHaveBeenCalled();
+    expect(events).toEqual([
+      {
+        type: "text",
+        text: "Which store do you mean? Tell me its name as it shows on your transactions.",
+      },
+    ]);
+    expect(chatHistoryMock.saveChatExchange).toHaveBeenCalledWith(
+      "u-1",
+      expect.objectContaining({ spendingLookup: { merchant: "Starbucks" } })
+    );
+  });
+
+  it("says the lookup failed, rather than guessing, when the database errors", async () => {
+    ollamaClientMock.startChatEventStream.mockResolvedValue(
+      streamOf([toolCallEvent("look_up_spending", {})])
+    );
+    spendingLookupMock.lookUpSpending.mockRejectedValue(new Error("connection lost"));
+
+    const events = await collectEvents(
+      await startChatReply("u-1", "Prompt", "How much did I spend this month?")
+    );
+
+    expect(events).toEqual([
+      { type: "text", text: "I couldn't look up your spending just now. Please try again." },
+    ]);
   });
 });

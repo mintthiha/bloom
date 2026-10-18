@@ -245,7 +245,7 @@ function describeAccount(account: ChatActionReferenceData["accounts"][number]): 
  * Reads a text argument with the same cleanup the HTTP routes apply to typed input. Returns null
  * when the model left it out, sent something that is not text, or sent more than `maxLength`.
  */
-function readTextArgument(value: unknown, maxLength: number): string | null {
+export function readTextArgument(value: unknown, maxLength: number): string | null {
   try {
     return requireString(value, "argument", { max: maxLength });
   } catch {
@@ -282,7 +282,7 @@ function readAmountArgument(value: unknown, statedAmounts: number[]): number | n
 }
 
 /** Whether a text mentions a phrase as whole words, ignoring case and spacing. */
-function mentionsPhrase(text: string, phrase: string): boolean {
+export function mentionsPhrase(text: string, phrase: string): boolean {
   const comparablePhrase = toComparableText(phrase);
   if (!comparablePhrase) return false;
   const escapedPhrase = comparablePhrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -290,7 +290,7 @@ function mentionsPhrase(text: string, phrase: string): boolean {
 }
 
 /** Finds the stored name that matches what the model typed, ignoring case and spacing. */
-function findMatchingName(names: string[], requestedName: string): string | null {
+export function findMatchingName(names: string[], requestedName: string): string | null {
   const comparableRequestedName = toComparableText(requestedName);
   return names.find((name) => toComparableText(name) === comparableRequestedName) ?? null;
 }
@@ -798,23 +798,24 @@ function detectUnsupportedRequestKind(question: string): UnsupportedRequestKind 
 const COMMAND_PATTERN =
   /^\s*(please\s+)?((can|could|would|will) you\s+)?(please\s+)?(create|open|add|make|delete|remove|close|transfer|move|record|log|import|cancel|change|edit|update|rename|set up|enter)\b/i;
 
-// Words that put a request within what the drafts cover, so the model gets to handle it.
-const DRAFTABLE_SUBJECT_PATTERN =
-  /\b(budgets?|goals?|rules?|always|limit|save|saving|savings|auto-?categori[sz]\w*|categori[sz]e\w*)\b/i;
+// Words that put a request within what the chat's tools cover — a draft, or a spending lookup
+// ("add up my Costco purchases") — so the model gets to handle it.
+const HANDLED_SUBJECT_PATTERN =
+  /\b(budgets?|goals?|rules?|always|limit|save|saving|savings|auto-?categori[sz]\w*|categori[sz]e\w*|spend|spent|spending|add up|total|how much)\b/i;
 
 /**
  * Answers a command the chat can't carry out — "open a TFSA for me", "transfer $200 to savings" —
  * with its fixed reply, before the model is asked at all. Left to the model, these sometimes came
  * back as a made-up plan ("I'll draft the transfer for you") without any tool being called, so
- * nothing could check them. Anything that mentions a budget, goal, or rule, or one of the user's
- * own budgets, goals, or rules by name, still goes to the model. Returns null for those, and for
- * anything that isn't a command.
+ * nothing could check them. Anything that mentions a budget, goal, rule, or spending, or one of
+ * the user's own budgets, goals, or rules by name, still goes to the model. Returns null for those,
+ * and for anything that isn't a command.
  */
 export function answerUnsupportedCommand(
   question: string,
   referenceData: ChatActionReferenceData
 ): string | null {
-  if (!COMMAND_PATTERN.test(question) || DRAFTABLE_SUBJECT_PATTERN.test(question)) return null;
+  if (!COMMAND_PATTERN.test(question) || HANDLED_SUBJECT_PATTERN.test(question)) return null;
   const draftableNames = [
     ...referenceData.budgets.map((budget) => budget.category),
     ...referenceData.savingsGoals.map((goal) => goal.name),

@@ -344,6 +344,7 @@ model ChatMessage {
   content              String
   proposedAction       Json?
   proposedActionStatus String?
+  spendingLookup       Json?
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([userId, createdAt])

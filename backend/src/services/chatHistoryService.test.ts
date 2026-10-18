@@ -53,6 +53,16 @@ describe("chatHistoryService", () => {
       expect(sql.trimEnd()).toMatch(/ORDER BY "createdAt" ASC$/);
     });
 
+    it("reads each message's spending lookup", async () => {
+      const { listRecentChatMessages } = await import("./chatHistoryService");
+      prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+      await listRecentChatMessages("u-1", 20);
+
+      const sql = String(prismaMock.$queryRaw.mock.calls[0]![0]);
+      expect(sql.match(/"spendingLookup"/g)).toHaveLength(2);
+    });
+
     it("reads each message's draft and where that draft stands", async () => {
       const { listRecentChatMessages } = await import("./chatHistoryService");
       prismaMock.$queryRaw.mockResolvedValueOnce([]);
@@ -127,7 +137,26 @@ describe("chatHistoryService", () => {
       await saveChatExchange("u-1", { question: "Hi", askedAt: new Date(), reply: "Hello" });
 
       const parameters = prismaMock.$executeRaw.mock.calls[0]!.slice(1);
-      expect(parameters.slice(8)).toEqual([null, null]);
+      expect(parameters.slice(8)).toEqual([null, null, null]);
+    });
+
+    it("stores the spending lookup a reply answered from, on the reply only", async () => {
+      const { saveChatExchange } = await import("./chatHistoryService");
+
+      await saveChatExchange("u-1", {
+        question: "How much at Costco this year?",
+        askedAt: new Date(),
+        reply: "You spent $278.50 at Costco so far in 2026.",
+        spendingLookup: { merchant: "Costco", period: "this year" },
+      });
+
+      const [sqlParts, ...parameters] = prismaMock.$executeRaw.mock.calls[0]!;
+      expect(String(sqlParts)).toMatch(/NULL, NULL, NULL\),\s+\(/);
+      expect(parameters[9]).toBeNull();
+      expect(JSON.parse(parameters[10] as string)).toEqual({
+        merchant: "Costco",
+        period: "this year",
+      });
     });
 
     it("stores a reply's draft as pending, on the reply only", async () => {
