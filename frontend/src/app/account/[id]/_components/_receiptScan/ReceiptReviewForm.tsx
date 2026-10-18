@@ -6,7 +6,7 @@ import { api, Account } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { inputStyle } from "@/lib/styles/input";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatLocalDate, toReceiptEffectiveAt } from "./receipt-date";
+import { formatLocalDate, toTransactionEffectiveAt } from "../transaction-date";
 import {
   calculateUnexplainedDifference,
   computeReceiptSplits,
@@ -90,14 +90,14 @@ export function ReceiptReviewForm({
       : 0;
   /** True when the purchase would exceed the current balance on a non-credit account. */
   const wouldOverdraw = account.accountType !== "CREDIT" && isTotalValid && total > account.balance;
-  const isDateValid = toReceiptEffectiveAt(receiptDate, new Date()) !== null;
+  const isDateValid = toTransactionEffectiveAt(receiptDate, new Date()) !== null;
   const canCreate =
     isTotalValid && isDateValid && !wouldOverdraw && !isCreating && uncategorizedItemCount === 0;
 
   /** Saves the reviewed receipt as one transaction, split by category when it spans several. */
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
-    const effectiveAt = toReceiptEffectiveAt(receiptDate, new Date());
+    const effectiveAt = toTransactionEffectiveAt(receiptDate, new Date());
     if (!canCreate || !effectiveAt) return;
     setIsCreating(true);
     try {

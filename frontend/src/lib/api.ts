@@ -45,6 +45,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+/**
+ * A transaction read from a quick-add note. Anything the note didn't make clear is null, so the
+ * form leaves it for the user; the date is YYYY-MM-DD and defaults to today.
+ */
+export type QuickAddDraft = {
+  direction: "EXPENSE" | "INCOME";
+  amount: number | null;
+  merchant: string | null;
+  category: string | null;
+  date: string;
+};
+
 export type AccountType = "CHEQUING" | "SAVINGS" | "TFSA" | "RRSP" | "FHSA" | "CREDIT";
 
 export type Account = {
@@ -771,7 +783,7 @@ export const api = {
   deposit: (
     id: string,
     amount: number,
-    input?: { category?: string; merchant?: string; description?: string }
+    input?: { category?: string; merchant?: string; description?: string; effectiveAt?: string }
   ) =>
     request<Account>(`/accounts/${id}/deposit`, {
       method: "POST",
@@ -780,7 +792,7 @@ export const api = {
   withdraw: (
     id: string,
     amount: number,
-    input?: { category?: string; merchant?: string; description?: string }
+    input?: { category?: string; merchant?: string; description?: string; effectiveAt?: string }
   ) =>
     request<Account>(`/accounts/${id}/withdraw`, {
       method: "POST",
@@ -951,6 +963,12 @@ export const api = {
     request<void>(`/categorization-rules/${id}`, { method: "DELETE" }),
   restoreCategorizationRule: (id: string) =>
     request<AutoCategorizationRule>(`/categorization-rules/${id}/restore`, { method: "POST" }),
+  /** Reads a one-line note such as "Coffee 4.50 at Tim's yesterday" into a draft for the form. */
+  draftQuickAddTransaction: (note: string, today: string) =>
+    request<{ draft: QuickAddDraft }>("/quick-add/draft", {
+      method: "POST",
+      body: JSON.stringify({ note, today }),
+    }),
   suggestCategories: (merchants: string[]) =>
     request<{ suggestions: { merchant: string; category: string }[] }>("/auto-categorize/suggest", {
       method: "POST",

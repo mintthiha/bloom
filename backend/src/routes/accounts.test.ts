@@ -9,6 +9,7 @@ const { serviceMock } = vi.hoisted(() => ({
     createAccount: vi.fn(),
     getAccount: vi.fn(),
     deposit: vi.fn(),
+    withdraw: vi.fn(),
     getTransactions: vi.fn(),
     updateTransaction: vi.fn(),
     deleteTransaction: vi.fn(),
@@ -29,6 +30,7 @@ describe("account routes", () => {
     serviceMock.createAccount.mockReset();
     serviceMock.getAccount.mockReset();
     serviceMock.deposit.mockReset();
+    serviceMock.withdraw.mockReset();
     serviceMock.getTransactions.mockReset();
     serviceMock.updateTransaction.mockReset();
     serviceMock.deleteTransaction.mockReset();
@@ -259,6 +261,48 @@ describe("account routes", () => {
       "Metro"
     );
   });
+
+  it.each(["deposit", "withdraw"] as const)(
+    "passes the date a %s happened on to the service",
+    async (operation) => {
+      serviceMock[operation].mockResolvedValue([{ id: "account-1" }]);
+
+      const response = await request(app)
+        .post(`/api/accounts/account-1/${operation}`)
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ amount: 4.5, merchant: "Tim Hortons", effectiveAt: "2026-10-16T16:00:00.000Z" });
+
+      expect(response.status).toBe(200);
+      expect(serviceMock[operation]).toHaveBeenCalledWith(
+        "user-1",
+        "account-1",
+        4.5,
+        undefined,
+        undefined,
+        new Date("2026-10-16T16:00:00.000Z"),
+        "Tim Hortons"
+      );
+    }
+  );
+
+  it.each([
+    ["deposit", 20260916, "effectiveAt must be an ISO date string"],
+    ["withdraw", "yesterday", "effectiveAt must be a valid ISO date"],
+  ] as const)(
+    "rejects a %s dated %j before hitting the service",
+    async (operation, effectiveAt, error) => {
+      const response = await request(app)
+        .post(`/api/accounts/account-1/${operation}`)
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ amount: 4.5, effectiveAt });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error });
+      expect(serviceMock[operation]).not.toHaveBeenCalled();
+    }
+  );
 
   it("rejects invalid transaction edit payloads before hitting the service", async () => {
     const response = await request(app)

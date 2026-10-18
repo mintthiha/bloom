@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NewTransactionForm } from "./NewTransactionForm";
+import { formatLocalDate } from "../transaction-date";
 import type { Account, AutoCategorizationRule, Category } from "@/lib/api";
 
 const { apiMock } = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const { apiMock } = vi.hoisted(() => ({
     deposit: vi.fn(),
     withdraw: vi.fn(),
     transfer: vi.fn(),
+    draftQuickAddTransaction: vi.fn(),
   },
 }));
 
@@ -237,5 +239,113 @@ describe("NewTransactionForm", () => {
 
     const categorySelect = screen.getByRole("combobox");
     await waitFor(() => expect(categorySelect).toHaveValue("Groceries"));
+  });
+});
+
+describe("NewTransactionForm — the transaction date", () => {
+  /** The local calendar day a number of days from today, as a date input holds it. */
+  function localDayFromToday(dayOffset: number): string {
+    const day = new Date();
+    day.setDate(day.getDate() + dayOffset);
+    return formatLocalDate(day);
+  }
+
+  it("starts on today and leaves today's transactions for the server to stamp", async () => {
+    apiMock.withdraw.mockResolvedValue(makeAccount());
+    renderForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+    expect(screen.getByLabelText("Transaction date")).toHaveValue(localDayFromToday(0));
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "20" } });
+    fireEvent.submit(screen.getByPlaceholderText("0.00").closest("form")!);
+
+    await waitFor(() => expect(apiMock.withdraw).toHaveBeenCalled());
+    expect(apiMock.withdraw.mock.calls[0]![2].effectiveAt).toBeUndefined();
+  });
+
+  it("records a transaction on an earlier day at local noon of that day", async () => {
+    apiMock.withdraw.mockResolvedValue(makeAccount());
+    renderForm();
+    const yesterday = localDayFromToday(-1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText("Transaction date"), { target: { value: yesterday } });
+    fireEvent.submit(screen.getByPlaceholderText("0.00").closest("form")!);
+
+    const [year, month, day] = yesterday.split("-").map(Number);
+    await waitFor(() =>
+      expect(apiMock.withdraw).toHaveBeenCalledWith("a-1", 20, {
+        category: undefined,
+        merchant: undefined,
+        effectiveAt: new Date(year!, month! - 1, day!, 12).toISOString(),
+      })
+    );
+  });
+
+  it("refuses a date in the future", () => {
+    renderForm();
+
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText("Transaction date"), {
+      target: { value: localDayFromToday(1) },
+    });
+    fireEvent.submit(screen.getByPlaceholderText("0.00").closest("form")!);
+
+    expect(toast.error).toHaveBeenCalledWith("Enter a date that isn't in the future");
+    expect(apiMock.deposit).not.toHaveBeenCalled();
+  });
+
+  it("has no date for a transfer", () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    expect(screen.queryByLabelText("Transaction date")).not.toBeInTheDocument();
+  });
+});
+
+describe("NewTransactionForm — quick add", () => {
+  it("fills the form from a note, ready to review and save", async () => {
+    const dayBefore = new Date();
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    const yesterday = formatLocalDate(dayBefore);
+    apiMock.draftQuickAddTransaction.mockResolvedValue({
+      draft: {
+        direction: "EXPENSE",
+        amount: 4.5,
+        merchant: "Tim Hortons",
+        category: "Dining",
+        date: yesterday,
+      },
+    });
+    apiMock.withdraw.mockResolvedValue(makeAccount());
+    renderForm();
+    // The user's categories have loaded, as they have long before a note is read.
+    await screen.findByRole("option", { name: "Salary" });
+
+    fireEvent.change(screen.getByLabelText("Describe a transaction"), {
+      target: { value: "Coffee 4.50 at Tim's yesterday" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Fill in" }));
+
+    await waitFor(() => expect(screen.getByPlaceholderText("0.00")).toHaveValue(4.5));
+    expect(screen.getByPlaceholderText("Merchant (optional)")).toHaveValue("Tim Hortons");
+    expect(screen.getByRole("combobox")).toHaveValue("Dining");
+    expect(screen.getByLabelText("Transaction date")).toHaveValue(yesterday);
+    expect(apiMock.withdraw).not.toHaveBeenCalled();
+
+    fireEvent.submit(screen.getByPlaceholderText("0.00").closest("form")!);
+    await waitFor(() =>
+      expect(apiMock.withdraw).toHaveBeenCalledWith(
+        "a-1",
+        4.5,
+        expect.objectContaining({ category: "Dining", merchant: "Tim Hortons" })
+      )
+    );
+  });
+
+  it("is hidden while importing", () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+    expect(screen.queryByLabelText("Describe a transaction")).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { findKnownMerchant } from "./known-merchants";
-import { formatLocalDate, toLocalCalendarDate } from "./receipt-date";
+import { formatLocalDate, toLocalCalendarDate } from "../transaction-date";
 
 /** One purchased line on a receipt, as read from the scanned text. */
 export type ReceiptLineItem = { name: string; amount: number };

@@ -1,7 +1,7 @@
 import { Request } from "express";
 import { rateLimit, RateLimitRequestHandler } from "express-rate-limit";
 
-export type AiFeature = "chat" | "categorization" | "receipt";
+export type AiFeature = "chat" | "categorization" | "receipt" | "quickAdd";
 
 /**
  * How many requests one user may make to each AI feature per window. Each feature has its own
@@ -12,6 +12,7 @@ export const AI_FEATURE_RATE_LIMITS: Record<AiFeature, { maxRequests: number; wi
     chat: { maxRequests: 30, windowMs: 60 * 60 * 1000 },
     categorization: { maxRequests: 30, windowMs: 15 * 60 * 1000 },
     receipt: { maxRequests: 20, windowMs: 60 * 60 * 1000 },
+    quickAdd: { maxRequests: 30, windowMs: 15 * 60 * 1000 },
   };
 
 /** Reads the signed-in user's id, which the Next.js server attaches to every backend request. */

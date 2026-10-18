@@ -42,6 +42,17 @@ function parseTransactionSplits(rawSplits: unknown): accountService.TransactionS
   });
 }
 
+/** Reads an optional ISO date for when a transaction happened; undefined leaves it as now. */
+function parseOptionalEffectiveAt(value: unknown): Date | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new AppError(400, "effectiveAt must be an ISO date string");
+  const effectiveAt = new Date(value);
+  if (Number.isNaN(effectiveAt.getTime())) {
+    throw new AppError(400, "effectiveAt must be a valid ISO date");
+  }
+  return effectiveAt;
+}
+
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.json(await accountService.listAccounts(extractUserId(req)));
@@ -163,13 +174,14 @@ router.post("/:id/deposit", async (req: Request, res: Response, next: NextFuncti
     const category = optionalString(body.category, "category", { max: 50 });
     const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
+    const effectiveAt = parseOptionalEffectiveAt(body.effectiveAt);
     const [account] = await accountService.deposit(
       extractUserId(req),
       extractParamId(req),
       amount,
       category,
       description,
-      undefined,
+      effectiveAt,
       merchant
     );
     res.json(account);
@@ -185,13 +197,14 @@ router.post("/:id/withdraw", async (req: Request, res: Response, next: NextFunct
     const category = optionalString(body.category, "category", { max: 50 });
     const merchant = optionalString(body.merchant, "merchant", { max: 100 });
     const description = optionalString(body.description, "description", { max: 240 });
+    const effectiveAt = parseOptionalEffectiveAt(body.effectiveAt);
     const [account] = await accountService.withdraw(
       extractUserId(req),
       extractParamId(req),
       amount,
       category,
       description,
-      undefined,
+      effectiveAt,
       merchant
     );
     res.json(account);
@@ -342,15 +355,7 @@ router.patch(
       const category = optionalString(body.category, "category", { max: 50 });
       const merchant = optionalString(body.merchant, "merchant", { max: 100 });
       const description = optionalString(body.description, "description", { max: 240 });
-      const effectiveAtValue = body.effectiveAt;
-      if (effectiveAtValue !== undefined && typeof effectiveAtValue !== "string") {
-        throw new AppError(400, "effectiveAt must be an ISO date string");
-      }
-      const effectiveAt =
-        typeof effectiveAtValue === "string" ? new Date(effectiveAtValue) : undefined;
-      if (effectiveAt && Number.isNaN(effectiveAt.getTime())) {
-        throw new AppError(400, "effectiveAt must be a valid ISO date");
-      }
+      const effectiveAt = parseOptionalEffectiveAt(body.effectiveAt);
       const account = await accountService.updateTransaction(
         extractUserId(req),
         extractParamId(req),

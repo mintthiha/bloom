@@ -4,9 +4,19 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Camera } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { api, Account, AutoCategorizationRule, Profile, Transaction } from "@/lib/api";
+import {
+  api,
+  Account,
+  AutoCategorizationRule,
+  Profile,
+  QuickAddDraft,
+  Transaction,
+} from "@/lib/api";
 import { ImportTab } from "../_import/ImportTab";
 import { ReceiptScanPanel } from "../_receiptScan/ReceiptScanPanel";
+import { formatLocalDate, toTransactionEffectiveAt } from "../transaction-date";
+import { QuickAddBar } from "./QuickAddBar";
+import { describeQuickAddFill, toQuickAddFormValues } from "./quick-add-draft";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { inputStyle } from "@/lib/styles/input";
 import { useCategories } from "@/hooks/useCategories";
@@ -55,6 +65,7 @@ export function NewTransactionForm({
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
+  const [transactionDate, setTransactionDate] = useState(() => formatLocalDate(new Date()));
   const [categorizationRules, setCategorizationRules] = useState<AutoCategorizationRule[]>([]);
   const { incomeCategoryNames, expenseCategoryNames, refresh: refreshCategories } = useCategories();
 
@@ -133,6 +144,25 @@ export function NewTransactionForm({
     }
   }
 
+  /** Fills the form from a quick-add draft and returns the line telling the user what to check. */
+  function handleQuickAddDraft(draft: QuickAddDraft): string {
+    const values = toQuickAddFormValues(draft, {
+      accountType: account.accountType,
+      categorizationRules,
+      incomeCategoryNames,
+      expenseCategoryNames,
+    });
+    setOp(values.op);
+    setAmount(values.amount);
+    setMerchant(values.merchant);
+    setCategory(values.category);
+    setCustomCategory("");
+    setTransactionDate(values.date);
+    setToId("");
+    setDescription("");
+    return describeQuickAddFill(values);
+  }
+
   /** Submits a deposit, withdrawal, or transfer based on the selected op. */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -141,6 +171,15 @@ export function NewTransactionForm({
       toast.error("Enter a valid positive amount");
       return;
     }
+    const now = new Date();
+    const effectiveAt = toTransactionEffectiveAt(transactionDate, now);
+    if (op !== "transfer" && (!effectiveAt || effectiveAt > now)) {
+      toast.error("Enter a date that isn't in the future");
+      return;
+    }
+    // Today is left for the server to stamp, as it was before the form had a date.
+    const effectiveAtIso =
+      effectiveAt && effectiveAt !== now ? effectiveAt.toISOString() : undefined;
     setSubmitting(true);
     let desc: string | undefined;
     let transactionCategory: string | undefined;
@@ -157,11 +196,13 @@ export function NewTransactionForm({
         await api.deposit(account.id, amt, {
           category: transactionCategory,
           merchant: transactionMerchant,
+          effectiveAt: effectiveAtIso,
         });
       if (op === "withdraw")
         await api.withdraw(account.id, amt, {
           category: transactionCategory,
           merchant: transactionMerchant,
+          effectiveAt: effectiveAtIso,
         });
       if (op === "transfer") {
         if (!toId.trim()) {
@@ -205,6 +246,7 @@ export function NewTransactionForm({
       setMerchant("");
       setCategory("");
       setCustomCategory("");
+      setTransactionDate(formatLocalDate(new Date()));
       await onSuccess();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Operation failed");
@@ -283,6 +325,8 @@ export function NewTransactionForm({
           Scan receipt
         </button>
       </div>
+
+      {op !== "import" && op !== "scan" && <QuickAddBar onDraft={handleQuickAddDraft} />}
 
       <div
         style={{
@@ -527,6 +571,14 @@ export function NewTransactionForm({
                 value={merchant}
                 onChange={(e) => handleMerchantChange(e.target.value)}
                 placeholder="Merchant (optional)"
+                style={inputStyle}
+              />
+              <input
+                type="date"
+                value={transactionDate}
+                onChange={(e) => setTransactionDate(e.target.value)}
+                max={formatLocalDate(new Date())}
+                aria-label="Transaction date"
                 style={inputStyle}
               />
             </>

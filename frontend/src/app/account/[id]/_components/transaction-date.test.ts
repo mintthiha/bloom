@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLocalDate, toLocalCalendarDate, toReceiptEffectiveAt } from "./receipt-date";
+import { formatLocalDate, toLocalCalendarDate, toTransactionEffectiveAt } from "./transaction-date";
 
 describe("formatLocalDate", () => {
   it("zero-pads the month and day", () => {
@@ -32,15 +32,15 @@ describe("toLocalCalendarDate", () => {
   });
 });
 
-describe("toReceiptEffectiveAt", () => {
+describe("toTransactionEffectiveAt", () => {
   const now = new Date(2026, 9, 11, 15, 42, 7);
 
-  it("stamps a receipt from today with the current time", () => {
-    expect(toReceiptEffectiveAt("2026-10-11", now)).toBe(now);
+  it("stamps a transaction from today with the current time", () => {
+    expect(toTransactionEffectiveAt("2026-10-11", now)).toBe(now);
   });
 
-  it("stamps a receipt from another day at local noon of that day", () => {
-    const effectiveAt = toReceiptEffectiveAt("2026-10-09", now);
+  it("stamps a transaction from another day at local noon of that day", () => {
+    const effectiveAt = toTransactionEffectiveAt("2026-10-09", now);
     expect(effectiveAt).toEqual(new Date(2026, 9, 9, 12, 0, 0));
   });
 
@@ -50,6 +50,6 @@ describe("toReceiptEffectiveAt", () => {
     ["a day that does not exist", "2026-02-30"],
     ["a date with a time attached", "2026-10-09T12:00"],
   ])("returns null for %s", (_description, receiptDate) => {
-    expect(toReceiptEffectiveAt(receiptDate, now)).toBeNull();
+    expect(toTransactionEffectiveAt(receiptDate, now)).toBeNull();
   });
 });

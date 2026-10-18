@@ -19,13 +19,14 @@ export function toLocalCalendarDate(year: number, month: number, day: number): D
 }
 
 /**
- * Turns the receipt's YYYY-MM-DD date into the moment the transaction is recorded at, or null
- * when the value isn't a real date. A receipt from today is stamped with the current time so it
- * sorts after the day's earlier transactions; any other day is stamped at local noon, which keeps
- * it on the right calendar day however the timestamp is later shifted between time zones.
+ * Turns a transaction's YYYY-MM-DD date (from a receipt or the new-transaction form) into the
+ * moment it is recorded at, or null when the value isn't a real date. A transaction from today is
+ * stamped with the current time so it sorts after the day's earlier transactions; any other day is
+ * stamped at local noon, which keeps it on the right calendar day however the timestamp is later
+ * shifted between time zones.
  */
-export function toReceiptEffectiveAt(receiptDate: string, now: Date): Date | null {
-  const match = DATE_INPUT_PATTERN.exec(receiptDate);
+export function toTransactionEffectiveAt(transactionDate: string, now: Date): Date | null {
+  const match = DATE_INPUT_PATTERN.exec(transactionDate);
   if (!match) return null;
   const calendarDate = toLocalCalendarDate(Number(match[1]), Number(match[2]), Number(match[3]));
   if (!calendarDate) return null;
