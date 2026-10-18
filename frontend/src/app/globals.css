@@ -553,6 +553,27 @@ body {
   transform: scale(0.97);
 }
 
+/* "Ask Bloom" pill in a dashboard card header: quiet amber outline that fills in on hover. */
+.ask-bloom-button {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 35%, transparent);
+  color: var(--brand-accent);
+  border-radius: 999px;
+  font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ask-bloom-button:hover {
+  border-color: var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+}
+.ask-bloom-button:active {
+  transform: scale(0.97);
+  background: color-mix(in srgb, var(--brand-accent) 18%, transparent);
+}
+
 /*
  * Category type filter pill (Expense / Income toggle on the categories page). Takes its accent
  * from a `--pill-accent` custom property set inline per type, so one class covers both colors.
@@ -721,6 +742,7 @@ body {
   .danger-action-button:not(:disabled):active,
   .rule-edit-button:not(:disabled):active,
   .budget-action-pill:not(:disabled):active,
+  .ask-bloom-button:active,
   .category-type-pill:not(:disabled):active,
   .budget-card:hover,
   .login-google-button:active,

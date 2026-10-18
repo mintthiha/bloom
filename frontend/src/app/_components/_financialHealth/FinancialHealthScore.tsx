@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Account, Budget, ManualEntry, MonthlySummary, NetWorthSnapshot } from "@/lib/api";
+import { AskBloomButton } from "@/components/AskBloomButton";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { computeHealthScore, SubScore } from "@/lib/financial-health-score";
+import { buildHealthScorePrompt } from "./ask-about-health-score";
 
 interface FinancialHealthScoreProps {
   accounts: Account[];
@@ -359,9 +361,18 @@ export function FinancialHealthScore({
       eyebrow="Financial Health"
       title="How your finances are doing"
       description="A single grade from your savings, debt, spending, and net worth trend. Scroll down to see the five factors and how each is calculated."
-      headerRight={
-        <ScoreBadge total={healthScore.total} grade={healthScore.grade} color={scoreColor} />
-      }
+      // The Ask Bloom pill only shows while expanded, so it never crowds the collapsed tile's title.
+      headerRight={(isCollapsed) => (
+        <>
+          {!isCollapsed && (
+            <AskBloomButton
+              topic="financial health score"
+              buildPrompt={() => buildHealthScorePrompt(healthScore)}
+            />
+          )}
+          <ScoreBadge total={healthScore.total} grade={healthScore.grade} color={scoreColor} />
+        </>
+      )}
     >
       {/* Prominent score display */}
       <div

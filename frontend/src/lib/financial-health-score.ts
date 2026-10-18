@@ -1,6 +1,9 @@
 import { Account, Budget, ManualEntry, MonthlySummary, NetWorthSnapshot } from "./api";
 import { formatCurrency } from "./format";
 
+/** Points each of the five factors is scored out of; together they make up the 100-point total. */
+export const SUB_SCORE_MAX_POINTS = 20;
+
 export interface SubScore {
   id: string;
   label: string;

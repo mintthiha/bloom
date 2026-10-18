@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ChatSection } from "./_components/_aiChat/ChatSection";
+import { useSendQueuedPrompt } from "./_components/_aiChat/useSendQueuedPrompt";
 import { LearningCards } from "./_components/_cardsSection/LearningCards";
 import { LearnPageSkeleton } from "./_components/_learnSkeleton/LearnPageSkeleton";
 import { useLearnChat } from "@/hooks/useLearnChat";
@@ -64,6 +65,12 @@ export default function LearnPage() {
     resetConversation,
     setProposalStatus,
   } = useLearnChat();
+
+  useSendQueuedPrompt({
+    isReady: !isLoading && !isLoadingHistory,
+    sendMessage,
+    chatElementRef: messagesContainerRef,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 300);

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { Account, Profile, RecurringTransaction } from "@/lib/api";
+import { AskBloomButton } from "@/components/AskBloomButton";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCurrency } from "@/lib/format";
@@ -8,6 +9,7 @@ import { useDisplayPreferences } from "@/components/display-preferences-provider
 import { computePaydayContext } from "@/lib/payday-context";
 import { computeSafeToSpend, SafeToSpendResult } from "@/lib/safe-to-spend";
 import { formatRelativeDate } from "../_recurringCalendar/recurring-calendar-utils";
+import { buildSafeToSpendPrompt } from "./ask-about-safe-to-spend";
 
 type Props = {
   accounts: Account[];
@@ -141,10 +143,19 @@ export function SafeToSpendCard({ accounts, recurringRules, profile }: Props) {
       description="Your cash plus expected income, minus the bills still due before month-end."
       // On mobile the header stacks into a column, so the badge would float on its own line
       // right above the headline figure that already shows the same number — only show it
-      // there while collapsed, when the badge is the sole visible figure.
-      headerRight={(isCollapsed) =>
-        !isMobile || isCollapsed ? <SafeToSpendBadge result={result} hideCents={hideCents} /> : null
-      }
+      // there while collapsed, when the badge is the sole visible figure. The Ask Bloom pill only
+      // shows while expanded, so it never crowds the collapsed tile's title.
+      headerRight={(isCollapsed) => (
+        <>
+          {!isCollapsed && (
+            <AskBloomButton
+              topic="safe-to-spend"
+              buildPrompt={() => buildSafeToSpendPrompt(result)}
+            />
+          )}
+          {(!isMobile || isCollapsed) && <SafeToSpendBadge result={result} hideCents={hideCents} />}
+        </>
+      )}
     >
       {/* Prominent headline figure */}
       <div

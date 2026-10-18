@@ -7,6 +7,10 @@ vi.mock("@/components/dashboard-visibility-provider", () => ({
   useDashboardVisibility: () => ({ allCollapsed: false }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const accounts = [
   { id: "a-1", accountType: "CHEQUING", balance: 5000 } as Account,
   { id: "a-2", accountType: "SAVINGS", balance: 12000 } as Account,
@@ -64,5 +68,23 @@ describe("FinancialHealthScore", () => {
     );
 
     expect(screen.getAllByText(/^[A-F]$/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("FinancialHealthScore Ask Bloom button", () => {
+  it("offers to ask Bloom about the score", () => {
+    render(
+      <FinancialHealthScore
+        accounts={accounts}
+        budgets={[]}
+        monthlySummary={monthlySummary}
+        netWorthHistory={[]}
+        manualEntries={[]}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Ask Bloom about your financial health score" })
+    ).toBeInTheDocument();
   });
 });

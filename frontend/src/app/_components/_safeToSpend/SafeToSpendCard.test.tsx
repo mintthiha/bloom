@@ -7,6 +7,10 @@ vi.mock("@/components/dashboard-visibility-provider", () => ({
   useDashboardVisibility: () => ({ allCollapsed: false }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 /** Builds a profile carrying only the pay-cycle fields the payday line reads. */
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return { payFrequency: "BIWEEKLY", nextPayday: "2026-09-25", ...overrides } as Profile;
@@ -104,5 +108,20 @@ describe("SafeToSpendCard", () => {
     );
 
     expect(screen.getByText("No bills due this month")).toBeInTheDocument();
+  });
+});
+
+describe("SafeToSpendCard Ask Bloom button", () => {
+  it("offers to ask Bloom about the figure", () => {
+    render(
+      <SafeToSpendCard
+        accounts={[{ id: "a-1", accountType: "CHEQUING", balance: 5000 } as Account]}
+        recurringRules={[]}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Ask Bloom about your safe-to-spend" })
+    ).toBeInTheDocument();
   });
 });
