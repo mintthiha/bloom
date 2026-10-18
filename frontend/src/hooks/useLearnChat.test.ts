@@ -352,3 +352,93 @@ describe("useLearnChat", () => {
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
   });
 });
+
+/**
+ * Builds a stand-in messages container with a fixed viewport height whose content height the test
+ * controls, since jsdom does no layout. `scrollTop` is a plain writable value so jumps can be read.
+ */
+function makeMessagesContainer(clientHeight: number) {
+  const container = document.createElement("div");
+  let scrollHeight = clientHeight;
+  Object.defineProperty(container, "clientHeight", { get: () => clientHeight });
+  Object.defineProperty(container, "scrollHeight", { get: () => scrollHeight });
+  Object.defineProperty(container, "scrollTop", { value: 0, writable: true });
+  return {
+    container,
+    setContentHeight(height: number) {
+      scrollHeight = height;
+    },
+  };
+}
+
+describe("useLearnChat scrolling", () => {
+  it("jumps to the bottom when a message is sent, even one taller than the follow threshold", async () => {
+    let resolveFetch: (response: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise((resolve) => (resolveFetch = resolve)))
+    );
+    const { result } = await renderLoadedChat();
+    const { container, setContentHeight } = makeMessagesContainer(400);
+    result.current.messagesContainerRef.current = container;
+    // The new question renders 300px of content below the old bottom — well past 120px.
+    setContentHeight(700);
+
+    act(() => {
+      void result.current.sendMessage("A tall question\nwith\nmany\nlines");
+    });
+
+    expect(container.scrollTop).toBe(700);
+    await act(async () => resolveFetch(streamingResponse(["ok"])));
+  });
+
+  it("does not drag the user back down mid-reply after they scroll up", async () => {
+    let releaseSecondChunk: () => void = () => {};
+    const secondChunkReleased = new Promise<void>((resolve) => (releaseSecondChunk = resolve));
+    const encoder = new TextEncoder();
+    const chunks = ["first ", "second"];
+    let chunkIndex = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        body: {
+          getReader: () => ({
+            read: async () => {
+              if (chunkIndex === 1) await secondChunkReleased;
+              return chunkIndex < chunks.length
+                ? {
+                    done: false,
+                    value: encoder.encode(
+                      `${JSON.stringify({ type: "text", text: chunks[chunkIndex++] })}\n`
+                    ),
+                  }
+                : { done: true, value: undefined };
+            },
+          }),
+        },
+      })
+    );
+    const { result } = await renderLoadedChat();
+    const { container, setContentHeight } = makeMessagesContainer(400);
+    result.current.messagesContainerRef.current = container;
+    setContentHeight(700);
+
+    let sendPromise: Promise<void> = Promise.resolve();
+    act(() => {
+      sendPromise = result.current.sendMessage("hi");
+    });
+    await waitFor(() => expect(result.current.messages.at(-1)?.content).toBe("first "));
+
+    // The user scrolls up to re-read; then more of the reply streams in.
+    container.scrollTop = 0;
+    setContentHeight(900);
+    await act(async () => {
+      releaseSecondChunk();
+      await sendPromise;
+    });
+
+    expect(result.current.messages.at(-1)?.content).toBe("first second");
+    expect(container.scrollTop).toBe(0);
+  });
+});

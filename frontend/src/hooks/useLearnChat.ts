@@ -35,6 +35,8 @@ export function useLearnChat() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Set when the user sends a message, so the next render jumps to the bottom however tall it is.
+  const shouldScrollToBottomRef = useRef(false);
 
   /** Loads the conversation the server has stored for this user, so it follows them across devices. */
   useEffect(() => {
@@ -58,16 +60,20 @@ export function useLearnChat() {
 
   /**
    * Follows the streamed reply by scrolling the messages container itself — not the
-   * window — so the page never jumps. Only auto-scrolls when the user is already near
-   * the bottom, so scrolling up to re-read an earlier answer isn't fought mid-stream.
+   * window — so the page never jumps. Mid-stream it only auto-scrolls when the user is
+   * already near the bottom, so scrolling up to re-read an earlier answer isn't fought.
+   * Sending always jumps to the bottom: the distance is measured after the new message
+   * renders, so a tall one (like a dashboard card's question) would otherwise look like
+   * the user had scrolled away and the reply would never be followed.
    */
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
     const distanceFromBottom =
       container.scrollHeight - container.scrollTop - container.clientHeight;
-    if (distanceFromBottom < 120) {
+    if (shouldScrollToBottomRef.current || distanceFromBottom < 120) {
       container.scrollTop = container.scrollHeight;
+      shouldScrollToBottomRef.current = false;
     }
   }, [messages]);
 
@@ -82,6 +88,7 @@ export function useLearnChat() {
     if (!text || streaming || isLoadingHistory) return;
     if (overrideText === undefined) setInput("");
 
+    shouldScrollToBottomRef.current = true;
     setMessages((previous) => [
       ...previous,
       { role: "user", content: text },
