@@ -2,9 +2,12 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenAccountCard } from "./OpenAccountCard";
 
-const { apiMock } = vi.hoisted(() => ({
+const { apiMock, pushMock } = vi.hoisted(() => ({
   apiMock: { createAccount: vi.fn() },
+  pushMock: vi.fn(),
 }));
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }));
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
@@ -44,8 +47,30 @@ describe("OpenAccountCard", () => {
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("acct-new"));
     expect(apiMock.createAccount).toHaveBeenCalledWith("Alex Owner", "CHEQUING", undefined);
-    expect(toast.success).toHaveBeenCalledWith("Account opened");
+    expect(toast.success).toHaveBeenCalledWith(
+      "Account opened",
+      expect.objectContaining({ action: expect.objectContaining({ label: "View account" }) })
+    );
     expect(ownerInput).toHaveValue("");
+  });
+
+  it("navigates to the new account's page when the toast action is clicked", async () => {
+    apiMock.createAccount.mockResolvedValue({ id: "acct-new" });
+    render(<OpenAccountCard onCreated={vi.fn().mockResolvedValue(undefined)} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Account holder name"), {
+      target: { value: "Alex" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(pushMock).not.toHaveBeenCalled();
+
+    const toastOptions = vi.mocked(toast.success).mock.calls[0][1] as unknown as {
+      action: { onClick: () => void };
+    };
+    toastOptions.action.onClick();
+    expect(pushMock).toHaveBeenCalledWith("/account/acct-new");
   });
 
   it("passes the nickname and selected account type through", async () => {

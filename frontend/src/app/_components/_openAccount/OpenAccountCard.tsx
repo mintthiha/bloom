@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api, AccountType } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
@@ -20,6 +21,7 @@ const inputStyle: React.CSSProperties = {
 
 /** Open new account card: collects owner name, optional nickname, and account type. */
 export function OpenAccountCard({ onCreated }: Props) {
+  const router = useRouter();
   const [ownerName, setOwnerName] = useState("");
   const [nickname, setNickname] = useState("");
   const [accountType, setAccountType] = useState<AccountType>("CHEQUING");
@@ -41,7 +43,13 @@ export function OpenAccountCard({ onCreated }: Props) {
       setOwnerName("");
       setNickname("");
       await onCreated(newAccount.id);
-      toast.success("Account opened");
+      // The dashboard balances card may be collapsed or hidden, so offer a direct route to the new account.
+      toast.success("Account opened", {
+        action: {
+          label: "View account",
+          onClick: () => router.push(`/account/${newAccount.id}`),
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
