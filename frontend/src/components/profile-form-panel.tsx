@@ -410,13 +410,23 @@ export function ProfileFormPanel({
           </div>
 
           {error && (
-            <p className="num" style={{ color: "#f87171", fontSize: "12px" }}>
+            <p
+              role="alert"
+              style={{
+                fontSize: "13px",
+                color: "#f87171",
+                padding: "8px 12px",
+                background: "#f8717110",
+                border: "1px solid #f8717130",
+                borderRadius: "8px",
+              }}
+            >
               {error}
             </p>
           )}
 
           {success && (
-            <p className="num" style={{ color: "#22c55e", fontSize: "12px" }}>
+            <p role="status" style={{ color: "#22c55e", fontSize: "13px" }}>
               {success}
             </p>
           )}

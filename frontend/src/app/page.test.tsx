@@ -117,6 +117,26 @@ describe("home page", () => {
     expect(screen.getByText("Create your profile")).toBeInTheDocument();
   });
 
+  it("shows the error page, not onboarding, when the profile fails to load", async () => {
+    apiMock.getProfile.mockRejectedValue(new Error("Bloom can't reach its server right now."));
+
+    render(<Page />);
+
+    expect(await screen.findByText("Bloom couldn't load your dashboard")).toBeInTheDocument();
+    expect(screen.queryByText("Let's set up your account.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Back to home" })).not.toBeInTheDocument();
+  });
+
+  it("shows the error page when the dashboard data fails to load", async () => {
+    apiMock.getProfile.mockResolvedValue({ firstName: "Sam", lastName: "Lee" });
+    apiMock.listAccounts.mockRejectedValue(new Error("Bloom can't reach its server right now."));
+
+    render(<Page />);
+
+    expect(await screen.findByText("Bloom couldn't load your dashboard")).toBeInTheDocument();
+  });
+
   it("shows the dashboard greeting when a profile exists", async () => {
     apiMock.getProfile.mockResolvedValue({
       userId: "user-1",

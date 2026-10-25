@@ -1,6 +1,6 @@
-/** Shown when the backend can't be reached or answers with a gateway error — usually a cold start. */
+/** Shown when the backend can't be reached or answers with a gateway error. */
 export const SERVER_UNAVAILABLE_MESSAGE =
-  "Bloom's server is unavailable right now — it may be waking up. Please try again in a moment.";
+  "Bloom can't reach its server right now. Please try again in a moment.";
 
 /** Shown when the browser can't reach Bloom at all, e.g. the device is offline. */
 export const NETWORK_ERROR_MESSAGE = "Couldn't reach Bloom. Check your connection and try again.";

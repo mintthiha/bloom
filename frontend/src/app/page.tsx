@@ -19,6 +19,7 @@ import {
 import { DateRangeControls } from "@/components/date-range-controls";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
+import { ServiceErrorPage } from "@/components/ServiceErrorPage";
 import {
   buildDateRangeQuery,
   DateRangeState,
@@ -67,6 +68,7 @@ function Home() {
   const [newlyCreatedAccountId, setNewlyCreatedAccountId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [hasLoadFailed, setHasLoadFailed] = useState(false);
   const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() =>
     getPresetDateRange("this-month")
@@ -153,8 +155,9 @@ function Home() {
     }
   }, [rangeQuery]);
 
+  /** Loads the dashboard on mount and whenever the date range changes; a failure swaps in the error page. */
   useEffect(() => {
-    loadAccounts();
+    loadAccounts().catch(() => setHasLoadFailed(true));
   }, [loadAccounts]);
 
   /** Applies any recurring transactions that came due since the last visit, once per page load. */
@@ -246,7 +249,8 @@ function Home() {
           }
         }
       } catch {
-        if (!cancelled) setProfile(null);
+        // A failed request is not "no profile yet" (that comes back as null), so never show onboarding here.
+        if (!cancelled) setHasLoadFailed(true);
       } finally {
         if (!cancelled) setProfileLoading(false);
       }
@@ -257,6 +261,17 @@ function Home() {
       cancelled = true;
     };
   }, []);
+
+  if (hasLoadFailed) {
+    return (
+      <ServiceErrorPage
+        title="Bloom couldn't load your dashboard"
+        description="Your data is safe. This is usually temporary — try again in a moment."
+        onRetry={() => window.location.reload()}
+        shouldShowHomeLink={false}
+      />
+    );
+  }
 
   if (!profileLoading && !profile) {
     return (

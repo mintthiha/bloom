@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, use, useMemo } from "react";
-import Link from "next/link";
 import { api, Account, DateRangeQuery, Profile, Transaction } from "@/lib/api";
 import { BackToHome } from "@/components/BackToHome";
+import { ServiceErrorPage } from "@/components/ServiceErrorPage";
 import { BackToAccounts } from "@/components/BackToAccounts";
 import { useDashboardView } from "@/components/dashboard-view-provider";
 import { AccountCard } from "./_components/_accountCard/AccountCard";
@@ -198,14 +198,11 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
 
   if (error)
     return (
-      <div style={{ maxWidth: pageWidth, margin: "0 auto", padding: "48px 24px" }}>
-        <p className="num" style={{ color: "#f87171", fontSize: "14px", marginBottom: "16px" }}>
-          {error}
-        </p>
-        <Link href="/" style={{ color: "var(--brand-accent)", fontSize: "14px" }}>
-          ← Back to accounts
-        </Link>
-      </div>
+      <ServiceErrorPage
+        title="Couldn't load this account"
+        description={error}
+        onRetry={() => window.location.reload()}
+      />
     );
 
   if (!account) return null;
