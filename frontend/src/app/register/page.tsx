@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { getFailedRequestMessage, parseJsonOrNull } from "@/lib/backend-errors";
 
 /** Bloom logomark; `size` controls the square badge dimension. */
 function BloomMark({ size = 28 }: { size?: number }) {
@@ -51,9 +52,8 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Registration failed. Please try again.");
+        setError(getFailedRequestMessage(res.status, parseJsonOrNull(await res.text())));
         return;
       }
 

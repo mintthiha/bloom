@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SERVER_UNAVAILABLE_MESSAGE } from "@/lib/backend-errors";
 import { GET, POST } from "./route";
 
 const { authMock } = vi.hoisted(() => ({ authMock: vi.fn() }));
@@ -85,5 +86,14 @@ describe("/api/bloom proxy", () => {
 
     expect(response.status).toBe(204);
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("returns a 503 JSON error when the backend can't be reached", async () => {
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+
+    const response = await callProxy(GET, ["accounts"]);
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: SERVER_UNAVAILABLE_MESSAGE });
   });
 });

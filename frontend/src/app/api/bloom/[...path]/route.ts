@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { SERVER_UNAVAILABLE_MESSAGE } from "@/lib/backend-errors";
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -30,7 +31,13 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
   const body = req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined;
 
-  const res = await fetch(url, { method: req.method, headers, body });
+  // An unreachable backend (cold start, container down) must still answer with JSON the client can show.
+  let res: Response;
+  try {
+    res = await fetch(url, { method: req.method, headers, body });
+  } catch {
+    return NextResponse.json({ error: SERVER_UNAVAILABLE_MESSAGE }, { status: 503 });
+  }
 
   if (res.status === 204) return new NextResponse(null, { status: 204 });
 

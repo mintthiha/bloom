@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import {
+  BACKEND_UNAVAILABLE_SIGN_IN_CODE,
+  SERVER_UNAVAILABLE_MESSAGE,
+  isServerUnavailableStatus,
+} from "@/lib/backend-errors";
 
 const GLOW_INFLUENCE_RADIUS = 200; // cursor distance at which repulsion kicks in — smaller = get closer first
 const GLOW_PUSH_ACCEL = 2.4; // peak shove strength when the cursor is right next to a glow
@@ -145,7 +150,10 @@ export default function LoginPage() {
         callbackUrl: "/",
         redirect: false,
       });
-      if (result?.error) {
+      if (result?.code === BACKEND_UNAVAILABLE_SIGN_IN_CODE) {
+        // The token may still be valid — keep it so the user can retry once the server is up.
+        setCredentialError(SERVER_UNAVAILABLE_MESSAGE);
+      } else if (result?.error) {
         localStorage.removeItem("bloom_saved_account");
         setSavedAccount(null);
         setCredentialError("Your saved sign-in has expired. Please sign in again.");
@@ -172,6 +180,28 @@ export default function LoginPage() {
     }).catch(() => {});
   }
 
+  /**
+   * Issues a remember-me token and saves it for one-click sign-in next time. Best-effort: the user
+   * is already signed in, so a failure here must not block the redirect.
+   */
+  async function saveRememberedAccount() {
+    try {
+      const res = await fetch("/api/remember-issue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: credentialEmail, password: credentialPassword }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      localStorage.setItem(
+        "bloom_saved_account",
+        JSON.stringify({ token: data.token, email: credentialEmail })
+      );
+    } catch {
+      // Skip remembering this time; signing in already succeeded.
+    }
+  }
+
   /** Signs in with email and password, issuing a remember-me token when the checkbox is checked. */
   async function handleCredentialSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -185,23 +215,14 @@ export default function LoginPage() {
         redirect: false,
       });
       if (result?.error) {
-        setCredentialError("Invalid email or password. Please try again.");
+        setCredentialError(
+          result.code === BACKEND_UNAVAILABLE_SIGN_IN_CODE
+            ? SERVER_UNAVAILABLE_MESSAGE
+            : "Invalid email or password. Please try again."
+        );
         return;
       }
-      if (rememberMe) {
-        const res = await fetch("/api/remember-issue", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: credentialEmail, password: credentialPassword }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          localStorage.setItem(
-            "bloom_saved_account",
-            JSON.stringify({ token: data.token, email: credentialEmail })
-          );
-        }
-      }
+      if (rememberMe) await saveRememberedAccount();
       if (result?.url) window.location.href = result.url;
     } catch {
       setCredentialError("Something went wrong. Please try again.");
@@ -217,7 +238,11 @@ export default function LoginPage() {
     try {
       const res = await fetch("/api/demo", { method: "POST" });
       if (!res.ok) {
-        setDemoError("Couldn't start the demo right now. Please try again.");
+        setDemoError(
+          isServerUnavailableStatus(res.status)
+            ? SERVER_UNAVAILABLE_MESSAGE
+            : "Couldn't start the demo right now. Please try again."
+        );
         return;
       }
       const data = await res.json();
@@ -227,7 +252,11 @@ export default function LoginPage() {
         redirect: false,
       });
       if (result?.error) {
-        setDemoError("Couldn't start the demo right now. Please try again.");
+        setDemoError(
+          result.code === BACKEND_UNAVAILABLE_SIGN_IN_CODE
+            ? SERVER_UNAVAILABLE_MESSAGE
+            : "Couldn't start the demo right now. Please try again."
+        );
         return;
       }
       if (result?.url) window.location.href = result.url;

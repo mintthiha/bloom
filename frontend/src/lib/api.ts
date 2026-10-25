@@ -1,6 +1,12 @@
 import type { AvatarColor } from "./initials-avatar";
 import type { AccentColor } from "./app-accent";
 import type { Currency } from "./currency";
+import {
+  GENERIC_FAILURE_MESSAGE,
+  NETWORK_ERROR_MESSAGE,
+  getFailedRequestMessage,
+  parseJsonOrNull,
+} from "./backend-errors";
 
 const BASE = "/api/bloom";
 
@@ -33,15 +39,26 @@ function withQuery(path: string, query?: Record<string, string | undefined>) {
   return suffix ? `${path}?${suffix}` : path;
 }
 
+/**
+ * Calls the backend through the proxy and returns the parsed JSON. Every failure — offline, a
+ * non-OK status, or a non-JSON body such as an HTML 502 page — throws an Error whose message is
+ * safe to show the user in a toast.
+ */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...init,
+    });
+  } catch {
+    throw new Error(NETWORK_ERROR_MESSAGE);
+  }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
-  const body = text ? JSON.parse(text) : null;
-  if (!res.ok) throw new Error(body?.error ?? "Request failed");
+  const body = parseJsonOrNull(text);
+  if (!res.ok) throw new Error(getFailedRequestMessage(res.status, body));
+  if (body === null && text.trim()) throw new Error(GENERIC_FAILURE_MESSAGE);
   return body as T;
 }
 
