@@ -49,73 +49,84 @@ export function ServiceErrorPage({
   const [isShowingDetails, setIsShowingDetails] = useState(false);
 
   return (
-    <div style={{ maxWidth: "560px", margin: "0 auto", padding: "64px 24px" }}>
-      <EmptyState
-        icon={TriangleAlert}
-        title={title}
-        description={description}
-        action={
-          <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-            <button
-              type="button"
-              onClick={onRetry}
-              className="press"
-              style={{
-                ...buttonBaseStyle,
-                background: "var(--surface-2)",
-                color: "var(--text-primary)",
-              }}
-            >
-              Try again
-            </button>
-            {shouldShowHomeLink && (
-              <Link
-                href="/"
+    // Fills the viewport below the app shell's 56px header so the message sits in the vertical middle.
+    <div
+      style={{
+        minHeight: "calc(100vh - 56px)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "48px 24px",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: "560px", margin: "0 auto" }}>
+        <EmptyState
+          icon={TriangleAlert}
+          title={title}
+          description={description}
+          action={
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={onRetry}
                 className="press"
                 style={{
                   ...buttonBaseStyle,
-                  background: "transparent",
-                  color: "var(--text-secondary)",
+                  background: "var(--surface-2)",
+                  color: "var(--text-primary)",
                 }}
               >
-                Back to home
-              </Link>
-            )}
-          </div>
-        }
-      />
+                Try again
+              </button>
+              {shouldShowHomeLink && (
+                <Link
+                  href="/"
+                  className="press"
+                  style={{
+                    ...buttonBaseStyle,
+                    background: "transparent",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Back to home
+                </Link>
+              )}
+            </div>
+          }
+        />
 
-      <div style={{ textAlign: "center", marginTop: "12px" }}>
-        <button
-          type="button"
-          onClick={() => setIsShowingDetails((isShowing) => !isShowing)}
-          aria-expanded={isShowingDetails}
-          aria-controls={DIAGNOSTICS_PANEL_ID}
-          className="press"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-            background: "none",
-            border: "none",
-            borderRadius: "6px",
-            padding: "6px 8px",
-            fontSize: "12px",
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            cursor: "pointer",
-          }}
-        >
-          {isShowingDetails ? "Hide technical details" : "Show technical details"}
-          <ChevronDown
-            size={14}
-            aria-hidden
-            style={{ transform: isShowingDetails ? "rotate(180deg)" : "none" }}
-          />
-        </button>
+        <div style={{ textAlign: "center", marginTop: "12px" }}>
+          <button
+            type="button"
+            onClick={() => setIsShowingDetails((isShowing) => !isShowing)}
+            aria-expanded={isShowingDetails}
+            aria-controls={DIAGNOSTICS_PANEL_ID}
+            className="press"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              background: "none",
+              border: "none",
+              borderRadius: "6px",
+              padding: "6px 8px",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "var(--text-muted)",
+              cursor: "pointer",
+            }}
+          >
+            {isShowingDetails ? "Hide technical details" : "Show technical details"}
+            <ChevronDown
+              size={14}
+              aria-hidden
+              style={{ transform: isShowingDetails ? "rotate(180deg)" : "none" }}
+            />
+          </button>
+        </div>
+
+        {isShowingDetails && <ServiceDiagnostics id={DIAGNOSTICS_PANEL_ID} error={error} />}
       </div>
-
-      {isShowingDetails && <ServiceDiagnostics id={DIAGNOSTICS_PANEL_ID} error={error} />}
     </div>
   );
 }
