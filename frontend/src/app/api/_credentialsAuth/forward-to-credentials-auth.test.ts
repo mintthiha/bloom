@@ -124,4 +124,22 @@ describe("forwardToCredentialsAuth", () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: GENERIC_FAILURE_MESSAGE });
   });
+
+  it("forwards the visitor's IP for per-visitor rate limits when given", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ token: "t" }), { status: 201 }));
+
+    await forwardToCredentialsAuth("/demo", "POST", undefined, { clientIp: "203.0.113.7" });
+
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers["X-Client-Ip"]).toBe("203.0.113.7");
+  });
+
+  it("omits the IP header when the visitor's IP is unknown", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ token: "t" }), { status: 201 }));
+
+    await forwardToCredentialsAuth("/demo", "POST", undefined, { clientIp: null });
+
+    const headers = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
+    expect(headers).not.toHaveProperty("X-Client-Ip");
+  });
 });

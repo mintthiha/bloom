@@ -6,8 +6,14 @@ import { Check } from "lucide-react";
 import {
   BACKEND_UNAVAILABLE_SIGN_IN_CODE,
   SERVER_UNAVAILABLE_MESSAGE,
-  isServerUnavailableStatus,
+  parseJsonOrNull,
 } from "@/lib/backend-errors";
+import { SAVED_ACCOUNT_STORAGE_KEY, SavedAccount, parseSavedAccount } from "@/lib/saved-account";
+import {
+  DEMO_FAILURE_MESSAGE,
+  describeCredentialSignInFailure,
+  describeDemoFailure,
+} from "./sign-in-messages";
 
 const GLOW_INFLUENCE_RADIUS = 200; // cursor distance at which repulsion kicks in — smaller = get closer first
 const GLOW_PUSH_ACCEL = 2.4; // peak shove strength when the cursor is right next to a glow
@@ -125,28 +131,33 @@ export default function LoginPage() {
   const [credentialError, setCredentialError] = useState<string | null>(null);
   const [isCredentialSubmitting, setIsCredentialSubmitting] = useState(false);
   const [isSavedSigningIn, setIsSavedSigningIn] = useState(false);
-  const [savedAccount, setSavedAccount] = useState<{ token: string; email: string } | null>(null);
+  const [savedAccount, setSavedAccount] = useState<SavedAccount | null>(null);
   const [isTryingDemo, setIsTryingDemo] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
 
-  /** Reads any saved account from localStorage on mount. */
+  /** Reads any saved account from localStorage on mount, rewriting older entries without their token. */
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("bloom_saved_account");
-      if (raw) setSavedAccount(JSON.parse(raw));
+      const storedAccount = parseSavedAccount(localStorage.getItem(SAVED_ACCOUNT_STORAGE_KEY));
+      if (storedAccount) {
+        localStorage.setItem(SAVED_ACCOUNT_STORAGE_KEY, JSON.stringify(storedAccount));
+      } else {
+        localStorage.removeItem(SAVED_ACCOUNT_STORAGE_KEY);
+      }
+      setSavedAccount(storedAccount);
     } catch {
-      localStorage.removeItem("bloom_saved_account");
+      // Storage is unavailable (private mode, blocked site data), so there is no saved account.
     }
   }, []);
 
-  /** Signs in using the saved remember-me token without requiring a password. */
+  /** Signs in with the saved sign-in token in this browser's httpOnly cookie — no password needed. */
   async function handleSavedSignIn() {
     if (!savedAccount) return;
     setCredentialError(null);
     setIsSavedSigningIn(true);
     try {
       const result = await signIn("credentials", {
-        rememberToken: savedAccount.token,
+        useSavedSignIn: "true",
         callbackUrl: "/",
         redirect: false,
       });
@@ -154,7 +165,7 @@ export default function LoginPage() {
         // The token may still be valid — keep it so the user can retry once the server is up.
         setCredentialError(SERVER_UNAVAILABLE_MESSAGE);
       } else if (result?.error) {
-        localStorage.removeItem("bloom_saved_account");
+        localStorage.removeItem(SAVED_ACCOUNT_STORAGE_KEY);
         setSavedAccount(null);
         setCredentialError("Your saved sign-in has expired. Please sign in again.");
       } else if (result?.url) {
@@ -167,22 +178,18 @@ export default function LoginPage() {
     }
   }
 
-  /** Clears the saved account and revokes the token server-side. */
+  /** Clears the saved account; the server revokes the token in the cookie and clears the cookie. */
   async function handleForgetSavedAccount() {
     if (!savedAccount) return;
-    const token = savedAccount.token;
-    localStorage.removeItem("bloom_saved_account");
+    localStorage.removeItem(SAVED_ACCOUNT_STORAGE_KEY);
     setSavedAccount(null);
-    fetch("/api/remember-revoke", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    }).catch(() => {});
+    fetch("/api/remember-revoke", { method: "DELETE" }).catch(() => {});
   }
 
   /**
-   * Issues a remember-me token and saves it for one-click sign-in next time. Best-effort: the user
-   * is already signed in, so a failure here must not block the redirect.
+   * Has the server issue a remember-me token into an httpOnly cookie, and saves the email for the
+   * "Continue as…" button. Best-effort: the user is already signed in, so a failure here must not
+   * block the redirect.
    */
   async function saveRememberedAccount() {
     try {
@@ -192,11 +199,8 @@ export default function LoginPage() {
         body: JSON.stringify({ email: credentialEmail, password: credentialPassword }),
       });
       if (!res.ok) return;
-      const data = await res.json();
-      localStorage.setItem(
-        "bloom_saved_account",
-        JSON.stringify({ token: data.token, email: credentialEmail })
-      );
+      const rememberedAccount: SavedAccount = { email: credentialEmail };
+      localStorage.setItem(SAVED_ACCOUNT_STORAGE_KEY, JSON.stringify(rememberedAccount));
     } catch {
       // Skip remembering this time; signing in already succeeded.
     }
@@ -215,11 +219,7 @@ export default function LoginPage() {
         redirect: false,
       });
       if (result?.error) {
-        setCredentialError(
-          result.code === BACKEND_UNAVAILABLE_SIGN_IN_CODE
-            ? SERVER_UNAVAILABLE_MESSAGE
-            : "Invalid email or password. Please try again."
-        );
+        setCredentialError(describeCredentialSignInFailure(result.code));
         return;
       }
       if (rememberMe) await saveRememberedAccount();
@@ -238,11 +238,8 @@ export default function LoginPage() {
     try {
       const res = await fetch("/api/demo", { method: "POST" });
       if (!res.ok) {
-        setDemoError(
-          isServerUnavailableStatus(res.status)
-            ? SERVER_UNAVAILABLE_MESSAGE
-            : "Couldn't start the demo right now. Please try again."
-        );
+        const failureBody = res.status === 429 ? parseJsonOrNull(await res.text()) : null;
+        setDemoError(describeDemoFailure(res.status, failureBody));
         return;
       }
       const data = await res.json();
@@ -255,7 +252,7 @@ export default function LoginPage() {
         setDemoError(
           result.code === BACKEND_UNAVAILABLE_SIGN_IN_CODE
             ? SERVER_UNAVAILABLE_MESSAGE
-            : "Couldn't start the demo right now. Please try again."
+            : DEMO_FAILURE_MESSAGE
         );
         return;
       }

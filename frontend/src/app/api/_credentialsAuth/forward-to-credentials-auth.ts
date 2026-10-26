@@ -26,20 +26,25 @@ export function invalidRequestBodyResponse(): NextResponse {
  * Forwards a request to a backend `/api/credentials-auth` endpoint with the internal secret and
  * relays its reply. The browser always gets JSON back: an unreachable backend becomes a 503 and
  * a non-JSON reply (e.g. an HTML 502 page) becomes a JSON error, so callers never hit a parse error.
+ * Pass `clientIp` for endpoints the backend rate-limits per visitor.
  */
 export async function forwardToCredentialsAuth(
   endpointPath: string,
   method: "POST" | "DELETE",
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
+  { clientIp }: { clientIp?: string | null } = {}
 ): Promise<NextResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Internal-Secret": process.env.INTERNAL_API_SECRET ?? "",
+  };
+  if (clientIp) headers["X-Client-Ip"] = clientIp;
+
   let backendResponse: Response;
   try {
     backendResponse = await fetch(`${BACKEND}/api/credentials-auth${endpointPath}`, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Internal-Secret": process.env.INTERNAL_API_SECRET ?? "",
-      },
+      headers,
       body: payload === undefined ? undefined : JSON.stringify(payload),
     });
   } catch {

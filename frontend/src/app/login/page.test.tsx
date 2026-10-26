@@ -1,6 +1,11 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BACKEND_UNAVAILABLE_SIGN_IN_CODE, SERVER_UNAVAILABLE_MESSAGE } from "@/lib/backend-errors";
+import {
+  BACKEND_UNAVAILABLE_SIGN_IN_CODE,
+  SERVER_UNAVAILABLE_MESSAGE,
+  TOO_MANY_SIGN_IN_ATTEMPTS_CODE,
+  TOO_MANY_SIGN_IN_ATTEMPTS_MESSAGE,
+} from "@/lib/backend-errors";
 import LoginPage from "./page";
 
 const { signInMock } = vi.hoisted(() => ({ signInMock: vi.fn() }));
@@ -130,11 +135,23 @@ describe("LoginPage", () => {
       expect(screen.queryByText(/invalid email or password/i)).not.toBeInTheDocument();
     });
 
-    it("saves the remember-me token after a successful sign-in", async () => {
+    it("tells the user when the email is locked out after too many attempts", async () => {
+      signInMock.mockResolvedValueOnce({
+        error: "CredentialsSignin",
+        code: TOO_MANY_SIGN_IN_ATTEMPTS_CODE,
+      });
+
+      render(<LoginPage />);
+      submitEmailSignIn();
+
+      expect(await screen.findByText(TOO_MANY_SIGN_IN_ATTEMPTS_MESSAGE)).toBeInTheDocument();
+    });
+
+    it("saves only the email for 'Continue as' after a remembered sign-in", async () => {
       signInMock.mockResolvedValueOnce({});
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ token: "remember-token" }),
+        json: async () => ({ email: "sam@example.ca" }),
       } as Response);
 
       render(<LoginPage />);
@@ -142,9 +159,12 @@ describe("LoginPage", () => {
 
       await waitFor(() =>
         expect(JSON.parse(localStorage.getItem("bloom_saved_account") ?? "null")).toEqual({
-          token: "remember-token",
           email: "sam@example.ca",
         })
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/remember-issue",
+        expect.objectContaining({ method: "POST" })
       );
     });
 
@@ -166,10 +186,50 @@ describe("LoginPage", () => {
   });
 
   describe("saved account sign-in", () => {
-    const savedAccount = { token: "remember-token", email: "saved@example.ca" };
+    const savedAccount = { email: "saved@example.ca" };
 
     beforeEach(() => {
       localStorage.setItem("bloom_saved_account", JSON.stringify(savedAccount));
+    });
+
+    it("signs in with the httpOnly cookie rather than a token from the page", async () => {
+      signInMock.mockResolvedValueOnce({});
+
+      render(<LoginPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /saved@example\.ca/ }));
+
+      await waitFor(() =>
+        expect(signInMock).toHaveBeenCalledWith("credentials", {
+          useSavedSignIn: "true",
+          callbackUrl: "/",
+          redirect: false,
+        })
+      );
+    });
+
+    it("drops the raw token from an entry saved before the cookie existed", async () => {
+      localStorage.setItem(
+        "bloom_saved_account",
+        JSON.stringify({ token: "legacy-token", email: "saved@example.ca" })
+      );
+
+      render(<LoginPage />);
+
+      expect(await screen.findByRole("button", { name: /saved@example\.ca/ })).toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem("bloom_saved_account") ?? "null")).toEqual(
+        savedAccount
+      );
+    });
+
+    it("revokes the cookie's token when the saved account is forgotten", async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+      render(<LoginPage />);
+      await screen.findByRole("button", { name: /saved@example\.ca/ });
+
+      fireEvent.click(screen.getByRole("button", { name: "Not you?" }));
+
+      expect(fetch).toHaveBeenCalledWith("/api/remember-revoke", { method: "DELETE" });
+      expect(localStorage.getItem("bloom_saved_account")).toBeNull();
     });
 
     it("forgets the saved account when its token has expired", async () => {

@@ -4,6 +4,7 @@ import {
   PER_USER_STORAGE_KEYS,
   clearPerUserStorage,
 } from "./per-user-storage";
+import { SAVED_ACCOUNT_STORAGE_KEY } from "./saved-account";
 
 afterEach(() => {
   localStorage.clear();
@@ -41,7 +42,16 @@ describe("clearPerUserStorage", () => {
     expect(() => clearPerUserStorage()).not.toThrow();
   });
 
-  it("includes the saved sign-in token so a deleted account cannot be offered again", () => {
-    expect(PER_USER_STORAGE_KEYS).toContain("bloom_saved_account");
+  it("removes the saved sign-in so a deleted account cannot be offered again", () => {
+    localStorage.setItem(SAVED_ACCOUNT_STORAGE_KEY, JSON.stringify({ email: "jane@example.com" }));
+
+    clearPerUserStorage();
+
+    expect(localStorage.getItem(SAVED_ACCOUNT_STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps the saved sign-in out of the keys wiped when a different user signs in", () => {
+    // It is written on the login page right before the redirect whose reset script wipes these.
+    expect(PER_USER_STORAGE_KEYS).not.toContain(SAVED_ACCOUNT_STORAGE_KEY);
   });
 });

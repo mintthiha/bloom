@@ -11,6 +11,13 @@ export const GENERIC_FAILURE_MESSAGE = "Something went wrong. Please try again."
 /** NextAuth sign-in error code meaning the backend couldn't verify credentials, not that they were wrong. */
 export const BACKEND_UNAVAILABLE_SIGN_IN_CODE = "backend_unavailable";
 
+/** NextAuth sign-in error code meaning this email has hit the failed sign-in limit. */
+export const TOO_MANY_SIGN_IN_ATTEMPTS_CODE = "too_many_attempts";
+
+/** Shown when the failed sign-in limit blocks a sign-in; matches the backend's 15-minute window. */
+export const TOO_MANY_SIGN_IN_ATTEMPTS_MESSAGE =
+  "Too many sign-in attempts. Please wait 15 minutes and try again.";
+
 const GATEWAY_ERROR_STATUSES = new Set([502, 503, 504]);
 
 /** Whether a status means the server is down or unreachable rather than rejecting the request. */

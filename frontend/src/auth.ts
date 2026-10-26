@@ -16,9 +16,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        rememberToken: { label: "Remember-me token", type: "text" },
+        rememberToken: { label: "Demo token", type: "text" },
+        useSavedSignIn: { label: "Use saved sign-in", type: "text" },
       },
-      /** Verifies credentials (email+password or a remember-me token) and returns the user on success. */
+      /** Verifies credentials (email+password, a demo token, or the saved sign-in cookie) and returns the user on success. */
       authorize: verifyCredentials,
     }),
   ],

@@ -1,6 +1,5 @@
 import express from "express";
 import helmet from "helmet";
-import { rateLimit } from "express-rate-limit";
 import pinoHttp from "pino-http";
 import accountsRouter from "./routes/accounts";
 import budgetsRouter from "./routes/budgets";
@@ -26,20 +25,13 @@ import exchangeRatesRouter from "./routes/exchangeRates";
 import { errorHandler } from "./middleware/errorHandler";
 import { requireInternalSecret } from "./middleware/internalAuth";
 import { createAiRateLimiter } from "./middleware/aiRateLimit";
+import { createRequestRateLimiter } from "./middleware/requestRateLimit";
 import logger from "./lib/logger";
 import prisma from "./lib/prisma";
 
 const app = express();
 app.use(helmet());
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 1000,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many requests, please try again later." },
-  })
-);
+app.use(createRequestRateLimiter());
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
@@ -75,17 +67,9 @@ app.use("/api/auto-categorize", createAiRateLimiter("categorization"), autoCateg
 app.use("/api/receipts", createAiRateLimiter("receipt"), receiptsRouter);
 app.use("/api/quick-add", createAiRateLimiter("quickAdd"), quickAddRouter);
 app.use("/api/internal/ai", createAiRateLimiter("chat"), aiChatRouter);
-app.use(
-  "/api/credentials-auth",
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many login attempts, please try again later." },
-  }),
-  credentialsAuthRouter
-);
+// Rate-limited per email and per visitor inside the router: a limiter keyed on req.ip here would be
+// one budget shared by every visitor, since all requests arrive from the Next.js server.
+app.use("/api/credentials-auth", credentialsAuthRouter);
 app.use(errorHandler);
 
 export default app;

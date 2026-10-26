@@ -56,4 +56,25 @@ describe("requireInternalSecret middleware", () => {
     expect(next).toHaveBeenCalledOnce();
     expect(res.status).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["a prefix of the secret", "correct"],
+    ["the secret with extra characters", "correct-secret-and-more"],
+    ["an empty string", ""],
+  ])("returns 401 for %s", (_description, providedSecret) => {
+    process.env.INTERNAL_API_SECRET = "correct-secret";
+    const res = makeRes();
+    requireInternalSecret(makeReq(providedSecret) as never, res as never, next as never);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when the header is sent more than once", () => {
+    process.env.INTERNAL_API_SECRET = "correct-secret";
+    const res = makeRes();
+    const req = { headers: { "x-internal-secret": ["correct-secret", "correct-secret"] } };
+    requireInternalSecret(req as never, res as never, next as never);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
 });

@@ -1,6 +1,11 @@
+import { SAVED_ACCOUNT_STORAGE_KEY } from "./saved-account";
+
 // Per-user localStorage keys that must not leak between accounts on a shared browser (dashboard
 // layout, onboarding progress, cached name, pinned goal, custom templates). Appearance keys
 // (theme, dashboard view, collapse, orbs) are intentionally excluded so they persist across logins.
+// The saved sign-in is excluded too: it belongs to the login screen, and is written just before the
+// redirect that runs the layout's reset script — wiping it there would undo "Remember me" on every
+// first sign-in in a browser. It is still cleared when the account is deleted.
 export const PER_USER_STORAGE_KEYS = [
   "bloom_profile_first_name",
   "bloom-account-order",
@@ -13,7 +18,6 @@ export const PER_USER_STORAGE_KEYS = [
   "bloom_onboarding_all_steps_complete",
   "bloom_onboarding_learn_explored",
   "bloom-custom-reward-programs",
-  "bloom_saved_account",
 ];
 
 /** Marker holding the id of the account whose preferences currently occupy localStorage. */
@@ -31,6 +35,7 @@ export function clearPerUserStorage(): void {
       localStorage.removeItem(key);
     }
     localStorage.removeItem(ACTIVE_USER_STORAGE_KEY);
+    localStorage.removeItem(SAVED_ACCOUNT_STORAGE_KEY);
   } catch {
     // Storage can be unavailable (private mode, blocked site data); there is nothing to clean up then.
   }

@@ -1,4 +1,15 @@
+import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
+
+/**
+ * Compares two secrets in constant time. Hashing first gives both sides the same length, which
+ * `timingSafeEqual` requires, so neither the content nor the length leaks through response timing.
+ */
+function secretsMatch(provided: string, expected: string): boolean {
+  const providedDigest = crypto.createHash("sha256").update(provided).digest();
+  const expectedDigest = crypto.createHash("sha256").update(expected).digest();
+  return crypto.timingSafeEqual(providedDigest, expectedDigest);
+}
 
 /**
  * Rejects any request that doesn't carry the correct shared secret, preventing
@@ -11,7 +22,8 @@ export function requireInternalSecret(req: Request, res: Response, next: NextFun
     res.status(503).json({ error: "Server misconfiguration" });
     return;
   }
-  if (req.headers["x-internal-secret"] !== secret) {
+  const providedSecret = req.headers["x-internal-secret"];
+  if (typeof providedSecret !== "string" || !secretsMatch(providedSecret, secret)) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }

@@ -12,7 +12,8 @@ Bloom is a beginner-focused Canadian personal finance app. Read this whole file 
 
 ## Architecture (facts you can't infer from the file tree)
 
-- **The browser never calls the backend directly.** The frontend calls its own `/api/*` routes, and `next.config.ts` rewrites `/api/*` to `${NEXT_PUBLIC_API_URL}/api/*` **server-side**. Consequence: there is **no CORS setup** and none is needed; the backend is only ever hit server-to-server.
+- **The browser never calls the backend directly.** It calls Next.js route handlers under `/api`: chiefly the authenticated proxy `/api/bloom/[...path]`, which checks the session and attaches `X-User-Id` + `X-Internal-Secret` server-side, plus a few public handlers (`/api/register`, `/api/demo`, `/api/remember-*`, `/api/health`). There is deliberately **no rewrite** from `/api/*` to the backend — don't add one; it would expose the backend to the internet behind only the shared secret. Consequence: there is **no CORS setup** and none is needed.
+- **The remember-me token lives in an httpOnly cookie (`bloom_remember`, path `/api`)**, never in `localStorage` or page JS. Only the email for "Continue as…" is stored client-side.
 - **`page.tsx` files are thin orchestration layers.** They own data-loading and top-level state, then pass data into feature components. Feature logic does **not** live in `page.tsx` (see Modularity).
 - **`CollapsibleCard` (`src/components/collapsible-card.tsx`) is the shared dashboard-card primitive.** It exposes `eyebrow`, `title`, `description`, and `headerRight` slots and owns its own collapse animation. Prefer it over hand-rolling a card.
 - **Backend route → service → SQL layering.** Routes validate/parse input and call services; services hold the logic and the SQL. Keep that separation.

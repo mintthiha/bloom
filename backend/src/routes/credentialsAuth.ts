@@ -3,67 +3,87 @@ import { requireString } from "../lib/validation";
 import { requireObject } from "../lib/validation";
 import * as credentialsAuthService from "../services/credentialsAuthService";
 import * as demoService from "../services/demoService";
+import {
+  createDemoAccountLimiters,
+  createFailedSignInLimiter,
+  createRegistrationLimiter,
+} from "../middleware/authRateLimit";
 
 const router = Router();
+
+// One counter per email shared by both password-checking routes, so guesses can't be split across them.
+const failedSignInLimiter = createFailedSignInLimiter();
 
 /**
  * Creates a new email/password account.
  * Body: { email: string; password: string }
  * Returns 201 { id, email } or 409 when the email is already taken.
  */
-router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const body = requireObject(req.body);
-    const email = requireString(body.email, "email", { max: 254 }).toLowerCase().trim();
-    const password = requireString(body.password, "password", { min: 8, max: 128 });
-    const user = await credentialsAuthService.registerUser(email, password);
-    res.status(201).json(user);
-  } catch (err) {
-    next(err);
+router.post(
+  "/register",
+  createRegistrationLimiter(),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = requireObject(req.body);
+      const email = requireString(body.email, "email", { max: 254 }).toLowerCase().trim();
+      const password = requireString(body.password, "password", { min: 8, max: 128 });
+      const user = await credentialsAuthService.registerUser(email, password);
+      res.status(201).json(user);
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 /**
  * Verifies an email and password, returning the user id on success.
  * Body: { email: string; password: string }
  * Returns 200 { id, email } or 401 when credentials are invalid.
  */
-router.post("/verify", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const body = requireObject(req.body);
-    const email = requireString(body.email, "email", { max: 254 }).toLowerCase().trim();
-    const password = requireString(body.password, "password", { max: 128 });
-    const user = await credentialsAuthService.verifyCredentials(email, password);
-    if (!user) {
-      res.status(401).json({ error: "Invalid email or password" });
-      return;
+router.post(
+  "/verify",
+  failedSignInLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = requireObject(req.body);
+      const email = requireString(body.email, "email", { max: 254 }).toLowerCase().trim();
+      const password = requireString(body.password, "password", { max: 128 });
+      const user = await credentialsAuthService.verifyCredentials(email, password);
+      if (!user) {
+        res.status(401).json({ error: "Invalid email or password" });
+        return;
+      }
+      res.json(user);
+    } catch (err) {
+      next(err);
     }
-    res.json(user);
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 /**
  * Verifies email and password, then issues a "remember me" token for one-click sign-in later.
  * Body: { email: string; password: string }
  * Returns 200 { id, email, token, expiresAt } or 401 when credentials are invalid.
  */
-router.post("/remember/issue", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const body = requireObject(req.body);
-    const email = requireString(body.email, "email", { max: 254 }).toLowerCase().trim();
-    const password = requireString(body.password, "password", { max: 128 });
-    const issued = await credentialsAuthService.issueRememberToken(email, password);
-    if (!issued) {
-      res.status(401).json({ error: "Invalid email or password" });
-      return;
+router.post(
+  "/remember/issue",
+  failedSignInLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = requireObject(req.body);
+      const email = requireString(body.email, "email", { max: 254 }).toLowerCase().trim();
+      const password = requireString(body.password, "password", { max: 128 });
+      const issued = await credentialsAuthService.issueRememberToken(email, password);
+      if (!issued) {
+        res.status(401).json({ error: "Invalid email or password" });
+        return;
+      }
+      res.json(issued);
+    } catch (err) {
+      next(err);
     }
-    res.json(issued);
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 /**
  * Exchanges a "remember me" token for the user it was issued to, without a password.
@@ -105,13 +125,17 @@ router.delete("/remember", async (req: Request, res: Response, next: NextFunctio
  * history and returns a "remember me" token to sign the visitor straight in.
  * No body required.
  */
-router.post("/demo", async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { token, expiresAt } = await demoService.createDemoAccount();
-    res.status(201).json({ token, expiresAt });
-  } catch (err) {
-    next(err);
+router.post(
+  "/demo",
+  ...createDemoAccountLimiters(),
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, expiresAt } = await demoService.createDemoAccount();
+      res.status(201).json({ token, expiresAt });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 export default router;

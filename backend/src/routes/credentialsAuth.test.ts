@@ -2,6 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import app from "../app";
 import { INTERNAL_SECRET } from "../test-setup";
+import { AUTH_RATE_LIMITS } from "../middleware/authRateLimit";
 
 const { serviceMock } = vi.hoisted(() => ({
   serviceMock: {
@@ -115,6 +116,36 @@ describe("credentials-auth routes", () => {
 
       expect(response.status).toBe(204);
       expect(serviceMock.revokeRememberToken).toHaveBeenCalledWith("raw-token");
+    });
+  });
+
+  describe("failed sign-in limit", () => {
+    it("blocks an email once its failures across both password routes reach the limit", async () => {
+      serviceMock.verifyCredentials.mockResolvedValue(null);
+      serviceMock.issueRememberToken.mockResolvedValue(null);
+      const credentials = { email: "guessed@example.com", password: "wrong-password" };
+
+      for (
+        let attempt = 0;
+        attempt < AUTH_RATE_LIMITS.failedSignInsPerEmail.maxRequests;
+        attempt++
+      ) {
+        const path = attempt % 2 ? "/remember/issue" : "/verify";
+        const response = await request(app)
+          .post(`/api/credentials-auth${path}`)
+          .set("X-Internal-Secret", INTERNAL_SECRET)
+          .send(credentials);
+        expect(response.status).toBe(401);
+      }
+      serviceMock.verifyCredentials.mockClear();
+
+      const blockedResponse = await request(app)
+        .post("/api/credentials-auth/verify")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .send({ ...credentials, password: "correct-password" });
+
+      expect(blockedResponse.status).toBe(429);
+      expect(serviceMock.verifyCredentials).not.toHaveBeenCalled();
     });
   });
 });

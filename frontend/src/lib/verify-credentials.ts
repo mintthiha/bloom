@@ -1,5 +1,10 @@
 import { CredentialsSignin } from "next-auth";
-import { BACKEND_UNAVAILABLE_SIGN_IN_CODE, parseJsonOrNull } from "./backend-errors";
+import {
+  BACKEND_UNAVAILABLE_SIGN_IN_CODE,
+  TOO_MANY_SIGN_IN_ATTEMPTS_CODE,
+  parseJsonOrNull,
+} from "./backend-errors";
+import { REMEMBER_COOKIE_NAME, readCookieValue } from "./remember-cookie";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -11,7 +16,18 @@ export class BackendUnavailableSignInError extends CredentialsSignin {
   code = BACKEND_UNAVAILABLE_SIGN_IN_CODE;
 }
 
-export type SignInCredentials = Partial<Record<"email" | "password" | "rememberToken", unknown>>;
+/** Thrown from `authorize` when the backend's failed sign-in limit blocks this email for now. */
+export class TooManySignInAttemptsError extends CredentialsSignin {
+  code = TOO_MANY_SIGN_IN_ATTEMPTS_CODE;
+}
+
+/**
+ * `rememberToken` carries a demo account's one-time token; `useSavedSignIn` asks to sign in with
+ * the token in this browser's httpOnly remember-me cookie, which page scripts can't read.
+ */
+export type SignInCredentials = Partial<
+  Record<"email" | "password" | "rememberToken" | "useSavedSignIn", unknown>
+>;
 
 export type VerifiedUser = { id: string; email: string; name: string };
 
@@ -22,7 +38,7 @@ function isBackendUser(body: unknown): body is { id: string; email: string } {
   return typeof id === "string" && typeof email === "string";
 }
 
-/** Posts to a backend verify endpoint and maps its reply to a session user, null for a rejection, or a throw for an outage. */
+/** Posts to a backend verify endpoint and maps its reply to a session user, null for a rejection, or a throw for an outage or lockout. */
 async function verifyWithBackend(
   endpointPath: string,
   payload: Record<string, unknown>
@@ -42,6 +58,7 @@ async function verifyWithBackend(
   }
 
   if (response.status >= 500) throw new BackendUnavailableSignInError();
+  if (response.status === 429) throw new TooManySignInAttemptsError();
   if (!response.ok) return null;
 
   const user = parseJsonOrNull(await response.text());
@@ -50,15 +67,21 @@ async function verifyWithBackend(
 }
 
 /**
- * Verifies a remember-me token, or else an email + password, against the backend. Returns null
- * when the credentials are rejected or missing, and throws `BackendUnavailableSignInError` when
- * the backend can't be reached or fails.
+ * Verifies a demo token, the browser's saved sign-in cookie, or else an email + password against
+ * the backend. Returns null when the credentials are rejected or missing, and throws a
+ * `CredentialsSignin` subclass when the backend is unreachable or the email is locked out.
  */
 export async function verifyCredentials(
-  credentials: SignInCredentials | undefined
+  credentials: SignInCredentials | undefined,
+  request?: Request
 ): Promise<VerifiedUser | null> {
   if (credentials?.rememberToken) {
     return verifyWithBackend("/remember/verify", { token: credentials.rememberToken });
+  }
+  if (credentials?.useSavedSignIn === "true") {
+    const savedToken = readCookieValue(request?.headers.get("cookie"), REMEMBER_COOKIE_NAME);
+    if (!savedToken) return null;
+    return verifyWithBackend("/remember/verify", { token: savedToken });
   }
   if (!credentials?.email || !credentials?.password) return null;
   return verifyWithBackend("/verify", {

@@ -3,6 +3,7 @@ import {
   invalidRequestBodyResponse,
   readJsonObjectBody,
 } from "../_credentialsAuth/forward-to-credentials-auth";
+import { readClientIp } from "../_credentialsAuth/read-client-ip";
 
 /**
  * Proxies account creation to the backend's credentials-auth register endpoint,
@@ -13,5 +14,10 @@ export async function POST(req: Request) {
   if (!requestBody) return invalidRequestBodyResponse();
 
   const { email, password } = requestBody;
-  return forwardToCredentialsAuth("/register", "POST", { email, password });
+  return forwardToCredentialsAuth(
+    "/register",
+    "POST",
+    { email, password },
+    { clientIp: readClientIp(req.headers) }
+  );
 }
