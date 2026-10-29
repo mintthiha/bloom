@@ -299,7 +299,7 @@ export function ReceiptReviewForm({
                 </select>
                 <button
                   type="button"
-                  className="transaction-delete-button"
+                  className="transaction-delete-button touch-target"
                   onClick={() => onItemRemove(itemIndex)}
                   aria-label={`Remove ${item.name}`}
                   title="Not a purchase? Remove this line"

@@ -100,13 +100,8 @@ export function TransactionsTable({
               <tr
                 key={row.id}
                 onClick={() => onRowClick(row)}
-                style={{ cursor: "pointer", transition: "background 0.12s" }}
-                onMouseEnter={(event) => {
-                  event.currentTarget.style.background = "var(--hover-overlay)";
-                }}
-                onMouseLeave={(event) => {
-                  event.currentTarget.style.background = "transparent";
-                }}
+                className="table-row-hover"
+                style={{ cursor: "pointer" }}
               >
                 <td
                   className="num"

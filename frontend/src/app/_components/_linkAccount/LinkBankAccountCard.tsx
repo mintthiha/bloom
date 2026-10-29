@@ -114,27 +114,18 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
       <button
         type="button"
         onClick={() => open()}
+        className="accent-outline-button"
         disabled={!buttonReady}
         style={{
           width: "100%",
           padding: "10px 20px",
-          background: buttonReady ? "transparent" : "transparent",
+          background: "transparent",
           color: buttonReady ? "var(--brand-accent-text)" : "var(--text-muted)",
           fontWeight: 700,
           fontSize: "14px",
-          border: `1px solid ${buttonReady ? "color-mix(in srgb, var(--brand-accent) 33%, transparent)" : "var(--border)"}`,
           borderRadius: "8px",
           cursor: buttonReady ? "pointer" : "not-allowed",
           opacity: buttonReady ? 1 : 0.5,
-          transition: "opacity 0.15s, border-color 0.15s, color 0.15s",
-        }}
-        onMouseEnter={(e) => {
-          if (buttonReady) e.currentTarget.style.borderColor = "var(--brand-accent)";
-        }}
-        onMouseLeave={(e) => {
-          if (buttonReady)
-            e.currentTarget.style.borderColor =
-              "color-mix(in srgb, var(--brand-accent) 33%, transparent)";
         }}
       >
         {linking

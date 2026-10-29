@@ -27,7 +27,7 @@ export function SubscriptionsHeader({ summary }: { summary: SubscriptionSummary 
       >
         Subscriptions
       </p>
-      <h2
+      <h1
         style={{
           fontSize: "20px",
           fontWeight: 800,
@@ -36,7 +36,7 @@ export function SubscriptionsHeader({ summary }: { summary: SubscriptionSummary 
         }}
       >
         You spend {formatCurrency(summary.monthlyTotal)}/mo on subscriptions
-      </h2>
+      </h1>
       <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginBottom: "20px" }}>
         Auto-detected from recurring merchant charges and your recurring rules.
       </p>

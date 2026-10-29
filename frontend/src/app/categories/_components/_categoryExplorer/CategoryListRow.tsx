@@ -160,7 +160,7 @@ export function CategoryListRow({
       </span>
       <button
         type="button"
-        className="rule-edit-button"
+        className="rule-edit-button touch-target"
         aria-label={`Edit ${category.name}`}
         onClick={() => onStartEdit(category)}
         style={{
@@ -176,7 +176,7 @@ export function CategoryListRow({
       </button>
       <button
         type="button"
-        className="budget-delete-button"
+        className="budget-delete-button touch-target"
         aria-label={`Delete ${category.name}`}
         onClick={() => onRequestDelete(category)}
         style={{

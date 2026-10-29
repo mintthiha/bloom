@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
 import "./globals.css";
-import { Geist } from "next/font/google";
+import { JetBrains_Mono, Outfit } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { auth } from "@/auth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +15,14 @@ import { CurrencyProvider } from "@/components/currency-provider";
 import { AppShell } from "@/components/app-shell";
 import { ACTIVE_USER_STORAGE_KEY, PER_USER_STORAGE_KEYS } from "@/lib/per-user-storage";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+// Self-hosted by next/font: no render-blocking request to Google Fonts, and no layout shift as
+// the fallback swaps out. Outfit is the UI face; JetBrains Mono renders every number via `.num`.
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Bloom",
@@ -39,7 +46,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const userId = session?.user?.id ?? "";
 
   return (
-    <html lang="en" className={cn("dark font-sans", geist.variable)} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={cn("dark font-sans", outfit.variable, jetbrainsMono.variable)}
+      suppressHydrationWarning
+    >
       <head>
         {/* Removes the dark class before first paint if the resolved theme (saved preference, or system when unset/"system") is light */}
         <script

@@ -90,7 +90,7 @@ export default function RegisterPage() {
           <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "-0.4px" }}>Bloom</span>
         </div>
 
-        <h2
+        <h1
           style={{
             fontSize: "24px",
             fontWeight: 800,
@@ -99,7 +99,7 @@ export default function RegisterPage() {
           }}
         >
           Create your account
-        </h2>
+        </h1>
         <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "28px" }}>
           Sign up with your email to get started.
         </p>

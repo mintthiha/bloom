@@ -19,6 +19,11 @@ describe("SubscriptionsHeader", () => {
     expect(screen.getByText(/You spend \$42\.50\/mo on subscriptions/)).toBeInTheDocument();
   });
 
+  it("makes the headline the page's top-level heading", () => {
+    render(<SubscriptionsHeader summary={makeSummary()} />);
+    expect(screen.getByRole("heading", { level: 1, name: /You spend/ })).toBeInTheDocument();
+  });
+
   it("shows the annual total and count", () => {
     render(<SubscriptionsHeader summary={makeSummary()} />);
     expect(screen.getByText("$510.00")).toBeInTheDocument();

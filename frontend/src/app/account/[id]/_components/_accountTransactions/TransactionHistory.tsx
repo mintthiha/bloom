@@ -254,18 +254,16 @@ export function TransactionHistory({
               return (
                 <div
                   key={t.id}
+                  className="list-row-hover"
                   style={{
                     display: "flex",
                     alignItems: isEditing ? "stretch" : "center",
                     justifyContent: "space-between",
                     padding: "14px 16px",
                     borderRadius: "10px",
-                    transition: "background 0.1s",
                     gap: "16px",
                     flexWrap: isEditing ? "wrap" : "nowrap",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div
                     style={{

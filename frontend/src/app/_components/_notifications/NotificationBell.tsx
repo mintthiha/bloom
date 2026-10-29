@@ -124,7 +124,7 @@ export function NotificationBell() {
     <>
       <button
         type="button"
-        className="notification-bell"
+        className="notification-bell touch-target"
         aria-label={hasUnread ? `Notifications, ${unreadCount} unread` : "Notifications"}
         onClick={() => handleOpenChange(true)}
         style={{

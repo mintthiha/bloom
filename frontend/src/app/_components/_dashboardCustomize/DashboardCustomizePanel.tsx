@@ -39,6 +39,7 @@ function CardToggle({
       type="button"
       role="switch"
       aria-label={label}
+      className="touch-target"
       aria-checked={checked}
       disabled={disabled}
       onClick={disabled ? undefined : onChange}
@@ -276,13 +277,13 @@ export function DashboardCustomizePanel() {
           <button
             type="button"
             aria-label="Customize"
+            className="header-icon-button touch-target"
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "6px",
               background: "var(--surface-1)",
-              border: "1px solid var(--border)",
               borderRadius: "8px",
               padding: isMobile ? "6px" : "6px 12px",
               width: isMobile ? "32px" : undefined,
@@ -290,17 +291,7 @@ export function DashboardCustomizePanel() {
               cursor: "pointer",
               fontSize: "12px",
               fontWeight: 600,
-              color: "var(--text-secondary)",
-              transition: "border-color 0.15s, color 0.15s",
               flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--border-hover)";
-              e.currentTarget.style.color = "var(--text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.color = "var(--text-secondary)";
             }}
           />
         }
@@ -481,21 +472,17 @@ export function DashboardCustomizePanel() {
                 <button
                   type="button"
                   onClick={handleRestoreChecklist}
+                  className="outline-hover-button"
                   style={{
                     marginTop: hasCustomLayout ? "10px" : "24px",
                     width: "100%",
                     background: "none",
-                    border: "1px solid var(--border)",
                     borderRadius: "8px",
                     padding: "8px",
                     cursor: "pointer",
                     fontSize: "12px",
                     fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    transition: "border-color 0.15s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
                 >
                   Restore getting started checklist
                 </button>

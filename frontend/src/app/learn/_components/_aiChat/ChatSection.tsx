@@ -276,7 +276,7 @@ export function ChatSection({
         {streaming ? (
           <button
             type="button"
-            className="chat-danger"
+            className="chat-danger touch-target"
             onClick={onStop}
             title="Stop generating"
             style={{
@@ -298,7 +298,7 @@ export function ChatSection({
         ) : (
           <button
             type="button"
-            className="chat-send"
+            className="chat-send touch-target"
             onClick={() => sendMessage()}
             disabled={!canSend}
             title="Send"

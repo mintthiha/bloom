@@ -27,7 +27,7 @@ const STATUS_APPEARANCE: Record<ServiceStatus, { icon: LucideIcon; color: string
   };
 
 const technicalTextStyle: CSSProperties = {
-  fontFamily: "'JetBrains Mono', monospace",
+  fontFamily: "var(--font-mono), monospace",
   fontSize: "12px",
   overflowWrap: "anywhere",
 };

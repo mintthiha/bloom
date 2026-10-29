@@ -394,31 +394,19 @@ function Home() {
     return (
       <button
         type="button"
-        className="fade-up"
+        className="fade-up summary-stat-card"
         onClick={() => {
           if (targetAccount) router.push(`/account/${targetAccount.id}`);
         }}
         disabled={!clickable}
         style={{
           background: "var(--surface-1)",
-          border: "1px solid var(--border)",
           borderRadius: "12px",
           padding: "20px",
           textAlign: "left",
           cursor: clickable ? "pointer" : "default",
           opacity: clickable ? 1 : 0.9,
-          transition: "border-color 0.15s, transform 0.15s",
           animationDelay: `${staggerIndex * 50}ms`,
-        }}
-        onMouseEnter={(e) => {
-          if (clickable) {
-            e.currentTarget.style.borderColor = "var(--border-hover)";
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = "var(--border)";
-          e.currentTarget.style.transform = "translateY(0)";
         }}
       >
         <p

@@ -119,7 +119,7 @@ export function NotificationItem({ notification, onActivate, onDismiss }: Props)
       </div>
       <button
         type="button"
-        className="notification-dismiss"
+        className="notification-dismiss touch-target"
         title="Dismiss"
         aria-label={`Dismiss ${notification.title}`}
         onClick={(event) => {
@@ -133,8 +133,8 @@ export function NotificationItem({ notification, onActivate, onDismiss }: Props)
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: "22px",
-          height: "22px",
+          width: "24px",
+          height: "24px",
           borderRadius: "6px",
           border: "none",
           background: "transparent",

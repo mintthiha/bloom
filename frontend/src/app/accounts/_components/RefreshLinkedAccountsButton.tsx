@@ -51,6 +51,7 @@ export function RefreshLinkedAccountsButton({
     <button
       type="button"
       onClick={handleSync}
+      className="accent-outline-button"
       disabled={syncing}
       style={{
         display: "flex",
@@ -61,21 +62,11 @@ export function RefreshLinkedAccountsButton({
         color: syncing ? "var(--text-muted)" : "var(--brand-accent-text)",
         fontWeight: 700,
         fontSize: "13px",
-        border: `1px solid ${syncing ? "var(--border)" : "color-mix(in srgb, var(--brand-accent) 33%, transparent)"}`,
         borderRadius: "8px",
         cursor: syncing ? "not-allowed" : "pointer",
         opacity: syncing ? 0.5 : 1,
-        transition: "opacity 0.15s, border-color 0.15s",
         whiteSpace: "nowrap",
         flexShrink: 0,
-      }}
-      onMouseEnter={(e) => {
-        if (!syncing) e.currentTarget.style.borderColor = "var(--brand-accent)";
-      }}
-      onMouseLeave={(e) => {
-        if (!syncing)
-          e.currentTarget.style.borderColor =
-            "color-mix(in srgb, var(--brand-accent) 33%, transparent)";
       }}
     >
       <RefreshCw size={13} className={syncing ? "spin" : undefined} />

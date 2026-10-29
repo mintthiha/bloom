@@ -26,6 +26,7 @@ export function ExportCsvButton({ txns, account }: ExportCsvButtonProps) {
     <button
       type="button"
       onClick={handleExport}
+      className="outline-hover-button"
       disabled={txns.length === 0}
       title={
         txns.length === 0
@@ -38,26 +39,12 @@ export function ExportCsvButton({ txns, account }: ExportCsvButtonProps) {
         gap: "6px",
         padding: "6px 12px",
         background: "var(--surface-2)",
-        border: "1px solid var(--border)",
         borderRadius: "8px",
         fontSize: "12px",
         fontWeight: 600,
-        color: txns.length === 0 ? "var(--text-muted)" : "var(--text-secondary)",
         cursor: txns.length === 0 ? "not-allowed" : "pointer",
         opacity: txns.length === 0 ? 0.5 : 1,
-        transition: "border-color 0.15s, color 0.15s",
         whiteSpace: "nowrap",
-      }}
-      onMouseEnter={(e) => {
-        if (txns.length > 0) {
-          e.currentTarget.style.borderColor = "var(--border-hover)";
-          e.currentTarget.style.color = "var(--text-primary)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "var(--border)";
-        e.currentTarget.style.color =
-          txns.length === 0 ? "var(--text-muted)" : "var(--text-secondary)";
       }}
     >
       <svg

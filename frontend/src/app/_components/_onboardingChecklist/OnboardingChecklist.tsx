@@ -228,11 +228,11 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
           type="button"
           onClick={handleDismiss}
           aria-label="Dismiss onboarding checklist"
+          className="quiet-text-button"
           style={{
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            color: "var(--text-muted)",
             fontSize: "12px",
             fontWeight: 600,
             padding: "4px 8px",
@@ -240,8 +240,6 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
             flexShrink: 0,
             marginTop: "2px",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
         >
           Dismiss
         </button>

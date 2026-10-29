@@ -17,6 +17,7 @@ export function HeaderSearch() {
         type="button"
         onClick={openCommandPalette}
         aria-label="Search transactions"
+        className="header-icon-button touch-target"
         style={{
           display: "flex",
           alignItems: "center",
@@ -24,9 +25,7 @@ export function HeaderSearch() {
           width: "32px",
           height: "32px",
           borderRadius: "8px",
-          border: "1px solid var(--border)",
           background: "var(--surface-1)",
-          color: "var(--text-secondary)",
           cursor: "pointer",
           flexShrink: 0,
         }}
@@ -41,6 +40,7 @@ export function HeaderSearch() {
       type="button"
       onClick={openCommandPalette}
       aria-label="Search transactions"
+      className="header-search-field"
       style={{
         display: "flex",
         alignItems: "center",
@@ -50,17 +50,9 @@ export function HeaderSearch() {
         height: "36px",
         padding: "0 12px",
         borderRadius: "10px",
-        border: "1px solid var(--border)",
         background: "var(--surface-1)",
         color: "var(--text-muted)",
         cursor: "pointer",
-        transition: "border-color 0.15s, color 0.15s",
-      }}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.borderColor = "var(--border-hover)";
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.borderColor = "var(--border)";
       }}
     >
       <Search size={15} style={{ flexShrink: 0 }} />

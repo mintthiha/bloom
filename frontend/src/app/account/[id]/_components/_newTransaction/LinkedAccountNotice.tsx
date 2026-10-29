@@ -70,6 +70,7 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
       <button
         type="button"
         onClick={handleResync}
+        className="accent-outline-button"
         disabled={resyncing || !account.plaidItemId}
         style={{
           alignSelf: "flex-start",
@@ -78,19 +79,9 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           color: resyncing ? "var(--text-muted)" : "var(--brand-accent-text)",
           fontWeight: 700,
           fontSize: "14px",
-          border: `1px solid ${resyncing ? "var(--border)" : "color-mix(in srgb, var(--brand-accent) 33%, transparent)"}`,
           borderRadius: "8px",
           cursor: resyncing ? "not-allowed" : "pointer",
           opacity: resyncing ? 0.5 : 1,
-          transition: "opacity 0.15s, border-color 0.15s",
-        }}
-        onMouseEnter={(e) => {
-          if (!resyncing) e.currentTarget.style.borderColor = "var(--brand-accent)";
-        }}
-        onMouseLeave={(e) => {
-          if (!resyncing)
-            e.currentTarget.style.borderColor =
-              "color-mix(in srgb, var(--brand-accent) 33%, transparent)";
         }}
       >
         {resyncing ? "Syncing..." : "Re-sync"}

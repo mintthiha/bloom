@@ -262,7 +262,7 @@ export function ProfileFormPanel({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
+              style={{ ...inputStyle, fontFamily: "var(--font-mono), monospace" }}
             />
             <p style={hintStyle}>Lowercase letters, numbers, and underscores only.</p>
           </div>
