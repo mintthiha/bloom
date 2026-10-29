@@ -17,17 +17,17 @@ interface FinancialHealthScoreProps {
 
 /** Returns the display colour for an overall 0–100 score. */
 function overallScoreColor(total: number): string {
-  if (total > 70) return "#22c55e";
+  if (total > 70) return "var(--positive)";
   if (total >= 40) return "#3b82f6";
-  return "#ef4444";
+  return "var(--negative)";
 }
 
 /** Returns the display colour for a sub-score out of 20. */
 function subScoreColor(score: number): string {
   const pct = score / 20;
-  if (pct >= 0.7) return "#22c55e";
+  if (pct >= 0.7) return "var(--positive)";
   if (pct >= 0.4) return "#3b82f6";
-  return "#ef4444";
+  return "var(--negative)";
 }
 
 /** Compact score + grade badge shown in the card header, visible even when collapsed. */
@@ -43,8 +43,8 @@ function ScoreBadge({ total, grade, color }: { total: number; grade: string; col
           fontWeight: 700,
           padding: "1px 7px",
           borderRadius: "5px",
-          background: `${color}22`,
-          border: `1px solid ${color}44`,
+          background: `color-mix(in srgb, ${color} 13%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${color} 27%, transparent)`,
           color,
         }}
       >

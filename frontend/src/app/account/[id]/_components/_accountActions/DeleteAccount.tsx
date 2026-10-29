@@ -92,7 +92,7 @@ export function DeleteAccount({ accountId, displayName }: DeleteAccountProps) {
         padding: "6px 14px",
         border: "1px solid #f8717130",
         background: "transparent",
-        color: "#f87171",
+        color: "var(--negative-soft)",
         borderRadius: "7px",
         fontSize: "11px",
         fontWeight: 700,

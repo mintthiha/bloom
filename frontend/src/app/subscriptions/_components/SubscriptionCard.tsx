@@ -79,7 +79,7 @@ export function SubscriptionCard({ subscription }: { subscription: Subscription 
               borderRadius: "999px",
               background: "color-mix(in srgb, var(--brand-accent) 10%, transparent)",
               border: "1px solid color-mix(in srgb, var(--brand-accent) 25%, transparent)",
-              color: "var(--brand-accent)",
+              color: "var(--brand-accent-text)",
               letterSpacing: "0.04em",
               textTransform: "uppercase",
             }}
@@ -116,7 +116,7 @@ export function SubscriptionCard({ subscription }: { subscription: Subscription 
             borderRadius: "8px",
             background: "#ef44441a",
             border: "1px solid #ef444440",
-            color: "#ef4444",
+            color: "var(--negative)",
             fontSize: "12px",
             fontWeight: 600,
           }}

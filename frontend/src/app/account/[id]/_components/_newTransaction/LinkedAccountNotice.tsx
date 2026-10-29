@@ -53,7 +53,7 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "var(--brand-accent)",
+          color: "var(--brand-accent-text)",
           margin: 0,
         }}
       >
@@ -75,7 +75,7 @@ export function LinkedAccountNotice({ account, onResynced }: LinkedAccountNotice
           alignSelf: "flex-start",
           padding: "10px 20px",
           background: "transparent",
-          color: resyncing ? "var(--text-muted)" : "var(--brand-accent)",
+          color: resyncing ? "var(--text-muted)" : "var(--brand-accent-text)",
           fontWeight: 700,
           fontSize: "14px",
           border: `1px solid ${resyncing ? "var(--border)" : "color-mix(in srgb, var(--brand-accent) 33%, transparent)"}`,

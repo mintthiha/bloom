@@ -23,7 +23,7 @@ type Props = {
 };
 
 const URGENCY_COLOR: Record<ReminderUrgency, string> = {
-  overdue: "#f87171",
+  overdue: "var(--negative-soft)",
   "due-soon": "#3b82f6",
   upcoming: "var(--text-muted)",
 };
@@ -68,7 +68,7 @@ export function NotificationItem({ notification, onActivate, onDismiss }: Props)
       style={{
         position: "relative",
         background: isUnread ? "var(--surface-2)" : "transparent",
-        border: `1px solid ${urgency !== "upcoming" && isBill ? accent + "44" : "var(--border)"}`,
+        border: `1px solid ${urgency !== "upcoming" && isBill ? `color-mix(in srgb, ${accent} 27%, transparent)` : "var(--border)"}`,
         borderRadius: "10px",
         padding: "12px 14px",
         display: "flex",
@@ -85,7 +85,10 @@ export function NotificationItem({ notification, onActivate, onDismiss }: Props)
           width: 28,
           height: 28,
           borderRadius: "8px",
-          background: accent === "var(--text-muted)" ? "var(--surface-3)" : accent + "22",
+          background:
+            accent === "var(--text-muted)"
+              ? "var(--surface-3)"
+              : `color-mix(in srgb, ${accent} 13%, transparent)`,
           color: accent,
           flexShrink: 0,
         }}

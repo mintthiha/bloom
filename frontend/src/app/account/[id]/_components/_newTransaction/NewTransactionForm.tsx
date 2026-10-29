@@ -492,7 +492,7 @@ export function NewTransactionForm({
           </div>
 
           {wouldOverdraw && (
-            <p style={{ fontSize: "12px", color: "#ef4444", margin: 0 }}>
+            <p style={{ fontSize: "12px", color: "var(--negative)", margin: 0 }}>
               Insufficient funds — balance is ${account.balance.toFixed(2)}.
             </p>
           )}
@@ -500,7 +500,7 @@ export function NewTransactionForm({
           {overContributionWarning && overContributionWarning.severity !== "none" && (
             <div
               style={{
-                border: `1px solid ${overContributionWarning.severity === "red" ? "#ef4444" : "#3b82f6"}`,
+                border: `1px solid ${overContributionWarning.severity === "red" ? "var(--negative)" : "#3b82f6"}`,
                 background: overContributionWarning.severity === "red" ? "#ef444408" : "#3b82f608",
                 borderRadius: "12px",
                 padding: "16px 20px",
@@ -510,7 +510,10 @@ export function NewTransactionForm({
                 style={{
                   fontSize: "13px",
                   fontWeight: 600,
-                  color: overContributionWarning.severity === "red" ? "#f87171" : "#d97706",
+                  color:
+                    overContributionWarning.severity === "red"
+                      ? "var(--negative-soft)"
+                      : "var(--warning)",
                   margin: 0,
                 }}
               >
@@ -520,7 +523,10 @@ export function NewTransactionForm({
                 style={{
                   fontSize: "12px",
                   fontWeight: 400,
-                  color: overContributionWarning.severity === "red" ? "#f87171" : "#d97706",
+                  color:
+                    overContributionWarning.severity === "red"
+                      ? "var(--negative-soft)"
+                      : "var(--warning)",
                   margin: "4px 0 0",
                 }}
               >

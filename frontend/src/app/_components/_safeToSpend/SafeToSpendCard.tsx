@@ -18,8 +18,8 @@ type Props = {
   profile?: Profile | null;
 };
 
-const POSITIVE_COLOR = "#22c55e";
-const NEGATIVE_COLOR = "#ef4444";
+const POSITIVE_COLOR = "var(--positive)";
+const NEGATIVE_COLOR = "var(--negative)";
 
 // Cap the "still due" list so a busy month can't stretch the card; the rest collapse into a summary row.
 const MAX_VISIBLE_BILLS = 5;
@@ -107,8 +107,8 @@ function SafeToSpendBadge({
         fontWeight: 800,
         padding: "2px 9px",
         borderRadius: "7px",
-        background: `${color}18`,
-        border: `1px solid ${color}44`,
+        background: `color-mix(in srgb, ${color} 9%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 27%, transparent)`,
         color,
       }}
     >

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api, BudgetHighlightRanking, PayFrequency, PrimaryFinancialGoal } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { inputStyle as baseInputStyle } from "@/lib/styles/input";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import {
   BUDGET_HIGHLIGHT_RANKING_OPTIONS,
   PAY_FREQUENCY_OPTIONS,
@@ -28,6 +29,7 @@ export function FinancialProfilePanel() {
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Loads the saved financial details on mount. */
   useEffect(() => {
@@ -42,8 +44,10 @@ export function FinancialProfilePanel() {
           setPrimaryFinancialGoal(profile.primaryFinancialGoal ?? "");
           setBudgetHighlightRanking(profile.budgetHighlightRanking ?? "");
         }
-      } catch {
-        // Leaves the form empty when the profile can't be loaded.
+      } catch (failure) {
+        // An empty form saved as-is would clear the user's real income and payday, so show the
+        // error page rather than leaving it editable.
+        if (!cancelled) reportLoadFailure(failure);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,7 +56,7 @@ export function FinancialProfilePanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportLoadFailure]);
 
   /** Persists the cashflow fields, treating blank inputs as cleared values. */
   async function handleSubmit(event: FormEvent) {

@@ -21,8 +21,8 @@ interface ServiceDiagnosticsProps {
 
 const STATUS_APPEARANCE: Record<ServiceStatus, { icon: LucideIcon; color: string; label: string }> =
   {
-    ok: { icon: Check, color: "#22c55e", label: "OK" },
-    down: { icon: X, color: "#f87171", label: "Down" },
+    ok: { icon: Check, color: "var(--positive)", label: "OK" },
+    down: { icon: X, color: "var(--negative-soft)", label: "Down" },
     unchecked: { icon: Minus, color: "var(--text-muted)", label: "Not checked" },
   };
 

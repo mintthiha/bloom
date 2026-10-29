@@ -40,7 +40,7 @@ export function LearnProgressBar({ exploredCount, totalCount, nextCardTitle }: P
           style={{
             fontSize: "12px",
             fontWeight: 700,
-            color: isComplete ? "#22c55e" : "var(--text-secondary)",
+            color: isComplete ? "var(--positive)" : "var(--text-secondary)",
             flexShrink: 0,
           }}
         >
@@ -68,7 +68,9 @@ export function LearnProgressBar({ exploredCount, totalCount, nextCardTitle }: P
       </div>
 
       {isComplete && (
-        <p style={{ fontSize: "12px", color: "#22c55e", marginTop: "10px", marginBottom: 0 }}>
+        <p
+          style={{ fontSize: "12px", color: "var(--positive)", marginTop: "10px", marginBottom: 0 }}
+        >
           Ask Bloom anything about what you learned — the AI chat is below.
         </p>
       )}

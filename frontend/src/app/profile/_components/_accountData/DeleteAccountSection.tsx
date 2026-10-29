@@ -55,7 +55,14 @@ export function DeleteAccountSection({ email }: DeleteAccountSectionProps) {
         borderTop: "1px solid var(--border)",
       }}
     >
-      <p style={{ fontSize: "14px", fontWeight: 600, marginBottom: "3px", color: "#f87171" }}>
+      <p
+        style={{
+          fontSize: "14px",
+          fontWeight: 600,
+          marginBottom: "3px",
+          color: "var(--negative-soft)",
+        }}
+      >
         Delete my account
       </p>
       <p style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "12px" }}>

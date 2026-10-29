@@ -14,7 +14,7 @@ export const CARDS = [
   {
     icon: PiggyBank,
     title: "TFSA — Tax-Free Savings Account",
-    color: "#22c55e",
+    color: "var(--positive)",
     summary:
       "Grow your money tax-free. Withdrawals are also tax-free and add back to your room the following year.",
     points: [
@@ -28,7 +28,7 @@ export const CARDS = [
   {
     icon: TrendingUp,
     title: "RRSP — Registered Retirement Savings Plan",
-    color: "var(--brand-accent)",
+    color: "var(--brand-accent-text)",
     summary:
       "Reduce your taxable income today. Pay tax only when you withdraw in retirement (typically at a lower rate).",
     points: [
@@ -42,7 +42,7 @@ export const CARDS = [
   {
     icon: BookOpen,
     title: "FHSA — First Home Savings Account",
-    color: "var(--brand-accent)",
+    color: "var(--brand-accent-text)",
     summary:
       "The best of both worlds: RRSP-like deductions on contributions and TFSA-like tax-free withdrawals for a first home.",
     points: [
@@ -56,7 +56,7 @@ export const CARDS = [
   {
     icon: CreditCard,
     title: "Credit Card Debt & Interest",
-    color: "#ef4444",
+    color: "var(--negative)",
     summary:
       "Credit cards charge ~20% annual interest. Even small balances compound quickly if you only pay the minimum.",
     points: [
@@ -130,7 +130,7 @@ export function LearningCards({
             style={{
               textAlign: "left",
               background: "var(--surface-1)",
-              border: `1px solid ${expanded ? card.color + "66" : "var(--border)"}`,
+              border: `1px solid ${expanded ? `color-mix(in srgb, ${card.color} 40%, transparent)` : "var(--border)"}`,
               borderRadius: "16px",
               padding: "20px",
               cursor: "pointer",
@@ -150,7 +150,7 @@ export function LearningCards({
                   width: "34px",
                   height: "34px",
                   borderRadius: "10px",
-                  background: card.color + "22",
+                  background: `color-mix(in srgb, ${card.color} 13%, transparent)`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -170,7 +170,7 @@ export function LearningCards({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.06em",
-                    color: "#22c55e",
+                    color: "var(--positive)",
                     background: "#22c55e18",
                     padding: "3px 7px",
                     borderRadius: "999px",

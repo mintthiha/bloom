@@ -20,7 +20,7 @@ function topEntries(entries: ManualEntry[], type: "ASSET" | "LIABILITY", limit: 
 
 /** Single display row for a manual entry — no editing on the dashboard card. */
 function EntryPreviewRow({ entry, hideCents }: { entry: ManualEntry; hideCents: boolean }) {
-  const accentColor = entry.type === "ASSET" ? "#22c55e" : "#ef4444";
+  const accentColor = entry.type === "ASSET" ? "var(--positive)" : "var(--negative)";
   return (
     <div
       style={{
@@ -112,7 +112,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
               style={{
                 fontSize: "16px",
                 fontWeight: 800,
-                color: net >= 0 ? "#22c55e" : "#ef4444",
+                color: net >= 0 ? "var(--positive)" : "var(--negative)",
                 whiteSpace: "nowrap",
               }}
             >
@@ -137,7 +137,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
               gap: "6px",
               fontSize: "13px",
               fontWeight: 700,
-              color: "var(--brand-accent)",
+              color: "var(--brand-accent-text)",
               background: "color-mix(in srgb, var(--brand-accent) 8%, transparent)",
               border: "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)",
               borderRadius: "8px",
@@ -158,7 +158,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
-                  color: "#ef4444",
+                  color: "var(--negative)",
                   marginBottom: "2px",
                 }}
               >
@@ -178,7 +178,7 @@ export function ManualEntriesCard({ entries }: ManualEntriesCardProps) {
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
-                  color: "#22c55e",
+                  color: "var(--positive)",
                   marginBottom: "2px",
                 }}
               >

@@ -8,6 +8,7 @@ import { deleteWithUndo } from "@/lib/undoableDelete";
 import { formatCurrency } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { GoalCard } from "./GoalCard";
 import { GoalFormDialog } from "./GoalFormDialog";
 
@@ -15,6 +16,7 @@ import { GoalFormDialog } from "./GoalFormDialog";
 export function GoalList() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
+  const reportLoadFailure = useLoadFailureBoundary();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -39,10 +41,9 @@ export function GoalList() {
       try {
         const data = await api.listSavingsGoals();
         if (!cancelled) setGoals(data);
-      } catch (err) {
-        if (!cancelled) {
-          toast.error(err instanceof Error ? err.message : "Failed to load goals");
-        }
+      } catch (failure) {
+        // An empty list would read as "no goals yet"; show the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,7 +53,7 @@ export function GoalList() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportLoadFailure]);
 
   /** Opens the form dialog in create mode. */
   function handleOpenCreate() {

@@ -223,7 +223,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
               style={{
                 padding: "5px 12px",
                 background: "#22c55e1a",
-                color: "#22c55e",
+                color: "var(--positive)",
                 border: "1px solid #22c55e44",
                 borderRadius: "6px",
                 fontSize: "12px",
@@ -280,7 +280,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
                   <span
                     style={{
                       fontSize: "13px",
-                      color: "var(--brand-accent)",
+                      color: "var(--brand-accent-text)",
                       fontWeight: 600,
                       flexShrink: 0,
                     }}
@@ -295,7 +295,7 @@ export function AiSuggestPanel({ onRuleAdded }: AiSuggestPanelProps) {
                     style={{
                       padding: "5px 12px",
                       background: isAdding ? "var(--surface-2)" : "#22c55e1a",
-                      color: "#22c55e",
+                      color: "var(--positive)",
                       border: "1px solid #22c55e44",
                       borderRadius: "6px",
                       fontSize: "12px",

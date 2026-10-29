@@ -21,7 +21,7 @@ export function SubscriptionsHeader({ summary }: { summary: SubscriptionSummary 
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "var(--brand-accent)",
+          color: "var(--brand-accent-text)",
           marginBottom: "8px",
         }}
       >
@@ -58,7 +58,7 @@ export function SubscriptionsHeader({ summary }: { summary: SubscriptionSummary 
           <div>
             <p
               className="num"
-              style={{ fontSize: "20px", fontWeight: 700, color: "var(--brand-accent)" }}
+              style={{ fontSize: "20px", fontWeight: 700, color: "var(--brand-accent-text)" }}
             >
               {formatCurrency(summary.annualTotal)}
             </p>

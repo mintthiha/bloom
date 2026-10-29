@@ -228,7 +228,6 @@ export function CategoryExplorer({ categories, isLoading, onChanged }: CategoryE
               minWidth: 0,
               background: "transparent",
               border: "none",
-              outline: "none",
               fontSize: "13px",
               color: "var(--text-primary)",
             }}

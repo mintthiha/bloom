@@ -60,7 +60,6 @@ export function AccountFilters({
             background: "var(--surface-1)",
             color: "var(--text-primary)",
             fontSize: "14px",
-            outline: "none",
           }}
         />
       </div>

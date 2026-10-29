@@ -48,7 +48,7 @@ export function NetWorthEmpathyNote({ history }: Props) {
         <p
           style={{
             fontSize: "13px",
-            color: "#22c55e",
+            color: "var(--positive)",
             marginTop: "8px",
             marginBottom: 0,
             fontWeight: 600,

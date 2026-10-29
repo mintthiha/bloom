@@ -160,7 +160,10 @@ export function OpenAccountCard({ onCreated }: Props) {
           </div>
         </div>
         {error && (
-          <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "8px" }}>
+          <p
+            role="alert"
+            style={{ color: "var(--negative-soft)", fontSize: "12px", marginTop: "8px" }}
+          >
             {error}
           </p>
         )}

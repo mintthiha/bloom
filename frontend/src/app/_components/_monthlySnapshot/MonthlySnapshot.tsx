@@ -71,10 +71,10 @@ export function MonthlySnapshot({
     savingsRate === null
       ? "var(--text-muted)"
       : savingsRate >= 0.2
-        ? "#22c55e"
+        ? "var(--positive)"
         : savingsRate >= 0.1
           ? "#3b82f6"
-          : "#f87171";
+          : "var(--negative-soft)";
   const savingsRateTooltip =
     savingsRate !== null
       ? `Saving ${Math.round(savingsRate * 100)}% of your income. Most financial plans suggest 20% as a starting target.`
@@ -110,7 +110,7 @@ export function MonthlySnapshot({
           >
             Top Spend
           </p>
-          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--brand-accent)" }}>
+          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--brand-accent-text)" }}>
             {monthlySummary.topExpenseCategory}
           </p>
         </div>
@@ -131,7 +131,8 @@ export function MonthlySnapshot({
               snapshotView === viewOption
                 ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
                 : "var(--surface-2)",
-            color: snapshotView === viewOption ? "var(--brand-accent)" : "var(--text-secondary)",
+            color:
+              snapshotView === viewOption ? "var(--brand-accent-text)" : "var(--text-secondary)",
             fontSize: "11px",
             fontWeight: 600,
             cursor: "pointer",
@@ -185,7 +186,7 @@ export function MonthlySnapshot({
               </p>
               <p
                 className="num balance-value"
-                style={{ fontSize: "18px", fontWeight: 600, color: "#22c55e" }}
+                style={{ fontSize: "18px", fontWeight: 600, color: "var(--positive)" }}
               >
                 <FlashOnChange watchKey={monthlySummary.income}>
                   {formatCurrency(monthlySummary.income, { hideCents })}
@@ -197,7 +198,7 @@ export function MonthlySnapshot({
                   style={{
                     fontSize: "11px",
                     marginTop: "5px",
-                    color: incomeDelta > 0 ? "#22c55e" : "#f97316",
+                    color: incomeDelta > 0 ? "var(--positive)" : "var(--caution)",
                   }}
                 >
                   <span className="balance-value">
@@ -232,7 +233,7 @@ export function MonthlySnapshot({
               </p>
               <p
                 className="num balance-value"
-                style={{ fontSize: "18px", fontWeight: 600, color: "#f97316" }}
+                style={{ fontSize: "18px", fontWeight: 600, color: "var(--caution)" }}
               >
                 <FlashOnChange watchKey={monthlySummary.spending}>
                   {formatCurrency(monthlySummary.spending, { hideCents })}
@@ -244,7 +245,7 @@ export function MonthlySnapshot({
                   style={{
                     fontSize: "11px",
                     marginTop: "5px",
-                    color: spendingDelta < 0 ? "#22c55e" : "#f97316",
+                    color: spendingDelta < 0 ? "var(--positive)" : "var(--caution)",
                   }}
                 >
                   <span className="balance-value">
@@ -282,7 +283,7 @@ export function MonthlySnapshot({
                 style={{
                   fontSize: "18px",
                   fontWeight: 600,
-                  color: monthlySummary.netCashFlow >= 0 ? "#22c55e" : "#f97316",
+                  color: monthlySummary.netCashFlow >= 0 ? "var(--positive)" : "var(--caution)",
                 }}
               >
                 <FlashOnChange watchKey={monthlySummary.netCashFlow}>
@@ -295,7 +296,7 @@ export function MonthlySnapshot({
                   style={{
                     fontSize: "11px",
                     marginTop: "5px",
-                    color: netDelta > 0 ? "#22c55e" : "#f97316",
+                    color: netDelta > 0 ? "var(--positive)" : "var(--caution)",
                   }}
                 >
                   <span className="balance-value">
@@ -375,8 +376,8 @@ export function MonthlySnapshot({
                     borderRadius: "50%",
                     background:
                       spendingForecast.vsLastMonth !== null && spendingForecast.vsLastMonth > 0
-                        ? "#f97316"
-                        : "#22c55e",
+                        ? "var(--caution)"
+                        : "var(--positive)",
                     flexShrink: 0,
                   }}
                 />
@@ -397,7 +398,7 @@ export function MonthlySnapshot({
                   style={{
                     fontSize: "11px",
                     fontWeight: 600,
-                    color: spendingForecast.vsLastMonth > 0 ? "#f97316" : "#22c55e",
+                    color: spendingForecast.vsLastMonth > 0 ? "var(--caution)" : "var(--positive)",
                     flexShrink: 0,
                   }}
                 >
@@ -492,7 +493,7 @@ export function MonthlySnapshot({
               wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
             />
             <Bar dataKey="income" fill="#22c55e" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="spending" fill="#f97316" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="spending" fill="var(--caution)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       ) : (

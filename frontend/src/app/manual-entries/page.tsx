@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/format";
 import { BackToHome } from "@/components/BackToHome";
 import { inputStyle } from "@/lib/styles/input";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 
 const ENTRY_TYPE_LABELS: Record<ManualEntryType, string> = {
   ASSET: "Asset",
@@ -62,7 +63,7 @@ function EntryRow({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const accentColor = entry.type === "ASSET" ? "#22c55e" : "#ef4444";
+  const accentColor = entry.type === "ASSET" ? "var(--positive)" : "var(--negative)";
 
   /** Saves edited name, amount, and date via the API and notifies the parent. */
   async function handleSave() {
@@ -442,7 +443,7 @@ function AddEntryForm({ onCreated }: { onCreated: (entry: ManualEntry) => void }
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          color: "var(--brand-accent)",
+          color: "var(--brand-accent-text)",
           marginBottom: "16px",
         }}
       >
@@ -609,14 +610,18 @@ export default function ManualEntriesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const reportLoadFailure = useLoadFailureBoundary();
 
-  /** Loads all manual entries and triggers a net worth snapshot on mount. */
+  /**
+   * Loads all manual entries and triggers a net worth snapshot on mount. A failure shows the
+   * error page, since an empty list would read as "no assets or liabilities".
+   */
   useEffect(() => {
     Promise.all([api.listManualEntries(), api.recordNetWorthSnapshot()])
       .then(([loaded]) => setEntries(loaded))
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Failed to load entries"))
+      .catch(reportLoadFailure)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [reportLoadFailure]);
 
   /** Toggles a single entry's selection. */
   function handleToggleSelect(id: string) {
@@ -714,7 +719,7 @@ export default function ManualEntriesPage() {
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
-            color: "var(--brand-accent)",
+            color: "var(--brand-accent-text)",
             marginBottom: "8px",
           }}
         >
@@ -742,9 +747,13 @@ export default function ManualEntriesPage() {
           style={{ display: "flex", gap: "12px", marginBottom: "28px", flexWrap: "wrap" }}
           className="fade-up"
         >
-          <StatChip label="Assets" value={totalAssets} color="#22c55e" />
-          <StatChip label="Liabilities" value={totalLiabilities} color="#ef4444" />
-          <StatChip label="Net" value={net} color={net >= 0 ? "#22c55e" : "#ef4444"} />
+          <StatChip label="Assets" value={totalAssets} color="var(--positive)" />
+          <StatChip label="Liabilities" value={totalLiabilities} color="var(--negative)" />
+          <StatChip
+            label="Net"
+            value={net}
+            color={net >= 0 ? "var(--positive)" : "var(--negative)"}
+          />
         </div>
       )}
 
@@ -767,7 +776,7 @@ export default function ManualEntriesPage() {
             marginBottom: "16px",
           }}
         >
-          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--brand-accent)" }}>
+          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--brand-accent-text)" }}>
             {selectedIds.size} {selectedIds.size === 1 ? "entry" : "entries"} selected
           </span>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -797,7 +806,7 @@ export default function ManualEntriesPage() {
                 padding: "6px 14px",
                 fontSize: "12px",
                 fontWeight: 700,
-                color: "#ef4444",
+                color: "var(--negative)",
                 cursor: "pointer",
               }}
             >
@@ -829,7 +838,7 @@ export default function ManualEntriesPage() {
           {liabilities.length > 0 && (
             <EntrySection
               label="Liabilities"
-              accentColor="#ef4444"
+              accentColor="var(--negative)"
               total={totalLiabilities}
               entries={liabilities}
               selectedIds={selectedIds}
@@ -842,7 +851,7 @@ export default function ManualEntriesPage() {
           {assets.length > 0 && (
             <EntrySection
               label="Assets"
-              accentColor="#22c55e"
+              accentColor="var(--positive)"
               total={totalAssets}
               entries={assets}
               selectedIds={selectedIds}

@@ -687,7 +687,10 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
             </p>
 
             {error && (
-              <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}>
+              <p
+                role="alert"
+                style={{ color: "var(--negative-soft)", fontSize: "12px", marginTop: "10px" }}
+              >
                 {error}
               </p>
             )}
@@ -759,7 +762,7 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
                       padding: "4px 8px",
                       borderRadius: "999px",
                       background: rule.active ? "#22c55e22" : "#6b728022",
-                      color: rule.active ? "#22c55e" : "#9ca3af",
+                      color: rule.active ? "var(--positive)" : "var(--inactive)",
                     }}
                   >
                     {rule.active ? "Active" : "Paused"}
@@ -848,7 +851,7 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
                         padding: "8px 12px",
                         border: "1px solid #f8717130",
                         background: "transparent",
-                        color: "#f87171",
+                        color: "var(--negative-soft)",
                         borderRadius: "8px",
                         fontSize: "12px",
                         cursor: deletingId === rule.id ? "not-allowed" : "pointer",

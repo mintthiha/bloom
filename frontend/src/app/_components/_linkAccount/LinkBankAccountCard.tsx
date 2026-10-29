@@ -102,7 +102,7 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
         <p
           style={{
             fontSize: "12px",
-            color: "#f87171",
+            color: "var(--negative-soft)",
             marginBottom: "12px",
           }}
         >
@@ -119,7 +119,7 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
           width: "100%",
           padding: "10px 20px",
           background: buttonReady ? "transparent" : "transparent",
-          color: buttonReady ? "var(--brand-accent)" : "var(--text-muted)",
+          color: buttonReady ? "var(--brand-accent-text)" : "var(--text-muted)",
           fontWeight: 700,
           fontSize: "14px",
           border: `1px solid ${buttonReady ? "color-mix(in srgb, var(--brand-accent) 33%, transparent)" : "var(--border)"}`,

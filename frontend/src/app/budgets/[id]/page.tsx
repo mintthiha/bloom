@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { api, BudgetActivity, DateRangeQuery } from "@/lib/api";
+import { ServiceErrorPage } from "@/components/ServiceErrorPage";
 import { formatCurrency } from "@/lib/format";
 import {
   buildDateRangeQuery,
@@ -85,40 +85,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
 
   if (error || !budget) {
     return (
-      <div
-        style={{
-          maxWidth: "920px",
-          margin: "0 auto",
-          padding: "40px 24px 48px",
-        }}
-      >
-        <Link
-          href="/"
-          style={{
-            color: "var(--text-secondary)",
-            textDecoration: "none",
-            fontSize: "13px",
-          }}
-        >
-          ← Back to dashboard
-        </Link>
-        <div
-          style={{
-            marginTop: "18px",
-            border: "1px solid var(--border)",
-            borderRadius: "14px",
-            padding: "24px",
-            background: "var(--surface-1)",
-          }}
-        >
-          <h1 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px" }}>
-            Budget activity unavailable
-          </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-            {error ?? "Unable to load this budget."}
-          </p>
-        </div>
-      </div>
+      <ServiceErrorPage
+        title="Couldn't load this budget"
+        description={error ?? "Unable to load this budget."}
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 

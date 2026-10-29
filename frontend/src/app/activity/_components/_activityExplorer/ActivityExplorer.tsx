@@ -8,6 +8,7 @@ import {
   ActivityLogResult,
   ActivitySortKey,
 } from "@/lib/api";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { ActivityFilterBar } from "./ActivityFilterBar";
 import { ActivityTable } from "./ActivityTable";
 
@@ -41,6 +42,7 @@ export function ActivityExplorer() {
   const [result, setResult] = useState<ActivityLogResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   const hasActiveFilters = Boolean(search || group || action || from || to);
 
@@ -73,8 +75,9 @@ export function ActivityExplorer() {
       .then((nextResult) => {
         if (!cancelled) setResult(nextResult);
       })
-      .catch(() => {
-        if (!cancelled) setResult({ logs: [], total: 0 });
+      .catch((failure) => {
+        // An empty page would read as "no activity"; show the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -83,7 +86,7 @@ export function ActivityExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [search, group, action, sort, from, to, page, refreshNonce]);
+  }, [search, group, action, sort, from, to, page, refreshNonce, reportLoadFailure]);
 
   /** Re-fetches the current page without changing any filter or paging state. */
   function handleRefresh() {

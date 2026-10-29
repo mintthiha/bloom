@@ -14,6 +14,7 @@ import { AccentColor, DEFAULT_ACCENT_COLOR, parseAccentColor } from "@/lib/app-a
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { Currency, DEFAULT_CURRENCY, parseCurrency } from "@/lib/currency";
 import { publishProfileUpdate } from "@/lib/profile-updates";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 
 type ProfileFormPanelProps = {
   title: string;
@@ -81,6 +82,7 @@ export function ProfileFormPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /**
    * Loads the saved profile when it exists and otherwise prefills the form
@@ -115,10 +117,10 @@ export function ProfileFormPanel({
         setTfsaBirthYear(profile?.tfsaBirthYear?.toString() ?? "");
         setTfsaRoomUsedElsewhere(profile?.tfsaRoomUsedElsewhere?.toString() ?? "");
         setRrspContributionRoom(profile?.rrspContributionRoom?.toString() ?? "");
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load profile");
-        }
+      } catch (failure) {
+        // Never leave the form editable with blank fields: saving it would overwrite the user's
+        // real profile with empty values. Hand the failure to the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -130,7 +132,7 @@ export function ProfileFormPanel({
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.email, session?.user?.name, status]);
+  }, [session?.user?.email, session?.user?.name, status, reportLoadFailure]);
 
   /**
    * Persists the profile fields and returns the normalized saved values to the
@@ -414,7 +416,7 @@ export function ProfileFormPanel({
               role="alert"
               style={{
                 fontSize: "13px",
-                color: "#f87171",
+                color: "var(--negative-soft)",
                 padding: "8px 12px",
                 background: "#f8717110",
                 border: "1px solid #f8717130",
@@ -426,7 +428,7 @@ export function ProfileFormPanel({
           )}
 
           {success && (
-            <p role="status" style={{ color: "#22c55e", fontSize: "13px" }}>
+            <p role="status" style={{ color: "var(--positive)", fontSize: "13px" }}>
               {success}
             </p>
           )}

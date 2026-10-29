@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api, Budget, MonthlySummary } from "@/lib/api";
 import { BudgetsManager } from "@/components/BudgetsManager";
 import { useHiddenBudgetIds } from "@/hooks/use-hidden-budget-ids";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 
 /** Full-page budgets overview: loads all budgets and this month's summary, then renders the manager. */
 export function BudgetsOverview() {
@@ -12,6 +13,7 @@ export function BudgetsOverview() {
   const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const { hiddenBudgetIds, toggleBudgetVisibility } = useHiddenBudgetIds();
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Loads budgets and the monthly summary in parallel; the summary feeds the category picker. */
   const loadData = useCallback(async () => {
@@ -22,16 +24,24 @@ export function BudgetsOverview() {
       ]);
       setBudgets(nextBudgets);
       setMonthlySummary(nextSummary);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load budgets");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
+  /** Refreshes after an edit; the budgets already on screen stay, so a failure is just a toast. */
+  const reloadData = useCallback(async () => {
+    try {
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load budgets");
+    }
   }, [loadData]);
+
+  /** Loads on mount; a failure shows the error page rather than "no budgets yet". */
+  useEffect(() => {
+    loadData().catch(reportLoadFailure);
+  }, [loadData, reportLoadFailure]);
 
   return (
     <>
@@ -61,7 +71,7 @@ export function BudgetsOverview() {
         <BudgetsManager
           budgets={budgets}
           monthlySummary={monthlySummary}
-          onChanged={loadData}
+          onChanged={reloadData}
           hiddenBudgetIds={hiddenBudgetIds}
           onToggleBudgetVisibility={toggleBudgetVisibility}
         />

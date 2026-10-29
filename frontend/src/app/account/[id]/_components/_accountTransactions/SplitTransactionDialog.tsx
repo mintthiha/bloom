@@ -350,7 +350,7 @@ export function SplitTransactionDialog({
               className="num"
               style={{
                 fontSize: "12px",
-                color: Math.abs(remaining) < 0.01 ? "var(--text-muted)" : "#f87171",
+                color: Math.abs(remaining) < 0.01 ? "var(--text-muted)" : "var(--negative-soft)",
               }}
             >
               {Math.abs(remaining) < 0.01

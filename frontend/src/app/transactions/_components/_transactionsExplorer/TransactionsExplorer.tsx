@@ -11,6 +11,7 @@ import {
   TransactionSortKey,
 } from "@/lib/api";
 import { useCategoryAppearance } from "@/hooks/useCategoryAppearance";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { TransactionFilterBar } from "./TransactionFilterBar";
 import { TransactionsTable } from "./TransactionsTable";
 import { ExportCsvButton } from "./ExportCsvButton";
@@ -48,6 +49,7 @@ export function TransactionsExplorer() {
 
   const [result, setResult] = useState<TransactionListResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   const hasActiveFilters = Boolean(search || accountId || type || from || to);
 
@@ -96,9 +98,9 @@ export function TransactionsExplorer() {
       .then((nextResult) => {
         if (!cancelled) setResult(nextResult);
       })
-      .catch(() => {
-        if (!cancelled)
-          setResult({ rows: [], total: 0, page: 1, limit: PAGE_SIZE, hasMore: false });
+      .catch((failure) => {
+        // An empty page would read as "no transactions"; show the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -107,7 +109,7 @@ export function TransactionsExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [accountId, type, search, sort, from, to, page]);
+  }, [accountId, type, search, sort, from, to, page, reportLoadFailure]);
 
   /** Applies a filter change and returns to the first page so results stay consistent. */
   const changeFilter = useCallback(<T,>(setter: (value: T) => void) => {

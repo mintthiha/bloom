@@ -8,8 +8,25 @@
   /* App-wide accent the user picks on their profile; overridden inline per-user by AccentProvider. */
   --brand-accent: #f59e0b;
   /* Darkened (not lightened) so the accent stays readable as text on this theme's light
-     surfaces — mixing toward white (as the dark theme does) would push contrast the wrong way. */
-  --brand-accent-light: color-mix(in srgb, var(--brand-accent) 60%, black);
+     surfaces — mixing toward white (as the dark theme does) would push contrast the wrong way.
+     55% is the lightest mix where every accent option (amber is the hardest) clears 4.5:1 on
+     --surface-3; at 60% amber fell to 4.2:1. */
+  --brand-accent-light: color-mix(in srgb, var(--brand-accent) 55%, black);
+  /* The accent for text and icons on ordinary surfaces: the raw accent fails AA on light ones. */
+  --brand-accent-text: var(--brand-accent-light);
+  /* Semantic money and status colours. The bright dark-theme values (#22c55e green 2.3:1,
+     #ef4444 red 3.8:1 on white) fail AA here, so the light theme uses deeper shades that clear
+     4.5:1 on every surface, worst case --surface-3. */
+  --positive: #166534;
+  --negative: #b91c1c;
+  /* The softer red the dark theme uses for errors and outflows; one shade suffices on light. */
+  --negative-soft: #b91c1c;
+  /* Orange for "worse than last month" deltas — a nudge, deliberately not alarm red. */
+  --caution: #9a3412;
+  /* Amber for "nearly over the limit" warnings. */
+  --warning: #92400e;
+  /* Grey for inactive or paused status. */
+  --inactive: #4b5563;
   --surface-0: #eef2fb;
   --surface-1: #ffffff;
   --surface-2: #e6ecf8;
@@ -65,6 +82,15 @@
 .dark {
   /* Here the readable-on-surface direction flips: lighten toward white against dark surfaces. */
   --brand-accent-light: color-mix(in srgb, var(--brand-accent) 75%, white);
+  /* The raw accent already reads clearly on dark surfaces, so text uses it unchanged. */
+  --brand-accent-text: var(--brand-accent);
+  /* The original values: each clears AA on the dark surfaces, so dark mode looks unchanged. */
+  --positive: #22c55e;
+  --negative: #ef4444;
+  --negative-soft: #f87171;
+  --caution: #f97316;
+  --warning: #d97706;
+  --inactive: #9ca3af;
   --surface-0: #060a14;
   --surface-1: #0d131f;
   --surface-2: #141b2b;
@@ -213,6 +239,15 @@ body {
 /* Never fall back to the browser default ring when focus-visible does not apply. */
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+/*
+ * Search boxes whose bordered wrapper holds a borderless input (icon + field). The ring goes on
+ * the wrapper so it traces the visible box; the input's inline `outline: none` is intentional.
+ */
+.search-field:focus-within {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
 }
 
 /*

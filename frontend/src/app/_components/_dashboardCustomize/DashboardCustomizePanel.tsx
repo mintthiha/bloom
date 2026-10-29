@@ -23,10 +23,13 @@ import {
 
 /** Animated pill switch indicating whether a card is visible. */
 function CardToggle({
+  label,
   checked,
   onChange,
   disabled = false,
 }: {
+  /** Names the switch for screen readers, e.g. "Show Net Worth History". */
+  label: string;
   checked: boolean;
   onChange: () => void;
   disabled?: boolean;
@@ -35,6 +38,7 @@ function CardToggle({
     <button
       type="button"
       role="switch"
+      aria-label={label}
       aria-checked={checked}
       disabled={disabled}
       onClick={disabled ? undefined : onChange}
@@ -130,7 +134,12 @@ function CardToggleRow({ cardId, lockedHint }: { cardId: CardId; lockedHint?: st
       interactive={!isLocked}
       dimmed={isLocked}
       control={
-        <CardToggle checked={isVisible} onChange={() => toggleCard(cardId)} disabled={isLocked} />
+        <CardToggle
+          label={`Show ${meta.label}`}
+          checked={isVisible}
+          onChange={() => toggleCard(cardId)}
+          disabled={isLocked}
+        />
       }
     />
   );
@@ -167,7 +176,7 @@ function DensityButton({
         background: active
           ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
           : "var(--surface-1)",
-        color: active ? "var(--brand-accent)" : "var(--text-secondary)",
+        color: active ? "var(--brand-accent-text)" : "var(--text-secondary)",
         fontSize: "12px",
         fontWeight: 600,
         cursor: "pointer",
@@ -379,10 +388,11 @@ export function DashboardCustomizePanel() {
           </div>
           {isDashboard && (
             <SettingRow
-              title="Collapse all cards by on load"
+              title="Collapse all cards on load"
               description="Close every card down to its compact header"
               control={
                 <CardToggle
+                  label="Collapse all cards on load"
                   checked={allCollapsed}
                   onChange={() => setAllCollapsed(!allCollapsed)}
                 />
@@ -394,7 +404,11 @@ export function DashboardCustomizePanel() {
             title="Ambient background orbs"
             description="Soft glows that drift in the background"
             control={
-              <CardToggle checked={orbsEnabled} onChange={() => setOrbsEnabled(!orbsEnabled)} />
+              <CardToggle
+                label="Ambient background orbs"
+                checked={orbsEnabled}
+                onChange={() => setOrbsEnabled(!orbsEnabled)}
+              />
             }
           />
 
@@ -404,6 +418,7 @@ export function DashboardCustomizePanel() {
               description="Suggest categories for unrecognized merchants on import"
               control={
                 <CardToggle
+                  label="AI category suggestions"
                   checked={aiSuggestionsEnabled}
                   onChange={() => {
                     const next = !aiSuggestionsEnabled;

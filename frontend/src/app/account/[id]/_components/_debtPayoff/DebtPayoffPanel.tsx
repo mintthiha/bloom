@@ -73,7 +73,7 @@ function PayoffScenarioRow({ label, monthlyPayment, result, highlighted }: Payof
             total interest
           </>
         ) : (
-          <span style={{ color: "#ef4444" }}>
+          <span style={{ color: "var(--negative)" }}>
             Payment is less than monthly interest — debt will grow, not shrink.
           </span>
         )}
@@ -340,11 +340,11 @@ export function DebtPayoffPanel({ account }: DebtPayoffPanelProps) {
                   {formatCurrency(savingsVsMinimum.extraPerMonth)}/month more
                 </strong>{" "}
                 than the minimum saves{" "}
-                <strong style={{ color: "#22c55e" }}>
+                <strong style={{ color: "var(--positive)" }}>
                   {formatCurrency(savingsVsMinimum.interestSaved)}
                 </strong>{" "}
                 in interest and gets you debt-free{" "}
-                <strong style={{ color: "#22c55e" }}>
+                <strong style={{ color: "var(--positive)" }}>
                   {savingsVsMinimum.monthsSaved} month
                   {savingsVsMinimum.monthsSaved !== 1 ? "s" : ""} sooner
                 </strong>

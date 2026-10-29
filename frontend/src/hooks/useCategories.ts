@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, Category } from "@/lib/api";
 
 /**
  * Loads the current user's custom category list (seeded with Bloom's starter
  * set on first fetch) and exposes it split by type for category pickers.
- * Falls back to an empty list on error so a picker never throws.
+ * Falls back to an empty list on error so a picker never throws; a page whose
+ * main content is the list can check `initialLoadFailure` instead.
  */
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [initialLoadFailure, setInitialLoadFailure] = useState<Error | null>(null);
+  const hasLoadedOnceRef = useRef(false);
 
   /** Fetches the latest category list from the API. */
   const refresh = useCallback(async () => {
@@ -16,8 +19,13 @@ export function useCategories() {
     try {
       const result = await api.listCategories();
       setCategories(result);
-    } catch {
-      // Leaves the previous list in place (or empty on first load) if the fetch fails.
+      hasLoadedOnceRef.current = true;
+    } catch (failure) {
+      // Leaves the previous list in place (or empty on first load) if the fetch fails. Only a
+      // failure before any list arrived is surfaced: a later one still has real data on screen.
+      if (!hasLoadedOnceRef.current) {
+        setInitialLoadFailure(failure instanceof Error ? failure : new Error(String(failure)));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -51,6 +59,7 @@ export function useCategories() {
     incomeCategoryNames,
     expenseCategoryNames,
     isLoading,
+    initialLoadFailure,
     refresh,
   };
 }

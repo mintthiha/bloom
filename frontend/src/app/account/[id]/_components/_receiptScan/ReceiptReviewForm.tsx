@@ -167,12 +167,12 @@ export function ReceiptReviewForm({
       </div>
 
       {!isTotalValid && (
-        <p style={{ fontSize: "12px", color: "#f87171", margin: 0 }}>
+        <p style={{ fontSize: "12px", color: "var(--negative-soft)", margin: 0 }}>
           Enter the receipt total to continue.
         </p>
       )}
       {wouldOverdraw && (
-        <p style={{ fontSize: "12px", color: "#ef4444", margin: 0 }}>
+        <p style={{ fontSize: "12px", color: "var(--negative)", margin: 0 }}>
           Insufficient funds — balance is {formatCurrency(account.balance)}.
         </p>
       )}
@@ -204,7 +204,9 @@ export function ReceiptReviewForm({
                 </span>
               )}
               {!isSuggestingCategories && hasSuggestionFailed && (
-                <span style={{ color: "#f87171", textTransform: "none", letterSpacing: 0 }}>
+                <span
+                  style={{ color: "var(--negative-soft)", textTransform: "none", letterSpacing: 0 }}
+                >
                   AI suggestions unavailable
                 </span>
               )}

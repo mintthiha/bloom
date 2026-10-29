@@ -112,7 +112,7 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: isPending ? "var(--brand-accent)" : "var(--text-secondary)",
+            color: isPending ? "var(--brand-accent-text)" : "var(--text-secondary)",
             marginBottom: "4px",
           }}
         >
@@ -208,7 +208,7 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
               alignItems: "center",
               gap: "5px",
               fontWeight: 600,
-              color: "#22c55e",
+              color: "var(--positive)",
             }}
           >
             <Check size={14} aria-hidden />
@@ -217,7 +217,7 @@ export function ProposedActionCard({ proposal, onStatusChange }: ProposedActionC
           <Link
             href={details.destination.href}
             className="hover:underline"
-            style={{ fontWeight: 600, color: "var(--brand-accent)" }}
+            style={{ fontWeight: 600, color: "var(--brand-accent-text)" }}
           >
             {details.destination.label}
           </Link>

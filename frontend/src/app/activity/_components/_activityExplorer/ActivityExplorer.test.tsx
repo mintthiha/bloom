@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TestErrorBoundary } from "@/test-utils/TestErrorBoundary";
 import { ActivityExplorer } from "./ActivityExplorer";
 import type { ActivityLogEntry } from "@/lib/api";
 
@@ -60,6 +61,21 @@ describe("ActivityExplorer", () => {
     apiMock.listActivityLogs.mockResolvedValue(makeResult(0, 0));
     render(<ActivityExplorer />);
     expect(await screen.findByText("No events")).toBeInTheDocument();
+  });
+
+  it("shows the error page instead of 'No events' when loading fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    apiMock.listActivityLogs.mockRejectedValue(new Error("Bloom can't reach its server"));
+
+    render(
+      <TestErrorBoundary>
+        <ActivityExplorer />
+      </TestErrorBoundary>
+    );
+
+    expect(await screen.findByText("Caught: Bloom can't reach its server")).toBeInTheDocument();
+    expect(screen.queryByText("No events")).not.toBeInTheDocument();
+    vi.mocked(console.error).mockRestore();
   });
 
   it("refetches with the group filter and resets to page one", async () => {

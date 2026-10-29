@@ -1,11 +1,19 @@
 "use client";
+import { useEffect } from "react";
 import { Tag } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { CategoryExplorer } from "./_components/_categoryExplorer/CategoryExplorer";
 
 /** Page for managing the user's custom category list: names, colours, and icons. */
 export default function CategoriesPage() {
-  const { categories, isLoading, refresh } = useCategories();
+  const { categories, isLoading, initialLoadFailure, refresh } = useCategories();
+  const reportLoadFailure = useLoadFailureBoundary();
+
+  /** Shows the error page if the list never loaded, rather than an empty category list. */
+  useEffect(() => {
+    if (initialLoadFailure) reportLoadFailure(initialLoadFailure);
+  }, [initialLoadFailure, reportLoadFailure]);
 
   return (
     <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 24px" }}>

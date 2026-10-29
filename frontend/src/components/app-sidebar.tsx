@@ -184,7 +184,7 @@ export function AppSidebar() {
                       background: active
                         ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
                         : "var(--surface-1)",
-                      color: active ? "var(--brand-accent)" : "var(--text-secondary)",
+                      color: active ? "var(--brand-accent-text)" : "var(--text-secondary)",
                       fontSize: "12px",
                       fontWeight: 600,
                       cursor: "pointer",

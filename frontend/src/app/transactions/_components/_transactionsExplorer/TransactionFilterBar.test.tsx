@@ -28,6 +28,12 @@ function renderBar(overrides: Partial<React.ComponentProps<typeof TransactionFil
 }
 
 describe("TransactionFilterBar", () => {
+  it("gives the search box an accessible name rather than relying on its placeholder", () => {
+    renderBar();
+
+    expect(screen.getByRole("textbox", { name: "Search transactions" })).toBeInTheDocument();
+  });
+
   it("lists each account as an option in the account filter", () => {
     renderBar();
     const select = screen.getByLabelText("Filter by account");

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { api, type SubscriptionSummary } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { SubscriptionsHeader } from "./SubscriptionsHeader";
 import { SubscriptionList } from "./SubscriptionList";
 
@@ -12,6 +12,7 @@ import { SubscriptionList } from "./SubscriptionList";
 export function SubscriptionsView() {
   const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Fetches the auto-detected subscription summary for the user. */
   useEffect(() => {
@@ -21,10 +22,9 @@ export function SubscriptionsView() {
       try {
         const data = await api.getSubscriptions();
         if (!cancelled) setSummary(data);
-      } catch (err) {
-        if (!cancelled) {
-          toast.error(err instanceof Error ? err.message : "Failed to load subscriptions");
-        }
+      } catch (failure) {
+        // The empty state would read as "no subscriptions found"; show the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -34,7 +34,7 @@ export function SubscriptionsView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportLoadFailure]);
 
   if (loading) {
     return (

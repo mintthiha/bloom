@@ -172,7 +172,7 @@ export function RecurringCalendar({ rules }: Props) {
                                 fontSize: "13px",
                                 fontWeight: 700,
                                 flexShrink: 0,
-                                color: isDeposit ? "#22c55e" : "var(--text-primary)",
+                                color: isDeposit ? "var(--positive)" : "var(--text-primary)",
                               }}
                             >
                               {isDeposit ? "+" : "−"}

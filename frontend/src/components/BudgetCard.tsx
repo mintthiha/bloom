@@ -112,7 +112,9 @@ export function BudgetCard({
         >
           <span
             className="num"
-            style={{ color: budget.isOverBudget ? "#f87171" : "var(--text-secondary)" }}
+            style={{
+              color: budget.isOverBudget ? "var(--negative-soft)" : "var(--text-secondary)",
+            }}
           >
             <span className="balance-value">
               {formatCurrency(Math.abs(budget.remaining), { hideCents })}
@@ -151,7 +153,10 @@ export function BudgetCard({
               </>
             )}
           </span>
-          <span className="num" style={{ color: budget.carryOut < 0 ? "#f87171" : "#4ade80" }}>
+          <span
+            className="num"
+            style={{ color: budget.carryOut < 0 ? "var(--negative-soft)" : "var(--positive)" }}
+          >
             <span className="balance-value">{formatSigned(budget.carryOut, hideCents)}</span> to
             next month
           </span>

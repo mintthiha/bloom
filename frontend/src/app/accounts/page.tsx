@@ -18,6 +18,7 @@ import {
 } from "@/lib/account-preferences";
 import { BackToHome } from "@/components/BackToHome";
 import { EmptyState } from "@/components/EmptyState";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { AccountFilters } from "./_components/_filters/AccountFilters";
 import { SortControl } from "./_components/_filters/SortControl";
 import { AccountsTreemap } from "./_components/_chart/AccountsTreemap";
@@ -27,8 +28,8 @@ import { RefreshLinkedAccountsButton } from "./_components/RefreshLinkedAccounts
 // Reuse the dashboard's manual-order key so a user's existing drag order carries over to this page.
 const ORDER_KEY = "bloom-account-order";
 
-const POSITIVE_COLOR = "#22c55e";
-const NEGATIVE_COLOR = "#ef4444";
+const POSITIVE_COLOR = "var(--positive)";
+const NEGATIVE_COLOR = "var(--negative)";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -40,6 +41,7 @@ export default function AccountsPage() {
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [showHidden, setShowHidden] = useState(false);
   const [customOrder, setCustomOrder] = useState<string[]>([]);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Loads every account for the signed-in user. */
   const loadAccounts = useCallback(async () => {
@@ -51,9 +53,10 @@ export default function AccountsPage() {
     }
   }, []);
 
+  /** Loads the accounts on mount; a failure shows the error page rather than "no accounts". */
   useEffect(() => {
-    loadAccounts();
-  }, [loadAccounts]);
+    loadAccounts().catch(reportLoadFailure);
+  }, [loadAccounts, reportLoadFailure]);
 
   /** Hydrate persisted preferences after mount to stay hydration-safe. */
   useEffect(() => {

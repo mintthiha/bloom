@@ -93,7 +93,7 @@ export function TransactionsTable({
         <tbody>
           {rows.map((row) => {
             const meta = TRANSACTION_TYPE_META[row.type] ?? { label: row.type, isInflow: false };
-            const amountColor = meta.isInflow ? "#22c55e" : "#f87171";
+            const amountColor = meta.isInflow ? "var(--positive)" : "var(--negative-soft)";
             const amountSign = meta.isInflow ? "+" : "−";
 
             return (

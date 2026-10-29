@@ -88,7 +88,7 @@ export function FhsaRoomPanel({ transactions, accountIds }: FhsaRoomPanelProps) 
               borderRadius: "12px",
               padding: "16px 20px",
               fontSize: "13px",
-              color: "#f87171",
+              color: "var(--negative-soft)",
             }}
           >
             {isAnnualOver &&

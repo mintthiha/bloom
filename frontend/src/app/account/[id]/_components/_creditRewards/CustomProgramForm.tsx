@@ -280,7 +280,7 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: isRemoveHovered ? "#f87171" : "var(--text-muted)",
+                  color: isRemoveHovered ? "var(--negative-soft)" : "var(--text-muted)",
                   cursor: "pointer",
                   fontSize: "18px",
                   lineHeight: 1,
@@ -326,7 +326,9 @@ export function CustomProgramForm({ onSave, onCancel }: CustomProgramFormProps) 
         </button>
       </div>
 
-      {error && <p style={{ fontSize: "12px", color: "#f87171", margin: 0 }}>{error}</p>}
+      {error && (
+        <p style={{ fontSize: "12px", color: "var(--negative-soft)", margin: 0 }}>{error}</p>
+      )}
 
       {/* Actions */}
       <div style={{ display: "flex", gap: "8px" }}>

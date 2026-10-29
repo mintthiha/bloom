@@ -58,7 +58,7 @@ export function RefreshLinkedAccountsButton({
         gap: "6px",
         padding: "8px 16px",
         background: "transparent",
-        color: syncing ? "var(--text-muted)" : "var(--brand-accent)",
+        color: syncing ? "var(--text-muted)" : "var(--brand-accent-text)",
         fontWeight: 700,
         fontSize: "13px",
         border: `1px solid ${syncing ? "var(--border)" : "color-mix(in srgb, var(--brand-accent) 33%, transparent)"}`,

@@ -319,7 +319,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
           download="bloom-import-template.csv"
           style={{
             fontSize: "12px",
-            color: "var(--brand-accent)",
+            color: "var(--brand-accent-text)",
             textDecoration: "none",
             fontWeight: 600,
           }}
@@ -328,7 +328,9 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
         </a>
       </div>
 
-      {csvParseError && <p style={{ fontSize: "12px", color: "#f87171" }}>{csvParseError}</p>}
+      {csvParseError && (
+        <p style={{ fontSize: "12px", color: "var(--negative-soft)" }}>{csvParseError}</p>
+      )}
 
       {csvRows.length > 0 && (
         <div>
@@ -350,12 +352,14 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
               }}
             >
               {csvRows.length} row{csvRows.length !== 1 ? "s" : ""} parsed
-              {errorCount > 0 && <span style={{ color: "#f87171" }}>{errorCount} with errors</span>}
+              {errorCount > 0 && (
+                <span style={{ color: "var(--negative-soft)" }}>{errorCount} with errors</span>
+              )}
               {isAiEnriching && (
                 <span style={{ color: "#8b5cf6", fontWeight: 600 }}>✦ AI suggesting…</span>
               )}
               {!isAiEnriching && aiEnrichError && (
-                <span style={{ color: "#f87171" }}>AI suggestions unavailable</span>
+                <span style={{ color: "var(--negative-soft)" }}>AI suggestions unavailable</span>
               )}
             </span>
             {validCount > 0 && (
@@ -427,7 +431,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                         className="num"
                         style={{
                           padding: "7px 8px",
-                          color: row.error ? "#f87171" : "var(--text-primary)",
+                          color: row.error ? "var(--negative-soft)" : "var(--text-primary)",
                           whiteSpace: "nowrap",
                         }}
                       >
@@ -436,7 +440,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                       <td
                         style={{
                           padding: "7px 8px",
-                          color: row.error ? "#f87171" : "var(--text-primary)",
+                          color: row.error ? "var(--negative-soft)" : "var(--text-primary)",
                           whiteSpace: "nowrap",
                         }}
                       >
@@ -446,7 +450,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                         className="num"
                         style={{
                           padding: "7px 8px",
-                          color: row.error ? "#f87171" : "var(--text-primary)",
+                          color: row.error ? "var(--negative-soft)" : "var(--text-primary)",
                           whiteSpace: "nowrap",
                         }}
                       >
@@ -559,9 +563,11 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                       </td>
                       <td style={{ padding: "7px 8px", whiteSpace: "nowrap" }}>
                         {row.error ? (
-                          <span style={{ color: "#f87171", fontSize: "11px" }}>{row.error}</span>
+                          <span style={{ color: "var(--negative-soft)", fontSize: "11px" }}>
+                            {row.error}
+                          </span>
                         ) : (
-                          <span style={{ color: "#22c55e", fontSize: "11px" }}>✓</span>
+                          <span style={{ color: "var(--positive)", fontSize: "11px" }}>✓</span>
                         )}
                       </td>
                     </tr>

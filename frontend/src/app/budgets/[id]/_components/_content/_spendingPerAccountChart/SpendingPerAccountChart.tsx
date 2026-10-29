@@ -40,7 +40,10 @@ export function SpendingPerAccountChart({ budget }: SpendingPerAccountChartProps
                 }}
               >
                 <span style={{ fontSize: "13px", fontWeight: 600 }}>{account.accountName}</span>
-                <span className="num" style={{ fontSize: "13px", color: "var(--brand-accent)" }}>
+                <span
+                  className="num"
+                  style={{ fontSize: "13px", color: "var(--brand-accent-text)" }}
+                >
                   {formatCurrency(account.total)}
                 </span>
               </div>

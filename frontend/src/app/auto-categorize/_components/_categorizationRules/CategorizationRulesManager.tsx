@@ -6,6 +6,7 @@ import { deleteWithUndo, UNDO_WINDOW_MS } from "@/lib/undoableDelete";
 import { inputStyle } from "@/lib/styles/input";
 import { ConfirmDeleteDialog } from "@/components/ConfirmDeleteDialog";
 import { useCategories } from "@/hooks/useCategories";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 
 const RULES_PER_PAGE = 10;
 
@@ -68,6 +69,7 @@ export function CategorizationRulesManager({
   const [isPendingBulkDelete, setIsPendingBulkDelete] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Loads the user's saved rules; re-runs when refreshTrigger changes. */
   useEffect(() => {
@@ -82,8 +84,9 @@ export function CategorizationRulesManager({
           setSelectedIds(new Set());
           setEditingId(null);
         }
-      } catch {
-        // Silently fall back to empty list.
+      } catch (failure) {
+        // An empty list would read as "no rules yet"; show the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -92,7 +95,7 @@ export function CategorizationRulesManager({
     return () => {
       cancelled = true;
     };
-  }, [refreshTrigger]);
+  }, [refreshTrigger, reportLoadFailure]);
 
   /** Syncs the select-all checkbox's indeterminate visual state when selection changes. */
   useEffect(() => {

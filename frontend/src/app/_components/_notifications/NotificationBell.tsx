@@ -200,7 +200,7 @@ export function NotificationBell() {
                   style={{
                     background: "transparent",
                     border: "none",
-                    color: "var(--brand-accent)",
+                    color: "var(--brand-accent-text)",
                     fontSize: "12px",
                     fontWeight: 600,
                     cursor: "pointer",

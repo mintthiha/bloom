@@ -286,7 +286,7 @@ export function CollapsibleCard({
                 borderRadius: "10px",
                 background: "color-mix(in srgb, var(--brand-accent) 8%, transparent)",
                 border: "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)",
-                color: "var(--brand-accent)",
+                color: "var(--brand-accent-text)",
                 marginBottom: "12px",
               }}
             >

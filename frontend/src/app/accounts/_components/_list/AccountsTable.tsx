@@ -10,7 +10,7 @@ import { ACCOUNT_GROUPS, sumSignedBalances, accountDisplayName } from "@/lib/acc
 import { EmptyState } from "@/components/EmptyState";
 
 const PIN_COLOR = "var(--brand-accent)";
-const NEGATIVE_COLOR = "#ef4444";
+const NEGATIVE_COLOR = "var(--negative)";
 
 interface AccountsTableProps {
   accounts: Account[];
@@ -97,7 +97,7 @@ export function AccountsTable({
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
-                    color: "var(--brand-accent)",
+                    color: "var(--brand-accent-text)",
                     marginBottom: "4px",
                   }}
                 >
@@ -326,7 +326,7 @@ export function AccountsTable({
                                 borderRadius: "4px",
                                 background:
                                   "color-mix(in srgb, var(--brand-accent) 9%, transparent)",
-                                color: "var(--brand-accent)",
+                                color: "var(--brand-accent-text)",
                               }}
                             >
                               Linked · {account.institutionName}

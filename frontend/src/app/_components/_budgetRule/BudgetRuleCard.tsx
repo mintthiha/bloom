@@ -32,13 +32,13 @@ type CategoryRow = {
 /** Returns a color for a bucket bar based on distance from target. */
 function getBucketColor(pct: number, targetPct: number, higherIsBetter: boolean): string {
   if (higherIsBetter) {
-    if (pct >= targetPct) return "#22c55e";
+    if (pct >= targetPct) return "var(--positive)";
     if (pct >= targetPct * 0.5) return "#3b82f6";
-    return "#f87171";
+    return "var(--negative-soft)";
   }
-  if (pct <= targetPct) return "#22c55e";
+  if (pct <= targetPct) return "var(--positive)";
   if (pct <= targetPct * 1.2) return "#3b82f6";
-  return "#f87171";
+  return "var(--negative-soft)";
 }
 
 type BucketRowProps = {

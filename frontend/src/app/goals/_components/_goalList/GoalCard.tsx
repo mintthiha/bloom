@@ -121,7 +121,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
             type="button"
             className="press"
             onClick={onDelete}
-            style={{ ...actionButtonStyle, color: "#ef4444" }}
+            style={{ ...actionButtonStyle, color: "var(--negative)" }}
           >
             Delete
           </button>
@@ -141,7 +141,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
             border: "1px solid var(--border)",
             fontSize: "11px",
             fontWeight: 600,
-            color: pace.status === "PAST_DUE" ? "#ef4444" : "var(--text-secondary)",
+            color: pace.status === "PAST_DUE" ? "var(--negative)" : "var(--text-secondary)",
           }}
         >
           <CalendarClock size={12} aria-hidden="true" />
@@ -194,9 +194,9 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
             fontWeight: 600,
             marginTop: "8px",
             color: isComplete
-              ? "#22c55e"
+              ? "var(--positive)"
               : pace.status === "PAST_DUE"
-                ? "#ef4444"
+                ? "var(--negative)"
                 : "var(--text-secondary)",
           }}
         >

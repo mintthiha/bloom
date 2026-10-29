@@ -1,5 +1,6 @@
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TestErrorBoundary } from "@/test-utils/TestErrorBoundary";
 import { GoalList } from "./GoalList";
 import type { SavingsGoal } from "@/lib/api";
 
@@ -126,12 +127,19 @@ describe("GoalList", () => {
     expect(screen.getByText("✈️")).toBeInTheDocument();
   });
 
-  it("surfaces a toast when loading fails", async () => {
+  it("shows the error page instead of 'no goals yet' when loading fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     apiMock.listSavingsGoals.mockRejectedValue(new Error("boom"));
 
-    render(<GoalList />);
+    render(
+      <TestErrorBoundary>
+        <GoalList />
+      </TestErrorBoundary>
+    );
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("boom"));
+    expect(await screen.findByText("Caught: boom")).toBeInTheDocument();
+    expect(screen.queryByText("No savings goals yet")).not.toBeInTheDocument();
+    vi.mocked(console.error).mockRestore();
   });
 
   it("opens the form in create mode from the header button", async () => {

@@ -54,12 +54,12 @@ function txnMeta(
   switch (t.type) {
     case "DEPOSIT":
       return isCredit
-        ? { label: "Charge", color: "#f87171", sign: "+", icon: "↑" }
-        : { label: "Deposit", color: "#22c55e", sign: "+", icon: "↓" };
+        ? { label: "Charge", color: "var(--negative-soft)", sign: "+", icon: "↑" }
+        : { label: "Deposit", color: "var(--positive)", sign: "+", icon: "↓" };
     case "WITHDRAWAL":
       return isCredit
-        ? { label: "Payment", color: "#22c55e", sign: "−", icon: "↓" }
-        : { label: "Withdrawal", color: "#f87171", sign: "−", icon: "↑" };
+        ? { label: "Payment", color: "var(--positive)", sign: "−", icon: "↓" }
+        : { label: "Withdrawal", color: "var(--negative-soft)", sign: "−", icon: "↑" };
     case "TRANSFER_OUT":
       return {
         label: "Transfer out",
@@ -68,7 +68,7 @@ function txnMeta(
         icon: "→",
       };
     case "TRANSFER_IN":
-      return { label: "Transfer in", color: "#22c55e", sign: "+", icon: "←" };
+      return { label: "Transfer in", color: "var(--positive)", sign: "+", icon: "←" };
   }
 }
 
@@ -282,8 +282,8 @@ export function TransactionHistory({
                         height: "34px",
                         borderRadius: "8px",
                         flexShrink: 0,
-                        background: `${color}18`,
-                        border: `1px solid ${color}30`,
+                        background: `color-mix(in srgb, ${color} 9%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${color} 19%, transparent)`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -604,7 +604,7 @@ export function TransactionHistory({
                             padding: "6px 10px",
                             border: "1px solid #f8717130",
                             background: "transparent",
-                            color: "#f87171",
+                            color: "var(--negative-soft)",
                             borderRadius: "8px",
                             fontSize: "11px",
                             fontWeight: 600,

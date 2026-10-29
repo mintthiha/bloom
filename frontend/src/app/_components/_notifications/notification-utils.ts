@@ -9,9 +9,9 @@ const DUE_SOON_THRESHOLD_DAYS = 7;
 export const KIND_ACCENT: Record<NotificationKind, string> = {
   BILL_REMINDER: "#3b82f6",
   LOW_BALANCE: "#f59e0b",
-  BUDGET_OVERSPEND: "#f87171",
-  GOAL_REACHED: "#22c55e",
-  GOAL_MILESTONE: "#22c55e",
+  BUDGET_OVERSPEND: "var(--negative-soft)",
+  GOAL_REACHED: "var(--positive)",
+  GOAL_MILESTONE: "var(--positive)",
   SUBSCRIPTION_PRICE: "#f59e0b",
 };
 

@@ -69,8 +69,9 @@ export function ActivityFilterBar({
         marginBottom: "18px",
       }}
     >
-      {/* Search */}
+      {/* Search — the wrapper draws the focus ring, since the input itself is borderless. */}
       <div
+        className="search-field"
         style={{
           display: "flex",
           alignItems: "center",
@@ -86,6 +87,7 @@ export function ActivityFilterBar({
         <Search size={15} style={{ flexShrink: 0, color: "var(--text-muted)" }} />
         <input
           value={searchInput}
+          aria-label="Search activity"
           onChange={(event) => onSearchInputChange(event.target.value)}
           placeholder="Search activity…"
           style={{

@@ -15,9 +15,9 @@ type Props = {
 };
 
 const SEVERITY_ACCENT_COLOR: Record<InsightSeverity, string> = {
-  warning: "#f87171",
+  warning: "var(--negative-soft)",
   info: "#3b82f6",
-  success: "#22c55e",
+  success: "var(--positive)",
 };
 
 /** A single insight row with a colored left accent, index number, message, and supporting detail. */
@@ -30,10 +30,10 @@ function InsightRow({ item, index }: { item: InsightItem; index: number }) {
         display: "flex",
         gap: "14px",
         alignItems: "flex-start",
-        background: `${color}0d`,
-        borderTop: `1px solid ${color}33`,
-        borderRight: `1px solid ${color}33`,
-        borderBottom: `1px solid ${color}33`,
+        background: `color-mix(in srgb, ${color} 5%, transparent)`,
+        borderTop: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
+        borderRight: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
+        borderBottom: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
         borderLeft: `3px solid ${color}`,
         borderRadius: "10px",
         padding: "12px 14px",
@@ -99,7 +99,7 @@ export function InsightsCard({
           padding: "3px 9px",
           borderRadius: "999px",
           background: "#f8717122",
-          color: "#f87171",
+          color: "var(--negative-soft)",
         }}
       >
         {warningCount} action{warningCount !== 1 ? "s" : ""}

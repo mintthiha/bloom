@@ -229,7 +229,7 @@ export function CommandPalette() {
             ) : (
               results.map((result, i) => {
                 const isInflow = result.type === "DEPOSIT" || result.type === "TRANSFER_IN";
-                const amountColor = isInflow ? "#22c55e" : "#f87171";
+                const amountColor = isInflow ? "var(--positive)" : "var(--negative-soft)";
                 const amountSign = isInflow ? "+" : "−";
                 const typeMeta = ACCOUNT_TYPE_META[result.accountType as AccountType];
                 const isSelected = i === selectedIndex;

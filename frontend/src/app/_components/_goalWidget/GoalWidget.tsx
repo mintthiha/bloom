@@ -122,7 +122,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
             cursor: "pointer",
             fontSize: "12px",
             fontWeight: 600,
-            color: "var(--brand-accent)",
+            color: "var(--brand-accent-text)",
             marginLeft: goals.length > 1 ? "auto" : "0",
           }}
         >
@@ -219,7 +219,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
             </span>
           </span>
           {isComplete && (
-            <span style={{ fontSize: "11px", color: "#22c55e", fontWeight: 600 }}>
+            <span style={{ fontSize: "11px", color: "var(--positive)", fontWeight: 600 }}>
               Goal reached!
             </span>
           )}
@@ -231,7 +231,7 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
               fontSize: "11.5px",
               fontWeight: 600,
               marginTop: "6px",
-              color: pace.status === "PAST_DUE" ? "#ef4444" : "var(--text-muted)",
+              color: pace.status === "PAST_DUE" ? "var(--negative)" : "var(--text-muted)",
             }}
           >
             {pace.summary}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { api, Profile } from "@/lib/api";
 import { ProfileFormPanel } from "@/components/profile-form-panel";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { ProfileIdentityHeader } from "./_components/_profileHeader/ProfileIdentityHeader";
 import { GlanceStatsStrip } from "./_components/_glanceStats/GlanceStatsStrip";
 import { FinancialProfilePanel } from "./_components/_financialProfile/FinancialProfilePanel";
@@ -14,6 +15,7 @@ import { AccountDataPanel } from "./_components/_accountData/AccountDataPanel";
 export default function ProfilePage() {
   const { data: session } = useSession();
   const [savedProfile, setSavedProfile] = useState<Profile | null>(null);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Loads the saved profile so the identity header can show the stored name and handle. */
   useEffect(() => {
@@ -23,8 +25,8 @@ export default function ProfilePage() {
       try {
         const profile = await api.getProfile();
         if (!cancelled) setSavedProfile(profile);
-      } catch {
-        if (!cancelled) setSavedProfile(null);
+      } catch (failure) {
+        if (!cancelled) reportLoadFailure(failure);
       }
     }
 
@@ -32,7 +34,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportLoadFailure]);
 
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", padding: "48px 24px" }}>

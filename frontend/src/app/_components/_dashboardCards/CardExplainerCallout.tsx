@@ -44,7 +44,7 @@ export function CardExplainerCallout({
             fontWeight: 700,
             textTransform: "uppercase",
             letterSpacing: "0.06em",
-            color: "var(--brand-accent)",
+            color: "var(--brand-accent-text)",
           }}
         >
           New card

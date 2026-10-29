@@ -35,7 +35,7 @@ export function FreezeButton({ accountId, frozen, onToggled }: FreezeButtonProps
         padding: "6px 14px",
         border: `1px solid ${frozen ? "#3b82f640" : "#f8717140"}`,
         background: frozen ? "#3b82f610" : "#f8717110",
-        color: frozen ? "#60a5fa" : "#f87171",
+        color: frozen ? "#60a5fa" : "var(--negative-soft)",
         borderRadius: "7px",
         fontSize: "11px",
         fontWeight: 700,

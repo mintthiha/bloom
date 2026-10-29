@@ -254,7 +254,10 @@ export function BudgetsManager({
         )}
 
         {budgetError && (
-          <p className="num" style={{ color: "#f87171", fontSize: "12px", marginTop: "10px" }}>
+          <p
+            role="alert"
+            style={{ color: "var(--negative-soft)", fontSize: "12px", marginTop: "10px" }}
+          >
             {budgetError}
           </p>
         )}

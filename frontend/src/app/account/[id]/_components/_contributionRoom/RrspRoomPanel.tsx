@@ -74,7 +74,7 @@ export function RrspRoomPanel({ transactions, accountIds, profile }: RrspRoomPan
                 borderRadius: "12px",
                 padding: "16px 20px",
                 fontSize: "13px",
-                color: "#f87171",
+                color: "var(--negative-soft)",
               }}
             >
               You may be over your estimated RRSP deduction limit. RRSP over-contributions above

@@ -33,7 +33,7 @@ function OnboardingStepRow({
       style={{
         fontSize: "12px",
         fontWeight: 700,
-        color: "#22c55e",
+        color: "var(--positive)",
         lineHeight: 1,
         flexShrink: 0,
         width: "14px",
@@ -190,7 +190,7 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
               fontWeight: 700,
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "var(--brand-accent)",
+              color: "var(--brand-accent-text)",
               marginBottom: "4px",
             }}
           >
@@ -215,7 +215,7 @@ export function OnboardingChecklist({ accounts, budgets, goals, monthlySummary }
                 padding: "2px 8px",
                 borderRadius: "999px",
                 background: "color-mix(in srgb, var(--brand-accent) 13%, transparent)",
-                color: "var(--brand-accent)",
+                color: "var(--brand-accent-text)",
                 flexShrink: 0,
               }}
             >

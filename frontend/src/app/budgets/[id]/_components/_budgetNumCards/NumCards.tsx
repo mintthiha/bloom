@@ -72,7 +72,7 @@ export function NumCards({ budget }: NumCardsProps) {
         <StatCard
           label="Remaining"
           value={remainingValue}
-          valueColor={budget.isOverBudget ? "#ef4444" : "#22c55e"}
+          valueColor={budget.isOverBudget ? "var(--negative)" : "var(--positive)"}
         />
         <StatCard label="Usage" value={`${budget.percentageUsed.toFixed(0)}%`} />
       </div>
@@ -91,7 +91,7 @@ export function NumCards({ budget }: NumCardsProps) {
           <StatCard
             label="Rolls over"
             value={formatSigned(budget.carryOut)}
-            valueColor={budget.carryOut < 0 ? "#ef4444" : "#22c55e"}
+            valueColor={budget.carryOut < 0 ? "var(--negative)" : "var(--positive)"}
           />
         </div>
       )}

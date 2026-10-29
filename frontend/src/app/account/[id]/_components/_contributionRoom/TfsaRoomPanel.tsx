@@ -95,7 +95,7 @@ export function TfsaRoomPanel({ transactions, accountIds, profile }: TfsaRoomPan
                 borderRadius: "12px",
                 padding: "16px 20px",
                 fontSize: "13px",
-                color: "#f87171",
+                color: "var(--negative-soft)",
               }}
             >
               You may be over your estimated TFSA room. CRA penalizes TFSA over-contributions at 1%

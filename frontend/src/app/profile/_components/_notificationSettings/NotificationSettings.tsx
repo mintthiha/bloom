@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api, NotificationPreferences } from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { ToggleRow } from "@/components/ToggleRow";
+import { useLoadFailureBoundary } from "@/hooks/useLoadFailureBoundary";
 import { LeadDaySelector } from "./LeadDaySelector";
 import { MilestoneSelector } from "./MilestoneSelector";
 import { LowBalanceThresholdInput } from "./LowBalanceThresholdInput";
@@ -32,6 +33,7 @@ export function NotificationSettings() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(FALLBACK_PREFERENCES);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const reportLoadFailure = useLoadFailureBoundary();
 
   /** Loads the saved notification preferences on mount. */
   useEffect(() => {
@@ -51,8 +53,10 @@ export function NotificationSettings() {
             subscriptionPriceAlertsEnabled: profile.subscriptionPriceAlertsEnabled,
           });
         }
-      } catch {
-        // Falls back to defaults if the profile can't be loaded.
+      } catch (failure) {
+        // Showing defaults would let one toggle save them over the user's real preferences, so
+        // show the error page instead.
+        if (!cancelled) reportLoadFailure(failure);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -61,7 +65,7 @@ export function NotificationSettings() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportLoadFailure]);
 
   /** Applies a change optimistically and restores the previous value if the save fails. */
   async function savePreferences(patch: Partial<NotificationPreferences>) {

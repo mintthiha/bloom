@@ -27,7 +27,7 @@ export function OptionPill({
         background: isSelected
           ? "color-mix(in srgb, var(--brand-accent) 10%, transparent)"
           : "var(--surface-2)",
-        color: isSelected ? "var(--brand-accent)" : "var(--text-secondary)",
+        color: isSelected ? "var(--brand-accent-text)" : "var(--text-secondary)",
         fontSize: "13px",
         fontWeight: 600,
         cursor: isDisabled ? "default" : "pointer",

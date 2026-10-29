@@ -204,7 +204,7 @@ export default function RegisterPage() {
             <p
               style={{
                 fontSize: "13px",
-                color: "#f87171",
+                color: "var(--negative-soft)",
                 padding: "10px 12px",
                 background: "#f8717110",
                 border: "1px solid #f8717130",

@@ -62,6 +62,27 @@ describe("useCategories", () => {
     expect(result.current.categories).toEqual([]);
   });
 
+  it("reports a failure of the first load so a page can show its error state", async () => {
+    apiMock.listCategories.mockRejectedValue(new Error("network error"));
+
+    const { result } = renderHook(() => useCategories());
+
+    await waitFor(() => expect(result.current.initialLoadFailure?.message).toBe("network error"));
+  });
+
+  it("does not report a failed refresh once a list has loaded", async () => {
+    apiMock.listCategories.mockResolvedValueOnce([makeCategory({ name: "Groceries" })]);
+    const { result } = renderHook(() => useCategories());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    apiMock.listCategories.mockRejectedValueOnce(new Error("network error"));
+    await result.current.refresh();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.initialLoadFailure).toBeNull();
+    expect(result.current.expenseCategoryNames).toEqual(["Groceries"]);
+  });
+
   it("refresh re-fetches and replaces the category list", async () => {
     apiMock.listCategories.mockResolvedValueOnce([makeCategory({ name: "Groceries" })]);
     const { result } = renderHook(() => useCategories());

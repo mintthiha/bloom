@@ -557,7 +557,7 @@ export default function LoginPage() {
                     borderRadius: "999px",
                     background: "color-mix(in srgb, var(--brand-accent) 12%, transparent)",
                     border: "1px solid color-mix(in srgb, var(--brand-accent) 27%, transparent)",
-                    color: "var(--brand-accent)",
+                    color: "var(--brand-accent-text)",
                     flexShrink: 0,
                     marginTop: "1px",
                   }}
@@ -754,7 +754,7 @@ export default function LoginPage() {
               className="fade-up"
               style={{
                 fontSize: "13px",
-                color: "#f87171",
+                color: "var(--negative-soft)",
                 padding: "8px 12px",
                 marginTop: "8px",
                 background: "#f8717110",
@@ -805,7 +805,7 @@ export default function LoginPage() {
                       justifyContent: "center",
                       fontSize: "12px",
                       fontWeight: 700,
-                      color: "var(--brand-accent)",
+                      color: "var(--brand-accent-text)",
                       flexShrink: 0,
                     }}
                   >
@@ -948,7 +948,7 @@ export default function LoginPage() {
               <p
                 style={{
                   fontSize: "13px",
-                  color: "#f87171",
+                  color: "var(--negative-soft)",
                   padding: "8px 12px",
                   background: "#f8717110",
                   border: "1px solid #f8717130",

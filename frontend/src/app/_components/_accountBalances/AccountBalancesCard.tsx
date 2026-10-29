@@ -20,8 +20,8 @@ type Props = {
   newlyCreatedId?: string;
 };
 
-const POSITIVE_COLOR = "#22c55e";
-const NEGATIVE_COLOR = "#ef4444";
+const POSITIVE_COLOR = "var(--positive)";
+const NEGATIVE_COLOR = "var(--negative)";
 
 // How many top accounts to show when the user hasn't pinned any of their own.
 const FALLBACK_COUNT = 3;
@@ -37,8 +37,8 @@ function TotalBadge({ total, hideCents }: { total: number; hideCents: boolean })
         fontWeight: 800,
         padding: "2px 9px",
         borderRadius: "7px",
-        background: `${color}18`,
-        border: `1px solid ${color}44`,
+        background: `color-mix(in srgb, ${color} 9%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 27%, transparent)`,
         color,
       }}
     >

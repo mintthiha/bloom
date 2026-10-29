@@ -654,7 +654,7 @@ function Home() {
                 title: "Net Worth",
                 value: <AnimatedCurrency value={netWorth} />,
                 flashKey: netWorth,
-                color: netWorth >= 0 ? "#22c55e" : "#ef4444",
+                color: netWorth >= 0 ? "var(--positive)" : "var(--negative)",
                 staggerIndex: 0,
               })}
               {renderSummaryCard({
@@ -724,7 +724,7 @@ function Home() {
                     </>
                   ),
                 flashKey: creditAccounts.length > 0 ? totalCredit : creditAccounts.length,
-                color: creditAccounts.length > 0 ? "#ef4444" : undefined,
+                color: creditAccounts.length > 0 ? "var(--negative)" : undefined,
                 targetAccount: creditAccounts[0],
                 staggerIndex: 5,
               })}

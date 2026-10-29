@@ -55,7 +55,7 @@ export function NetWorthHistory({ history }: Props) {
           style={{
             fontSize: "14px",
             fontWeight: 700,
-            color: delta >= 0 ? "#22c55e" : "#ef4444",
+            color: delta >= 0 ? "var(--positive)" : "var(--negative)",
           }}
         >
           {delta >= 0 ? "+" : ""}

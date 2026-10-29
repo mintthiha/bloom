@@ -239,7 +239,8 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
                   fontSize: "11.5px",
                   fontWeight: 600,
                   marginTop: "8px",
-                  color: pacePreview.status === "PAST_DUE" ? "#ef4444" : "var(--text-secondary)",
+                  color:
+                    pacePreview.status === "PAST_DUE" ? "var(--negative)" : "var(--text-secondary)",
                 }}
               >
                 {pacePreview.summary}
