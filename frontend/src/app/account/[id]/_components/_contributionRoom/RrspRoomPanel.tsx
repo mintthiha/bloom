@@ -5,6 +5,7 @@ import { CollapsibleCard } from "@/components/collapsible-card";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { calculateNetContributions } from "@/lib/contribution-room";
 import { formatCurrency } from "@/lib/format";
+import { toProgressScale } from "@/lib/progress-scale";
 
 type RrspRoomPanelProps = {
   transactions: Transaction[];
@@ -26,13 +27,13 @@ function RoomProgressBar({ used, total, color }: { used: number; total: number; 
         }}
       >
         <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: color,
-            borderRadius: "4px",
-            transition: "width 0.3s ease",
-          }}
+          className="progress-fill"
+          style={
+            {
+              background: color,
+              "--progress": toProgressScale(pct),
+            } as React.CSSProperties
+          }
         />
       </div>
     </div>

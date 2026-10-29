@@ -51,7 +51,7 @@ export function SpendingPerAccountChart({ budget }: SpendingPerAccountChartProps
                 style={{
                   height: "8px",
                   borderRadius: "999px",
-                  background: "#ffffff0a",
+                  background: "color-mix(in srgb, var(--text-primary) 4%, transparent)",
                   overflow: "hidden",
                 }}
               >

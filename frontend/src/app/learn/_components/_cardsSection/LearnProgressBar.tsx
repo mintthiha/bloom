@@ -1,3 +1,5 @@
+import { toProgressScale } from "@/lib/progress-scale";
+
 type Props = {
   exploredCount: number;
   totalCount: number;
@@ -57,13 +59,13 @@ export function LearnProgressBar({ exploredCount, totalCount, nextCardTitle }: P
         }}
       >
         <div
-          style={{
-            height: "100%",
-            width: `${percentage}%`,
-            background: isComplete ? "#22c55e" : "var(--brand-accent)",
-            borderRadius: "999px",
-            transition: "width 0.3s ease",
-          }}
+          className="progress-fill"
+          style={
+            {
+              background: isComplete ? "#22c55e" : "var(--brand-accent)",
+              "--progress": toProgressScale(percentage),
+            } as React.CSSProperties
+          }
         />
       </div>
 

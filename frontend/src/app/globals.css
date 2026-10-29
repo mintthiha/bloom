@@ -57,8 +57,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.623 0.188 259.8);
-  --primary-foreground: oklch(0.985 0 0);
+  /* shadcn primary (e.g. the default Button variant): neutral authority, never a fixed blue —
+     near-white on dark, ink on light. The accent stays reserved for signal. */
+  --primary: var(--text-primary);
+  --primary-foreground: var(--surface-0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -121,8 +123,10 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.025 260);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.623 0.188 259.8);
-  --primary-foreground: oklch(0.985 0 0);
+  /* shadcn primary (e.g. the default Button variant): neutral authority, never a fixed blue —
+     near-white on dark, ink on light. The accent stays reserved for signal. */
+  --primary: var(--text-primary);
+  --primary-foreground: var(--surface-0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -1198,18 +1202,21 @@ body::before {
 }
 
 /*
- * Savings-goal progress fill. Animates via `transform: scaleX` (composited on the GPU)
- * rather than `width` (which forces layout reflow every frame). The fill sits at full width
- * and is scaled from the left; the track's `overflow: hidden` + rounded corners clip the shape.
- * The scale ratio (0–1) is passed in as the `--goal-progress` custom property.
+ * Progress-bar fill (goals, budgets, contribution room, health score, learning progress).
+ * Animates via `transform: scaleX` (composited on the GPU) rather than `width` (which forces
+ * layout reflow every frame). The fill sits at full size and is scaled from the left; the
+ * track's `overflow: hidden` + rounded corners clip the shape. The 0–1 ratio arrives as the
+ * `--progress` custom property — build it with `toProgressScale` so it's always clamped.
  */
-.goal-progress-fill {
+.progress-fill {
+  width: 100%;
+  height: 100%;
   transform-origin: left;
-  transform: scaleX(var(--goal-progress, 0));
+  transform: scaleX(var(--progress, 0));
   transition: transform 0.3s ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  .goal-progress-fill {
+  .progress-fill {
     transition: none;
   }
 }

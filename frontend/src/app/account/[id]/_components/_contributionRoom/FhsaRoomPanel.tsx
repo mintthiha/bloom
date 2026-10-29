@@ -10,6 +10,7 @@ import {
   calculateNetContributionsForYear,
 } from "@/lib/contribution-room";
 import { formatCurrency } from "@/lib/format";
+import { toProgressScale } from "@/lib/progress-scale";
 
 type FhsaRoomPanelProps = {
   transactions: Transaction[];
@@ -49,13 +50,13 @@ function LabeledProgressBar({
         }}
       >
         <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: color,
-            borderRadius: "4px",
-            transition: "width 0.3s ease",
-          }}
+          className="progress-fill"
+          style={
+            {
+              background: color,
+              "--progress": toProgressScale(pct),
+            } as React.CSSProperties
+          }
         />
       </div>
     </div>

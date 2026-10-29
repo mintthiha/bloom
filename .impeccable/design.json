@@ -1,37 +1,54 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-06-22T01:00:00Z",
+  "generatedAt": "2026-10-28T00:00:00Z",
   "title": "Design System: Bloom",
   "extensions": {
     "colorMeta": {
-      "amber":        { "role": "primary",  "displayName": "Signal Amber",  "canonical": "#f59e0b", "tonalRamp": ["#1a0e00", "#3b2200", "#5e3800", "#875200", "#b36e06", "#f59e0b", "#fbbf24", "#fde68a"] },
-      "amber-light":  { "role": "primary",  "displayName": "Amber Warm",    "canonical": "#fbbf24", "tonalRamp": ["#1a1000", "#3b2700", "#5e4000", "#886000", "#b58015", "#fbbf24", "#fde68a", "#fef9ed"] },
-      "surface-0":    { "role": "neutral",  "displayName": "Deep Night",     "canonical": "#080808", "tonalRamp": ["#080808", "#111111", "#1a1a1a", "#222222", "#2c2c2c", "#3a3a3a", "#555555", "#777777"] },
-      "surface-1":    { "role": "neutral",  "displayName": "Card Black",     "canonical": "#111111", "tonalRamp": ["#080808", "#111111", "#1a1a1a", "#222222", "#2c2c2c", "#3a3a3a", "#555555", "#888888"] },
-      "text-primary": { "role": "neutral",  "displayName": "Clean White",    "canonical": "#efefef", "tonalRamp": ["#333333", "#555555", "#777777", "#999999", "#bbbbbb", "#cccccc", "#e0e0e0", "#efefef"] },
-      "savings":      { "role": "tertiary", "displayName": "Savings Green",  "canonical": "#22c55e", "tonalRamp": ["#052e16", "#0a5e2a", "#0f7d38", "#14a34a", "#16a34a", "#22c55e", "#4ade80", "#bbf7d0"] },
-      "credit":       { "role": "tertiary", "displayName": "Alert Red",      "canonical": "#ef4444", "tonalRamp": ["#3b0a0a", "#6b1414", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca"] },
-      "tfsa":         { "role": "tertiary", "displayName": "Sky Blue",       "canonical": "#38bdf8", "tonalRamp": ["#082f49", "#0c4a6e", "#075985", "#0369a1", "#0ea5e9", "#38bdf8", "#7dd3fc", "#e0f2fe"] },
-      "rrsp":         { "role": "tertiary", "displayName": "Soft Purple",    "canonical": "#a78bfa", "tonalRamp": ["#2e1065", "#4c1d95", "#5b21b6", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa", "#ddd6fe"] },
-      "fhsa":         { "role": "tertiary", "displayName": "Rose",           "canonical": "#fb7185", "tonalRamp": ["#4c0519", "#881337", "#9f1239", "#be123c", "#e11d48", "#f43f5e", "#fb7185", "#fecdd3"] }
+      "amber":          { "role": "primary",  "displayName": "Signal Amber (default accent)", "canonical": "#f59e0b", "tonalRamp": ["#1a0e00", "#3b2200", "#5e3800", "#875200", "#b36e06", "#f59e0b", "#fbbf24", "#fde68a"] },
+      "accent-blue":    { "role": "primary",  "displayName": "Accent Option: Blue",   "canonical": "#3b82f6", "tonalRamp": ["#172554", "#1e3a8a", "#1e40af", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#bfdbfe"] },
+      "accent-green":   { "role": "primary",  "displayName": "Accent Option: Green",  "canonical": "#10b981", "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#a7f3d0"] },
+      "accent-violet":  { "role": "primary",  "displayName": "Accent Option: Violet", "canonical": "#a855f7", "tonalRamp": ["#3b0764", "#581c87", "#6b21a8", "#7e22ce", "#9333ea", "#a855f7", "#c084fc", "#e9d5ff"] },
+      "accent-pink":    { "role": "primary",  "displayName": "Accent Option: Pink",   "canonical": "#ec4899", "tonalRamp": ["#500724", "#831843", "#9d174d", "#be185d", "#db2777", "#ec4899", "#f472b6", "#fbcfe8"] },
+      "accent-cyan":    { "role": "primary",  "displayName": "Accent Option: Cyan",   "canonical": "#06b6d4", "tonalRamp": ["#083344", "#164e63", "#155e75", "#0e7490", "#0891b2", "#06b6d4", "#22d3ee", "#a5f3fc"] },
+      "surface-0":      { "role": "neutral",  "displayName": "Deep Navy",    "canonical": "#060a14", "tonalRamp": ["#060a14", "#0d131f", "#141b2b", "#1c2438", "#263149", "#2d3854", "#808898", "#eef1f7"] },
+      "surface-1":      { "role": "neutral",  "displayName": "Card Navy",    "canonical": "#0d131f", "tonalRamp": ["#060a14", "#0d131f", "#141b2b", "#1c2438", "#263149", "#2d3854", "#808898", "#eef1f7"] },
+      "text-primary":   { "role": "neutral",  "displayName": "Cool White",   "canonical": "#eef1f7", "tonalRamp": ["#263149", "#4a5268", "#6b7388", "#808898", "#8b93a7", "#b4bacb", "#d6dae6", "#eef1f7"] },
+      "surface-0-day":  { "role": "neutral",  "displayName": "Daytime Paper", "canonical": "#eef2fb", "tonalRamp": ["#0c1320", "#5b6472", "#b8c7e0", "#c4d0e6", "#dbe4f4", "#e6ecf8", "#eef2fb", "#ffffff"] },
+      "text-primary-day": { "role": "neutral", "displayName": "Daytime Ink", "canonical": "#0c1320", "tonalRamp": ["#0c1320", "#1f2a3d", "#3a455c", "#5b6472", "#5c6480", "#8a93a8", "#b8c7e0", "#eef2fb"] },
+      "positive":       { "role": "tertiary", "displayName": "Positive",       "canonical": "#22c55e", "tonalRamp": ["#052e16", "#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#4ade80", "#bbf7d0"] },
+      "negative":       { "role": "tertiary", "displayName": "Negative",       "canonical": "#ef4444", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca"] },
+      "caution":        { "role": "tertiary", "displayName": "Caution Orange", "canonical": "#f97316", "tonalRamp": ["#431407", "#7c2d12", "#9a3412", "#c2410c", "#ea580c", "#f97316", "#fb923c", "#fed7aa"] },
+      "warning":        { "role": "tertiary", "displayName": "Limit Warning",  "canonical": "#d97706", "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a"] },
+      "chequing":       { "role": "tertiary", "displayName": "Chequing Blue",  "canonical": "#3b82f6", "tonalRamp": ["#172554", "#1e3a8a", "#1e40af", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#bfdbfe"] },
+      "savings":        { "role": "tertiary", "displayName": "Savings Green",  "canonical": "#22c55e", "tonalRamp": ["#052e16", "#0a5e2a", "#0f7d38", "#14a34a", "#16a34a", "#22c55e", "#4ade80", "#bbf7d0"] },
+      "tfsa":           { "role": "tertiary", "displayName": "TFSA Sky",       "canonical": "#38bdf8", "tonalRamp": ["#082f49", "#0c4a6e", "#075985", "#0369a1", "#0ea5e9", "#38bdf8", "#7dd3fc", "#e0f2fe"] },
+      "rrsp":           { "role": "tertiary", "displayName": "RRSP Purple",    "canonical": "#a78bfa", "tonalRamp": ["#2e1065", "#4c1d95", "#5b21b6", "#6d28d9", "#7c3aed", "#8b5cf6", "#a78bfa", "#ddd6fe"] },
+      "fhsa":           { "role": "tertiary", "displayName": "FHSA Rose",      "canonical": "#fb7185", "tonalRamp": ["#4c0519", "#881337", "#9f1239", "#be123c", "#e11d48", "#f43f5e", "#fb7185", "#fecdd3"] },
+      "credit":         { "role": "tertiary", "displayName": "Credit Red",     "canonical": "#ef4444", "tonalRamp": ["#3b0a0a", "#6b1414", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca"] }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Page-level headings — dashboard greeting, onboarding hero title." },
-      "headline": { "displayName": "Headline", "purpose": "Card headings, step titles in multi-step flows." },
+      "display":  { "displayName": "Display",  "purpose": "One per page, as its h1 — dashboard greeting, page titles, onboarding hero." },
+      "headline": { "displayName": "Headline", "purpose": "Card headings, step titles, a data page's headline sentence." },
       "title":    { "displayName": "Title",    "purpose": "Section labels, sidebar group headers." },
       "body":     { "displayName": "Body",     "purpose": "Descriptions, helper text, metadata. Cap at 65ch." },
-      "label":    { "displayName": "Label",    "purpose": "Eyebrow kickers above card headlines. Amber only. One per card." },
-      "mono":     { "displayName": "Mono",     "purpose": "All currency, balances, percentages, numeric counters via .num class." }
+      "label":    { "displayName": "Label",    "purpose": "Eyebrow kickers above card headlines, in the readable accent. One per card." },
+      "mono":     { "displayName": "Mono",     "purpose": "All currency, balances, percentages, counters via .num. Numbers only — never prose." }
     },
-    "shadows": [],
+    "shadows": [
+      { "name": "shadow-hover",   "value": "0 8px 24px -10px rgba(0,0,0,0.6), inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 20%, transparent)", "purpose": "Hovered interactive cards (night theme). Feedback only, never at rest." },
+      { "name": "shadow-pressed", "value": "0 2px 8px -4px rgba(0,0,0,0.5), inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 12%, transparent)", "purpose": "Pressed interactive cards." },
+      { "name": "dialog",         "value": "0 24px 80px rgba(0,0,0,0.45)", "purpose": "Modal dialogs floating above the page." }
+    ],
     "motion": [
-      { "name": "hover-lift",    "value": "transform 150ms ease, border-color 150ms ease", "purpose": "Interactive card hover — translateY(-1px) + border shift to #333." },
-      { "name": "collapse",      "value": "grid-template-rows 280ms ease",                 "purpose": "Collapsible card height animation." },
-      { "name": "fade-content",  "value": "opacity 200ms ease",                            "purpose": "Collapsible card content fade on open/close." },
-      { "name": "fade-up-enter", "value": "opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1)", "purpose": "Dashboard section entrance. Staggered via animation-delay: 0.06s increments." }
+      { "name": "hover-lift",    "value": "translate 150ms ease, border-color 150ms ease", "purpose": "Clickable stat tiles: lift 1px with the standalone translate property (the entrance animation owns transform)." },
+      { "name": "progress-fill", "value": "transform 300ms ease", "purpose": "Progress bars scale their fill with scaleX from the left; never animate width." },
+      { "name": "collapse",      "value": "grid-template-rows 280ms ease", "purpose": "Collapsible card height animation." },
+      { "name": "fade-content",  "value": "opacity 200ms ease", "purpose": "Collapsible card content fade on open/close." },
+      { "name": "fade-up-enter", "value": "opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1)", "purpose": "Section entrance, staggered in 0.06s steps. Disabled under reduced motion, like every animation." }
     ],
     "breakpoints": [
-      { "name": "mobile", "value": "768px", "purpose": "Sidebar collapses; cards stack single-column." }
+      { "name": "mobile", "value": "768px", "purpose": "Sidebar becomes a sheet; dashboard collapses to one column; header search becomes an icon." },
+      { "name": "touch", "value": "(pointer: coarse)", "purpose": ".touch-target grows small controls' tap area to 44×44px without changing their drawn size." }
     ]
   },
   "components": [
@@ -39,93 +56,122 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Form submission and primary actions. Near-white on near-black — authoritative, not amber.",
-      "html": "<button class=\"ds-btn-primary\">Continue</button>",
-      "css": ".ds-btn-primary { background: #efefef; color: #080808; border: none; border-radius: 10px; padding: 0 10px; height: 32px; font-family: Outfit, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; transition: background 150ms ease, transform 150ms ease; } .ds-btn-primary:hover { background: #d0d0d0; transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 3px solid rgba(239,246,255,0.5); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+      "description": "Form submission and primary actions. Near-white on near-black by night (ink on white by day) — neutral authority, never the accent or a fixed blue.",
+      "html": "<button class=\"ds-btn-primary\">Save</button>",
+      "css": ".ds-btn-primary { background: #eef1f7; color: #060a14; border: none; border-radius: 10px; padding: 0 12px; height: 32px; font-family: Outfit, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; transition: filter 150ms ease, transform 120ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { filter: brightness(0.92); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
     },
     {
-      "name": "Ghost Button",
+      "name": "Outline Button",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Secondary and icon-only actions. Transparent at rest.",
-      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
-      "css": ".ds-btn-ghost { background: transparent; color: #888888; border: 1px solid #1f1f1f; border-radius: 10px; padding: 0 10px; height: 32px; font-family: Outfit, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; transition: border-color 150ms ease, color 150ms ease; } .ds-btn-ghost:hover { border-color: #333333; color: #efefef; } .ds-btn-ghost:focus-visible { outline: 3px solid rgba(239,246,255,0.3); outline-offset: 2px; } .ds-btn-ghost:disabled { opacity: 0.5; pointer-events: none; }"
+      "description": "Secondary actions (Export CSV, Cancel). Transparent; border and label brighten on hover.",
+      "html": "<button class=\"ds-btn-outline\">Export CSV</button>",
+      "css": ".ds-btn-outline { background: transparent; color: #8b93a7; border: 1px solid #1b2334; border-radius: 10px; padding: 0 12px; height: 32px; font-family: Outfit, sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; transition: border-color 150ms ease, color 150ms ease; } .ds-btn-outline:hover { border-color: #2d3854; color: #eef1f7; } .ds-btn-outline:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; } .ds-btn-outline:disabled { color: #808898; opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Accent Outline Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Connection actions (Re-sync, Link bank account): accent text, faint accent border that becomes the full accent on hover.",
+      "html": "<button class=\"ds-btn-accent-outline\">Re-sync</button>",
+      "css": ".ds-btn-accent-outline { background: transparent; color: #f59e0b; border: 1px solid rgba(245,158,11,0.33); border-radius: 8px; padding: 10px 20px; font-family: Outfit, sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: border-color 150ms ease, opacity 150ms ease; } .ds-btn-accent-outline:hover { border-color: #f59e0b; } .ds-btn-accent-outline:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; } .ds-btn-accent-outline:disabled { border-color: #1b2334; color: #808898; opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Header Icon Button",
+      "kind": "button",
+      "refersTo": "button-header-icon",
+      "description": "32px bordered icon buttons in the header (theme, privacy, hide cents, search). A switched-on toggle keeps the brighter icon color at rest.",
+      "html": "<button class=\"ds-btn-icon\" aria-label=\"Switch theme\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z\"/></svg></button>",
+      "css": ".ds-btn-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: #8b93a7; border: 1px solid #1b2334; border-radius: 8px; cursor: pointer; transition: border-color 150ms ease, color 150ms ease; } .ds-btn-icon:hover { border-color: #2d3854; color: #eef1f7; } .ds-btn-icon:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }"
     },
     {
       "name": "Nav Button (Active)",
-      "kind": "button",
+      "kind": "nav",
       "refersTo": "button-nav-active",
-      "description": "Sidebar navigation item in its active/current-page state. Amber tint — signal only.",
+      "description": "Sidebar navigation item in its current-page state. Accent tint — signal only.",
       "html": "<button class=\"ds-btn-nav ds-btn-nav--active\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><polyline points=\"12 6 12 12 16 14\"/></svg><span>Goals</span></button>",
-      "css": ".ds-btn-nav { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 10px; border: 1px solid #1f1f1f; background: #111111; color: #888888; font-family: Outfit, sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; width: 100%; text-decoration: none; transition: border-color 150ms ease, background 150ms ease, color 150ms ease; } .ds-btn-nav--active { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); color: #f59e0b; } .ds-btn-nav:not(.ds-btn-nav--active):hover { border-color: #333333; color: #efefef; } .ds-btn-nav:focus-visible { outline: 3px solid rgba(245,158,11,0.3); outline-offset: 2px; }"
+      "css": ".ds-btn-nav { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 10px; border: 1px solid #1b2334; background: #0d131f; color: #8b93a7; font-family: Outfit, sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; width: 100%; transition: border-color 150ms ease, background 150ms ease, color 150ms ease; } .ds-btn-nav--active { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.1); color: #f59e0b; } .ds-btn-nav:not(.ds-btn-nav--active):hover { border-color: #2d3854; color: #eef1f7; } .ds-btn-nav:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }"
     },
     {
       "name": "Dashboard Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Foundational container for all dashboard content. Amber eyebrow + optional headline.",
-      "html": "<div class=\"ds-card\"><p class=\"ds-card-eyebrow\">Account Balances</p><h2 class=\"ds-card-headline\">$24,580</h2><p class=\"ds-card-body\">Across 3 accounts</p></div>",
-      "css": ".ds-card { background: #111111; border: 1px solid #1f1f1f; border-radius: 14px; padding: 24px; } .ds-card-eyebrow { font-family: Outfit, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #f59e0b; margin-bottom: 8px; } .ds-card-headline { font-family: JetBrains Mono, monospace; font-size: 22px; font-weight: 500; color: #efefef; letter-spacing: 0; font-variant-numeric: tabular-nums; margin-bottom: 6px; } .ds-card-body { font-family: Outfit, sans-serif; font-size: 14px; color: #888888; }"
+      "description": "Foundational container: border-defined, faint diagonal wash, flat at rest, soft shadow only on hover. Accent eyebrow + optional headline.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-eyebrow\">Account Balances</p><h2 class=\"ds-card-headline\">$24,580.00</h2><p class=\"ds-card-body\">Across 3 accounts</p></div>",
+      "css": ".ds-card { background: linear-gradient(135deg, #0f1a2e 0%, #0d131f 58%); border: 1px solid #1b2334; border-radius: 14px; padding: 24px; transition: box-shadow 180ms ease; } .ds-card:hover { box-shadow: 0 8px 24px -10px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(245,158,11,0.2); } .ds-card-eyebrow { font-family: Outfit, sans-serif; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #f59e0b; margin: 0 0 8px; } .ds-card-headline { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500; color: #eef1f7; font-variant-numeric: tabular-nums; margin: 0 0 6px; } .ds-card-body { font-family: Outfit, sans-serif; font-size: 14px; color: #8b93a7; margin: 0; }"
     },
     {
-      "name": "Stat Card",
+      "name": "Stat Tile",
       "kind": "card",
       "refersTo": "stat-card",
-      "description": "Compact clickable metric tile in the dashboard summary row.",
-      "html": "<button class=\"ds-stat-card\"><p class=\"ds-stat-title\">Net Worth</p><div class=\"ds-stat-value\" style=\"color:#22c55e\">$12,450</div></button>",
-      "css": ".ds-stat-card { background: #111111; border: 1px solid #1f1f1f; border-radius: 12px; padding: 20px; text-align: left; cursor: pointer; display: block; width: 100%; transition: border-color 150ms ease, transform 150ms ease; } .ds-stat-card:hover { border-color: #333333; transform: translateY(-1px); } .ds-stat-title { font-family: Outfit, sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #888888; margin-bottom: 10px; } .ds-stat-value { font-family: JetBrains Mono, monospace; font-size: 22px; font-weight: 500; color: #efefef; font-variant-numeric: tabular-nums; }"
+      "description": "Compact metric tile in the dashboard summary row. Clickable tiles lift 1px and light their border on hover.",
+      "html": "<button class=\"ds-stat-card\"><p class=\"ds-stat-title\">Net Worth</p><div class=\"ds-stat-value\">$12,450.00</div></button>",
+      "css": ".ds-stat-card { background: #0d131f; border: 1px solid #1b2334; border-radius: 12px; padding: 20px; text-align: left; cursor: pointer; display: block; width: 100%; transition: border-color 150ms ease, translate 150ms ease; } .ds-stat-card:hover { border-color: #2d3854; translate: 0 -1px; } .ds-stat-card:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; } .ds-stat-title { font-family: Outfit, sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8b93a7; margin: 0 0 10px; } .ds-stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 500; color: #22c55e; font-variant-numeric: tabular-nums; } @media (prefers-reduced-motion: reduce) { .ds-stat-card:hover { translate: none; } }"
     },
     {
       "name": "Input Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Standard text input — transparent bg, border-defined, focus ring.",
-      "html": "<div class=\"ds-input-wrap\"><input class=\"ds-input\" type=\"text\" placeholder=\"Account name\"></div>",
-      "css": ".ds-input { height: 32px; width: 100%; background: transparent; border: 1px solid #2c2c2c; border-radius: 10px; padding: 0 10px; font-family: Outfit, sans-serif; font-size: 14px; color: #efefef; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input::placeholder { color: #555555; } .ds-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; background: rgba(44,44,44,0.5); }"
+      "description": "Text input on a raised surface with a 1px border; keyboard focus shows the 2px accent ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" aria-label=\"Account name\" placeholder=\"Account name\">",
+      "css": ".ds-input { height: 40px; width: 100%; background: #0d131f; border: 1px solid #1b2334; border-radius: 10px; padding: 0 12px; font-family: Outfit, sans-serif; font-size: 14px; color: #eef1f7; transition: border-color 150ms ease; } .ds-input::placeholder { color: #808898; } .ds-input:hover { border-color: #2d3854; } .ds-input:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Progress Bar",
+      "kind": "custom",
+      "refersTo": "progress-track",
+      "description": "Goal, budget, and contribution-room progress. The fill is drawn with scaleX from the left, clamped to 0–1.",
+      "html": "<div class=\"ds-progress\"><div class=\"ds-progress-fill\" style=\"--progress: 0.62\"></div></div>",
+      "css": ".ds-progress { height: 8px; border-radius: 9999px; background: rgba(238,241,247,0.04); overflow: hidden; } .ds-progress-fill { width: 100%; height: 100%; background: #f59e0b; transform-origin: left; transform: scaleX(var(--progress, 0)); transition: transform 300ms ease; } @media (prefers-reduced-motion: reduce) { .ds-progress-fill { transition: none; } }"
     }
   ],
   "narrative": {
     "northStar": "The Night Ledger",
-    "overview": "Bloom is a financial record-keeper for quiet, deliberate review. Its interface is built for the person who opens their dashboard to understand their situation — not to be entertained, encouraged, or upsold. The aesthetic is authoritative and calm: near-black surfaces, a single amber signal color, and typographic weight as the primary hierarchy tool.\n\nEvery design decision returns to one question: does this help the user see clearly? Surface colors create depth without decoration. Amber lights up active states and section labels — never as background fill, never as celebration. Numbers are always monospaced. Nothing glows, pulses, or animates unless it conveys state.\n\nThis system explicitly rejects glassmorphism, purple or teal gradients, neon greens as positive money signals, confetti animations on milestones, and motivational CTA language.",
+    "overview": "Bloom is a financial record-keeper for quiet, deliberate review. Its interface is built for the person who opens their dashboard to understand their situation — not to be entertained, encouraged, or upsold. The aesthetic is authoritative and calm: deep navy surfaces, a single signal accent, and typographic weight as the primary hierarchy tool. The night ledger is the default; a daytime ledger (the light theme) carries the same structure on pale blue-grey paper, and follows the operating system's preference unless the user picks one.\n\nEvery design decision returns to one question: does this help the user see clearly? Surface colors create depth without decoration. The accent lights up active states and section labels — never as background fill, never as celebration. Numbers are always monospaced. Nothing glows, pulses, or animates unless it conveys state.\n\nUsers may personalize three things, and only three: the app accent (one of six), and an identity color and emoji for each account and savings goal. Personalization changes *which* signal color or glyph appears — never how much signal there is.\n\nThis system explicitly rejects glassmorphism, purple or teal gradients, neon greens as \"positive money\" signals, confetti animations on milestones, and motivational CTA language. A user with negative net worth should see that number clearly and without drama. The interface neither congratulates nor catastrophizes.",
     "keyCharacteristics": [
-      "Near-black surface ramp (surface-0 → surface-4) for tonal depth, zero shadow dependency",
-      "Single amber accent used for signal only — active states, labels, key highlights",
-      "Outfit for all UI copy; JetBrains Mono for every numeric and currency value",
-      "Flat, border-defined cards with 14px radius and 24px internal padding",
-      "Motion is structural only — 150–280ms state transitions, no choreographic sequences"
+      "Navy surface ramp (surface-0 → surface-4) for tonal depth, mirrored by a pale daytime ramp in the light theme",
+      "One user-chosen signal accent (Signal Amber by default) used for signal only — active states, labels, key highlights",
+      "Outfit for all UI copy; JetBrains Mono (`.num`) for every numeric and currency value — both self-hosted",
+      "Border-defined cards with 14px radius, 24px padding, and a faint diagonal wash; flat at rest",
+      "Motion is structural only — 150–280ms state transitions, all of it disabled under reduced motion"
     ],
     "rules": [
-      { "name": "The One Signal Rule",       "body": "Amber appears on ≤10% of any given screen. It is an indicator light, not a brand color. Amber fill on a button or card background breaks the system.", "section": "colors" },
-      { "name": "The Semantic Separation Rule", "body": "Account-type colors (savings, TFSA, RRSP, FHSA, credit) exist only in data visualization. They never appear in navigation, buttons, or structural UI.", "section": "colors" },
-      { "name": "The Mono Lock Rule",        "body": "Every currency value, balance, percentage, and numeric counter uses JetBrains Mono with font-variant-numeric: tabular-nums. No exceptions.", "section": "typography" },
-      { "name": "The Label Scarcity Rule",   "body": "Uppercase tracked labels appear once per card as the eyebrow. More than one amber eyebrow per card is visual shouting.", "section": "typography" },
-      { "name": "The No-Shadow Rule",        "body": "No box-shadow on structural cards, panels, or containers. If elevation is needed, use a lighter surface token or a border step up.", "section": "elevation" },
-      { "name": "The Border-as-Edge Rule",   "body": "Borders at #1f1f1f are not decorative — they are the only edge definition in a surface-ramp system. Never strip borders to appear cleaner.", "section": "elevation" }
+      { "name": "The One Signal Rule", "body": "The accent appears on ≤10% of any given screen. It is an indicator light, not a brand color. Accent fill on a button or card background breaks the system — whichever of the six accents the user chose.", "section": "colors" },
+      { "name": "The Token-Only Semantics Rule", "body": "Money and status colors are always the semantic variables, never hex literals. A hard-coded `#22c55e` is 2.3:1 on a white card. The theme-contrast test enforces 4.5:1 for every semantic token on every text surface in both themes.", "section": "colors" },
+      { "name": "The Identity Scope Rule", "body": "Account-type and account identity colors mark *that account*: its badge, avatar, chart series, and its own page header. They never color navigation, global buttons, or structural UI.", "section": "colors" },
+      { "name": "The Mono Lock Rule", "body": "Every currency value, balance, percentage, and numeric counter uses JetBrains Mono with tabular numerals. No exceptions. Outfit numerals in financial data produce misaligned columns.", "section": "typography" },
+      { "name": "The Prose Is Not Data Rule", "body": "`.num` is for numbers only. Error messages, hints, and sentences are always Outfit — monospace prose reads as a stack trace.", "section": "typography" },
+      { "name": "The Label Scarcity Rule", "body": "Uppercase tracked labels appear once per card as the eyebrow. More than one accent eyebrow per card is visual shouting; use Title style in secondary text for a second level.", "section": "typography" },
+      { "name": "The Flat-At-Rest Rule", "body": "No shadow on any card, panel, or container at rest. Shadow is feedback (hover, press) or genuine overlay (dialogs) — never a default.", "section": "elevation" },
+      { "name": "The Border-as-Edge Rule", "body": "Borders are not decorative — they are the only edge definition in a surface-ramp system. Never strip a card border to look cleaner; the card disappears.", "section": "elevation" }
     ],
     "dos": [
-      "Do use amber (#f59e0b) only for active states, eyebrow labels, and key numeric highlights. One use per component.",
-      "Do use JetBrains Mono (.num + font-variant-numeric: tabular-nums) for every currency value, balance, percentage, and numeric counter.",
-      "Do define card depth through surface tokens and 1px borders — never through box-shadow.",
-      "Do use translateY(-1px) at 150ms for hover lift on interactive cards.",
-      "Do animate collapsible height with grid-template-rows: 0fr → 1fr, not max-height.",
-      "Do include @media (prefers-reduced-motion: reduce) on every animation — instant transitions.",
-      "Do show negative financial data (#ef4444) clearly and without alarm UI. The number is the information.",
-      "Do cap prose body text at 65ch. Stat values, tables, and monospace data may run wider.",
-      "Do use the account-type palette (savings green, TFSA blue, etc.) only in charts and type badges."
+      "**Do** use the accent only for active states, eyebrow labels, focus rings, progress fills, and key numeric highlights — and `--brand-accent-text` whenever it colors text.",
+      "**Do** use the semantic variables (`--positive`, `--negative`, `--negative-soft`, `--caution`, `--warning`, `--inactive`) for every money and status color.",
+      "**Do** use JetBrains Mono (`.num`) for every currency value, balance, percentage, and numeric counter.",
+      "**Do** define depth with surface tokens and 1px borders; let shadow appear only on hover, press, or true overlays.",
+      "**Do** put hover states in CSS classes that own both the resting and hovered values, so no inline style overrides them.",
+      "**Do** lift hovered elements with `translate`, and draw progress with `scaleX` — never animate `width`, `height`, or margins.",
+      "**Do** add `.touch-target` to any control smaller than 44px that isn't in a dense swatch grid.",
+      "**Do** include a `prefers-reduced-motion: reduce` override for every animation and hover transform.",
+      "**Do** show negative financial data clearly and without alarm UI. The number is the information.",
+      "**Do** keep emoji to the user-chosen identity glyph on an account or savings goal.",
+      "**Do** cap prose at 65ch; stat values, tables, and mono data may run wider."
     ],
     "donts": [
-      "Don't use purple, teal, or neon gradients anywhere in the interface.",
-      "Don't use glassmorphism — no backdrop-filter: blur on structural cards or panels.",
-      "Don't add confetti, celebration, or sparkle animations on financial milestones or goal completions.",
-      "Don't use generic blue SaaS primary buttons. Primary actions use near-white on near-black.",
-      "Don't use illustrated empty states with cartoon characters or mascots.",
-      "Don't use bright neon green as a positive money signal. Savings green is #22c55e — measured, not neon.",
-      "Don't use emoji in UI labels, buttons, status indicators, or toast messages.",
-      "Don't use motivational CTA language. The interface is neutral on outcomes.",
-      "Don't add box-shadow to cards, panels, or containers.",
-      "Don't place more than one amber eyebrow label inside a single card.",
-      "Don't use Outfit for displaying financial numeric data — JetBrains Mono is non-negotiable for tabular values.",
-      "Don't strip card borders to appear cleaner — without them, cards are invisible against the dark body."
+      "**Don't** use purple, teal, or neon gradients anywhere in the interface.",
+      "**Don't** use glassmorphism on cards or panels — the sticky header's translucency is the single exception.",
+      "**Don't** add confetti, celebration, or sparkle animations on financial milestones or goal completions.",
+      "**Don't** use a fixed blue (or any fixed color) for primary buttons. Primary actions are neutral; the accent is signal.",
+      "**Don't** hard-code one theme's hex for a semantic or neutral color — it will fail contrast in the other theme.",
+      "**Don't** use illustrated empty states with cartoon characters or mascots.",
+      "**Don't** use emoji in system copy: labels, buttons, status indicators, or toast messages.",
+      "**Don't** use motivational CTA language (\"Boost your savings!\"). The interface is neutral on outcomes.",
+      "**Don't** put a shadow on a card, panel, or container at rest.",
+      "**Don't** place more than one accent eyebrow label inside a single card.",
+      "**Don't** render prose in `.num`, or financial numbers in Outfit.",
+      "**Don't** set hover styles from JavaScript (`onMouseEnter`) — keyboard users get no equivalent and reduced motion is ignored.",
+      "**Don't** strip card borders to appear cleaner."
     ]
   }
 }

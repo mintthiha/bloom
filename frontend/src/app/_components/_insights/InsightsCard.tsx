@@ -20,7 +20,7 @@ const SEVERITY_ACCENT_COLOR: Record<InsightSeverity, string> = {
   success: "var(--positive)",
 };
 
-/** A single insight row with a colored left accent, index number, message, and supporting detail. */
+/** A single insight row: a severity-tinted panel with a coloured index number, message, and detail. */
 function InsightRow({ item, index }: { item: InsightItem; index: number }) {
   const color = SEVERITY_ACCENT_COLOR[item.severity];
 
@@ -31,10 +31,7 @@ function InsightRow({ item, index }: { item: InsightItem; index: number }) {
         gap: "14px",
         alignItems: "flex-start",
         background: `color-mix(in srgb, ${color} 5%, transparent)`,
-        borderTop: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
-        borderRight: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
-        borderBottom: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
-        borderLeft: `3px solid ${color}`,
+        border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
         borderRadius: "10px",
         padding: "12px 14px",
       }}

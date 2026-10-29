@@ -18,8 +18,8 @@ const ACCENT_HEX: Record<AccentColor, string> = {
   CYAN: "#06b6d4",
 };
 
-/** The accent applied when the user has not chosen one. */
-export const DEFAULT_ACCENT_COLOR: AccentColor = "BLUE";
+/** The accent applied when the user has not chosen one: Bloom's signal amber (see DESIGN.md). */
+export const DEFAULT_ACCENT_COLOR: AccentColor = "AMBER";
 
 /** Human-readable swatch list for the profile accent-colour picker, in palette order. */
 export const ACCENT_COLOR_OPTIONS: { value: AccentColor; label: string; hex: string }[] =

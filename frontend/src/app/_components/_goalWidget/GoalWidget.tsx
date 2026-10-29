@@ -9,6 +9,7 @@ import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { calculateGoalPace } from "@/lib/goal-pace";
 import { resolveSavingsGoalAppearance } from "@/lib/savings-goal-appearance";
 import { CollapsibleCard } from "@/components/collapsible-card";
+import { toProgressScale } from "@/lib/progress-scale";
 
 const STORAGE_KEY = "bloom_goal_widget_id";
 
@@ -177,18 +178,16 @@ export function GoalWidget({ goals }: { goals: SavingsGoal[] }) {
               flex: 1,
               height: "8px",
               borderRadius: "999px",
-              background: "#ffffff0a",
+              background: "color-mix(in srgb, var(--text-primary) 4%, transparent)",
               overflow: "hidden",
             }}
           >
             <div
-              className="goal-progress-fill"
+              className="progress-fill"
               style={
                 {
-                  width: "100%",
-                  height: "100%",
                   background: progressColor,
-                  "--goal-progress": selectedGoal.percentageReached / 100,
+                  "--progress": toProgressScale(selectedGoal.percentageReached),
                 } as CSSProperties
               }
             />

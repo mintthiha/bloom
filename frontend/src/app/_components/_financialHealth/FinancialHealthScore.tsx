@@ -6,6 +6,7 @@ import { AskBloomButton } from "@/components/AskBloomButton";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { computeHealthScore, SubScore } from "@/lib/financial-health-score";
 import { buildHealthScorePrompt } from "./ask-about-health-score";
+import { toProgressScale } from "@/lib/progress-scale";
 
 interface FinancialHealthScoreProps {
   accounts: Account[];
@@ -75,20 +76,20 @@ function SubScoreRow({ sub }: { sub: SubScore }) {
       <div
         style={{
           height: "6px",
-          background: "#ffffff0a",
+          background: "color-mix(in srgb, var(--text-primary) 4%, transparent)",
           borderRadius: "999px",
           overflow: "hidden",
           marginBottom: "5px",
         }}
       >
         <div
-          style={{
-            width: `${(sub.score / 20) * 100}%`,
-            height: "100%",
-            background: color,
-            borderRadius: "999px",
-            transition: "width 0.4s ease",
-          }}
+          className="progress-fill"
+          style={
+            {
+              background: color,
+              "--progress": toProgressScale((sub.score / 20) * 100),
+            } as React.CSSProperties
+          }
         />
       </div>
       <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{sub.status}</p>
@@ -419,19 +420,19 @@ export function FinancialHealthScore({
             maxWidth: "240px",
             margin: "14px auto 0",
             height: "8px",
-            background: "#ffffff0a",
+            background: "color-mix(in srgb, var(--text-primary) 4%, transparent)",
             borderRadius: "999px",
             overflow: "hidden",
           }}
         >
           <div
-            style={{
-              width: `${healthScore.total}%`,
-              height: "100%",
-              background: scoreColor,
-              borderRadius: "999px",
-              transition: "width 0.5s ease",
-            }}
+            className="progress-fill"
+            style={
+              {
+                background: scoreColor,
+                "--progress": toProgressScale(healthScore.total),
+              } as React.CSSProperties
+            }
           />
         </div>
       </div>

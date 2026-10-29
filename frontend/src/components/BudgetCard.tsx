@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/format";
 import { useDisplayPreferences } from "@/components/display-preferences-provider";
 import { BudgetRolloverToggle } from "@/components/BudgetRolloverToggle";
 import { MoveBudgetMoneyDialog } from "@/components/MoveBudgetMoneyDialog";
+import { toProgressScale } from "@/lib/progress-scale";
 
 type Props = {
   budget: Budget;
@@ -88,18 +89,19 @@ export function BudgetCard({
           style={{
             height: "10px",
             borderRadius: "999px",
-            background: "#ffffff0a",
+            background: "color-mix(in srgb, var(--text-primary) 4%, transparent)",
             overflow: "hidden",
             marginBottom: "10px",
           }}
         >
           <div
-            style={{
-              width: `${progress}%`,
-              height: "100%",
-              background: budget.isOverBudget ? "#ef4444" : "var(--brand-accent)",
-              transition: "width 0.2s ease",
-            }}
+            className="progress-fill"
+            style={
+              {
+                background: budget.isOverBudget ? "#ef4444" : "var(--brand-accent)",
+                "--progress": toProgressScale(progress),
+              } as React.CSSProperties
+            }
           />
         </div>
         <div

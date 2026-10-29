@@ -27,9 +27,9 @@ export function NetWorthEmpathyNote({ history }: Props) {
       style={{
         marginTop: "16px",
         padding: "12px 16px",
-        borderLeft: "3px solid var(--brand-accent)",
+        border: "1px solid color-mix(in srgb, var(--brand-accent) 20%, transparent)",
         background: "color-mix(in srgb, var(--brand-accent) 5%, transparent)",
-        borderRadius: "0 6px 6px 0",
+        borderRadius: "10px",
       }}
     >
       <p

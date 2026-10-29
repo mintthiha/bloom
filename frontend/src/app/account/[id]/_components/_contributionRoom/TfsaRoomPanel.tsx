@@ -5,6 +5,7 @@ import { CollapsibleCard } from "@/components/collapsible-card";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { calculateTfsaLifetimeRoom, calculateNetContributions } from "@/lib/contribution-room";
 import { formatCurrency } from "@/lib/format";
+import { toProgressScale } from "@/lib/progress-scale";
 
 type TfsaRoomPanelProps = {
   transactions: Transaction[];
@@ -36,13 +37,13 @@ function RoomProgressBar({
         }}
       >
         <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: isOver ? "#ef4444" : color,
-            borderRadius: "4px",
-            transition: "width 0.3s ease",
-          }}
+          className="progress-fill"
+          style={
+            {
+              background: isOver ? "#ef4444" : color,
+              "--progress": toProgressScale(pct),
+            } as React.CSSProperties
+          }
         />
       </div>
     </div>

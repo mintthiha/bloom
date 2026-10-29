@@ -4,6 +4,7 @@ import { api, CategoryBreakdownItem, DateRangeQuery, MonthlySummary } from "@/li
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { formatCurrency } from "@/lib/format";
 import { useDisplayPreferences } from "@/components/display-preferences-provider";
+import { toProgressScale } from "@/lib/progress-scale";
 
 const NEEDS_CATEGORIES = new Set(["Groceries", "Rent", "Utilities", "Transport", "Healthcare"]);
 
@@ -127,15 +128,21 @@ function BucketRow({
         <div
           style={{
             position: "absolute",
-            left: 0,
-            top: 0,
-            height: "100%",
-            width: `${barWidth}%`,
-            background: color,
+            inset: 0,
             borderRadius: "4px",
-            transition: "width 0.5s ease",
+            overflow: "hidden",
           }}
-        />
+        >
+          <div
+            className="progress-fill"
+            style={
+              {
+                background: color,
+                "--progress": toProgressScale(barWidth),
+              } as React.CSSProperties
+            }
+          />
+        </div>
         <div
           style={{
             position: "absolute",

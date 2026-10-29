@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/format";
 import { ACCOUNT_TYPE_META } from "@/lib/constants/account";
 import { calculateGoalPace, formatTargetDate } from "@/lib/goal-pace";
 import { resolveSavingsGoalAppearance } from "@/lib/savings-goal-appearance";
+import { toProgressScale } from "@/lib/progress-scale";
 
 type GoalCardProps = {
   goal: SavingsGoal;
@@ -173,18 +174,18 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
           style={{
             height: "8px",
             borderRadius: "999px",
-            background: "#ffffff0a",
+            background: "color-mix(in srgb, var(--text-primary) 4%, transparent)",
             overflow: "hidden",
           }}
         >
           <div
-            style={{
-              width: `${goal.percentageReached}%`,
-              height: "100%",
-              background: appearance.color,
-              borderRadius: "999px",
-              transition: "width 0.3s ease",
-            }}
+            className="progress-fill"
+            style={
+              {
+                background: appearance.color,
+                "--progress": toProgressScale(goal.percentageReached),
+              } as React.CSSProperties
+            }
           />
         </div>
 
