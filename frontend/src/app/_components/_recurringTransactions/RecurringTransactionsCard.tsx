@@ -92,12 +92,12 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
 
   /** Sets the default accountId once accounts load, if no account is selected. */
   useEffect(() => {
-    if (!form.accountId && recurringAccounts.length > 0) {
-      setForm((previous) => ({
-        ...previous,
-        accountId: recurringAccounts[0]!.id,
-      }));
-    }
+    const firstRecurringAccount = accounts.find((account) => account.accountType !== "CREDIT");
+    if (!firstRecurringAccount) return;
+    // Checked inside the updater so a choice the user already made is never overwritten.
+    setForm((previous) =>
+      previous.accountId ? previous : { ...previous, accountId: firstRecurringAccount.id }
+    );
   }, [accounts]);
 
   /** Clears the form and exits editing mode. */

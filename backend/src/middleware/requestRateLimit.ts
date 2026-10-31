@@ -14,11 +14,16 @@ export function readRequestRateLimitKey(req: Request): string {
   return typeof userId === "string" && userId ? `user:${userId}` : `client:${readClientKey(req)}`;
 }
 
-/** Broad per-caller cap on all backend traffic; feature-specific limits sit on top of it. */
-export function createRequestRateLimiter(): RateLimitRequestHandler {
+/**
+ * Broad per-caller cap on all backend traffic; feature-specific limits sit on top of it.
+ * `maxRequests` is overridable so tests can exercise the keying without sending 1000 requests.
+ */
+export function createRequestRateLimiter({
+  maxRequests = REQUESTS_PER_CALLER_LIMIT.maxRequests,
+}: { maxRequests?: number } = {}): RateLimitRequestHandler {
   return rateLimit({
     windowMs: REQUESTS_PER_CALLER_LIMIT.windowMs,
-    limit: REQUESTS_PER_CALLER_LIMIT.maxRequests,
+    limit: maxRequests,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: readRequestRateLimitKey,

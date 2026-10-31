@@ -92,9 +92,8 @@ export function GoalFormDialog({ goal, onClose, onSaved }: GoalFormDialogProps) 
       .listAccounts()
       .then((data) => {
         setAccounts(data);
-        if (!selectedAccountId && data.length > 0) {
-          setSelectedAccountId(data[0]!.id);
-        }
+        // Only fills an empty selection, so editing a goal keeps its own account.
+        setSelectedAccountId((current) => current || data[0]?.id || "");
       })
       .catch(() => {});
   }, []);

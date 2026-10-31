@@ -47,8 +47,12 @@ export function parseDateRangeQuery(query: { start?: unknown; end?: unknown }) {
     throw new AppError(400, "start and end must be ISO date strings");
   }
 
-  return {
-    start: new Date(startValue),
-    end: new Date(endValue),
-  };
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  // An unparseable string becomes an Invalid Date, which would otherwise reach SQL and 500.
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw new AppError(400, "start and end must be valid dates");
+  }
+
+  return { start, end };
 }

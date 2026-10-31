@@ -2,30 +2,8 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { BloomMark } from "@/components/BloomMark";
 import { getFailedRequestMessage, parseJsonOrNull } from "@/lib/backend-errors";
-
-/** Bloom logomark; `size` controls the square badge dimension. */
-function BloomMark({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
-      <rect width="28" height="28" rx="6" fill="var(--brand-accent)" />
-      <path
-        d="M8 20V8h5.5a4 4 0 0 1 0 8H8"
-        stroke="#000"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 16h7a4 4 0 0 1 0 8H8"
-        stroke="#000"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");

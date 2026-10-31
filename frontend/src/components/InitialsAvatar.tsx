@@ -50,6 +50,10 @@ export function InitialsAvatar({
 
   if (imageUrl && !hasImageFailed) {
     return (
+      // A plain <img> on purpose: the avatar is tiny and comes from the sign-in provider's CDN,
+      // so next/image would add a server round-trip (and a remotePatterns allowlist) for no gain,
+      // and onError must fall back to initials when the provider URL expires.
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={imageUrl}
         alt={label}

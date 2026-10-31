@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type DashboardView = "single" | "double" | "triple";
+export type DashboardView = "single" | "double" | "triple";
 
 type DashboardViewContextValue = {
   view: DashboardView;

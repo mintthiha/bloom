@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type CardId =
   | "safe-to-spend"
@@ -268,32 +268,36 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
    * time, it is queued for its own on-dashboard "how it works" callout, alongside any other cards
    * still awaiting theirs — enabling a second card never dismisses the first card's callout.
    */
-  function toggleCard(cardId: CardId) {
-    setVisibleCards((prev) => {
-      const next = new Set(prev);
-      if (next.has(cardId)) {
-        next.delete(cardId);
-      } else {
-        next.add(cardId);
-        if (!explainedCards.has(cardId)) {
-          setPendingExplainCardIds((pending) => {
-            const nextPending = new Set(pending);
-            nextPending.add(cardId);
-            return nextPending;
-          });
+  const toggleCard = useCallback(
+    (cardId: CardId) => {
+      setVisibleCards((prev) => {
+        const next = new Set(prev);
+        if (next.has(cardId)) {
+          next.delete(cardId);
         } else {
-          setGlowingCards((prevGlowing) => {
-            const nextGlowing = new Set(prevGlowing);
-            nextGlowing.add(cardId);
-            window.localStorage.setItem(GLOW_STORAGE_KEY, JSON.stringify([...nextGlowing]));
-            return nextGlowing;
-          });
+          next.add(cardId);
+          if (!explainedCards.has(cardId)) {
+            setPendingExplainCardIds((pending) => {
+              const nextPending = new Set(pending);
+              nextPending.add(cardId);
+              return nextPending;
+            });
+          } else {
+            setGlowingCards((prevGlowing) => {
+              const nextGlowing = new Set(prevGlowing);
+              nextGlowing.add(cardId);
+              window.localStorage.setItem(GLOW_STORAGE_KEY, JSON.stringify([...nextGlowing]));
+              return nextGlowing;
+            });
+          }
         }
-      }
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-      return next;
-    });
-  }
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+        return next;
+      });
+    },
+    // explainedCards decides between the explainer and the glow, so it must stay current here.
+    [explainedCards]
+  );
 
   /** Dismisses one card's explainer and records the card so its callout never shows again. */
   function dismissExplainedCard(cardId: CardId) {
@@ -372,7 +376,15 @@ export function DashboardVisibilityProvider({ children }: { children: React.Reac
       glowingCards,
       dismissCardGlow,
     }),
-    [visibleCards, allCollapsed, orbsEnabled, cardOrder, pendingExplainCardIds, glowingCards]
+    [
+      visibleCards,
+      toggleCard,
+      allCollapsed,
+      orbsEnabled,
+      cardOrder,
+      pendingExplainCardIds,
+      glowingCards,
+    ]
   );
 
   return (

@@ -88,6 +88,14 @@ describe("date-range", () => {
       );
     });
 
+    it.each([
+      ["an unparseable start", { start: "not-a-date", end: "2026-02-01" }],
+      ["an unparseable end", { start: "2026-01-01", end: "soon" }],
+      ["an impossible calendar date", { start: "2026-13-45", end: "2026-02-01" }],
+    ])("rejects %s", (_description, query) => {
+      expect(() => parseDateRangeQuery(query)).toThrow("start and end must be valid dates");
+    });
+
     it("rejects non-string param values", () => {
       expect(() => parseDateRangeQuery({ start: 123, end: 456 })).toThrow(
         "start and end must be ISO date strings"

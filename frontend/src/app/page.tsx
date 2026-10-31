@@ -1,94 +1,52 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
-import {
-  api,
-  Account,
-  Budget,
-  DateRangeQuery,
-  ManualEntry,
-  MonthlyTrend,
-  MonthlySummary,
-  NetWorthSnapshot,
-  Profile,
-  RecurringTransaction,
-  SavingsGoal,
-} from "@/lib/api";
-import { DateRangeControls } from "@/components/date-range-controls";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import type { DateRangeQuery } from "@/lib/api";
 import { useDashboardView } from "@/components/dashboard-view-provider";
-import { ProfileFormPanel } from "@/components/profile-form-panel";
-import { ServiceErrorPage } from "@/components/ServiceErrorPage";
-import {
-  buildDateRangeQuery,
-  DateRangeState,
-  getBrowserTimeZone,
-  getPresetDateRange,
-} from "@/lib/date-range";
-import { formatCurrency } from "@/lib/format";
-import { getCachedFirstName, setCachedFirstName, getGreeting } from "@/lib/profile-cache";
-import { AnimatedCurrency } from "@/components/animated-currency";
-import { AnimatedCount } from "@/components/animated-count";
-import { FlashOnChange } from "@/components/flash-on-change";
-import { GoalWidget } from "./_components/_goalWidget/GoalWidget";
-import { MonthlySnapshot } from "./_components/_monthlySnapshot/MonthlySnapshot";
-import { BudgetsCard } from "./_components/_budgets/BudgetsCard";
-import { RecurringTransactionsCard } from "./_components/_recurringTransactions/RecurringTransactionsCard";
-import { runApplyDueRecurringTransactions } from "./_components/_recurringTransactions/apply-due-recurring";
-import { RecurringCalendar } from "./_components/_recurringCalendar/RecurringCalendar";
-import { NetWorthHistory } from "./_components/_netWorthHistory/NetWorthHistory";
-import { ManualEntriesCard } from "./_components/_manualEntries/ManualEntriesCard";
-import { AccountBalancesCard } from "./_components/_accountBalances/AccountBalancesCard";
-import { OpenAccountCard } from "./_components/_openAccount/OpenAccountCard";
-import { InsightsCard } from "./_components/_insights/InsightsCard";
-import { BudgetRuleCard } from "./_components/_budgetRule/BudgetRuleCard";
-import { FinancialHealthScore } from "./_components/_financialHealth/FinancialHealthScore";
-import { SafeToSpendCard } from "./_components/_safeToSpend/SafeToSpendCard";
-import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
-import { DraggableCardGrid, DashboardCard } from "./_components/_dashboardCards/DraggableCardGrid";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
+import { ServiceErrorPage } from "@/components/ServiceErrorPage";
+import { buildDateRangeQuery, DateRangeState, getPresetDateRange } from "@/lib/date-range";
+import { buildDashboardCards } from "./_components/_dashboardCards/buildDashboardCards";
+import { DraggableCardGrid } from "./_components/_dashboardCards/DraggableCardGrid";
+import {
+  getDashboardColumns,
+  getTwoColumnGrid,
+} from "./_components/_dashboardData/dashboard-ranges";
+import { useDashboardData } from "./_components/_dashboardData/useDashboardData";
+import {
+  useAccountDeletedToast,
+  useApplyDueRecurringOnLoad,
+} from "./_components/_dashboardData/useDashboardLoadEffects";
+import { useDashboardProfile } from "./_components/_dashboardData/useDashboardProfile";
+import { DashboardHeader } from "./_components/_dashboardHeader/DashboardHeader";
+import { DashboardSkeleton } from "./_components/_dashboardSkeleton/DashboardSkeleton";
+import { ManageAccountsSection } from "./_components/_manageAccounts/ManageAccountsSection";
 import { OnboardingChecklist } from "./_components/_onboardingChecklist/OnboardingChecklist";
-import { LinkBankAccountCard } from "./_components/_linkAccount/LinkBankAccountCard";
-import { GreetingHighlight } from "./_components/_greetingHighlight/GreetingHighlight";
+import { ProfileOnboarding } from "./_components/_profileOnboarding/ProfileOnboarding";
+import { SummaryStatsRow } from "./_components/_summaryStats/SummaryStatsRow";
 
+/** The dashboard: loads everything, then shows onboarding, the error page, or the card grid. */
 function Home() {
   const { effectiveView } = useDashboardView();
   const { visibleCards } = useDashboardVisibility();
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary | null>(null);
-  const [previousMonthlySummary, setPreviousMonthlySummary] = useState<MonthlySummary | null>(null);
-  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
-  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthSnapshot[]>([]);
-  const [recurringRules, setRecurringRules] = useState<RecurringTransaction[]>([]);
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [manualEntries, setManualEntries] = useState<ManualEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newlyCreatedAccountId, setNewlyCreatedAccountId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
   const [hasLoadFailed, setHasLoadFailed] = useState(false);
-  const [cachedFirstName, setCachedFirstNameState] = useState<string | null>(null);
+  const [newlyCreatedAccountId, setNewlyCreatedAccountId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRangeState>(() =>
     getPresetDateRange("this-month")
   );
-  const [timeZone, setTimeZone] = useState("UTC");
-  const searchParams = useSearchParams();
-  const router = useRouter();
 
   const rangeQuery: DateRangeQuery | undefined = useMemo(
     () => buildDateRangeQuery(dateRange),
     [dateRange]
   );
+  const dashboard = useDashboardData(rangeQuery);
+  const { loadDashboard } = dashboard;
+  const { profile, isProfileLoading, cachedFirstName, handleProfileSaved } = useDashboardProfile(
+    () => setHasLoadFailed(true)
+  );
+  useApplyDueRecurringOnLoad(loadDashboard);
+  useAccountDeletedToast(loadDashboard);
 
-  const dashboardColumns =
-    effectiveView === "single"
-      ? "1fr"
-      : effectiveView === "double"
-        ? "repeat(2, minmax(0, 1fr))"
-        : "repeat(auto-fit, minmax(340px, 1fr))";
-  const twoColumnGrid = effectiveView === "single" ? "1fr" : "repeat(auto-fit, minmax(480px, 1fr))";
+  const dashboardColumns = getDashboardColumns(effectiveView);
 
   /** Keeps the date range fresh whenever the preset changes (e.g., "this-month" recalculates daily). */
   useEffect(() => {
@@ -97,125 +55,10 @@ function Home() {
     }
   }, [dateRange.preset]);
 
-  /** Detects the browser timezone for display. */
-  useEffect(() => {
-    setTimeZone(getBrowserTimeZone());
-  }, []);
-
-  /** Loads all dashboard data in parallel, then records and fetches net worth history. */
-  const loadAccounts = useCallback(async () => {
-    try {
-      let previousRangeQuery: DateRangeQuery | undefined;
-      if (rangeQuery) {
-        const start = new Date(rangeQuery.start!);
-        const end = new Date(rangeQuery.end!);
-        const diffMs = end.getTime() - start.getTime();
-        previousRangeQuery = {
-          start: new Date(start.getTime() - diffMs).toISOString(),
-          end: start.toISOString(),
-        };
-      }
-
-      const [
-        nextAccounts,
-        nextSummary,
-        nextPreviousSummary,
-        nextBudgets,
-        nextRecurringRules,
-        nextTrends,
-        nextGoals,
-        nextManualEntries,
-      ] = await Promise.all([
-        api.listAccounts(),
-        api.getMonthlySummary(rangeQuery),
-        previousRangeQuery ? api.getMonthlySummary(previousRangeQuery) : Promise.resolve(null),
-        api.getBudgets(rangeQuery),
-        api.listRecurringTransactions(),
-        api.getMonthlyTrends(6),
-        api.listSavingsGoals(),
-        api.listManualEntries(),
-      ]);
-
-      setAccounts(nextAccounts);
-      setMonthlySummary(nextSummary);
-      setPreviousMonthlySummary(nextPreviousSummary);
-      setBudgets(nextBudgets);
-      setRecurringRules(nextRecurringRules);
-      setMonthlyTrends(nextTrends);
-      setGoals(nextGoals);
-      setManualEntries(nextManualEntries);
-
-      const [, nextHistory] = await Promise.all([
-        api.recordNetWorthSnapshot(),
-        api.getNetWorthHistory(12),
-      ]);
-      setNetWorthHistory(nextHistory);
-    } finally {
-      setLoading(false);
-    }
-  }, [rangeQuery]);
-
   /** Loads the dashboard on mount and whenever the date range changes; a failure swaps in the error page. */
   useEffect(() => {
-    loadAccounts().catch(() => setHasLoadFailed(true));
-  }, [loadAccounts]);
-
-  /** Applies any recurring transactions that came due since the last visit, once per page load. */
-  useEffect(() => {
-    let cancelled = false;
-
-    async function applyDueOnLoad() {
-      try {
-        const result = await runApplyDueRecurringTransactions();
-        if (cancelled) return;
-        if (result.appliedCount > 0) {
-          toast.success(
-            `Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`
-          );
-          await loadAccounts();
-        }
-      } catch {
-        // Silent: the recurring card's manual "Apply due" button surfaces failures explicitly.
-      }
-    }
-
-    applyDueOnLoad();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  /** Shows a toast (with a 5s "Undo") when returning from an account deletion. */
-  useEffect(() => {
-    const deleted = searchParams.get("deleted");
-    const deletedId = searchParams.get("deletedId");
-    if (deleted) {
-      if (deletedId) {
-        toast.success(`${deleted} deleted`, {
-          duration: 5000,
-          action: {
-            label: "Undo",
-            onClick: async () => {
-              try {
-                await api.restoreAccount(deletedId);
-                await loadAccounts();
-                toast.success(`${deleted} restored`);
-              } catch (error) {
-                toast.error(
-                  error instanceof Error && error.message
-                    ? error.message
-                    : "Couldn't undo — account stays deleted"
-                );
-              }
-            },
-          },
-        });
-      } else {
-        toast.success(`${deleted} deleted`);
-      }
-      router.replace("/");
-    }
-  }, []);
+    loadDashboard().catch(() => setHasLoadFailed(true));
+  }, [loadDashboard]);
 
   /** Scrolls to the account balances card after a new account is created so the glow is visible. */
   useEffect(() => {
@@ -228,40 +71,6 @@ function Home() {
     return () => clearTimeout(scrollTimer);
   }, [newlyCreatedAccountId]);
 
-  /** Seeds the greeting name instantly from localStorage to avoid a flash on load. */
-  useEffect(() => {
-    const cached = getCachedFirstName();
-    if (cached) setCachedFirstNameState(cached);
-  }, []);
-
-  /** Loads the user profile for the welcome greeting and onboarding gate. */
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfile() {
-      try {
-        const nextProfile = await api.getProfile();
-        if (!cancelled) {
-          setProfile(nextProfile);
-          if (nextProfile?.firstName) {
-            setCachedFirstName(nextProfile.firstName);
-            setCachedFirstNameState(nextProfile.firstName);
-          }
-        }
-      } catch {
-        // A failed request is not "no profile yet" (that comes back as null), so never show onboarding here.
-        if (!cancelled) setHasLoadFailed(true);
-      } finally {
-        if (!cancelled) setProfileLoading(false);
-      }
-    }
-
-    loadProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   if (hasLoadFailed) {
     return (
       <ServiceErrorPage
@@ -273,292 +82,27 @@ function Home() {
     );
   }
 
-  if (!profileLoading && !profile) {
-    return (
-      <div style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 24px" }}>
-        <div className="fade-up" style={{ marginBottom: "24px" }}>
-          <p
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "var(--brand-accent-light)",
-              marginBottom: "10px",
-            }}
-          >
-            Welcome To Bloom
-          </p>
-          <h1
-            style={{
-              fontSize: "34px",
-              fontWeight: 800,
-              letterSpacing: "-0.6px",
-              marginBottom: "8px",
-            }}
-          >
-            Let&apos;s set up your account.
-          </h1>
-          <p
-            style={{
-              color: "var(--text-secondary)",
-              fontSize: "15px",
-              maxWidth: "560px",
-            }}
-          >
-            We need a few profile details before you start using Bloom. Your first and last name are
-            prefilled from Google when available.
-          </p>
-        </div>
-
-        <div style={{ display: "grid", gap: "16px" }}>
-          <div
-            className="fade-up fade-up-1"
-            style={{
-              background: "var(--surface-1)",
-              border: "1px solid color-mix(in srgb, var(--brand-accent) 13%, transparent)",
-              borderRadius: "16px",
-              padding: "24px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: "11px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--brand-accent-light)",
-                marginBottom: "12px",
-              }}
-            >
-              Step 1
-            </p>
-            <h2
-              style={{
-                fontSize: "22px",
-                fontWeight: 800,
-                letterSpacing: "-0.4px",
-                marginBottom: "8px",
-              }}
-            >
-              Choose how your profile appears in Bloom
-            </h2>
-            <p
-              style={{
-                color: "var(--text-secondary)",
-                fontSize: "14px",
-                maxWidth: "520px",
-              }}
-            >
-              Set your name, username, and email. Once this is saved, the dashboard and sidebar will
-              use your Bloom profile instead of the raw Google session name.
-            </p>
-          </div>
-
-          <ProfileFormPanel
-            title="Create your profile"
-            description="This is the first step of onboarding. You can update these details later from the profile page."
-            submitLabel="Continue to Bloom"
-            successMessage="Profile saved. Loading your dashboard..."
-            onSaved={(savedProfile) => {
-              setProfile(savedProfile);
-              // Cache the name so the greeting personalizes immediately, without a reload.
-              if (savedProfile.firstName) {
-                setCachedFirstName(savedProfile.firstName);
-                setCachedFirstNameState(savedProfile.firstName);
-              }
-            }}
-          />
-        </div>
-      </div>
-    );
+  if (!isProfileLoading && !profile) {
+    return <ProfileOnboarding onSaved={handleProfileSaved} />;
   }
 
-  /** Renders a small stat card for the summary row at the top of the dashboard. */
-  function renderSummaryCard({
-    title,
-    value,
-    flashKey,
-    color,
-    targetAccount,
-    staggerIndex = 0,
-  }: {
-    title: string;
-    value: React.ReactNode;
-    flashKey?: unknown;
-    color?: string;
-    targetAccount?: Account;
-    staggerIndex?: number;
-  }) {
-    const clickable = Boolean(targetAccount);
-    return (
-      <button
-        type="button"
-        className="fade-up summary-stat-card"
-        onClick={() => {
-          if (targetAccount) router.push(`/account/${targetAccount.id}`);
-        }}
-        disabled={!clickable}
-        style={{
-          background: "var(--surface-1)",
-          borderRadius: "12px",
-          padding: "20px",
-          textAlign: "left",
-          cursor: clickable ? "pointer" : "default",
-          opacity: clickable ? 1 : 0.9,
-          animationDelay: `${staggerIndex * 50}ms`,
-        }}
-      >
-        <p
-          style={{
-            fontSize: "11px",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "var(--text-secondary)",
-            marginBottom: "10px",
-          }}
-        >
-          {title}
-        </p>
-        <div
-          className="num"
-          style={{
-            fontSize: "22px",
-            fontWeight: 500,
-            color: color ?? "var(--text-primary)",
-          }}
-        >
-          <FlashOnChange watchKey={flashKey}>{value}</FlashOnChange>
-        </div>
-      </button>
-    );
-  }
-
-  const cashAccounts = accounts.filter((a) => a.accountType !== "CREDIT");
-  const creditAccounts = accounts.filter((a) => a.accountType === "CREDIT");
-  const chequingAccounts = accounts.filter((a) => a.accountType === "CHEQUING");
-  const savingsAccounts = accounts.filter((a) => a.accountType === "SAVINGS");
-  const registeredAccounts = accounts.filter(
-    (a) => a.accountType === "TFSA" || a.accountType === "RRSP" || a.accountType === "FHSA"
-  );
-  const totalCash = cashAccounts.reduce((sum, a) => sum + a.balance, 0);
-  const totalCredit = creditAccounts.reduce((sum, a) => sum + a.balance, 0);
-  const manualAssets = manualEntries
-    .filter((e) => e.type === "ASSET")
-    .reduce((sum, e) => sum + e.amount, 0);
-  const manualLiabilities = manualEntries
-    .filter((e) => e.type === "LIABILITY")
-    .reduce((sum, e) => sum + e.amount, 0);
-  const netWorth = totalCash + manualAssets - totalCredit - manualLiabilities;
-
-  // Build the reorderable card set in default order; each card carries its own data-availability gate.
-  const reorderableCards: DashboardCard[] = [];
-  if (accounts.length > 0 && monthlySummary) {
-    if (visibleCards.has("safe-to-spend")) {
-      reorderableCards.push({
-        id: "safe-to-spend",
-        node: (
-          <SafeToSpendCard accounts={accounts} recurringRules={recurringRules} profile={profile} />
-        ),
-      });
-    }
-    if (visibleCards.has("goals")) {
-      reorderableCards.push({ id: "goals", node: <GoalWidget goals={goals} /> });
-    }
-    if (visibleCards.has("financial-health")) {
-      reorderableCards.push({
-        id: "financial-health",
-        node: (
-          <FinancialHealthScore
-            accounts={accounts}
-            budgets={budgets}
-            monthlySummary={monthlySummary}
-            netWorthHistory={netWorthHistory}
-            manualEntries={manualEntries}
-          />
-        ),
-      });
-    }
-    if (visibleCards.has("insights")) {
-      reorderableCards.push({
-        id: "insights",
-        node: (
-          <InsightsCard
-            accounts={accounts}
-            budgets={budgets}
-            monthlySummary={monthlySummary}
-            previousMonthlySummary={previousMonthlySummary}
-            recurringRules={recurringRules}
-          />
-        ),
-      });
-    }
-    if (visibleCards.has("budget-rule")) {
-      reorderableCards.push({
-        id: "budget-rule",
-        node: <BudgetRuleCard monthlySummary={monthlySummary} rangeQuery={rangeQuery} />,
-      });
-    }
-    if (visibleCards.has("monthly-snapshot")) {
-      reorderableCards.push({
-        id: "monthly-snapshot",
-        node: (
-          <MonthlySnapshot
-            monthlySummary={monthlySummary}
-            previousMonthlySummary={previousMonthlySummary}
-            monthlyTrends={monthlyTrends}
-            isCurrentMonth={dateRange.preset === "this-month"}
-          />
-        ),
-      });
-    }
-    if (visibleCards.has("budgets")) {
-      reorderableCards.push({
-        id: "budgets",
-        anchorId: "budgets-card-section",
-        node: (
-          <BudgetsCard budgets={budgets} monthlySummary={monthlySummary} onChanged={loadAccounts} />
-        ),
-      });
-    }
-  }
-  if (accounts.length > 0 && visibleCards.has("recurring")) {
-    reorderableCards.push({
-      id: "recurring",
-      node: (
-        <RecurringTransactionsCard
-          rules={recurringRules}
-          accounts={accounts}
-          onChanged={loadAccounts}
-        />
-      ),
-    });
-  }
-  if (accounts.length > 0 && visibleCards.has("calendar")) {
-    reorderableCards.push({ id: "calendar", node: <RecurringCalendar rules={recurringRules} /> });
-  }
-  if (netWorthHistory.length > 0 && visibleCards.has("net-worth")) {
-    reorderableCards.push({ id: "net-worth", node: <NetWorthHistory history={netWorthHistory} /> });
-  }
-  if (visibleCards.has("manual-entries")) {
-    reorderableCards.push({
-      id: "manual-entries",
-      node: <ManualEntriesCard entries={manualEntries} />,
-    });
-  }
-  if (accounts.length > 0 && visibleCards.has("account-balances")) {
-    reorderableCards.push({
-      id: "account-balances",
-      anchorId: "account-balances-anchor",
-      node: (
-        <AccountBalancesCard
-          accounts={accounts}
-          newlyCreatedId={newlyCreatedAccountId ?? undefined}
-        />
-      ),
-    });
-  }
+  const reorderableCards = buildDashboardCards({
+    visibleCards,
+    accounts: dashboard.accounts,
+    budgets: dashboard.budgets,
+    monthlySummary: dashboard.monthlySummary,
+    previousMonthlySummary: dashboard.previousMonthlySummary,
+    monthlyTrends: dashboard.monthlyTrends,
+    netWorthHistory: dashboard.netWorthHistory,
+    recurringRules: dashboard.recurringRules,
+    goals: dashboard.goals,
+    manualEntries: dashboard.manualEntries,
+    profile,
+    rangeQuery,
+    isCurrentMonth: dateRange.preset === "this-month",
+    newlyCreatedAccountId,
+    onChanged: loadDashboard,
+  });
 
   return (
     <div
@@ -568,229 +112,55 @@ function Home() {
         padding: "40px 24px 48px",
       }}
     >
-      {/* Welcome */}
-      <div className="fade-up" style={{ marginBottom: "28px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "16px",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: "32px",
-                fontWeight: 800,
-                letterSpacing: "-0.5px",
-                marginBottom: "6px",
-              }}
-            >
-              {cachedFirstName ? `${getGreeting()}, ${cachedFirstName}.` : `${getGreeting()}.`}
-            </h1>
-            <GreetingHighlight
-              accounts={accounts}
-              budgets={budgets}
-              goals={goals}
-              monthlySummary={loading ? null : monthlySummary}
-              previousMonthlySummary={previousMonthlySummary}
-              recurringRules={recurringRules}
-              primaryFinancialGoal={profile?.primaryFinancialGoal ?? null}
-              budgetHighlightRanking={profile?.budgetHighlightRanking ?? null}
-            />
-            <p
-              style={{
-                color: "var(--text-muted)",
-                fontSize: "12px",
-                marginTop: "6px",
-              }}
-            >
-              Times shown in {timeZone}.
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <DateRangeControls value={dateRange} onChange={setDateRange} />
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        firstName={cachedFirstName}
+        highlight={{
+          accounts: dashboard.accounts,
+          budgets: dashboard.budgets,
+          goals: dashboard.goals,
+          monthlySummary: dashboard.isLoading ? null : dashboard.monthlySummary,
+          previousMonthlySummary: dashboard.previousMonthlySummary,
+          recurringRules: dashboard.recurringRules,
+          primaryFinancialGoal: profile?.primaryFinancialGoal ?? null,
+          budgetHighlightRanking: profile?.budgetHighlightRanking ?? null,
+        }}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+      />
 
-      {loading ? (
-        <DashboardSkeleton dashboardColumns={dashboardColumns} twoColumnGrid={twoColumnGrid} />
+      {dashboard.isLoading ? (
+        <DashboardSkeleton
+          dashboardColumns={dashboardColumns}
+          twoColumnGrid={getTwoColumnGrid(effectiveView)}
+        />
       ) : (
         <div className="content-fade-in">
           {/* Onboarding checklist — only visible to new users until all steps complete or dismissed */}
           <OnboardingChecklist
-            accounts={accounts}
-            budgets={budgets}
-            goals={goals}
-            monthlySummary={monthlySummary}
+            accounts={dashboard.accounts}
+            budgets={dashboard.budgets}
+            goals={dashboard.goals}
+            monthlySummary={dashboard.monthlySummary}
           />
 
-          {/* Stats row */}
-          {accounts.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "12px",
-                marginBottom: "36px",
-              }}
-            >
-              {renderSummaryCard({
-                title: "Net Worth",
-                value: <AnimatedCurrency value={netWorth} />,
-                flashKey: netWorth,
-                color: netWorth >= 0 ? "var(--positive)" : "var(--negative)",
-                staggerIndex: 0,
-              })}
-              {renderSummaryCard({
-                title: "Total Cash",
-                value: <AnimatedCurrency value={totalCash} />,
-                flashKey: totalCash,
-                color: "var(--brand-accent-light)",
-                targetAccount: cashAccounts[0],
-                staggerIndex: 1,
-              })}
-              {renderSummaryCard({
-                title: "Chequing",
-                value: (
-                  <>
-                    <AnimatedCount value={chequingAccounts.length} />{" "}
-                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                      acct{chequingAccounts.length !== 1 ? "s" : ""}
-                    </span>
-                  </>
-                ),
-                flashKey: chequingAccounts.length,
-                targetAccount: chequingAccounts[0],
-                staggerIndex: 2,
-              })}
-              {renderSummaryCard({
-                title: "Savings",
-                value: (
-                  <>
-                    <AnimatedCount value={savingsAccounts.length} />{" "}
-                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                      acct{savingsAccounts.length !== 1 ? "s" : ""}
-                    </span>
-                  </>
-                ),
-                flashKey: savingsAccounts.length,
-                targetAccount: savingsAccounts[0],
-                staggerIndex: 3,
-              })}
-              {renderSummaryCard({
-                title: "Registered",
-                value: (
-                  <>
-                    <AnimatedCount value={registeredAccounts.length} />{" "}
-                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                      acct{registeredAccounts.length !== 1 ? "s" : ""}
-                    </span>
-                  </>
-                ),
-                flashKey: registeredAccounts.length,
-                targetAccount: registeredAccounts[0],
-                staggerIndex: 4,
-              })}
-              {renderSummaryCard({
-                title: "Credit",
-                value:
-                  creditAccounts.length > 0 ? (
-                    <>
-                      <AnimatedCurrency value={totalCredit} />{" "}
-                      <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>owed</span>
-                    </>
-                  ) : (
-                    <>
-                      <AnimatedCount value={creditAccounts.length} />{" "}
-                      <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                        acct{creditAccounts.length !== 1 ? "s" : ""}
-                      </span>
-                    </>
-                  ),
-                flashKey: creditAccounts.length > 0 ? totalCredit : creditAccounts.length,
-                color: creditAccounts.length > 0 ? "var(--negative)" : undefined,
-                targetAccount: creditAccounts[0],
-                staggerIndex: 5,
-              })}
-            </div>
+          {dashboard.accounts.length > 0 && (
+            <SummaryStatsRow
+              accounts={dashboard.accounts}
+              manualEntries={dashboard.manualEntries}
+            />
           )}
 
           {/* Customizable cards — drag any card by its handle to reorder; the order persists per user. */}
           <DraggableCardGrid cards={reorderableCards} columns={dashboardColumns} />
 
-          {/* Labeled boundary that separates the account-management actions from the data cards above. */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-              marginTop: "40px",
-              marginBottom: "18px",
+          <ManageAccountsSection
+            columns={dashboardColumns}
+            onAccountCreated={async (newAccountId) => {
+              setNewlyCreatedAccountId(newAccountId);
+              await loadDashboard();
             }}
-          >
-            <p
-              style={{
-                fontSize: "13px",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--text-secondary)",
-                flexShrink: 0,
-              }}
-            >
-              Manage Accounts
-            </p>
-            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
-            <Link
-              href="/accounts"
-              className="press"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--brand-accent-light)",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              View all accounts
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </Link>
-          </div>
-
-          {/* Open New Account + Link Bank Account (utility cards, not reorderable) */}
-          <div
-            id="open-account-section"
-            style={{
-              display: "grid",
-              gridTemplateColumns: dashboardColumns,
-              gap: "20px",
-              alignItems: "start",
-              marginBottom: "32px",
-            }}
-          >
-            <OpenAccountCard
-              onCreated={async (newAccountId: string) => {
-                setNewlyCreatedAccountId(newAccountId);
-                await loadAccounts();
-              }}
-            />
-            <LinkBankAccountCard onLinked={loadAccounts} />
-          </div>
+            onBankLinked={loadDashboard}
+          />
         </div>
       )}
     </div>
