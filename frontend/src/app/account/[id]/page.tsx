@@ -33,7 +33,9 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
   const isDoubleColumn = effectiveView !== "single";
   const pageWidth = isDoubleColumn ? "1200px" : "720px";
   const summaryColumns = isDoubleColumn ? "minmax(0, 1.15fr) minmax(320px, 0.85fr)" : "1fr";
-  const detailColumns = isDoubleColumn ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "1fr";
+  // minmax(0, …) lets each column shrink below its content's width, so wide content (the CSV
+  // import preview table) scrolls inside its own wrapper instead of stretching the whole page.
+  const detailColumns = isDoubleColumn ? "minmax(0, 1.1fr) minmax(0, 0.9fr)" : "minmax(0, 1fr)";
   const analyticsColumns = isDoubleColumn ? "1fr 1fr" : "1fr";
   const historyFilterColumns = isDoubleColumn
     ? "minmax(0, 160px) minmax(0, 180px) minmax(0, 1fr)"
@@ -308,11 +310,11 @@ export default function AccountPage({ params }: { params: Promise<{ id: string }
               account={account}
               transferTargets={transferTargets}
               onSuccess={refresh}
-              onImportSuccess={(imported) => {
-                toast.success(`Imported ${imported} transaction${imported !== 1 ? "s" : ""}`);
+              onImportSuccess={() => {
                 setFilterDateRange(getPresetDateRange("all-time"));
                 refresh();
               }}
+              onImportUndone={refresh}
               profile={profile}
               transactionsForType={sameTypeTransactions}
               sameTypeAccountIds={sameTypeAccountIds}

@@ -153,6 +153,8 @@ model Transaction {
   createdAt          DateTime        @default(now()) @db.Timestamptz(3)
   deletedAt          DateTime?       @db.Timestamptz(3)
   plaidTransactionId String?         @unique
+  /// Groups the rows written by one CSV import so the whole import can be listed and undone together.
+  importBatchId      String?
 
   fromAccountId String?
   fromAccount   Account? @relation("SentTransactions", fields: [fromAccountId], references: [id])
@@ -164,6 +166,7 @@ model Transaction {
 
   @@index([fromAccountId, effectiveAt])
   @@index([toAccountId, effectiveAt])
+  @@index([importBatchId])
 }
 
 /// A category line item within a split transaction (e.g. one $120 grocery run split

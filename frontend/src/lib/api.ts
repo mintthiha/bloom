@@ -322,6 +322,35 @@ export type TransactionSearchResult = {
   accountType: AccountType;
 };
 
+/** One CSV row as sent to the import and duplicate-check endpoints. */
+export type ImportCsvRow = {
+  type: "DEPOSIT" | "WITHDRAWAL";
+  amount: number;
+  date: string;
+  description?: string;
+  merchant?: string;
+  category?: string;
+  /** Keeps a row the duplicate check flagged as already imported. */
+  allowDuplicate?: boolean;
+};
+
+/** What a CSV import wrote; `importBatchId` is null when every row was skipped as a duplicate. */
+export type ImportCsvResult = {
+  imported: number;
+  skippedDuplicates: number;
+  importBatchId: string | null;
+  account: Account;
+};
+
+/** A past CSV import on an account that still has live transactions and can be undone. */
+export type ImportBatchSummary = {
+  importBatchId: string;
+  transactionCount: number;
+  importedAt: string;
+  earliestEffectiveAt: string;
+  latestEffectiveAt: string;
+};
+
 export type SavingsGoal = {
   id: string;
   userId: string;
@@ -897,21 +926,22 @@ export const api = {
     }),
   deleteAccount: (id: string) => request<void>(`/accounts/${id}`, { method: "DELETE" }),
   restoreAccount: (id: string) => request<Account>(`/accounts/${id}/restore`, { method: "POST" }),
-  importCsv: (
-    id: string,
-    rows: Array<{
-      type: "DEPOSIT" | "WITHDRAWAL";
-      amount: number;
-      date: string;
-      description?: string;
-      merchant?: string;
-      category?: string;
-    }>
-  ) =>
-    request<{ imported: number; account: Account }>(`/accounts/${id}/import`, {
+  importCsv: (id: string, rows: ImportCsvRow[]) =>
+    request<ImportCsvResult>(`/accounts/${id}/import`, {
       method: "POST",
       body: JSON.stringify({ rows }),
     }),
+  findImportDuplicates: (id: string, rows: ImportCsvRow[]) =>
+    request<{ duplicateRowIndexes: number[] }>(`/accounts/${id}/import/duplicates`, {
+      method: "POST",
+      body: JSON.stringify({ rows }),
+    }),
+  listImportBatches: (id: string) => request<ImportBatchSummary[]>(`/accounts/${id}/imports`),
+  undoImportBatch: (id: string, importBatchId: string) =>
+    request<{ removed: number; account: Account }>(
+      `/accounts/${id}/imports/${encodeURIComponent(importBatchId)}`,
+      { method: "DELETE" }
+    ),
   searchTransactions: (q: string, limit = 20) =>
     request<TransactionSearchResult[]>(
       withQuery("/transactions/search", { q, limit: String(limit) })

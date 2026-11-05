@@ -31,5 +31,10 @@ export {
   restoreTransaction,
 } from "./account/accountTransactions";
 export type { ReceiptPurchaseInput } from "./account/accountTransactions";
-export { importTransactions } from "./account/accountImport";
-export type { ImportRow } from "./account/accountImport";
+export {
+  importTransactions,
+  findImportDuplicates,
+  listImportBatches,
+  undoImportBatch,
+} from "./account/accountImport";
+export type { ImportRow, ImportBatchSummary } from "./account/accountImport";

@@ -262,43 +262,74 @@ router.post("/:id/receipt-purchases", async (req: Request, res: Response, next: 
   }
 });
 
+/** Caps how many CSV rows a single import (or duplicate check) can carry. */
+const MAX_IMPORT_ROWS = 500;
+
+/** Import batch ids are server-generated UUIDs; anything else can't name a real import. */
+const IMPORT_BATCH_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Validates an import request body's `rows` array — shared by the import and the duplicate
+ * check so both see exactly the same rows. Throws 400 naming the first bad row.
+ */
+function parseImportRows(rawBody: unknown): accountService.ImportRow[] {
+  const body = requireObject(rawBody);
+  if (!Array.isArray(body.rows)) throw new AppError(400, "rows must be an array");
+  if (body.rows.length === 0) throw new AppError(400, "rows must not be empty");
+  if (body.rows.length > MAX_IMPORT_ROWS) {
+    throw new AppError(400, `Cannot import more than ${MAX_IMPORT_ROWS} rows at once`);
+  }
+
+  return (body.rows as unknown[]).map((row, i) => {
+    if (typeof row !== "object" || row === null)
+      throw new AppError(400, `Row ${i + 1}: must be an object`);
+    const r = row as Record<string, unknown>;
+
+    const rawType = String(r.type ?? "").toUpperCase();
+    if (rawType !== "DEPOSIT" && rawType !== "WITHDRAWAL") {
+      throw new AppError(400, `Row ${i + 1}: type must be "deposit" or "withdrawal"`);
+    }
+
+    const amount = Number(r.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new AppError(400, `Row ${i + 1}: amount must be a positive number`);
+    }
+
+    const effectiveAt = new Date(String(r.date ?? ""));
+    if (Number.isNaN(effectiveAt.getTime())) {
+      throw new AppError(400, `Row ${i + 1}: date must be a valid date`);
+    }
+
+    if (r.allowDuplicate !== undefined && typeof r.allowDuplicate !== "boolean") {
+      throw new AppError(400, `Row ${i + 1}: allowDuplicate must be a boolean`);
+    }
+
+    return {
+      type: rawType as "DEPOSIT" | "WITHDRAWAL",
+      amount: Math.round(amount * 100) / 100,
+      effectiveAt,
+      description: typeof r.description === "string" ? r.description : undefined,
+      merchant: typeof r.merchant === "string" ? r.merchant : undefined,
+      category: typeof r.category === "string" ? r.category : undefined,
+      allowDuplicate: r.allowDuplicate === true ? true : undefined,
+    };
+  });
+}
+
+router.post("/:id/import/duplicates", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const rows = parseImportRows(req.body);
+    res.json(
+      await accountService.findImportDuplicates(extractUserId(req), extractParamId(req), rows)
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/:id/import", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const body = requireObject(req.body);
-    if (!Array.isArray(body.rows)) throw new AppError(400, "rows must be an array");
-    if (body.rows.length === 0) throw new AppError(400, "rows must not be empty");
-    if (body.rows.length > 500) throw new AppError(400, "Cannot import more than 500 rows at once");
-
-    const rows = (body.rows as unknown[]).map((row, i) => {
-      if (typeof row !== "object" || row === null)
-        throw new AppError(400, `Row ${i + 1}: must be an object`);
-      const r = row as Record<string, unknown>;
-
-      const rawType = String(r.type ?? "").toUpperCase();
-      if (rawType !== "DEPOSIT" && rawType !== "WITHDRAWAL") {
-        throw new AppError(400, `Row ${i + 1}: type must be "deposit" or "withdrawal"`);
-      }
-
-      const amount = Number(r.amount);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        throw new AppError(400, `Row ${i + 1}: amount must be a positive number`);
-      }
-
-      const effectiveAt = new Date(String(r.date ?? ""));
-      if (Number.isNaN(effectiveAt.getTime())) {
-        throw new AppError(400, `Row ${i + 1}: date must be a valid date`);
-      }
-
-      return {
-        type: rawType as "DEPOSIT" | "WITHDRAWAL",
-        amount: Math.round(amount * 100) / 100,
-        effectiveAt,
-        description: typeof r.description === "string" ? r.description : undefined,
-        merchant: typeof r.merchant === "string" ? r.merchant : undefined,
-        category: typeof r.category === "string" ? r.category : undefined,
-      };
-    });
-
+    const rows = parseImportRows(req.body);
     res.json(
       await accountService.importTransactions(extractUserId(req), extractParamId(req), rows)
     );
@@ -306,6 +337,31 @@ router.post("/:id/import", async (req: Request, res: Response, next: NextFunctio
     next(err);
   }
 });
+
+router.get("/:id/imports", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(await accountService.listImportBatches(extractUserId(req), extractParamId(req)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete(
+  "/:id/imports/:importBatchId",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const importBatchId = req.params["importBatchId"] as string;
+      if (!IMPORT_BATCH_ID_PATTERN.test(importBatchId)) {
+        throw new AppError(400, "importBatchId must be a valid import id");
+      }
+      res.json(
+        await accountService.undoImportBatch(extractUserId(req), extractParamId(req), importBatchId)
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.get("/:id/transactions", async (req: Request, res: Response, next: NextFunction) => {
   try {

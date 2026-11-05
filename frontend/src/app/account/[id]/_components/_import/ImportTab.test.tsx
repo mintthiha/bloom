@@ -3,12 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ImportTab } from "./ImportTab";
 import type { AutoCategorizationRule } from "@/lib/api";
 
-const { apiMock } = vi.hoisted(() => ({ apiMock: { importCsv: vi.fn() } }));
+const { apiMock, toastMock } = vi.hoisted(() => ({
+  apiMock: {
+    importCsv: vi.fn(),
+    findImportDuplicates: vi.fn(),
+    listImportBatches: vi.fn(),
+    undoImportBatch: vi.fn(),
+  },
+  toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, api: { ...actual.api, importCsv: apiMock.importCsv } };
+  return { ...actual, api: { ...actual.api, ...apiMock } };
 });
+
+vi.mock("sonner", () => ({ toast: toastMock }));
 
 /** Selects a CSV file on the hidden file input, driving the FileReader parse path. */
 function selectCsv(text: string) {
@@ -27,6 +37,7 @@ function renderTab(rules: AutoCategorizationRule[] = []) {
       accountId="a-1"
       onSuccess={onSuccess}
       onError={onError}
+      onImportUndone={vi.fn()}
       categorizationRules={rules}
     />
   );
@@ -35,6 +46,8 @@ function renderTab(rules: AutoCategorizationRule[] = []) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  apiMock.findImportDuplicates.mockResolvedValue({ duplicateRowIndexes: [] });
+  apiMock.listImportBatches.mockResolvedValue([]);
 });
 
 describe("ImportTab", () => {
@@ -81,14 +94,109 @@ describe("ImportTab", () => {
   });
 
   it("imports the valid rows and reports the count", async () => {
-    apiMock.importCsv.mockResolvedValue({ imported: 1, account: {} });
+    const result = { imported: 1, skippedDuplicates: 0, importBatchId: "b-1", account: {} };
+    apiMock.importCsv.mockResolvedValue(result);
     const { onSuccess } = renderTab();
     selectCsv(`${HEADER}\n2026-01-15,deposit,1500,Salary,,Salary`);
 
     fireEvent.click(await screen.findByRole("button", { name: "Import 1 transaction" }));
 
     await waitFor(() => expect(apiMock.importCsv).toHaveBeenCalledWith("a-1", expect.any(Array)));
-    expect(onSuccess).toHaveBeenCalledWith(1);
+    expect(onSuccess).toHaveBeenCalledWith(result);
+    expect(toastMock.success).toHaveBeenCalledWith("Imported 1 transaction");
+  });
+
+  describe("duplicate detection", () => {
+    const twoRowFile = `${HEADER}\n2026-01-15,withdrawal,4.50,Coffee,,\n2026-01-16,withdrawal,85.50,Groceries,,`;
+
+    it("flags rows already on the account and leaves them out of the import count", async () => {
+      apiMock.findImportDuplicates.mockResolvedValue({ duplicateRowIndexes: [0] });
+      renderTab();
+      selectCsv(twoRowFile);
+
+      expect(await screen.findByText("1 already imported")).toBeInTheDocument();
+      expect(screen.getByText("Already imported")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import 1 transaction" })).toBeInTheDocument();
+    });
+
+    it("sends only the new rows when importing", async () => {
+      apiMock.findImportDuplicates.mockResolvedValue({ duplicateRowIndexes: [0] });
+      apiMock.importCsv.mockResolvedValue({
+        imported: 1,
+        skippedDuplicates: 0,
+        importBatchId: "b-1",
+        account: {},
+      });
+      renderTab();
+      selectCsv(twoRowFile);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Import 1 transaction" }));
+
+      await waitFor(() => expect(apiMock.importCsv).toHaveBeenCalled());
+      const [, sentRows] = apiMock.importCsv.mock.calls[0];
+      expect(sentRows).toHaveLength(1);
+      expect(sentRows[0]).toMatchObject({ description: "Groceries" });
+    });
+
+    it("lets the user import a flagged duplicate anyway", async () => {
+      apiMock.findImportDuplicates.mockResolvedValue({ duplicateRowIndexes: [0] });
+      apiMock.importCsv.mockResolvedValue({
+        imported: 2,
+        skippedDuplicates: 0,
+        importBatchId: "b-1",
+        account: {},
+      });
+      renderTab();
+      selectCsv(twoRowFile);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Import duplicate row 1 anyway" }));
+      expect(screen.getByText("Importing anyway")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Import 2 transactions" }));
+
+      await waitFor(() => expect(apiMock.importCsv).toHaveBeenCalled());
+      const [, sentRows] = apiMock.importCsv.mock.calls[0];
+      expect(sentRows[0]).toMatchObject({ description: "Coffee", allowDuplicate: true });
+      expect(sentRows[1].allowDuplicate).toBeUndefined();
+    });
+
+    it("explains when everything in the file is already imported", async () => {
+      apiMock.findImportDuplicates.mockResolvedValue({ duplicateRowIndexes: [0, 1] });
+      renderTab();
+      selectCsv(twoRowFile);
+
+      expect(
+        await screen.findByText("Everything in this file is already imported")
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Import \d/ })).not.toBeInTheDocument();
+    });
+
+    it("still allows importing when the duplicate check fails", async () => {
+      apiMock.findImportDuplicates.mockRejectedValue(new Error("offline"));
+      renderTab();
+      selectCsv(twoRowFile);
+
+      expect(await screen.findByText(/check for duplicates/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import 2 transactions" })).toBeEnabled();
+    });
+
+    it("reports duplicates the server skipped in the success toast", async () => {
+      apiMock.importCsv.mockResolvedValue({
+        imported: 1,
+        skippedDuplicates: 1,
+        importBatchId: "b-1",
+        account: {},
+      });
+      renderTab();
+      selectCsv(twoRowFile);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Import 2 transactions" }));
+
+      await waitFor(() =>
+        expect(toastMock.success).toHaveBeenCalledWith(
+          "Imported 1 transaction · 1 duplicate skipped"
+        )
+      );
+    });
   });
 
   it("surfaces an error via onError when the import fails", async () => {

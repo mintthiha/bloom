@@ -8,6 +8,10 @@ export type CsvRow = {
   /** True when the category was filled in by AI rather than from the CSV or local rules. */
   aiSuggestedCategory?: boolean;
   error?: string;
+  /** True when the account already holds this transaction, so the import skips it by default. */
+  isDuplicate?: boolean;
+  /** True when the user chose to import a flagged duplicate anyway (e.g. a genuine repeat purchase). */
+  shouldImportAnyway?: boolean;
 };
 
 export const CSV_TEMPLATE = `date,type,amount,description,merchant,category\n2026-01-15,deposit,1500.00,January salary,,Salary\n2026-01-18,withdrawal,85.50,Weekly groceries,Loblaws,Groceries\n`;

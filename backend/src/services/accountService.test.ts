@@ -23,6 +23,9 @@ import {
   deleteAccount,
   restoreAccount,
   importTransactions,
+  findImportDuplicates,
+  listImportBatches,
+  undoImportBatch,
   setTransactionSplits,
   clearTransactionSplits,
   recordReceiptPurchase,
@@ -1086,15 +1089,244 @@ describe("importTransactions", () => {
       })
     );
     prismaMock.$queryRaw
-      .mockResolvedValueOnce([makeAccountRow()])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeAccountRow()]) // getAccount
+      .mockResolvedValueOnce([]) // overlapping history for the duplicate check
+      .mockResolvedValueOnce([]) // INSERT
+      .mockResolvedValueOnce([]) // balance replay
+      .mockResolvedValueOnce([]) // net-worth backfill month rows
       .mockResolvedValueOnce([makeAccountRow({ balance: "100.00" })]);
     const result = await importTransactions("u-1", "a-1", [
       { type: "DEPOSIT", amount: 100, effectiveAt: new Date() },
     ]);
     expect(result.imported).toBe(1);
+    expect(result.skippedDuplicates).toBe(0);
     expect(result.account.balance).toBe(100);
+  });
+
+  /**
+   * Routes $transaction through the shared $queryRaw mock and answers each query by its SQL:
+   * the account lookup returns the account, the duplicate check returns `overlappingHistory`,
+   * and everything else (inserts, replay, backfill) returns no rows.
+   */
+  function runImportAgainst(overlappingHistory: unknown[]) {
+    prismaMock.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: { update: vi.fn().mockResolvedValue({}) },
+      })
+    );
+    prismaMock.$queryRaw.mockImplementation((sql: unknown) => {
+      const text = String(sql);
+      if (text.includes('"isLinked"')) return Promise.resolve([makeAccountRow()]);
+      if (text.includes('"effectiveAt" >=')) return Promise.resolve(overlappingHistory);
+      return Promise.resolve([]);
+    });
+  }
+
+  /** Returns the interpolated values of every INSERT INTO "Transaction" the import issued. */
+  function insertedTransactionValues() {
+    return prismaMock.$queryRaw.mock.calls
+      .filter(([sql]) => String(sql).includes('INSERT INTO "Transaction"'))
+      .map(([, ...values]) => values);
+  }
+
+  const januaryFifteenth = new Date("2026-01-15T00:00:00.000Z");
+  const existingCoffee = {
+    type: "WITHDRAWAL",
+    amount: "4.5000",
+    effectiveAt: januaryFifteenth,
+    description: "Tim Hortons",
+    merchant: null,
+  };
+
+  it("skips a row that is already on the account and reports it", async () => {
+    runImportAgainst([existingCoffee]);
+
+    const result = await importTransactions("u-1", "a-1", [
+      {
+        type: "WITHDRAWAL",
+        amount: 4.5,
+        effectiveAt: januaryFifteenth,
+        description: "Tim Hortons",
+      },
+      { type: "DEPOSIT", amount: 1500, effectiveAt: januaryFifteenth, description: "Payroll" },
+    ]);
+
+    expect(result.imported).toBe(1);
+    expect(result.skippedDuplicates).toBe(1);
+    const inserts = insertedTransactionValues();
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toContain("Payroll");
+  });
+
+  it("keeps a flagged duplicate when the user allowed it", async () => {
+    runImportAgainst([existingCoffee]);
+
+    const result = await importTransactions("u-1", "a-1", [
+      {
+        type: "WITHDRAWAL",
+        amount: 4.5,
+        effectiveAt: januaryFifteenth,
+        description: "Tim Hortons",
+        allowDuplicate: true,
+      },
+    ]);
+
+    expect(result.imported).toBe(1);
+    expect(result.skippedDuplicates).toBe(0);
+    expect(insertedTransactionValues()).toHaveLength(1);
+  });
+
+  it("tags every inserted row with one shared import batch id and returns it", async () => {
+    runImportAgainst([]);
+
+    const result = await importTransactions("u-1", "a-1", [
+      { type: "DEPOSIT", amount: 10, effectiveAt: januaryFifteenth, description: "A" },
+      { type: "DEPOSIT", amount: 20, effectiveAt: januaryFifteenth, description: "B" },
+    ]);
+
+    const inserts = insertedTransactionValues();
+    expect(inserts).toHaveLength(2);
+    expect(result.importBatchId).toEqual(expect.any(String));
+    for (const values of inserts) {
+      expect(values[values.length - 1]).toBe(result.importBatchId);
+    }
+  });
+
+  it("writes nothing when every row was already imported", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([
+      {
+        type: "DEPOSIT",
+        amount: "1500.0000",
+        effectiveAt: januaryFifteenth,
+        description: "Payroll",
+        merchant: null,
+      },
+    ]);
+
+    const result = await importTransactions("u-1", "a-1", [
+      { type: "DEPOSIT", amount: 1500, effectiveAt: januaryFifteenth, description: "Payroll" },
+    ]);
+
+    expect(result).toMatchObject({ imported: 0, skippedDuplicates: 1, importBatchId: null });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("findImportDuplicates", () => {
+  it("returns the indexes of rows already on the account", async () => {
+    const day = new Date("2026-03-02T00:00:00.000Z");
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([
+      {
+        type: "WITHDRAWAL",
+        amount: "85.5000",
+        effectiveAt: day,
+        description: "LOBLAWS",
+        merchant: null,
+      },
+    ]);
+
+    const result = await findImportDuplicates("u-1", "a-1", [
+      { type: "DEPOSIT", amount: 85.5, effectiveAt: day, description: "LOBLAWS" },
+      { type: "WITHDRAWAL", amount: 85.5, effectiveAt: day, description: "Loblaws" },
+    ]);
+
+    expect(result.duplicateRowIndexes).toEqual([1]);
+  });
+
+  it("only looks up history within the days the rows span", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]);
+
+    await findImportDuplicates("u-1", "a-1", [
+      { type: "DEPOSIT", amount: 1, effectiveAt: new Date("2026-03-10T12:00:00.000Z") },
+      { type: "DEPOSIT", amount: 1, effectiveAt: new Date("2026-03-02T00:00:00.000Z") },
+    ]);
+
+    const [, ...values] = prismaMock.$queryRaw.mock.calls[1];
+    expect(values).toContainEqual(new Date("2026-03-02T00:00:00.000Z"));
+    expect(values).toContainEqual(new Date("2026-03-11T00:00:00.000Z"));
+  });
+
+  it("throws 404 when the account is not the user's", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(
+      findImportDuplicates("u-1", "a-1", [{ type: "DEPOSIT", amount: 1, effectiveAt: new Date() }])
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("listImportBatches", () => {
+  it("returns the recent import summaries for the account", async () => {
+    const batch = {
+      importBatchId: "b-1",
+      transactionCount: 12,
+      importedAt: new Date("2026-11-01"),
+      earliestEffectiveAt: new Date("2026-10-01"),
+      latestEffectiveAt: new Date("2026-10-31"),
+    };
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([batch]);
+
+    const result = await listImportBatches("u-1", "a-1");
+
+    expect(result).toEqual([batch]);
+    const sql = String(prismaMock.$queryRaw.mock.calls[1][0]);
+    expect(sql).toContain('"deletedAt" IS NULL');
+    expect(sql).toContain('"importBatchId" IS NOT NULL');
+  });
+
+  it("throws 404 when the account is not the user's", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(listImportBatches("u-1", "a-1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("undoImportBatch", () => {
+  /** Runs $transaction against a tx whose updateMany reports `count` soft-deleted rows. */
+  function runUndoTransaction(count: number) {
+    const updateMany = vi.fn().mockResolvedValue({ count });
+    prismaMock.$transaction.mockImplementationOnce((fn: (tx: unknown) => unknown) =>
+      fn({
+        $queryRaw: prismaMock.$queryRaw,
+        account: { update: vi.fn().mockResolvedValue({}) },
+        transaction: { update: vi.fn().mockResolvedValue({}), updateMany },
+      })
+    );
+    return updateMany;
+  }
+
+  it("soft-deletes only this account's live rows from the import and returns the count", async () => {
+    const updateMany = runUndoTransaction(3);
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeAccountRow()])
+      .mockResolvedValueOnce([]) // balance replay
+      .mockResolvedValueOnce([]) // net-worth backfill month rows
+      .mockResolvedValueOnce([makeAccountRow({ balance: "0.00" })]);
+
+    const result = await undoImportBatch("u-1", "a-1", "b-1");
+
+    expect(result.removed).toBe(3);
+    expect(result.account.balance).toBe(0);
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        importBatchId: "b-1",
+        deletedAt: null,
+        OR: [{ toAccountId: "a-1" }, { fromAccountId: "a-1" }],
+      },
+      data: { deletedAt: expect.any(Date) },
+    });
+  });
+
+  it("throws 404 when the import has nothing left to undo", async () => {
+    runUndoTransaction(0);
+    prismaMock.$queryRaw.mockResolvedValueOnce([makeAccountRow()]);
+
+    await expect(undoImportBatch("u-1", "a-1", "b-1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("throws 404 without touching transactions when the account is not the user's", async () => {
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+    await expect(undoImportBatch("u-1", "a-1", "b-1")).rejects.toMatchObject({ statusCode: 404 });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 });

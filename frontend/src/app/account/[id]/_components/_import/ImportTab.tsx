@@ -1,17 +1,22 @@
 "use client";
 import { useRef, useState } from "react";
-import { api, AutoCategorizationRule } from "@/lib/api";
+import { toast } from "sonner";
+import { api, AutoCategorizationRule, ImportCsvResult } from "@/lib/api";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getAiSuggestionsEnabled, setAiSuggestionsEnabled } from "@/lib/import-preferences";
 
+import { CsvRow, CSV_TEMPLATE, parseCsvText, applyCategorizationRules } from "./import-csv";
 import {
-  CsvRow,
-  CSV_TEMPLATE,
-  parseCsvText,
-  resolveApiType,
-  applyCategorizationRules,
-} from "./import-csv";
+  countTransactions,
+  describeImportResult,
+  markDuplicateRows,
+  selectRowsToImport,
+  selectValidRows,
+  summarizeImportRows,
+  toImportPayloadRow,
+} from "./import-duplicates";
+import { RecentImports } from "./RecentImports";
 
 const PAGE_SIZE = 10;
 
@@ -36,12 +41,21 @@ type EditingCell = { index: number; field: "category" | "merchant" };
 
 type ImportTabProps = {
   accountId: string;
-  onSuccess: (imported: number) => void;
+  onSuccess: (result: ImportCsvResult) => void;
   onError: (message: string) => void;
+  /** Called after a past import is undone, so the account page can reload its balance and history. */
+  onImportUndone: () => void;
   categorizationRules: AutoCategorizationRule[];
 };
 
-export function ImportTab({ accountId, onSuccess, onError, categorizationRules }: ImportTabProps) {
+/** CSV import panel: parse and preview a file, flag rows already on the account, then import the rest. */
+export function ImportTab({
+  accountId,
+  onSuccess,
+  onError,
+  onImportUndone,
+  categorizationRules,
+}: ImportTabProps) {
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
   const [csvImporting, setCsvImporting] = useState(false);
@@ -52,6 +66,11 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
+  const [hasDuplicateCheckFailed, setHasDuplicateCheckFailed] = useState(false);
+  const [recentImportsRefreshKey, setRecentImportsRefreshKey] = useState(0);
+  /** Increments per chosen file so a slow duplicate check can't mark rows from a newer file. */
+  const fileGenerationRef = useRef(0);
 
   /** Toggles AI enrichment, persists the preference, and cancels any in-progress stream when disabled. */
   function handleAiToggle(enabled: boolean) {
@@ -118,13 +137,48 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
     }
   }
 
-  /** Parses the selected file into rows, applies local rules, then enriches with AI for missing categories. */
+  /**
+   * Asks the backend which parsed rows are already on the account and flags them so they are
+   * skipped by default. A failed check is non-fatal: the server re-checks on import anyway.
+   */
+  async function checkForDuplicates(rows: CsvRow[], fileGeneration: number): Promise<void> {
+    const validRows = selectValidRows(rows);
+    if (validRows.length === 0) return;
+    setIsCheckingDuplicates(true);
+    try {
+      const { duplicateRowIndexes } = await api.findImportDuplicates(
+        accountId,
+        validRows.map(toImportPayloadRow)
+      );
+      if (fileGenerationRef.current !== fileGeneration) return;
+      setCsvRows((previousRows) => markDuplicateRows(previousRows, duplicateRowIndexes));
+    } catch {
+      if (fileGenerationRef.current === fileGeneration) setHasDuplicateCheckFailed(true);
+    } finally {
+      if (fileGenerationRef.current === fileGeneration) setIsCheckingDuplicates(false);
+    }
+  }
+
+  /** Flips whether a flagged duplicate is imported anyway (for a genuine repeat purchase) or skipped. */
+  function toggleImportAnyway(index: number) {
+    setCsvRows((previousRows) =>
+      previousRows.map((row, i) =>
+        i === index ? { ...row, shouldImportAnyway: !row.shouldImportAnyway } : row
+      )
+    );
+  }
+
+  /** Parses the selected file into rows, applies local rules, flags duplicates, then enriches with AI for missing categories. */
   function handleCsvFile(file: File | null) {
     setCsvRows([]);
     setCsvParseError(null);
     setAiEnrichError(false);
     setCurrentPage(1);
     setEditingCell(null);
+    setHasDuplicateCheckFailed(false);
+    setIsCheckingDuplicates(false);
+    fileGenerationRef.current += 1;
+    const fileGeneration = fileGenerationRef.current;
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -141,6 +195,7 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
         }
         const withRules = applyCategorizationRules(parsed, ruleMap);
         setCsvRows(withRules);
+        void checkForDuplicates(withRules, fileGeneration);
         if (!aiEnabled) return;
         const abortController = new AbortController();
         aiAbortRef.current = abortController;
@@ -162,22 +217,20 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
     reader.readAsText(file);
   }
 
-  /** Imports all valid rows to the account via the API. */
+  /** Imports the valid rows (minus skipped duplicates), then clears the preview so the file can't be imported twice. */
   async function handleImportCsv() {
-    const valid = csvRows.filter((r) => !r.error);
-    if (valid.length === 0) return;
+    const rowsToImport = selectRowsToImport(csvRows);
+    if (rowsToImport.length === 0) return;
     setCsvImporting(true);
     try {
-      const rows = valid.map((r) => ({
-        type: resolveApiType(r.type),
-        amount: Number(r.amount),
-        date: r.date,
-        description: r.description,
-        merchant: r.merchant,
-        category: r.category,
-      }));
-      const result = await api.importCsv(accountId, rows);
-      onSuccess(result.imported);
+      const result = await api.importCsv(accountId, rowsToImport.map(toImportPayloadRow));
+      setCsvRows([]);
+      setCurrentPage(1);
+      setRecentImportsRefreshKey((key) => key + 1);
+      const { tone, message } = describeImportResult(result);
+      if (tone === "success") toast.success(message);
+      else toast.info(message);
+      onSuccess(result);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Import failed");
     } finally {
@@ -213,8 +266,8 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
     setEditingCell(null);
   }
 
-  const validCount = csvRows.filter((r) => !r.error).length;
-  const errorCount = csvRows.length - validCount;
+  const { errorCount, duplicateCount, importableCount } = summarizeImportRows(csvRows);
+  const isImportBlocked = csvImporting || isAiEnriching || isCheckingDuplicates;
   const totalPages = Math.max(1, Math.ceil(csvRows.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const paginatedRows = csvRows.slice(pageStart, pageStart + PAGE_SIZE);
@@ -311,7 +364,11 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
             type="file"
             accept=".csv,text/csv"
             style={{ display: "none" }}
-            onChange={(e) => handleCsvFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              handleCsvFile(e.target.files?.[0] ?? null);
+              // Clear the input so choosing the same file again still triggers a fresh parse.
+              e.target.value = "";
+            }}
           />
         </label>
         <a
@@ -355,6 +412,19 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
               {errorCount > 0 && (
                 <span style={{ color: "var(--negative-soft)" }}>{errorCount} with errors</span>
               )}
+              {isCheckingDuplicates && (
+                <span style={{ color: "var(--text-muted)" }}>Checking for duplicates…</span>
+              )}
+              {!isCheckingDuplicates && duplicateCount > 0 && (
+                <span style={{ color: "var(--brand-accent-text)", fontWeight: 600 }}>
+                  {duplicateCount} already imported
+                </span>
+              )}
+              {!isCheckingDuplicates && hasDuplicateCheckFailed && (
+                <span style={{ color: "var(--text-muted)" }}>
+                  Couldn&apos;t check for duplicates — exact repeats are still skipped on import
+                </span>
+              )}
               {isAiEnriching && (
                 <span style={{ color: "#8b5cf6", fontWeight: 600 }}>✦ AI suggesting…</span>
               )}
@@ -362,12 +432,20 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                 <span style={{ color: "var(--negative-soft)" }}>AI suggestions unavailable</span>
               )}
             </span>
-            {validCount > 0 && (
-              <span title={isAiEnriching ? "AI suggested categories are still loading" : undefined}>
+            {importableCount > 0 && (
+              <span
+                title={
+                  isAiEnriching
+                    ? "AI suggested categories are still loading"
+                    : isCheckingDuplicates
+                      ? "Still checking for duplicates"
+                      : undefined
+                }
+              >
                 <button
                   className="press"
                   onClick={handleImportCsv}
-                  disabled={csvImporting || isAiEnriching}
+                  disabled={isImportBlocked}
                   style={{
                     padding: "8px 16px",
                     background: "var(--brand-accent)",
@@ -376,14 +454,17 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                     borderRadius: "8px",
                     fontSize: "12px",
                     fontWeight: 700,
-                    cursor: csvImporting || isAiEnriching ? "not-allowed" : "pointer",
-                    opacity: csvImporting || isAiEnriching ? 0.5 : 1,
+                    cursor: isImportBlocked ? "not-allowed" : "pointer",
+                    opacity: isImportBlocked ? 0.5 : 1,
                   }}
                 >
-                  {csvImporting
-                    ? "Importing..."
-                    : `Import ${validCount} transaction${validCount !== 1 ? "s" : ""}`}
+                  {csvImporting ? "Importing..." : `Import ${countTransactions(importableCount)}`}
                 </button>
+              </span>
+            )}
+            {importableCount === 0 && duplicateCount > 0 && !isCheckingDuplicates && (
+              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                Everything in this file is already imported
               </span>
             )}
           </div>
@@ -421,11 +502,15 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                     editingCell?.index === absoluteIndex && editingCell.field === "category";
                   const isEditingMerchant =
                     editingCell?.index === absoluteIndex && editingCell.field === "merchant";
+                  const isSkippedDuplicate = row.isDuplicate === true && !row.shouldImportAnyway;
 
                   return (
                     <tr
                       key={absoluteIndex}
-                      style={{ background: row.error ? "#f8717108" : "transparent" }}
+                      style={{
+                        background: row.error ? "#f8717108" : "transparent",
+                        opacity: isSkippedDuplicate ? 0.55 : 1,
+                      }}
                     >
                       <td
                         className="num"
@@ -566,6 +651,26 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
                           <span style={{ color: "var(--negative-soft)", fontSize: "11px" }}>
                             {row.error}
                           </span>
+                        ) : row.isDuplicate ? (
+                          <span
+                            style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+                          >
+                            <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                              {row.shouldImportAnyway ? "Importing anyway" : "Already imported"}
+                            </span>
+                            <button
+                              type="button"
+                              className="import-duplicate-toggle"
+                              onClick={() => toggleImportAnyway(absoluteIndex)}
+                              aria-label={
+                                row.shouldImportAnyway
+                                  ? `Skip duplicate row ${absoluteIndex + 1}`
+                                  : `Import duplicate row ${absoluteIndex + 1} anyway`
+                              }
+                            >
+                              {row.shouldImportAnyway ? "Skip" : "Import anyway"}
+                            </button>
+                          </span>
                         ) : (
                           <span style={{ color: "var(--positive)", fontSize: "11px" }}>✓</span>
                         )}
@@ -628,6 +733,12 @@ export function ImportTab({ accountId, onSuccess, onError, categorizationRules }
           )}
         </div>
       )}
+
+      <RecentImports
+        accountId={accountId}
+        refreshKey={recentImportsRefreshKey}
+        onImportUndone={onImportUndone}
+      />
     </div>
   );
 }

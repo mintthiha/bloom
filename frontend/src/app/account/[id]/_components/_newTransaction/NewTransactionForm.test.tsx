@@ -94,6 +94,7 @@ function renderForm(overrides: Partial<React.ComponentProps<typeof NewTransactio
       transferTargets={[]}
       onSuccess={onSuccess}
       onImportSuccess={vi.fn()}
+      onImportUndone={vi.fn()}
       profile={null}
       transactionsForType={[]}
       sameTypeAccountIds={[]}

@@ -19,6 +19,10 @@ const { serviceMock } = vi.hoisted(() => ({
     setTransactionSplits: vi.fn(),
     recordReceiptPurchase: vi.fn(),
     updateAccountAppearance: vi.fn(),
+    importTransactions: vi.fn(),
+    findImportDuplicates: vi.fn(),
+    listImportBatches: vi.fn(),
+    undoImportBatch: vi.fn(),
   },
 }));
 
@@ -40,6 +44,10 @@ describe("account routes", () => {
     serviceMock.setTransactionSplits.mockReset();
     serviceMock.recordReceiptPurchase.mockReset();
     serviceMock.updateAccountAppearance.mockReset();
+    serviceMock.importTransactions.mockReset();
+    serviceMock.findImportDuplicates.mockReset();
+    serviceMock.listImportBatches.mockReset();
+    serviceMock.undoImportBatch.mockReset();
   });
 
   it("returns 401 for monthly summary when x-user-id is missing", async () => {
@@ -476,5 +484,125 @@ describe("account routes", () => {
 
     expect(response.status).toBe(200);
     expect(serviceMock.restoreAccount).toHaveBeenCalledWith("user-1", "account-1");
+  });
+  describe("CSV import", () => {
+    const validRow = { type: "withdrawal", amount: 4.5, date: "2026-01-15", description: "Coffee" };
+    const importBatchId = "3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b";
+
+    it("checks rows for duplicates and returns the flagged indexes", async () => {
+      serviceMock.findImportDuplicates.mockResolvedValue({ duplicateRowIndexes: [0] });
+
+      const response = await request(app)
+        .post("/api/accounts/account-1/import/duplicates")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ rows: [validRow] });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ duplicateRowIndexes: [0] });
+      expect(serviceMock.findImportDuplicates).toHaveBeenCalledWith("user-1", "account-1", [
+        expect.objectContaining({
+          type: "WITHDRAWAL",
+          amount: 4.5,
+          effectiveAt: new Date("2026-01-15"),
+          description: "Coffee",
+        }),
+      ]);
+    });
+
+    it("rejects a duplicate check with an invalid row before calling the service", async () => {
+      const response = await request(app)
+        .post("/api/accounts/account-1/import/duplicates")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ rows: [{ ...validRow, amount: -1 }] });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.findImportDuplicates).not.toHaveBeenCalled();
+    });
+
+    it("passes allowDuplicate through to the import only when it is true", async () => {
+      serviceMock.importTransactions.mockResolvedValue({
+        imported: 2,
+        skippedDuplicates: 0,
+        importBatchId,
+        account: { id: "account-1" },
+      });
+
+      const response = await request(app)
+        .post("/api/accounts/account-1/import")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ rows: [{ ...validRow, allowDuplicate: true }, validRow] });
+
+      expect(response.status).toBe(200);
+      expect(response.body.importBatchId).toBe(importBatchId);
+      const [, , rows] = serviceMock.importTransactions.mock.calls[0];
+      expect(rows[0].allowDuplicate).toBe(true);
+      expect(rows[1].allowDuplicate).toBeUndefined();
+    });
+
+    it("rejects a non-boolean allowDuplicate before calling the service", async () => {
+      const response = await request(app)
+        .post("/api/accounts/account-1/import")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ rows: [{ ...validRow, allowDuplicate: "yes" }] });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe("Row 1: allowDuplicate must be a boolean");
+      expect(serviceMock.importTransactions).not.toHaveBeenCalled();
+    });
+
+    it("rejects more than 500 rows before calling the service", async () => {
+      const response = await request(app)
+        .post("/api/accounts/account-1/import")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1")
+        .send({ rows: Array.from({ length: 501 }, () => validRow) });
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.importTransactions).not.toHaveBeenCalled();
+    });
+
+    it("lists the account's recent imports", async () => {
+      serviceMock.listImportBatches.mockResolvedValue([{ importBatchId, transactionCount: 3 }]);
+
+      const response = await request(app)
+        .get("/api/accounts/account-1/imports")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([{ importBatchId, transactionCount: 3 }]);
+      expect(serviceMock.listImportBatches).toHaveBeenCalledWith("user-1", "account-1");
+    });
+
+    it("undoes an import by its batch id", async () => {
+      serviceMock.undoImportBatch.mockResolvedValue({ removed: 3, account: { id: "account-1" } });
+
+      const response = await request(app)
+        .delete(`/api/accounts/account-1/imports/${importBatchId}`)
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1");
+
+      expect(response.status).toBe(200);
+      expect(response.body.removed).toBe(3);
+      expect(serviceMock.undoImportBatch).toHaveBeenCalledWith(
+        "user-1",
+        "account-1",
+        importBatchId
+      );
+    });
+
+    it("rejects an undo with a malformed batch id before calling the service", async () => {
+      const response = await request(app)
+        .delete("/api/accounts/account-1/imports/not-a-uuid")
+        .set("X-Internal-Secret", INTERNAL_SECRET)
+        .set("X-User-Id", "user-1");
+
+      expect(response.status).toBe(400);
+      expect(serviceMock.undoImportBatch).not.toHaveBeenCalled();
+    });
   });
 });

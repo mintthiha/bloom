@@ -8,6 +8,7 @@ import {
   api,
   Account,
   AutoCategorizationRule,
+  ImportCsvResult,
   Profile,
   QuickAddDraft,
   Transaction,
@@ -40,7 +41,9 @@ interface NewTransactionFormProps {
   account: Account;
   transferTargets: Account[];
   onSuccess: () => Promise<void>;
-  onImportSuccess: (imported: number) => void;
+  onImportSuccess: (result: ImportCsvResult) => void;
+  /** Called after a past CSV import is undone from the import tab. */
+  onImportUndone: () => void;
   profile: Profile | null;
   transactionsForType: Transaction[];
   sameTypeAccountIds: string[];
@@ -52,6 +55,7 @@ export function NewTransactionForm({
   transferTargets,
   onSuccess,
   onImportSuccess,
+  onImportUndone,
   profile,
   transactionsForType,
   sameTypeAccountIds,
@@ -375,11 +379,12 @@ export function NewTransactionForm({
       <div style={{ display: op === "import" ? "block" : "none" }}>
         <ImportTab
           accountId={account.id}
-          onSuccess={(imported) => {
-            onImportSuccess(imported);
+          onSuccess={(result) => {
+            onImportSuccess(result);
             setOp("deposit");
           }}
           onError={(msg) => toast.error(msg)}
+          onImportUndone={onImportUndone}
           categorizationRules={categorizationRules}
         />
       </div>
