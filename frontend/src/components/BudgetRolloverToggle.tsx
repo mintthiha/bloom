@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { api, Budget } from "@/lib/api";
 
 type Props = {
-  budget: Budget;
+  /** Only the id and current rollover state are needed, so review rows can reuse this toggle too. */
+  budget: Pick<Budget, "id" | "rolloverEnabled">;
   onChanged: () => Promise<void>;
 };
 

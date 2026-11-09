@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { prismaMock, accountMock, budgetMock, goalMock, subscriptionMock } = vi.hoisted(() => ({
-  prismaMock: {
-    $queryRaw: vi.fn(),
-  },
-  accountMock: { listAccounts: vi.fn() },
-  budgetMock: { listBudgets: vi.fn() },
-  goalMock: { listSavingsGoals: vi.fn() },
-  subscriptionMock: { getSubscriptionSummary: vi.fn() },
-}));
+const { prismaMock, accountMock, budgetMock, goalMock, subscriptionMock, reviewMock } = vi.hoisted(
+  () => ({
+    prismaMock: {
+      $queryRaw: vi.fn(),
+    },
+    accountMock: { listAccounts: vi.fn() },
+    budgetMock: { listBudgets: vi.fn() },
+    goalMock: { listSavingsGoals: vi.fn() },
+    subscriptionMock: { getSubscriptionSummary: vi.fn() },
+    reviewMock: { hasActivityInMonth: vi.fn(), hasCompletedMonthlyReview: vi.fn() },
+  })
+);
 
 vi.mock("@prisma/client", () => ({
   PrismaClient: class {
@@ -20,6 +23,7 @@ vi.mock("./accountService", () => accountMock);
 vi.mock("./budgetService", () => budgetMock);
 vi.mock("./savingsGoalService", () => goalMock);
 vi.mock("./subscriptionService", () => subscriptionMock);
+vi.mock("./reviewService", () => reviewMock);
 
 const ALL_PREFERENCES_ON = {
   billRemindersEnabled: true,
@@ -44,6 +48,95 @@ describe("reminderService", () => {
     budgetMock.listBudgets.mockReset();
     goalMock.listSavingsGoals.mockReset();
     subscriptionMock.getSubscriptionSummary.mockReset();
+    reviewMock.hasActivityInMonth.mockReset();
+    reviewMock.hasCompletedMonthlyReview.mockReset();
+  });
+
+  describe("generateMonthlyReviewReminder", () => {
+    const novemberFourth = new Date("2026-11-04T15:00:00.000Z");
+
+    it("does nothing after the first week of the month", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      const result = await generateMonthlyReviewReminder(
+        "user-1",
+        preferences(),
+        new Date("2026-11-08T12:00:00.000Z")
+      );
+      expect(result).toEqual({ createdCount: 0 });
+      expect(reviewMock.hasCompletedMonthlyReview).not.toHaveBeenCalled();
+      expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("still runs on the last day of the window", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      reviewMock.hasCompletedMonthlyReview.mockResolvedValue(true);
+      await generateMonthlyReviewReminder(
+        "user-1",
+        preferences(),
+        new Date("2026-11-07T23:00:00.000Z")
+      );
+      expect(reviewMock.hasCompletedMonthlyReview).toHaveBeenCalledWith("user-1", "2026-10");
+    });
+
+    it("skips a month the user has already reviewed", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      reviewMock.hasCompletedMonthlyReview.mockResolvedValue(true);
+      const result = await generateMonthlyReviewReminder("user-1", preferences(), novemberFourth);
+      expect(result).toEqual({ createdCount: 0 });
+      expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("skips a month with no recorded activity", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      reviewMock.hasCompletedMonthlyReview.mockResolvedValue(false);
+      reviewMock.hasActivityInMonth.mockResolvedValue(false);
+      const result = await generateMonthlyReviewReminder("user-1", preferences(), novemberFourth);
+      expect(result).toEqual({ createdCount: 0 });
+      expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("invites the user to review last month, linking straight to it", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      reviewMock.hasCompletedMonthlyReview.mockResolvedValue(false);
+      reviewMock.hasActivityInMonth.mockResolvedValue(true);
+      prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-review" }]);
+
+      const result = await generateMonthlyReviewReminder("user-1", preferences(), novemberFourth);
+
+      expect(result).toEqual({ createdCount: 1 });
+      const values = prismaMock.$queryRaw.mock.calls[0]!.slice(1);
+      expect(values).toContain("MONTHLY_REVIEW");
+      expect(values).toContain("MONTHLY_REVIEW:2026-10");
+      expect(values).toContain("Your October review is ready");
+      expect(values).toContain("/review?month=2026-10");
+    });
+
+    it("reviews December of the previous year in early January", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      reviewMock.hasCompletedMonthlyReview.mockResolvedValue(false);
+      reviewMock.hasActivityInMonth.mockResolvedValue(true);
+      prismaMock.$queryRaw.mockResolvedValueOnce([{ id: "notif-review" }]);
+
+      await generateMonthlyReviewReminder(
+        "user-1",
+        preferences(),
+        new Date("2027-01-02T12:00:00.000Z")
+      );
+
+      expect(reviewMock.hasActivityInMonth).toHaveBeenCalledWith("user-1", "2026-12");
+      expect(prismaMock.$queryRaw.mock.calls[0]!.slice(1)).toContain(
+        "Your December review is ready"
+      );
+    });
+
+    it("counts nothing when this month's reminder already exists (dedupe)", async () => {
+      const { generateMonthlyReviewReminder } = await import("./reminderService");
+      reviewMock.hasCompletedMonthlyReview.mockResolvedValue(false);
+      reviewMock.hasActivityInMonth.mockResolvedValue(true);
+      prismaMock.$queryRaw.mockResolvedValueOnce([]); // ON CONFLICT DO NOTHING
+      const result = await generateMonthlyReviewReminder("user-1", preferences(), novemberFourth);
+      expect(result).toEqual({ createdCount: 0 });
+    });
   });
 
   it("falls back to the no-profile preferences when the user has no profile", async () => {

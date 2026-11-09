@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Activity,
   BookOpen,
+  CalendarCheck,
   Landmark,
   LayoutDashboard,
   Receipt,
@@ -35,6 +36,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/budgets", label: "Budgets", icon: Wallet },
   { href: "/categories", label: "Categories", icon: Tag },
   { href: "/goals", label: "Goals", icon: Target },
+  { href: "/review", label: "Monthly review", icon: CalendarCheck },
   { href: "/learn", label: "Learn", icon: BookOpen },
   { href: "/auto-categorize", label: "Auto-categorize", icon: Sparkles },
   { href: "/activity", label: "Activity", icon: Activity },

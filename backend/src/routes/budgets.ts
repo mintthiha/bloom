@@ -92,6 +92,26 @@ router.patch("/:id/rollover", async (req: Request, res: Response, next: NextFunc
 });
 
 /**
+ * Sets one budget's limit for a single month only (the monthly review's "adjust next month").
+ */
+router.put("/:id/months/:month", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = requireObject(req.body);
+    const limit = requirePositiveNumber(body.limit, "limit");
+    res.json(
+      await budgetService.setBudgetMonthLimit(
+        uid(req),
+        req.params["id"] as string,
+        req.params["month"] as string,
+        limit
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * Moves money between two of the user's envelopes for a given month.
  */
 router.post("/move", async (req: Request, res: Response, next: NextFunction) => {

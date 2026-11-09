@@ -389,3 +389,15 @@ model RememberToken {
 
   @@index([userId])
 }
+
+/// One completed monthly review ritual. A row exists only once the user finishes reviewing that
+/// month, so the set of rows is also the user's review streak history.
+model MonthlyReview {
+  id          String   @id @default(cuid())
+  userId      String
+  /// The reviewed month as YYYY-MM, in the user's own time zone.
+  month       String
+  completedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([userId, month])
+}

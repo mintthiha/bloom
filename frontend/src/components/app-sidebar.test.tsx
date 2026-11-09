@@ -57,6 +57,7 @@ describe("AppSidebar", () => {
       ["Budgets", "/budgets"],
       ["Categories", "/categories"],
       ["Goals", "/goals"],
+      ["Monthly review", "/review"],
       ["Learn", "/learn"],
       ["Auto-categorize", "/auto-categorize"],
       ["Activity", "/activity"],

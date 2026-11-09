@@ -46,7 +46,8 @@ export type ActivityType =
   | "CATEGORY_DELETED"
   | "PROFILE_UPDATED"
   | "PROFILE_REMINDERS_UPDATED"
-  | "PROFILE_FINANCIAL_UPDATED";
+  | "PROFILE_FINANCIAL_UPDATED"
+  | "PROFILE_REVIEW_COMPLETED";
 
 export type ActivityLogEntry = {
   id: string;

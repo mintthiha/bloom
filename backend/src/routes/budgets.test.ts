@@ -10,6 +10,7 @@ const { serviceMock } = vi.hoisted(() => ({
     upsertBudget: vi.fn(),
     deleteBudget: vi.fn(),
     restoreBudget: vi.fn(),
+    setBudgetMonthLimit: vi.fn(),
   },
 }));
 
@@ -22,6 +23,40 @@ describe("budget routes", () => {
     serviceMock.upsertBudget.mockReset();
     serviceMock.deleteBudget.mockReset();
     serviceMock.restoreBudget.mockReset();
+    serviceMock.setBudgetMonthLimit.mockReset();
+  });
+
+  it("sets a single month's limit through the service", async () => {
+    serviceMock.setBudgetMonthLimit.mockResolvedValue({
+      budgetId: "budget-1",
+      month: "2026-11",
+      limit: 450,
+    });
+
+    const response = await request(app)
+      .put("/api/budgets/budget-1/months/2026-11")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ limit: 450 });
+
+    expect(response.status).toBe(200);
+    expect(serviceMock.setBudgetMonthLimit).toHaveBeenCalledWith(
+      "user-1",
+      "budget-1",
+      "2026-11",
+      450
+    );
+  });
+
+  it("rejects a non-positive month limit before calling the service", async () => {
+    const response = await request(app)
+      .put("/api/budgets/budget-1/months/2026-11")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1")
+      .send({ limit: -5 });
+
+    expect(response.status).toBe(400);
+    expect(serviceMock.setBudgetMonthLimit).not.toHaveBeenCalled();
   });
 
   it("returns 401 when x-user-id is missing", async () => {

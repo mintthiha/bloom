@@ -559,6 +559,44 @@ export async function moveBudgetMoney(
   return { fromBudgetId: source.id, toBudgetId: destination.id, month: targetMonth, amount };
 }
 
+/**
+ * Sets one envelope's limit for a single month (e.g. next month, from the monthly review) by
+ * writing that month's limit override. The template `monthlyLimit` is left alone, because every
+ * month without an override falls back to it — changing it would silently rewrite past months.
+ * Throws 400 for a malformed month or non-positive limit, 404 when the budget isn't the user's.
+ */
+export async function setBudgetMonthLimit(
+  userId: string,
+  budgetId: string,
+  month: string,
+  limit: number
+) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw new AppError(400, "month must be in YYYY-MM format");
+  }
+  if (!Number.isFinite(limit) || limit <= 0) {
+    throw new AppError(400, "Limit must be a positive number");
+  }
+  const budget = await getBudgetRecord(userId, budgetId);
+
+  await prisma.$queryRaw`
+    INSERT INTO "BudgetPeriod" ("id", "budgetId", "userId", "month", "limitOverride", "adjustment", "createdAt", "updatedAt")
+    VALUES (${randomUUID()}, ${budget.id}, ${userId}, ${`${month}-01`}::date, ${limit}, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT ("budgetId", "month")
+    DO UPDATE SET
+      "limitOverride" = EXCLUDED."limitOverride",
+      "updatedAt" = CURRENT_TIMESTAMP
+  `;
+
+  logActivity(
+    userId,
+    "BUDGET_UPDATED",
+    `Set ${budget.category} budget to $${limit.toFixed(2)} for ${month}`,
+    { budgetId: budget.id, category: budget.category, month, limit }
+  );
+  return { budgetId: budget.id, category: budget.category, month, limit };
+}
+
 /** Adds `delta` to a budget's adjustment for a month, creating the period row on first move. */
 async function applyBudgetAdjustment(
   userId: string,

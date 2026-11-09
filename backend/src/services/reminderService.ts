@@ -6,6 +6,8 @@ import { listBudgets } from "./budgetService";
 import { listSavingsGoals } from "./savingsGoalService";
 import { getSubscriptionSummary } from "./subscriptionService";
 import { highestMilestoneReached } from "./goalMilestones";
+import { hasActivityInMonth, hasCompletedMonthlyReview } from "./reviewService";
+import { isReviewReminderWindow, monthKeyOfDate, shiftMonthKey } from "./reviewCalculations";
 import { NotificationPreferences, PREFERENCES_WITHOUT_PROFILE } from "./notificationPreferences";
 
 export type NotificationKind =
@@ -14,7 +16,8 @@ export type NotificationKind =
   | "BUDGET_OVERSPEND"
   | "GOAL_REACHED"
   | "GOAL_MILESTONE"
-  | "SUBSCRIPTION_PRICE";
+  | "SUBSCRIPTION_PRICE"
+  | "MONTHLY_REVIEW";
 
 type NotificationRecord = {
   id: string;
@@ -288,6 +291,47 @@ export async function generateSubscriptionPriceAlerts(
   return { createdCount };
 }
 
+/** Month names for the review reminder title, e.g. "Your October review is ready". */
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/**
+ * Invites the user to review last month during the first week of a new month — once per month,
+ * only if they recorded anything last month and haven't already finished that review.
+ */
+export async function generateMonthlyReviewReminder(
+  userId: string,
+  _preferences: NotificationPreferences,
+  now = new Date()
+) {
+  if (!isReviewReminderWindow(now)) return { createdCount: 0 };
+  const reviewMonth = shiftMonthKey(monthKeyOfDate(now), -1);
+  if (await hasCompletedMonthlyReview(userId, reviewMonth)) return { createdCount: 0 };
+  if (!(await hasActivityInMonth(userId, reviewMonth))) return { createdCount: 0 };
+
+  const monthName = MONTH_NAMES[Number(reviewMonth.slice(5, 7)) - 1];
+  const created = await createNotification(userId, {
+    kind: "MONTHLY_REVIEW",
+    dedupeKey: `MONTHLY_REVIEW:${reviewMonth}`,
+    title: `Your ${monthName} review is ready`,
+    body: "A few minutes to see how the month went and set up the next one.",
+    linkHref: `/review?month=${reviewMonth}`,
+  });
+  return { createdCount: created ? 1 : 0 };
+}
+
 /**
  * Runs every notification generator for the user against one preferences read,
  * so each kind the user has switched off is skipped. Each generator is isolated
@@ -301,6 +345,7 @@ export async function generateNotifications(userId: string) {
     generateBudgetOverspendAlerts,
     generateGoalMilestoneAlerts,
     generateSubscriptionPriceAlerts,
+    generateMonthlyReviewReminder,
   ];
 
   let createdCount = 0;

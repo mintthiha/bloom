@@ -547,4 +547,64 @@ describe("budgetService", () => {
       })
     ).rejects.toMatchObject({ statusCode: 400, message: "month must be in YYYY-MM format" });
   });
+
+  describe("setBudgetMonthLimit", () => {
+    const groceries = {
+      id: "budget-groceries",
+      userId: "user-1",
+      category: "Groceries",
+      monthlyLimit: "400.0000",
+      rolloverEnabled: false,
+      createdAt: new Date("2026-01-01"),
+      updatedAt: new Date("2026-01-01"),
+    };
+
+    it("writes a limit override for that month only, leaving the template alone", async () => {
+      const { setBudgetMonthLimit } = await import("./budgetService");
+      prismaMock.$queryRaw.mockResolvedValueOnce([groceries]).mockResolvedValueOnce([]);
+
+      const result = await setBudgetMonthLimit("user-1", "budget-groceries", "2026-11", 450);
+
+      expect(result).toEqual({
+        budgetId: "budget-groceries",
+        category: "Groceries",
+        month: "2026-11",
+        limit: 450,
+      });
+      const [sql, ...values] = prismaMock.$queryRaw.mock.calls[1]!;
+      const text = String(sql);
+      expect(text).toContain('INSERT INTO "BudgetPeriod"');
+      expect(text).toContain('"limitOverride" = EXCLUDED."limitOverride"');
+      expect(text).not.toContain('"CategoryBudget"');
+      expect(values).toEqual(
+        expect.arrayContaining(["budget-groceries", "user-1", "2026-11-01", 450])
+      );
+      expect(logActivityMock).toHaveBeenCalledWith(
+        "user-1",
+        "BUDGET_UPDATED",
+        "Set Groceries budget to $450.00 for 2026-11",
+        expect.objectContaining({ month: "2026-11", limit: 450 })
+      );
+    });
+
+    it("throws 404 for a budget that is not the user's", async () => {
+      const { setBudgetMonthLimit } = await import("./budgetService");
+      prismaMock.$queryRaw.mockResolvedValueOnce([]);
+      await expect(setBudgetMonthLimit("user-1", "nope", "2026-11", 450)).rejects.toMatchObject({
+        statusCode: 404,
+      });
+      expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects a malformed month or non-positive limit before touching the database", async () => {
+      const { setBudgetMonthLimit } = await import("./budgetService");
+      await expect(setBudgetMonthLimit("user-1", "b", "2026-13", 450)).rejects.toMatchObject({
+        statusCode: 400,
+      });
+      await expect(setBudgetMonthLimit("user-1", "b", "2026-11", 0)).rejects.toMatchObject({
+        statusCode: 400,
+      });
+      expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+    });
+  });
 });

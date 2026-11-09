@@ -351,6 +351,99 @@ export type ImportBatchSummary = {
   latestEffectiveAt: string;
 };
 
+/** One spending category in a review, with the comparison month's amount. */
+export type ReviewCategory = {
+  category: string;
+  spending: number;
+  previousSpending: number;
+  changePercent: number | null;
+  shareOfSpending: number;
+};
+
+/** The largest single purchase in a review period. */
+export type ReviewBiggestExpense = {
+  label: string;
+  amount: number;
+  category: string | null;
+  effectiveAt: string;
+};
+
+/** One budget envelope's result for the reviewed month, plus what's set for next month. */
+export type ReviewBudget = {
+  id: string;
+  category: string;
+  limit: number;
+  available: number;
+  spent: number;
+  remaining: number;
+  isOverBudget: boolean;
+  rolloverEnabled: boolean;
+  carryOut: number;
+  nextMonthLimit: number;
+  templateLimit: number;
+};
+
+/** A savings goal's movement across the reviewed month. */
+export type ReviewGoal = {
+  id: string;
+  name: string;
+  targetAmount: number;
+  balanceAtStart: number;
+  balanceAtEnd: number;
+  contributed: number;
+  percentAtEnd: number;
+  isReached: boolean;
+  wasReachedThisMonth: boolean;
+};
+
+/** The guided monthly review for one month. */
+export type MonthlyReview = {
+  month: string;
+  previousMonth: string;
+  nextMonth: string;
+  hasActivity: boolean;
+  completedAt: string | null;
+  reviewStreak: number;
+  cashFlow: {
+    income: number;
+    spending: number;
+    netCashFlow: number;
+    savingsRate: number | null;
+    transactionCount: number;
+    previousIncome: number;
+    previousSpending: number;
+    spendingChangePercent: number | null;
+  };
+  topCategories: ReviewCategory[];
+  biggestExpense: ReviewBiggestExpense | null;
+  budgetResults: { total: number; keptCount: number; overCount: number };
+  budgets: ReviewBudget[];
+  goals: ReviewGoal[];
+};
+
+/** The "<year> in Bloom" recap. */
+export type YearInReview = {
+  year: number;
+  isYearComplete: boolean;
+  hasActivity: boolean;
+  totals: {
+    income: number;
+    spending: number;
+    netSaved: number;
+    savingsRate: number | null;
+    transactionCount: number;
+  };
+  months: { month: string; income: number; spending: number }[];
+  bestSavingMonth: { month: string; netSaved: number } | null;
+  highestSpendingMonth: { month: string; spending: number } | null;
+  activeMonthCount: number;
+  topCategories: { category: string; spending: number; shareOfSpending: number }[];
+  biggestExpense: ReviewBiggestExpense | null;
+  topMerchant: { label: string; visitCount: number; spending: number } | null;
+  reviewsCompleted: number;
+  goalsReached: string[];
+};
+
 export type SavingsGoal = {
   id: string;
   userId: string;
@@ -809,6 +902,20 @@ export const api = {
       "/budgets/move",
       { method: "POST", body: JSON.stringify(input) }
     ),
+  setBudgetMonthLimit: (id: string, month: string, limit: number) =>
+    request<{ budgetId: string; category: string; month: string; limit: number }>(
+      `/budgets/${id}/months/${month}`,
+      { method: "PUT", body: JSON.stringify({ limit }) }
+    ),
+  getMonthlyReview: (month: string, timeZone: string) =>
+    request<MonthlyReview>(withQuery("/reviews/monthly", { month, timeZone })),
+  completeMonthlyReview: (month: string) =>
+    request<{ month: string; completedAt: string; reviewStreak: number }>(
+      `/reviews/monthly/${month}/complete`,
+      { method: "POST" }
+    ),
+  getYearInReview: (year: number, timeZone: string) =>
+    request<YearInReview>(withQuery("/reviews/year", { year: String(year), timeZone })),
   deleteBudget: (id: string) => request<void>(`/budgets/${id}`, { method: "DELETE" }),
   restoreBudget: (id: string) => request<Budget>(`/budgets/${id}/restore`, { method: "POST" }),
   getSubscriptions: () => request<SubscriptionSummary>("/subscriptions"),
