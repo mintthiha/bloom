@@ -1,0 +1,427 @@
+/*
+ * The "Extravagant" look.
+ *
+ * Every rule here is scoped to `html[data-visual-style="extravagant"]` (set by VisualStyleProvider
+ * and the head script in layout.tsx), so the classic look is untouched when the attribute is
+ * "classic". The only unscoped rules are the classes owned by the effects layer itself
+ * (`.extravagant-*`, which only render while the look is on) and the settings-tile preview.
+ *
+ * Rules of the road for anything added here:
+ *  - Never put `transform`, `filter`, or `backdrop-filter` on a generic container at rest: each
+ *    makes the element the containing block for `position: fixed` descendants (in-page dialog
+ *    overlays). Hover lifts use the individual `translate` / `scale` properties on leaf controls.
+ *  - Every autonomous animation is switched off in the reduced-motion block at the bottom.
+ */
+
+@property --extravagant-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Companion hues for the user's accent. Fixed fallbacks first, then accent-relative where supported. */
+html[data-visual-style="extravagant"] {
+  --extravagant-hue-b: #a855f7;
+  --extravagant-hue-c: #22d3ee;
+  --extravagant-aurora-opacity: 0.3;
+  /* Cards turn slightly translucent and pick up a tint so the aurora glows through them. */
+  --snapshot-gradient: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--extravagant-hue-b) 14%, var(--surface-1)) 0%,
+    color-mix(in srgb, var(--surface-1) 84%, transparent) 58%
+  );
+  --shadow-hover:
+    0 22px 60px -22px color-mix(in srgb, var(--brand-accent) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--brand-accent) 22%, transparent);
+}
+html[data-visual-style="extravagant"].dark {
+  --extravagant-aurora-opacity: 0.22;
+}
+@supports (color: oklch(from red l c h)) {
+  html[data-visual-style="extravagant"] {
+    --extravagant-hue-b: oklch(from var(--brand-accent) l c calc(h + 75));
+    --extravagant-hue-c: oklch(from var(--brand-accent) l c calc(h - 85));
+  }
+}
+
+/* ── Aurora backdrop ─────────────────────────────────────────────────────────────────────────── */
+
+.extravagant-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  animation: extravagantAuroraReveal 1.6s ease both;
+}
+.extravagant-aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: var(--extravagant-aurora-opacity);
+  will-change: transform;
+}
+.extravagant-aurora-blob-1 {
+  width: 58vw;
+  height: 58vw;
+  top: -24vw;
+  left: -12vw;
+  background: var(--brand-accent);
+  animation: extravagantAuroraDriftA 24s ease-in-out infinite alternate;
+}
+.extravagant-aurora-blob-2 {
+  width: 46vw;
+  height: 46vw;
+  top: 8vh;
+  right: -14vw;
+  background: var(--extravagant-hue-b);
+  animation: extravagantAuroraDriftB 30s ease-in-out infinite alternate;
+}
+.extravagant-aurora-blob-3 {
+  width: 50vw;
+  height: 50vw;
+  bottom: -26vw;
+  left: 18vw;
+  background: var(--extravagant-hue-c);
+  animation: extravagantAuroraDriftC 27s ease-in-out infinite alternate;
+}
+.extravagant-aurora-blob-4 {
+  width: 30vw;
+  height: 30vw;
+  top: 38vh;
+  left: 34vw;
+  background: var(--extravagant-hue-b);
+  opacity: calc(var(--extravagant-aurora-opacity) * 0.6);
+  animation: extravagantAuroraDriftB 19s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes extravagantAuroraReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes extravagantAuroraDriftA {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18vw, 10vh, 0) scale(1.18);
+  }
+  100% {
+    transform: translate3d(6vw, 26vh, 0) scale(0.92);
+  }
+}
+@keyframes extravagantAuroraDriftB {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-22vw, 14vh, 0) scale(1.25) rotate(40deg);
+  }
+  100% {
+    transform: translate3d(-8vw, -10vh, 0) scale(0.9) rotate(-20deg);
+  }
+}
+@keyframes extravagantAuroraDriftC {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(14vw, -18vh, 0) scale(1.15);
+  }
+  100% {
+    transform: translate3d(-16vw, -6vh, 0) scale(1.05);
+  }
+}
+
+/* ── Cursor glow, click sparks, scroll progress ──────────────────────────────────────────────── */
+
+.extravagant-cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand-accent) 22%, transparent) 0%,
+    color-mix(in srgb, var(--extravagant-hue-b) 10%, transparent) 40%,
+    transparent 68%
+  );
+}
+/* A cursor glow makes no sense without a hovering pointer. */
+@media (hover: none) {
+  .extravagant-cursor-glow {
+    display: none;
+  }
+}
+
+.extravagant-sparks-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.extravagant-scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 30;
+  transform-origin: 0 50%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--extravagant-hue-c),
+    var(--brand-accent),
+    var(--extravagant-hue-b)
+  );
+  box-shadow: 0 0 14px color-mix(in srgb, var(--brand-accent) 70%, transparent);
+}
+
+/* ── Entrances ───────────────────────────────────────────────────────────────────────────────── */
+
+/* The existing `.fade-up` entrance becomes a deeper, blurred rise-and-settle. The staggered
+   `.fade-up-N` delays are stretched so a page visibly cascades in. */
+@keyframes extravagantRise {
+  0% {
+    opacity: 0;
+    transform: translateY(56px) scale(0.92);
+    filter: blur(14px);
+  }
+  60% {
+    opacity: 1;
+    filter: none;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+html[data-visual-style="extravagant"] .fade-up {
+  animation-name: extravagantRise;
+  animation-duration: 0.95s;
+  animation-timing-function: cubic-bezier(0.2, 1.3, 0.35, 1);
+}
+html[data-visual-style="extravagant"] .fade-up-1 {
+  animation-delay: 0.1s;
+}
+html[data-visual-style="extravagant"] .fade-up-2 {
+  animation-delay: 0.2s;
+}
+html[data-visual-style="extravagant"] .fade-up-3 {
+  animation-delay: 0.3s;
+}
+html[data-visual-style="extravagant"] .fade-up-4 {
+  animation-delay: 0.4s;
+}
+html[data-visual-style="extravagant"] .fade-up-5 {
+  animation-delay: 0.5s;
+}
+
+/* ── Cards (`.lift`): cursor spotlight + orbiting gradient border ─────────────────────────────── */
+
+html[data-visual-style="extravagant"] .lift {
+  position: relative;
+  transition:
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease;
+}
+/* Orbiting border: a conic gradient masked down to a 1px ring, spinning only while hovered. */
+html[data-visual-style="extravagant"] .lift::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from var(--extravagant-border-angle),
+    transparent 0%,
+    transparent 45%,
+    var(--extravagant-hue-c) 62%,
+    var(--brand-accent) 78%,
+    var(--extravagant-hue-b) 92%,
+    transparent 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  transition: opacity 0.35s ease;
+  animation: extravagantBorderOrbit 3.2s linear infinite;
+  animation-play-state: paused;
+}
+html[data-visual-style="extravagant"] .lift:hover::before {
+  opacity: 1;
+  animation-play-state: running;
+}
+/* Spotlight: follows `--spotlight-x/y`, published per card by useCardSpotlight. */
+html[data-visual-style="extravagant"] .lift::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    460px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    color-mix(in srgb, var(--brand-accent) 13%, transparent),
+    transparent 62%
+  );
+  transition: opacity 0.35s ease;
+}
+html[data-visual-style="extravagant"] .lift:hover::after {
+  opacity: 1;
+}
+@keyframes extravagantBorderOrbit {
+  to {
+    --extravagant-border-angle: 360deg;
+  }
+}
+
+/* ── Headings: a band of accent light sweeps across every page title ─────────────────────────── */
+
+html[data-visual-style="extravagant"] main h1 {
+  background-image: linear-gradient(
+    100deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 38%,
+    var(--extravagant-hue-c) 46%,
+    var(--brand-accent-text) 50%,
+    var(--extravagant-hue-b) 54%,
+    var(--text-primary) 62%,
+    var(--text-primary) 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: extravagantHeadingSheen 7s ease-in-out infinite;
+}
+@keyframes extravagantHeadingSheen {
+  0%,
+  35% {
+    background-position: 100% 0;
+  }
+  75%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* ── Controls: springier, glowing hover responses ────────────────────────────────────────────── */
+
+html[data-visual-style="extravagant"] .press {
+  transition:
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    scale 0.35s cubic-bezier(0.2, 1.6, 0.4, 1),
+    box-shadow 0.25s ease,
+    filter 0.15s ease;
+}
+html[data-visual-style="extravagant"] .press:not(:disabled):hover {
+  scale: 1.045;
+  box-shadow: 0 8px 26px -8px color-mix(in srgb, var(--brand-accent) 75%, transparent);
+}
+html[data-visual-style="extravagant"] .press:not(:disabled):active {
+  scale: 0.96;
+}
+
+html[data-visual-style="extravagant"] .nav-item {
+  transition:
+    box-shadow 0.15s ease,
+    translate 0.35s cubic-bezier(0.2, 1.6, 0.4, 1),
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html[data-visual-style="extravagant"] .nav-item:hover {
+  translate: 4px 0;
+}
+
+html[data-visual-style="extravagant"] .summary-stat-card {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.3s ease,
+    translate 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+html[data-visual-style="extravagant"] .summary-stat-card:not(:disabled):hover {
+  translate: 0 -5px;
+  border-color: color-mix(in srgb, var(--brand-accent) 55%, transparent);
+  box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--brand-accent) 60%, transparent);
+}
+
+/* Progress bars glow in the accent as they fill. */
+html[data-visual-style="extravagant"] .progress-fill {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--brand-accent) 55%, transparent);
+}
+
+/* ── Settings tile (profile → Appearance) ────────────────────────────────────────────────────── */
+
+/* The border lives here rather than inline so the selected and hover states can recolour it:
+   an inline border would win over these rules and leave the accent ring sitting outside a grey one. */
+.visual-style-tile {
+  border: 2px solid var(--border);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    translate 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.visual-style-tile:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-hover);
+  translate: 0 -2px;
+}
+.visual-style-tile:active {
+  translate: 0 0;
+  box-shadow: var(--shadow-pressed);
+}
+.visual-style-tile[aria-checked="true"],
+.visual-style-tile[aria-checked="true"]:hover {
+  border-color: var(--brand-accent);
+}
+
+/* The extravagant tile previews its own look even while the app is in classic. */
+.visual-style-preview-extravagant {
+  background: linear-gradient(120deg, #22d3ee, var(--brand-accent), #a855f7, #22d3ee);
+  background-size: 300% 100%;
+  animation: visualStylePreviewFlow 6s linear infinite;
+}
+@keyframes visualStylePreviewFlow {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+/* ── Reduced motion: keep the colour and glow, drop everything that moves on its own ─────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .extravagant-aurora,
+  .extravagant-aurora-blob,
+  .visual-style-preview-extravagant,
+  html[data-visual-style="extravagant"] .fade-up,
+  html[data-visual-style="extravagant"] .lift::before,
+  html[data-visual-style="extravagant"] main h1 {
+    animation: none;
+  }
+  html[data-visual-style="extravagant"] .press:not(:disabled):hover,
+  html[data-visual-style="extravagant"] .press:not(:disabled):active {
+    scale: none;
+  }
+  html[data-visual-style="extravagant"] .nav-item:hover,
+  html[data-visual-style="extravagant"] .summary-stat-card:not(:disabled):hover,
+  .visual-style-tile:hover {
+    translate: none;
+  }
+}

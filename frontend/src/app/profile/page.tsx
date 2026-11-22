@@ -10,6 +10,7 @@ import { GlanceStatsStrip } from "./_components/_glanceStats/GlanceStatsStrip";
 import { FinancialProfilePanel } from "./_components/_financialProfile/FinancialProfilePanel";
 import { NotificationSettings } from "./_components/_notificationSettings/NotificationSettings";
 import { DisplayPreferencesCard } from "./_components/_displayPreferences/DisplayPreferencesCard";
+import { VisualStyleCard } from "./_components/_visualStyle/VisualStyleCard";
 import { AccountDataPanel } from "./_components/_accountData/AccountDataPanel";
 
 export default function ProfilePage() {
@@ -57,6 +58,7 @@ export default function ProfilePage() {
       />
       <FinancialProfilePanel />
       <DisplayPreferencesCard />
+      <VisualStyleCard />
       <NotificationSettings />
       <AccountDataPanel email={savedProfile?.email ?? session?.user?.email ?? null} />
     </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
 import "./globals.css";
+import "./extravagant.css";
 import { JetBrains_Mono, Outfit } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { auth } from "@/auth";
@@ -13,7 +14,9 @@ import { DisplayPreferencesProvider } from "@/components/display-preferences-pro
 import { AccentProvider } from "@/components/accent-provider";
 import { CurrencyProvider } from "@/components/currency-provider";
 import { AppShell } from "@/components/app-shell";
+import { VisualStyleProvider } from "@/components/visual-style-provider";
 import { ACTIVE_USER_STORAGE_KEY, PER_USER_STORAGE_KEYS } from "@/lib/per-user-storage";
+import { buildVisualStyleBootScript } from "@/lib/visual-style";
 
 // Self-hosted by next/font: no render-blocking request to Google Fonts, and no layout shift as
 // the fallback swaps out. Outfit is the UI face; JetBrains Mono renders every number via `.num`.
@@ -64,6 +67,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: `(function(){try{var a=localStorage.getItem('bloom-accent');if(a)document.documentElement.style.setProperty('--brand-accent',a)}catch(e){}})();`,
           }}
         />
+        {/* Stamps the saved look (classic/extravagant) onto <html> before first paint to avoid a flash of the other one */}
+        <script dangerouslySetInnerHTML={{ __html: buildVisualStyleBootScript() }} />
         {/* Resets per-user preferences before providers hydrate when the account has changed */}
         {userId && <script dangerouslySetInnerHTML={{ __html: buildPerUserResetScript(userId) }} />}
         {/* Applies the cached privacy-mode attribute before first paint to avoid a flash of unblurred balances */}
@@ -82,7 +87,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <TooltipProvider>
                     <DashboardViewProvider>
                       <DashboardVisibilityProvider>
-                        <AppShell>{children}</AppShell>
+                        <VisualStyleProvider>
+                          <AppShell>{children}</AppShell>
+                        </VisualStyleProvider>
                       </DashboardVisibilityProvider>
                     </DashboardViewProvider>
                   </TooltipProvider>

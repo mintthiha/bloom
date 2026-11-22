@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -16,6 +17,12 @@ import { DashboardCustomizePanel } from "@/app/_components/_dashboardCustomize/D
 import { NotificationBell } from "@/app/_components/_notifications/NotificationBell";
 import { useDashboardVisibility } from "@/components/dashboard-visibility-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useVisualStyle } from "@/components/visual-style-provider";
+
+// Code-split so the animation library and effects only download once the extravagant look is on.
+const ExtravagantEffects = dynamic(() => import("@/components/extravagant/ExtravagantEffects"), {
+  ssr: false,
+});
 
 /** Routes that render standalone, without the sidebar/header/footer app chrome. */
 const CHROMELESS_ROUTES = new Set(["/login", "/register"]);
@@ -25,6 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { orbsEnabled } = useDashboardVisibility();
   const isMobile = useIsMobile();
+  const { visualStyle } = useVisualStyle();
 
   if (CHROMELESS_ROUTES.has(pathname)) {
     return <>{children}</>;
@@ -87,9 +95,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <CommandPalette />
         <ThemedToaster />
         <main style={{ flex: 1, overflowX: "hidden" }}>
+          {visualStyle === "extravagant" && <ExtravagantEffects />}
           {orbsEnabled && <AmbientOrb />}
-          {/* Content sits above the ambient orbs (which render at z-index 0). */}
-          <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+          {/* Content sits above the ambient orbs (which render at z-index 0). The data attribute
+              is the hook the extravagant page transition animates. */}
+          <div data-page-content style={{ position: "relative", zIndex: 1 }}>
+            {children}
+          </div>
         </main>
         <footer
           style={{
