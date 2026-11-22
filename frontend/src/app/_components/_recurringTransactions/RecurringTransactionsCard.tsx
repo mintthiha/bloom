@@ -16,6 +16,14 @@ import { formatLocalDate } from "@/lib/date-range";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { CollapsibleFormSection } from "./CollapsibleFormSection";
 import { runApplyDueRecurringTransactions } from "./apply-due-recurring";
+import { describeApplyDueResult } from "./apply-due-feedback";
+import {
+  getRuleDueStatus,
+  MAX_COUNTED_OCCURRENCES,
+  sortDueRulesFirst,
+} from "./recurring-due-status";
+
+const DUE_COLOR = "var(--brand-accent-text)";
 import { EmptyState } from "@/components/EmptyState";
 import { ensureCustomCategoryExists } from "@/lib/ensure-custom-category";
 import {
@@ -83,12 +91,16 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDeleteRule, setPendingDeleteRule] = useState<RecurringTransaction | null>(null);
+  /** Why each rule failed on the last "Apply due" click, so the reason stays visible on its row. */
+  const [lastApplyFailureByRuleId, setLastApplyFailureByRuleId] = useState<Record<string, string>>(
+    {}
+  );
 
   const recurringAccounts = accounts.filter((account) => account.accountType !== "CREDIT");
   const recurringCategories = form.type === "DEPOSIT" ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES;
-  const dueCount = rules.filter(
-    (rule) => rule.active && new Date(rule.nextRunAt) <= new Date()
-  ).length;
+  const now = new Date();
+  const dueCount = rules.filter((rule) => getRuleDueStatus(rule, now).isDue).length;
+  const sortedRules = sortDueRulesFirst(rules, now);
 
   /** Sets the default accountId once accounts load, if no account is selected. */
   useEffect(() => {
@@ -199,39 +211,40 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
     }
   }
 
-  /** Applies all due recurring transactions and refreshes account data. */
+  /**
+   * Applies all due recurring transactions, toasts the outcome (including which rule failed and
+   * why), then refreshes account data. Feedback is a toast, not `error` state: that only renders
+   * inside the new-rule form, which is usually collapsed.
+   */
   async function handleApplyDue() {
     setApplying(true);
-    setError(null);
     try {
       const result = await runApplyDueRecurringTransactions();
+      setLastApplyFailureByRuleId(
+        Object.fromEntries(
+          result.failures.map((failure) => [failure.recurringTransactionId, failure.message])
+        )
+      );
+      const { successMessage, errorMessage } = describeApplyDueResult(result, rules);
+      if (successMessage) toast.success(successMessage);
+      if (errorMessage) toast.error(errorMessage);
       await onChanged();
-      if (result.appliedCount > 0) {
-        toast.success(
-          `Applied ${result.appliedCount} recurring transaction${result.appliedCount === 1 ? "" : "s"}`
-        );
-      } else if (result.failedCount > 0) {
-        setError(result.failures[0]?.message ?? "Some recurring transactions could not be applied");
-      } else {
-        toast.success("No recurring transactions are due");
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to apply recurring transactions");
+      toast.error(err instanceof Error ? err.message : "Failed to apply recurring transactions");
     } finally {
       setApplying(false);
     }
   }
 
-  /** Toggles the active/paused state of a recurring rule. */
+  /** Toggles the active/paused state of a recurring rule; failures toast since the form may be closed. */
   async function handleToggle(rule: RecurringTransaction) {
     setTogglingId(rule.id);
-    setError(null);
     try {
       await api.setRecurringTransactionActive(rule.id, !rule.active);
       await onChanged();
       window.dispatchEvent(new CustomEvent("recurring-changed"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update recurring transaction");
+      toast.error(err instanceof Error ? err.message : "Failed to update recurring transaction");
     } finally {
       setTogglingId(null);
     }
@@ -240,7 +253,6 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
   /** Soft-deletes the pending recurring rule with a 5-second undo toast. */
   async function handleConfirmDelete(id: string) {
     setDeletingId(id);
-    setError(null);
     const notifyChanged = async () => {
       await onChanged();
       window.dispatchEvent(new CustomEvent("recurring-changed"));
@@ -706,164 +718,216 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
           />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {rules.map((rule) => (
-              <div
-                key={rule.id}
-                style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "12px",
-                  padding: "16px",
-                }}
-              >
+            {sortedRules.map((rule) => {
+              const dueStatus = getRuleDueStatus(rule, now);
+              const lastApplyFailure = lastApplyFailureByRuleId[rule.id];
+              const pendingCountLabel =
+                dueStatus.pendingOccurrenceCount >= MAX_COUNTED_OCCURRENCES
+                  ? `${MAX_COUNTED_OCCURRENCES}+`
+                  : `${dueStatus.pendingOccurrenceCount}`;
+              return (
                 <div
+                  key={rule.id}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    alignItems: "flex-start",
-                    marginBottom: "10px",
+                    background: "var(--surface-2)",
+                    border: `1px solid ${dueStatus.isDue ? "color-mix(in srgb, var(--brand-accent) 45%, transparent)" : "var(--border)"}`,
+                    borderRadius: "12px",
+                    padding: "16px",
                   }}
                 >
-                  <div>
-                    <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}>
-                      {rule.name}
-                    </p>
-                    {rule.merchant && (
-                      <p
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--text-muted)",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Merchant: {rule.merchant}
-                      </p>
-                    )}
-                    <p className="num" style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      <span className="balance-value">
-                        {formatCurrency(rule.amount, { hideCents })}
-                      </span>{" "}
-                      · {rule.frequency.toLowerCase()} ·{" "}
-                      {rule.accountNickname ?? rule.accountOwnerName}
-                    </p>
-                    {(rule.category || rule.description) && (
-                      <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-                        {[rule.category, rule.description].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
-                  </div>
-                  <span
+                  <div
                     style={{
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      padding: "4px 8px",
-                      borderRadius: "999px",
-                      background: rule.active ? "#22c55e22" : "#6b728022",
-                      color: rule.active ? "var(--positive)" : "var(--inactive)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      alignItems: "flex-start",
+                      marginBottom: "10px",
                     }}
                   >
-                    {rule.active ? "Active" : "Paused"}
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div>
-                    <p className="num" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                      Next run{" "}
-                      {new Date(rule.nextRunAt).toLocaleDateString("en-CA", {
-                        dateStyle: "medium",
-                      })}
-                    </p>
-                    {rule.lastRunAt && (
+                    <div>
+                      <p style={{ fontSize: "14px", fontWeight: 700, marginBottom: "4px" }}>
+                        {rule.name}
+                      </p>
+                      {rule.merchant && (
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "var(--text-muted)",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Merchant: {rule.merchant}
+                        </p>
+                      )}
                       <p
                         className="num"
-                        style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}
+                        style={{ fontSize: "12px", color: "var(--text-secondary)" }}
                       >
-                        Last applied{" "}
-                        {new Date(rule.lastRunAt).toLocaleDateString("en-CA", {
-                          dateStyle: "medium",
-                        })}
+                        <span className="balance-value">
+                          {formatCurrency(rule.amount, { hideCents })}
+                        </span>{" "}
+                        · {rule.frequency.toLowerCase()} ·{" "}
+                        {rule.accountNickname ?? rule.accountOwnerName}
                       </p>
-                    )}
+                      {(rule.category || rule.description) && (
+                        <p
+                          style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}
+                        >
+                          {[rule.category, rule.description].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        padding: "4px 8px",
+                        borderRadius: "999px",
+                        background: dueStatus.isDue
+                          ? "color-mix(in srgb, var(--brand-accent) 15%, transparent)"
+                          : rule.active
+                            ? "#22c55e22"
+                            : "#6b728022",
+                        color: dueStatus.isDue
+                          ? DUE_COLOR
+                          : rule.active
+                            ? "var(--positive)"
+                            : "var(--inactive)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {dueStatus.isDue ? "Due" : rule.active ? "Active" : "Paused"}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      onClick={() => startEditing(rule)}
-                      disabled={
-                        Boolean(editingRuleId && editingRuleId !== rule.id) ||
-                        togglingId === rule.id
-                      }
-                      style={{
-                        padding: "8px 12px",
-                        border: "1px solid var(--border)",
-                        background: "transparent",
-                        color: "var(--text-secondary)",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        cursor:
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      {dueStatus.isDue ? (
+                        <p
+                          className="num"
+                          style={{ fontSize: "12px", color: DUE_COLOR, fontWeight: 600 }}
+                        >
+                          Due since{" "}
+                          {new Date(rule.nextRunAt).toLocaleDateString("en-CA", {
+                            dateStyle: "medium",
+                          })}{" "}
+                          · {pendingCountLabel} payment
+                          {dueStatus.pendingOccurrenceCount === 1 ? "" : "s"} (
+                          <span className="balance-value">
+                            {formatCurrency(dueStatus.pendingTotal, { hideCents })}
+                          </span>
+                          ) pending
+                        </p>
+                      ) : (
+                        <p className="num" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                          Next run{" "}
+                          {new Date(rule.nextRunAt).toLocaleDateString("en-CA", {
+                            dateStyle: "medium",
+                          })}
+                        </p>
+                      )}
+                      {lastApplyFailure && (
+                        <p
+                          role="status"
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--negative-soft)",
+                            marginTop: "4px",
+                          }}
+                        >
+                          Last attempt failed: {lastApplyFailure}
+                        </p>
+                      )}
+                      {rule.lastRunAt && (
+                        <p
+                          className="num"
+                          style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px" }}
+                        >
+                          Last applied{" "}
+                          {new Date(rule.lastRunAt).toLocaleDateString("en-CA", {
+                            dateStyle: "medium",
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() => startEditing(rule)}
+                        disabled={
                           Boolean(editingRuleId && editingRuleId !== rule.id) ||
                           togglingId === rule.id
-                            ? "not-allowed"
-                            : "pointer",
-                        opacity:
-                          Boolean(editingRuleId && editingRuleId !== rule.id) ||
-                          togglingId === rule.id
-                            ? 0.45
-                            : 1,
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleToggle(rule)}
-                      disabled={togglingId === rule.id}
-                      style={{
-                        padding: "8px 12px",
-                        border: "1px solid var(--border)",
-                        background: "transparent",
-                        color: "var(--text-secondary)",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        cursor: togglingId === rule.id ? "not-allowed" : "pointer",
-                        opacity: togglingId === rule.id ? 0.45 : 1,
-                      }}
-                    >
-                      {togglingId === rule.id ? "Saving..." : rule.active ? "Pause" : "Resume"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPendingDeleteRule(rule)}
-                      disabled={deletingId === rule.id}
-                      style={{
-                        padding: "8px 12px",
-                        border: "1px solid #f8717130",
-                        background: "transparent",
-                        color: "var(--negative-soft)",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        cursor: deletingId === rule.id ? "not-allowed" : "pointer",
-                        opacity: deletingId === rule.id ? 0.45 : 1,
-                      }}
-                    >
-                      {deletingId === rule.id ? "Deleting..." : "Delete"}
-                    </button>
+                        }
+                        style={{
+                          padding: "8px 12px",
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--text-secondary)",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          cursor:
+                            Boolean(editingRuleId && editingRuleId !== rule.id) ||
+                            togglingId === rule.id
+                              ? "not-allowed"
+                              : "pointer",
+                          opacity:
+                            Boolean(editingRuleId && editingRuleId !== rule.id) ||
+                            togglingId === rule.id
+                              ? 0.45
+                              : 1,
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(rule)}
+                        disabled={togglingId === rule.id}
+                        style={{
+                          padding: "8px 12px",
+                          border: "1px solid var(--border)",
+                          background: "transparent",
+                          color: "var(--text-secondary)",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          cursor: togglingId === rule.id ? "not-allowed" : "pointer",
+                          opacity: togglingId === rule.id ? 0.45 : 1,
+                        }}
+                      >
+                        {togglingId === rule.id ? "Saving..." : rule.active ? "Pause" : "Resume"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDeleteRule(rule)}
+                        disabled={deletingId === rule.id}
+                        style={{
+                          padding: "8px 12px",
+                          border: "1px solid #f8717130",
+                          background: "transparent",
+                          color: "var(--negative-soft)",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          cursor: deletingId === rule.id ? "not-allowed" : "pointer",
+                          opacity: deletingId === rule.id ? 0.45 : 1,
+                        }}
+                      >
+                        {deletingId === rule.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CollapsibleCard>
