@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Wallet } from "lucide-react";
 import { api, Account, AccountType } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -24,6 +24,8 @@ import { SortControl } from "./_components/_filters/SortControl";
 import { AccountsTreemap } from "./_components/_chart/AccountsTreemap";
 import { AccountsTable } from "./_components/_list/AccountsTable";
 import { RefreshLinkedAccountsButton } from "./_components/RefreshLinkedAccountsButton";
+import { selectLinkedAccountIds } from "./_components/_linkedHighlight/linked-account-ids";
+import { useLinkedItemFromUrl } from "./_components/_linkedHighlight/useLinkedItemFromUrl";
 
 // Reuse the dashboard's manual-order key so a user's existing drag order carries over to this page.
 const ORDER_KEY = "bloom-account-order";
@@ -31,7 +33,8 @@ const ORDER_KEY = "bloom-account-order";
 const POSITIVE_COLOR = "var(--positive)";
 const NEGATIVE_COLOR = "var(--negative)";
 
-export default function AccountsPage() {
+/** Accounts list: loads accounts and owns filter, sort, pin, hide, order, and just-linked highlight state. */
+function AccountsPageContent() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -42,6 +45,7 @@ export default function AccountsPage() {
   const [showHidden, setShowHidden] = useState(false);
   const [customOrder, setCustomOrder] = useState<string[]>([]);
   const reportLoadFailure = useLoadFailureBoundary();
+  const linkedPlaidItemId = useLinkedItemFromUrl();
 
   /** Loads every account for the signed-in user. */
   const loadAccounts = useCallback(async () => {
@@ -123,6 +127,10 @@ export default function AccountsPage() {
 
   const pinnedSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
   const hiddenSet = useMemo(() => new Set(hiddenIds), [hiddenIds]);
+  const highlightedSet = useMemo(
+    () => selectLinkedAccountIds(accounts, linkedPlaidItemId),
+    [accounts, linkedPlaidItemId]
+  );
 
   const visibleAccounts = useMemo(() => {
     const filtered = filterAccounts(accounts, {
@@ -243,6 +251,7 @@ export default function AccountsPage() {
             draggable={sortKey === "custom"}
             pinnedIds={pinnedSet}
             hiddenIds={hiddenSet}
+            highlightedIds={highlightedSet}
             onTogglePin={handleTogglePin}
             onToggleHide={handleToggleHide}
             onReorder={handleReorder}
@@ -250,5 +259,14 @@ export default function AccountsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Wraps the page in Suspense, which Next requires for `useSearchParams` (the just-linked highlight). */
+export default function AccountsPage() {
+  return (
+    <Suspense>
+      <AccountsPageContent />
+    </Suspense>
   );
 }

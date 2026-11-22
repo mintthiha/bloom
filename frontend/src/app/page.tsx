@@ -159,7 +159,6 @@ function Home() {
               setNewlyCreatedAccountId(newAccountId);
               await loadDashboard();
             }}
-            onBankLinked={loadDashboard}
           />
         </div>
       )}

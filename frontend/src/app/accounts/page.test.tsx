@@ -33,8 +33,16 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const { navigationMock } = vi.hoisted(() => ({
+  navigationMock: {
+    replace: vi.fn(),
+    searchParams: new URLSearchParams(),
+  },
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: navigationMock.replace }),
+  useSearchParams: () => navigationMock.searchParams,
 }));
 
 /** Builds an Account with defaults so each test overrides only the fields it needs. */
@@ -69,6 +77,8 @@ describe("accounts page", () => {
     localStorage.clear();
     apiMock.listAccounts.mockReset();
     apiMock.listAccounts.mockResolvedValue(THREE_ACCOUNTS);
+    navigationMock.replace.mockReset();
+    navigationMock.searchParams = new URLSearchParams();
   });
 
   it("groups accounts into cash, registered, and credit sections", async () => {
@@ -123,5 +133,48 @@ describe("accounts page", () => {
     render(<AccountsPage />);
 
     expect(await screen.findByText("No accounts yet")).toBeInTheDocument();
+  });
+
+  describe("just-linked highlight", () => {
+    const LINKED_ACCOUNTS: Account[] = [
+      makeAccount({ id: "account-1", nickname: "Main" }),
+      makeAccount({
+        id: "old-link",
+        nickname: "Old TD Chequing",
+        isLinked: true,
+        plaidItemId: "item-old",
+        institutionName: "TD Bank",
+      }),
+      makeAccount({
+        id: "new-link",
+        nickname: "New TD Chequing",
+        isLinked: true,
+        plaidItemId: "item-new",
+        institutionName: "TD Bank",
+      }),
+    ];
+
+    it("badges only the accounts from the just-linked item and cleans the URL", async () => {
+      apiMock.listAccounts.mockResolvedValue(LINKED_ACCOUNTS);
+      navigationMock.searchParams = new URLSearchParams("linkedItem=item-new");
+      render(<AccountsPage />);
+
+      const badge = await screen.findByText("Just linked");
+      expect(screen.getAllByText("Just linked")).toHaveLength(1);
+      // The badge sits in the same row as the new account's name, not the older TD link.
+      const row = badge.closest("a");
+      expect(row).toHaveTextContent("New TD Chequing");
+      expect(row).not.toHaveTextContent("Old TD Chequing");
+      expect(navigationMock.replace).toHaveBeenCalledWith("/accounts", { scroll: false });
+    });
+
+    it("shows no badge and leaves the URL alone when nothing was just linked", async () => {
+      apiMock.listAccounts.mockResolvedValue(LINKED_ACCOUNTS);
+      render(<AccountsPage />);
+
+      await screen.findByText("Cash Accounts");
+      expect(screen.queryByText("Just linked")).not.toBeInTheDocument();
+      expect(navigationMock.replace).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Star, Eye, EyeOff, SlidersHorizontal } from "lucide-react";
 import { Account } from "@/lib/api";
@@ -19,6 +19,8 @@ interface AccountsTableProps {
   draggable: boolean;
   pinnedIds: Set<string>;
   hiddenIds: Set<string>;
+  /** Accounts that were just linked; they glow, carry a "Just linked" badge, and the first is scrolled into view. */
+  highlightedIds: Set<string>;
   onTogglePin: (id: string) => void;
   onToggleHide: (id: string) => void;
   onReorder: (draggedId: string, targetId: string) => void;
@@ -34,6 +36,7 @@ export function AccountsTable({
   draggable,
   pinnedIds,
   hiddenIds,
+  highlightedIds,
   onTogglePin,
   onToggleHide,
   onReorder,
@@ -41,6 +44,18 @@ export function AccountsTable({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const draggingGroupId = useRef<string | null>(null);
+  const firstHighlightedRowRef = useRef<HTMLDivElement | null>(null);
+  const hasScrolledToHighlightRef = useRef(false);
+
+  /** Scrolls the first just-linked account into view once its row has rendered. */
+  useEffect(() => {
+    const element = firstHighlightedRowRef.current;
+    if (hasScrolledToHighlightRef.current || !element) return;
+    hasScrolledToHighlightRef.current = true;
+    if (typeof element.scrollIntoView === "function") {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightedIds, loading, accounts]);
 
   if (loading) {
     return (
@@ -66,6 +81,10 @@ export function AccountsTable({
     ...group,
     accounts: accounts.filter((account) => group.types.includes(account.accountType)),
   })).filter((group) => group.accounts.length > 0);
+
+  const firstHighlightedId = groups
+    .flatMap((group) => group.accounts)
+    .find((account) => highlightedIds.has(account.id))?.id;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -124,10 +143,15 @@ export function AccountsTable({
               const isDragOver = dragOverId === account.id;
               const isPinned = pinnedIds.has(account.id);
               const isHidden = hiddenIds.has(account.id);
+              const isHighlighted = highlightedIds.has(account.id);
+              const restingBorderColor = isHighlighted
+                ? "color-mix(in srgb, var(--brand-accent) 55%, transparent)"
+                : "var(--border)";
 
               return (
                 <div
                   key={account.id}
+                  ref={account.id === firstHighlightedId ? firstHighlightedRowRef : undefined}
                   draggable={draggable}
                   onDragStart={(event) => {
                     if (!draggable) return;
@@ -163,12 +187,12 @@ export function AccountsTable({
                     }
                     setDragOverId(null);
                   }}
-                  className="lift"
+                  className={`lift${isHighlighted ? " linked-account-highlight" : ""}`}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     background: isDragOver ? "var(--surface-2)" : "var(--surface-1)",
-                    border: `1px solid ${isDragOver ? "color-mix(in srgb, var(--brand-accent) 40%, transparent)" : "var(--border)"}`,
+                    border: `1px solid ${isDragOver ? "color-mix(in srgb, var(--brand-accent) 40%, transparent)" : restingBorderColor}`,
                     borderRadius: "12px",
                     transition:
                       "border-color 0.2s, background 0.2s, opacity 0.15s, box-shadow 0.2s",
@@ -330,6 +354,22 @@ export function AccountsTable({
                               }}
                             >
                               Linked · {account.institutionName}
+                            </span>
+                          )}
+                          {isHighlighted && (
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background: "var(--brand-accent)",
+                                color: "#000",
+                              }}
+                            >
+                              Just linked
                             </span>
                           )}
                         </div>

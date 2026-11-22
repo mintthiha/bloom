@@ -7,16 +7,10 @@ interface ManageAccountsSectionProps {
   columns: string;
   /** Called with the new account's id after "Open account" succeeds. */
   onAccountCreated: (newAccountId: string) => Promise<void>;
-  /** Called after a bank is linked through Plaid. */
-  onBankLinked: () => Promise<void>;
 }
 
 /** Labeled section below the data cards for opening or linking accounts. */
-export function ManageAccountsSection({
-  columns,
-  onAccountCreated,
-  onBankLinked,
-}: ManageAccountsSectionProps) {
+export function ManageAccountsSection({ columns, onAccountCreated }: ManageAccountsSectionProps) {
   return (
     <>
       {/* Labeled boundary that separates the account-management actions from the data cards above. */}
@@ -76,7 +70,7 @@ export function ManageAccountsSection({
         }}
       >
         <OpenAccountCard onCreated={onAccountCreated} />
-        <LinkBankAccountCard onLinked={onBankLinked} />
+        <LinkBankAccountCard />
       </div>
     </>
   );

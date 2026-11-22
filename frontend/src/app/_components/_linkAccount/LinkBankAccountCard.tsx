@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { usePlaidLink, PlaidLinkOnSuccess } from "react-plaid-link";
 import { api } from "@/lib/api";
+import { buildLinkedAccountsUrl } from "@/lib/linked-accounts-url";
 import { toast } from "sonner";
 import { CollapsibleCard } from "@/components/collapsible-card";
-
-interface LinkBankAccountCardProps {
-  onLinked: () => Promise<void>;
-}
 
 /**
  * Dashboard card that opens Plaid Link for the user to connect an external bank account.
  * Fetches a link token on mount so the modal opens instantly when the button is clicked.
+ * After a successful link it sends the user to /accounts with the new accounts highlighted.
  */
-export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
+export function LinkBankAccountCard() {
+  const router = useRouter();
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
   const [tokenError, setTokenError] = useState(false);
@@ -35,7 +35,7 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
     };
   }, []);
 
-  /** Exchanges the Plaid public token, syncs accounts, then refreshes the dashboard. */
+  /** Exchanges the Plaid public token, syncs accounts, then opens /accounts highlighting the new ones. */
   const handleSuccess = useCallback<PlaidLinkOnSuccess>(
     async (publicToken, metadata) => {
       const institutionName = metadata.institution?.name ?? "External Bank";
@@ -45,14 +45,14 @@ export function LinkBankAccountCard({ onLinked }: LinkBankAccountCardProps) {
         toast.success(
           `Linked ${result.accountsLinked} account${result.accountsLinked !== 1 ? "s" : ""} from ${institutionName}`
         );
-        await onLinked();
+        router.push(buildLinkedAccountsUrl(result.itemId));
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to link bank account");
       } finally {
         setLinking(false);
       }
     },
-    [onLinked]
+    [router]
   );
 
   const { open, ready } = usePlaidLink({

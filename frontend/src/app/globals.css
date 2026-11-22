@@ -937,10 +937,35 @@ body {
   border-radius: 10px;
 }
 
+/* Pulsing amber ring on /accounts rows that were just linked through Plaid. Animates only
+   box-shadow and has no fill mode, so the row's inline background and .lift hover shadow return
+   once it ends; the persistent amber border comes from the row's inline style. */
+@keyframes linkedAccountHighlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  20%,
+  55% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--brand-accent) 35%, transparent),
+      0 0 22px color-mix(in srgb, var(--brand-accent) 22%, transparent);
+  }
+  38% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--brand-accent) 20%, transparent),
+      0 0 10px color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  }
+}
+.linked-account-highlight {
+  animation: linkedAccountHighlight 3.2s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fade-up,
   .flash-amber,
   .new-account-glow,
+  .linked-account-highlight,
   .content-fade-in,
   .login-glow {
     animation: none;
