@@ -109,6 +109,8 @@ export function buildDashboardCards(inputs: DashboardCardInputs): DashboardCard[
             monthlySummary={monthlySummary}
             previousMonthlySummary={previousMonthlySummary}
             recurringRules={recurringRules}
+            profile={profile}
+            goals={goals}
           />
         ),
       });

@@ -335,17 +335,15 @@ const TONE_BY_INSIGHT_SEVERITY: Record<InsightSeverity, GreetingHighlightTone> =
 };
 
 /**
- * Falls back to the top-ranked dashboard insight (overdue bills, idle cash, missing budgets) so the
- * hero still says something concrete when none of the goal-specific derivations have data.
+ * Falls back to the top-ranked dashboard insight (overdue bills, savings rate, missing budgets) so
+ * the hero still says something concrete when none of the goal-specific derivations have data.
  */
 function buildTopInsightHighlight(input: GreetingHighlightInput): GreetingHighlight | null {
   if (!input.monthlySummary) return null;
 
   const [topInsight] = generateInsights({
-    accounts: input.accounts,
     budgets: input.budgets,
     monthlySummary: input.monthlySummary,
-    previousMonthlySummary: input.previousMonthlySummary,
     recurringRules: input.recurringRules,
   });
   if (!topInsight) return null;

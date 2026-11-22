@@ -1,10 +1,19 @@
 "use client";
 import { useMemo } from "react";
 import { CircleCheck } from "lucide-react";
-import { Account, Budget, MonthlySummary, RecurringTransaction } from "@/lib/api";
+import {
+  Account,
+  Budget,
+  MonthlySummary,
+  Profile,
+  RecurringTransaction,
+  SavingsGoal,
+} from "@/lib/api";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { EmptyState } from "@/components/EmptyState";
 import { generateInsights, InsightItem, InsightSeverity } from "./insights";
+import { buildMoneyLadder } from "./money-ladder";
+import { MoneyLadderSection } from "./MoneyLadderSection";
 
 type Props = {
   accounts: Account[];
@@ -12,6 +21,8 @@ type Props = {
   monthlySummary: MonthlySummary;
   previousMonthlySummary: MonthlySummary | null;
   recurringRules: RecurringTransaction[];
+  profile: Profile | null;
+  goals: SavingsGoal[];
 };
 
 const SEVERITY_ACCENT_COLOR: Record<InsightSeverity, string> = {
@@ -65,24 +76,35 @@ function InsightRow({ item, index }: { item: InsightItem; index: number }) {
   );
 }
 
-/** Collapsible card showing up to 3 prioritized financial action items derived from dashboard data. */
+/**
+ * "Your Next Moves" card: the money ladder (where the next dollar should go) on top, then up to
+ * 3 action items for this month (budgets, overdue bills, savings rate).
+ */
 export function InsightsCard({
   accounts,
   budgets,
   monthlySummary,
   previousMonthlySummary,
   recurringRules,
+  profile,
+  goals,
 }: Props) {
-  const insights = useMemo(
+  const ladder = useMemo(
     () =>
-      generateInsights({
+      buildMoneyLadder({
         accounts,
-        budgets,
         monthlySummary,
         previousMonthlySummary,
-        recurringRules,
+        profile,
+        goals,
+        currentYear: new Date().getFullYear(),
       }),
-    [accounts, budgets, monthlySummary, previousMonthlySummary, recurringRules]
+    [accounts, monthlySummary, previousMonthlySummary, profile, goals]
+  );
+
+  const insights = useMemo(
+    () => generateInsights({ budgets, monthlySummary, recurringRules }),
+    [budgets, monthlySummary, recurringRules]
   );
 
   const warningCount = insights.filter((i) => i.severity === "warning").length;
@@ -107,25 +129,43 @@ export function InsightsCard({
     <CollapsibleCard
       eyebrow="Your Next Moves"
       title="What to focus on next"
-      description="Personalized action items based on your current data."
+      description="Where your next dollar should go, plus anything that needs attention this month."
       headerRight={headerRight}
       className="fade-up fade-up-2"
       style={{}}
     >
-      {insights.length === 0 ? (
-        <EmptyState
-          icon={CircleCheck}
-          variant="inline"
-          title="All clear"
-          description="No action items right now — your accounts are looking healthy."
-        />
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {insights.map((item, index) => (
-            <InsightRow key={item.id} item={item} index={index} />
-          ))}
-        </div>
-      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <MoneyLadderSection ladder={ladder} />
+
+        <section aria-label="This month">
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--text-secondary)",
+              marginBottom: "8px",
+            }}
+          >
+            This month
+          </p>
+          {insights.length === 0 ? (
+            <EmptyState
+              icon={CircleCheck}
+              variant="inline"
+              title="All clear"
+              description="No budget, bill, or savings-rate issues this month."
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {insights.map((item, index) => (
+                <InsightRow key={item.id} item={item} index={index} />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </CollapsibleCard>
   );
 }

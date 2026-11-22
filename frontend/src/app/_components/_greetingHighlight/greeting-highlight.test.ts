@@ -487,15 +487,16 @@ describe("selectGreetingHighlight", () => {
   it("falls back to the top dashboard insight when no goal-specific rule has data", () => {
     const highlight = selectGreetingHighlight(
       makeInput({
-        accounts: [makeAccount("CHEQUING", 5000, "a-1"), makeAccount("TFSA", 0, "a-2")],
-        monthlySummary: makeSummary(0, 0),
+        accounts: [makeAccount("CHEQUING", 5000, "a-1")],
+        // Income with no spending: no emergency-fund or spending-pace data, but a 100% savings rate.
+        monthlySummary: makeSummary(1000, 0),
       })
     );
 
     expect(highlight).toEqual({
       id: "top-insight",
-      tone: "neutral",
-      text: "$5,000 sitting in chequing.",
+      tone: "positive",
+      text: "Savings rate is 100% this month — great work.",
     });
   });
 

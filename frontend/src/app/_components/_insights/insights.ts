@@ -1,4 +1,4 @@
-import { Account, Budget, MonthlySummary, RecurringTransaction } from "@/lib/api";
+import { Budget, MonthlySummary, RecurringTransaction } from "@/lib/api";
 
 export type InsightSeverity = "warning" | "info" | "success";
 
@@ -10,10 +10,8 @@ export type InsightItem = {
 };
 
 type InsightsInput = {
-  accounts: Account[];
   budgets: Budget[];
   monthlySummary: MonthlySummary;
-  previousMonthlySummary: MonthlySummary | null;
   recurringRules: RecurringTransaction[];
 };
 
@@ -29,12 +27,10 @@ function formatCurrencyWhole(amount: number): string {
   }).format(amount);
 }
 
-/** Returns up to 3 prioritized financial action items derived from the current dashboard data. */
+/** Returns up to 3 prioritized "this month" action items: budgets, overdue bills, savings rate. */
 export function generateInsights({
-  accounts,
   budgets,
   monthlySummary,
-  previousMonthlySummary,
   recurringRules,
 }: InsightsInput): InsightItem[] {
   const insights: InsightItem[] = [];
@@ -77,56 +73,12 @@ export function generateInsights({
     });
   }
 
-  if (insights.length >= MAX_INSIGHTS) return insights;
-
-  // Rule 3: Emergency fund coverage (warning if < 1 month, info if 1–3 months)
-  const liquidBalance = accounts
-    .filter((a) => a.accountType === "CHEQUING" || a.accountType === "SAVINGS")
-    .reduce((sum, a) => sum + a.balance, 0);
-  const referenceSpending =
-    (previousMonthlySummary?.spending ?? 0) > 0
-      ? previousMonthlySummary!.spending
-      : monthlySummary.spending;
-  if (referenceSpending > 0) {
-    const monthsCovered = liquidBalance / referenceSpending;
-    if (monthsCovered < 1) {
-      insights.push({
-        id: "emergency-fund",
-        severity: "warning",
-        message: "Emergency fund covers less than 1 month of expenses",
-        detail: `You have ${formatCurrencyWhole(liquidBalance)} in liquid savings. Target 3–6 months (${formatCurrencyWhole(referenceSpending * 3)}–${formatCurrencyWhole(referenceSpending * 6)}).`,
-      });
-    } else if (monthsCovered < 3) {
-      insights.push({
-        id: "emergency-fund",
-        severity: "info",
-        message: `Emergency fund covers ~${monthsCovered.toFixed(1)} months of expenses`,
-        detail: `Good progress. Most advisors recommend 3–6 months. Target: ${formatCurrencyWhole(referenceSpending * 3)}.`,
-      });
-    }
-  }
+  // Where savings should go (emergency fund, idle cash → TFSA, …) is the money ladder's job
+  // (money-ladder.ts); these rules cover only this month's housekeeping.
 
   if (insights.length >= MAX_INSIGHTS) return insights;
 
-  // Rule 4: Idle chequing cash with registered accounts available (info)
-  const totalChequing = accounts
-    .filter((a) => a.accountType === "CHEQUING")
-    .reduce((sum, a) => sum + a.balance, 0);
-  const hasRegisteredAccounts = accounts.some(
-    (a) => a.accountType === "TFSA" || a.accountType === "RRSP" || a.accountType === "FHSA"
-  );
-  if (totalChequing > 1000 && hasRegisteredAccounts) {
-    insights.push({
-      id: "idle-chequing",
-      severity: "info",
-      message: `${formatCurrencyWhole(totalChequing)} sitting in chequing`,
-      detail: "Consider moving some to your TFSA, RRSP, or FHSA to grow it tax-free.",
-    });
-  }
-
-  if (insights.length >= MAX_INSIGHTS) return insights;
-
-  // Rule 5: Low savings rate — shown only when income exists (warning)
+  // Rule 3: Low savings rate — shown only when income exists (warning)
   if (monthlySummary.income > 0) {
     const savingsRate = monthlySummary.netCashFlow / monthlySummary.income;
     if (savingsRate < 0.1) {
@@ -141,7 +93,7 @@ export function generateInsights({
 
   if (insights.length >= MAX_INSIGHTS) return insights;
 
-  // Rule 6: No budgets set but spending exists (info)
+  // Rule 4: No budgets set but spending exists (info)
   if (budgets.length === 0 && monthlySummary.spending > 0) {
     insights.push({
       id: "no-budgets",
@@ -153,7 +105,7 @@ export function generateInsights({
 
   if (insights.length >= MAX_INSIGHTS) return insights;
 
-  // Rule 7: Good savings rate ≥ 20% — shown only when no warnings are present (success)
+  // Rule 5: Good savings rate ≥ 20% — shown only when no warnings are present (success)
   const hasWarnings = insights.some((i) => i.severity === "warning");
   if (!hasWarnings && monthlySummary.income > 0) {
     const savingsRate = monthlySummary.netCashFlow / monthlySummary.income;

@@ -1,30 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateInsights } from "./insights";
-import type { Account, Budget, MonthlySummary, RecurringTransaction } from "@/lib/api";
+import type { Budget, MonthlySummary, RecurringTransaction } from "@/lib/api";
 
 // Pin the clock to 2026-05-15 so daysLeftInMonth (= 31 - 15 = 16) is stable
 // and overdue-date comparisons are deterministic.
 const FIXED_NOW = new Date("2026-05-15T12:00:00.000Z");
-
-/** Creates an Account fixture. */
-function makeAccount(accountType: Account["accountType"], balance: number, id = "a-1"): Account {
-  return {
-    id,
-    ownerName: "Test",
-    nickname: null,
-    accountType,
-    balance,
-    frozen: false,
-    isLinked: false,
-    plaidAccountId: null,
-    plaidItemId: null,
-    institutionName: null,
-    color: null,
-    icon: null,
-    createdAt: "",
-    updatedAt: "",
-  };
-}
 
 /** Creates a Budget fixture with isOverBudget derived from the amounts. */
 function makeBudget(
@@ -93,10 +73,8 @@ function makeRule(nextRunAt: string, active = true, id = "r-1"): RecurringTransa
 }
 
 const EMPTY_INPUT = {
-  accounts: [] as Account[],
   budgets: [] as Budget[],
   monthlySummary: makeSummary(0, 0),
-  previousMonthlySummary: null,
   recurringRules: [] as RecurringTransaction[],
 };
 
@@ -229,143 +207,10 @@ describe("generateInsights — Rule 2: overdue recurring", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Rule 3: emergency fund coverage
+// Rule 3: low savings rate
 // ---------------------------------------------------------------------------
 
-describe("generateInsights — Rule 3: emergency fund coverage", () => {
-  it("produces a warning when liquid savings cover less than 1 month of expenses", () => {
-    // 500 liquid / 1000 spending = 0.5 months
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 500)],
-      monthlySummary: makeSummary(0, 1000),
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toMatchObject({ severity: "warning" });
-  });
-
-  it("produces an info insight when liquid savings cover between 1 and 3 months", () => {
-    // 2000 liquid / 1000 spending = 2 months
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("SAVINGS", 2000)],
-      monthlySummary: makeSummary(0, 1000),
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toMatchObject({ severity: "info" });
-  });
-
-  it("produces no emergency insight when liquid savings cover 3 or more months", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 3000)],
-      monthlySummary: makeSummary(0, 1000),
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toBeUndefined();
-  });
-
-  it("uses previousMonthlySummary spending as reference when it is non-zero", () => {
-    // previous spending=2000, liquid=1500 → 0.75 months → warning
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 1500)],
-      monthlySummary: makeSummary(0, 100),
-      previousMonthlySummary: makeSummary(0, 2000),
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toMatchObject({ severity: "warning" });
-  });
-
-  it("falls back to current month spending when previousMonthlySummary spending is zero", () => {
-    // previous=0, current spending=1000, liquid=2000 → 2 months → info
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 2000)],
-      monthlySummary: makeSummary(0, 1000),
-      previousMonthlySummary: makeSummary(0, 0),
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toMatchObject({ severity: "info" });
-  });
-
-  it("skips the emergency fund check entirely when both current and previous spending are zero", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 5000)],
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toBeUndefined();
-  });
-
-  it("does not count registered accounts (TFSA, RRSP) as liquid savings", () => {
-    // 5000 in TFSA is not liquid; 500 in CHEQUING → 0.5 months → warning
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("TFSA", 5000, "a-1"), makeAccount("CHEQUING", 500, "a-2")],
-      monthlySummary: makeSummary(0, 1000),
-    });
-
-    expect(result.find((i) => i.id === "emergency-fund")).toMatchObject({ severity: "warning" });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Rule 4: idle chequing cash
-// ---------------------------------------------------------------------------
-
-describe("generateInsights — Rule 4: idle chequing cash", () => {
-  it("produces an info insight when chequing balance exceeds $1000 and a registered account exists", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 2000, "a-1"), makeAccount("TFSA", 500, "a-2")],
-    });
-
-    expect(result.find((i) => i.id === "idle-chequing")).toMatchObject({ severity: "info" });
-  });
-
-  it("does not flag idle chequing when no registered account exists", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 5000)],
-    });
-
-    expect(result.find((i) => i.id === "idle-chequing")).toBeUndefined();
-  });
-
-  it("does not flag idle chequing when balance is exactly $1000", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 1000, "a-1"), makeAccount("TFSA", 500, "a-2")],
-    });
-
-    expect(result.find((i) => i.id === "idle-chequing")).toBeUndefined();
-  });
-
-  it("triggers on RRSP as a registered account type", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 2000, "a-1"), makeAccount("RRSP", 500, "a-2")],
-    });
-
-    expect(result.find((i) => i.id === "idle-chequing")).toBeTruthy();
-  });
-
-  it("triggers on FHSA as a registered account type", () => {
-    const result = generateInsights({
-      ...EMPTY_INPUT,
-      accounts: [makeAccount("CHEQUING", 2000, "a-1"), makeAccount("FHSA", 500, "a-2")],
-    });
-
-    expect(result.find((i) => i.id === "idle-chequing")).toBeTruthy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Rule 5: low savings rate
-// ---------------------------------------------------------------------------
-
-describe("generateInsights — Rule 5: low savings rate", () => {
+describe("generateInsights — Rule 3: low savings rate", () => {
   it("produces a warning when savings rate is below 10% and income is positive", () => {
     // rate = (1000 - 950) / 1000 = 5%
     const result = generateInsights({
@@ -397,10 +242,10 @@ describe("generateInsights — Rule 5: low savings rate", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Rule 6: no budgets set
+// Rule 4: no budgets set
 // ---------------------------------------------------------------------------
 
-describe("generateInsights — Rule 6: no budgets set", () => {
+describe("generateInsights — Rule 4: no budgets set", () => {
   it("produces an info insight when no budgets are set but spending exists", () => {
     const result = generateInsights({
       ...EMPTY_INPUT,
@@ -428,13 +273,12 @@ describe("generateInsights — Rule 6: no budgets set", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Rule 7: good savings rate (success, only when no warnings)
+// Rule 5: good savings rate (success, only when no warnings)
 // ---------------------------------------------------------------------------
 
-describe("generateInsights — Rule 7: good savings rate", () => {
+describe("generateInsights — Rule 5: good savings rate", () => {
   it("produces a success insight when savings rate is ≥20% and no warnings are present", () => {
-    // spending=0 keeps referenceSpending=0 so Rule 3 (emergency fund) is skipped entirely;
-    // income=1000 with no spending → 100% savings rate → Rule 7 fires
+    // income=1000 with no spending → 100% savings rate → Rule 5 fires
     const result = generateInsights({
       ...EMPTY_INPUT,
       monthlySummary: makeSummary(1000, 0),
@@ -479,45 +323,37 @@ describe("generateInsights — Rule 7: good savings rate", () => {
 });
 
 // ---------------------------------------------------------------------------
-// MAX_INSIGHTS cap (3)
+// Priority order when several rules fire
 // ---------------------------------------------------------------------------
 
-describe("generateInsights — MAX_INSIGHTS cap", () => {
+describe("generateInsights — priority order", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW);
   });
   afterEach(() => vi.useRealTimers());
 
-  it("returns at most 3 insights when more than 3 rules would match", () => {
-    // Rule 1: over-budget (1 insight)
-    // Rule 2: overdue recurring (2 insights)
-    // Rule 3: emergency fund, 2 months covered (3 insights)
-    // Rule 4: idle chequing > $1000 with TFSA — would fire but cap is reached
+  it("lists over-budget, then overdue recurring, then low savings rate", () => {
+    // rate = (1000 - 950) / 1000 = 5% → low savings rate also fires
     const result = generateInsights({
-      accounts: [makeAccount("CHEQUING", 2000, "a-1"), makeAccount("TFSA", 500, "a-2")],
       budgets: [makeBudget("Dining", 300, 400)],
-      monthlySummary: makeSummary(0, 1000),
-      previousMonthlySummary: null,
+      monthlySummary: makeSummary(1000, 950),
       recurringRules: [makeRule("2026-05-01T00:00:00.000Z")],
     });
 
-    expect(result).toHaveLength(3);
-    expect(result.find((i) => i.id === "idle-chequing")).toBeUndefined();
+    expect(result.map((i) => i.id)).toEqual([
+      "over-budget",
+      "overdue-recurring",
+      "low-savings-rate",
+    ]);
   });
 
-  it("includes the first three matching rules in priority order when the cap is hit", () => {
+  it("does not offer emergency-fund or idle-cash advice — the money ladder owns that", () => {
     const result = generateInsights({
-      accounts: [makeAccount("CHEQUING", 2000, "a-1"), makeAccount("TFSA", 500, "a-2")],
-      budgets: [makeBudget("Dining", 300, 400)],
+      ...EMPTY_INPUT,
       monthlySummary: makeSummary(0, 1000),
-      previousMonthlySummary: null,
-      recurringRules: [makeRule("2026-05-01T00:00:00.000Z")],
     });
 
-    const ids = result.map((i) => i.id);
-    expect(ids).toContain("over-budget");
-    expect(ids).toContain("overdue-recurring");
-    expect(ids).toContain("emergency-fund");
+    expect(result.map((i) => i.id)).toEqual(["no-budgets"]);
   });
 });
