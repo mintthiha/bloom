@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { AppError } from "../middleware/errorHandler";
-import { PROVINCE_CODES, normalizeEnumValue, parseOptionalDateOnly } from "./profileOptions";
+import {
+  PRIMARY_FINANCIAL_GOALS,
+  PROVINCE_CODES,
+  normalizeEnumValue,
+  parseOptionalDateOnly,
+} from "./profileOptions";
 
 /** Runs `action` and returns the AppError it throws, failing the test if it doesn't throw one. */
 function captureAppError(action: () => unknown): AppError {
@@ -43,6 +48,12 @@ describe("normalizeEnumValue", () => {
   it("rejects whitespace-only input as not in the allowed set", () => {
     expect(() => normalizeEnumValue("   ", "province", PROVINCE_CODES)).toThrow(
       "province must be one of"
+    );
+  });
+
+  it("accepts the first-home goal, which drives the FHSA step of the money ladder", () => {
+    expect(normalizeEnumValue("first_home", "primaryFinancialGoal", PRIMARY_FINANCIAL_GOALS)).toBe(
+      "FIRST_HOME"
     );
   });
 });

@@ -28,6 +28,11 @@ export const PRIMARY_FINANCIAL_GOAL_OPTIONS: {
     hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
   },
   {
+    value: "FIRST_HOME",
+    label: "Buy my first home",
+    hint: "Bloom will steer your savings toward an FHSA first, then your TFSA.",
+  },
+  {
     value: "TRACK_SPENDING",
     label: "Just track my spending",
     hint: "Saved for future use — Bloom will tailor its guidance to this goal.",
@@ -68,6 +73,7 @@ const GREETING_LEAD_BY_GOAL: Record<PrimaryFinancialGoal, string | null> = {
   EMERGENCY_FUND: "your emergency fund",
   PAY_OFF_DEBT: "your credit payoff",
   BIG_PURCHASE: "your savings goals",
+  FIRST_HOME: "your savings goals",
   // Track-spending users lead with the budget line itself, so there is nothing to warn about.
   TRACK_SPENDING: null,
 };

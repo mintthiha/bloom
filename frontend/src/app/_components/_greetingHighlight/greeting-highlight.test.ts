@@ -353,6 +353,20 @@ describe("selectGreetingHighlight", () => {
     expect(highlight?.text).toBe("Japan trip is 90% funded — $400 to go.");
   });
 
+  it("leads with the down-payment goal for a first-home saver, ahead of the emergency fund", () => {
+    const highlight = selectGreetingHighlight(
+      makeInput({
+        primaryFinancialGoal: "FIRST_HOME",
+        // Enough data for an emergency-fund line too, so the ranking is what decides.
+        accounts: [makeAccount("CHEQUING", 500, "a-1")],
+        goals: [makeGoal("Down payment", 40000, 10000, "g-1")],
+        monthlySummary: makeSummary(1000, 1000),
+      })
+    );
+
+    expect(highlight?.id).toBe("savings-goal");
+  });
+
   it("projects weeks to a savings goal when there is a surplus", () => {
     const highlight = selectGreetingHighlight(
       makeInput({

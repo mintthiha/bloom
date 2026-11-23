@@ -270,6 +270,61 @@ describe("buildMoneyLadder — step 4: tax-free savings", () => {
   });
 });
 
+describe("buildMoneyLadder — step 4 for a first-home saver", () => {
+  const COVERED_BASICS = makeAccount("savings", "SAVINGS", 5000);
+  const FIRST_HOME_PROFILE = makeProfile({ primaryFinancialGoal: "FIRST_HOME" });
+
+  it("suggests opening an FHSA instead of a TFSA, with the yearly and lifetime limits", () => {
+    const ladder = buildMoneyLadder(
+      makeInput({ accounts: [COVERED_BASICS], profile: FIRST_HOME_PROFILE })
+    );
+
+    expect(ladder.focus).toMatchObject({ stepId: "tax-sheltered", stepNumber: 4 });
+    expect(ladder.focus.headline).toBe("Open an FHSA");
+    expect(ladder.focus.detail).toContain("up to $8,000 a year, $40,000 in total");
+    expect(ladder.focus.detail).toContain("Room only starts building the year you open one");
+    expect(ladder.focus.action).toBeNull();
+  });
+
+  it("links to an existing but empty FHSA to start contributing", () => {
+    const ladder = buildMoneyLadder(
+      makeInput({
+        accounts: [COVERED_BASICS, makeAccount("fhsa", "FHSA", 0)],
+        profile: FIRST_HOME_PROFILE,
+      })
+    );
+
+    expect(ladder.focus.headline).toBe("Start contributing to your FHSA");
+    expect(ladder.focus.action).toEqual({ label: "See your FHSA room", href: "/account/fhsa" });
+  });
+
+  it("is not done by a funded TFSA alone — the FHSA comes first", () => {
+    const ladder = buildMoneyLadder(
+      makeInput({
+        accounts: [COVERED_BASICS, makeAccount("tfsa", "TFSA", 2000)],
+        profile: FIRST_HOME_PROFILE,
+      })
+    );
+
+    expect(ladder.steps[3].status).toBe("current");
+    expect(ladder.focus.headline).toBe("Open an FHSA");
+  });
+
+  it("is done once the FHSA has money in it, and step 5 keeps the FHSA top-up in view", () => {
+    const ladder = buildMoneyLadder(
+      makeInput({
+        accounts: [COVERED_BASICS, makeAccount("fhsa", "FHSA", 500)],
+        profile: FIRST_HOME_PROFILE,
+      })
+    );
+
+    expect(ladder.steps[3].status).toBe("done");
+    expect(ladder.focus.stepId).toBe("beyond-basics");
+    expect(ladder.focus.detail).toContain("Set a down-payment goal");
+    expect(ladder.focus.detail).toContain("keep topping up your FHSA (up to $8,000 a year)");
+  });
+});
+
 describe("buildMoneyLadder — step 5: beyond the basics", () => {
   const ALL_BASICS = [makeAccount("savings", "SAVINGS", 5000), makeAccount("tfsa", "TFSA", 2000)];
 

@@ -165,6 +165,7 @@ describe("describeBudgetHighlightApplicability", () => {
     expect(describeBudgetHighlightApplicability("EMERGENCY_FUND")).toContain("your emergency fund");
     expect(describeBudgetHighlightApplicability("PAY_OFF_DEBT")).toContain("your credit payoff");
     expect(describeBudgetHighlightApplicability("BIG_PURCHASE")).toContain("your savings goals");
+    expect(describeBudgetHighlightApplicability("FIRST_HOME")).toContain("your savings goals");
   });
 
   it("warns that an over-budget category still wins", () => {

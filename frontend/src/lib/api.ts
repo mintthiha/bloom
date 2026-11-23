@@ -138,6 +138,7 @@ export type PrimaryFinancialGoal =
   | "EMERGENCY_FUND"
   | "PAY_OFF_DEBT"
   | "BIG_PURCHASE"
+  | "FIRST_HOME"
   | "TRACK_SPENDING";
 
 /**

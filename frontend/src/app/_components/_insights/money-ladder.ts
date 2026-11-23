@@ -1,6 +1,10 @@
 import type { Account, MonthlySummary, Profile, SavingsGoal } from "@/lib/api";
 import { accountDisplayName } from "@/lib/account-view";
-import { calculateTfsaLifetimeRoom } from "@/lib/contribution-room";
+import {
+  calculateTfsaLifetimeRoom,
+  FHSA_ANNUAL_LIMIT,
+  FHSA_LIFETIME_LIMIT,
+} from "@/lib/contribution-room";
 import { formatCurrency } from "@/lib/format";
 
 /**
@@ -200,21 +204,54 @@ function describeTaxSheltered(
   };
 }
 
-/** Focus for step 5: the basics are covered, so point at goals. */
-function describeBeyondBasics(goals: SavingsGoal[]): Omit<MoneyLadderFocus, "stepNumber"> {
+/**
+ * Focus for step 4 when the user is saving for a first home: the FHSA comes before the TFSA,
+ * since it combines an RRSP-style deduction with TFSA-style tax-free withdrawals for the purchase.
+ */
+function describeFirstHomeSavings(accounts: Account[]): Omit<MoneyLadderFocus, "stepNumber"> {
+  const fhsaAccount = accounts.find((account) => account.accountType === "FHSA");
+  const whyFhsa = `Contributions are tax-deductible like an RRSP, and withdrawals for your first home are tax-free like a TFSA. You can put in up to ${formatWholeDollars(FHSA_ANNUAL_LIMIT)} a year, ${formatWholeDollars(FHSA_LIFETIME_LIMIT)} in total.`;
+
+  if (fhsaAccount) {
+    return {
+      stepId: "tax-sheltered",
+      headline: "Start contributing to your FHSA",
+      detail: `${whyFhsa} Once you've used this year's room, your TFSA is next.`,
+      action: { label: "See your FHSA room", href: `/account/${fhsaAccount.id}` },
+    };
+  }
+
+  return {
+    stepId: "tax-sheltered",
+    headline: "Open an FHSA",
+    detail: `${whyFhsa} Room only starts building the year you open one, so open it early even if you can't contribute yet. Add it to Bloom to track your room.`,
+    action: null,
+  };
+}
+
+/** Focus for step 5: the basics are covered, so point at goals and the yearly top-ups. */
+function describeBeyondBasics(
+  goals: SavingsGoal[],
+  isSavingForFirstHome: boolean
+): Omit<MoneyLadderFocus, "stepNumber"> {
+  const topUpSentence = isSavingForFirstHome
+    ? `keep topping up your FHSA (up to ${formatWholeDollars(FHSA_ANNUAL_LIMIT)} a year) and your TFSA each January when new room arrives.`
+    : "keep topping up your TFSA each January when new room arrives.";
+
   if (goals.length > 0) {
     return {
       stepId: "beyond-basics",
       headline: "You've covered the basics",
-      detail: `Put extra savings toward your ${goals.length} goal${goals.length !== 1 ? "s" : ""}, and keep topping up your TFSA each January when new room arrives.`,
+      detail: `Put extra savings toward your ${goals.length} goal${goals.length !== 1 ? "s" : ""}, and ${topUpSentence}`,
       action: { label: "View goals", href: "/goals" },
     };
   }
   return {
     stepId: "beyond-basics",
     headline: "You've covered the basics",
-    detail:
-      "Pick something to save for next, like a trip, a car, or a home, and keep topping up your TFSA each January when new room arrives.",
+    detail: isSavingForFirstHome
+      ? `Set a down-payment goal so you can see your progress, and ${topUpSentence}`
+      : `Pick something to save for next, like a trip, a car, or a home, and ${topUpSentence}`,
     action: { label: "Set a goal", href: "/goals" },
   };
 }
@@ -237,8 +274,13 @@ export function buildMoneyLadder({
     (account) => account.accountType === "CREDIT" && account.balance > 0
   );
   const referenceSpending = selectReferenceSpending(monthlySummary, previousMonthlySummary);
-  const hasFundedRegisteredAccount = accounts.some(
-    (account) => REGISTERED_ACCOUNT_TYPES.includes(account.accountType) && account.balance > 0
+  const isSavingForFirstHome = profile?.primaryFinancialGoal === "FIRST_HOME";
+  // A first-home saver needs the FHSA specifically; anyone else is covered by any funded registered account.
+  const taxShelteredTypes: Account["accountType"][] = isSavingForFirstHome
+    ? ["FHSA"]
+    : REGISTERED_ACCOUNT_TYPES;
+  const hasFundedTaxShelteredAccount = accounts.some(
+    (account) => taxShelteredTypes.includes(account.accountType) && account.balance > 0
   );
 
   const isStepComplete: Record<MoneyLadderStepId, boolean> = {
@@ -246,7 +288,7 @@ export function buildMoneyLadder({
     "card-debt": cardsWithBalance.length === 0,
     "emergency-fund":
       referenceSpending > 0 && liquidBalance >= referenceSpending * EMERGENCY_FUND_MONTHS,
-    "tax-sheltered": hasFundedRegisteredAccount,
+    "tax-sheltered": hasFundedTaxShelteredAccount,
     "beyond-basics": false,
   };
 
@@ -262,8 +304,11 @@ export function buildMoneyLadder({
     "starter-buffer": () => describeStarterBuffer(liquidBalance),
     "card-debt": () => describeCardDebt(cardsWithBalance),
     "emergency-fund": () => describeEmergencyFund(liquidBalance, referenceSpending),
-    "tax-sheltered": () => describeTaxSheltered(accounts, profile, currentYear),
-    "beyond-basics": () => describeBeyondBasics(goals),
+    "tax-sheltered": () =>
+      isSavingForFirstHome
+        ? describeFirstHomeSavings(accounts)
+        : describeTaxSheltered(accounts, profile, currentYear),
+    "beyond-basics": () => describeBeyondBasics(goals, isSavingForFirstHome),
   };
 
   return {

@@ -68,6 +68,15 @@ const HIGHLIGHT_PRIORITY_BY_GOAL: Record<PrimaryFinancialGoal | "DEFAULT", strin
     "emergency-fund",
     "credit-payoff",
   ],
+  // A first-home saver's headline progress is their down-payment goal, so they rank like BIG_PURCHASE.
+  FIRST_HOME: [
+    "savings-goal",
+    "over-budget",
+    "spending-pace",
+    "under-budget",
+    "emergency-fund",
+    "credit-payoff",
+  ],
   TRACK_SPENDING: [
     "over-budget",
     "under-budget",

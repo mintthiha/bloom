@@ -25,6 +25,7 @@ export const PRIMARY_FINANCIAL_GOALS = [
   "EMERGENCY_FUND",
   "PAY_OFF_DEBT",
   "BIG_PURCHASE",
+  "FIRST_HOME",
   "TRACK_SPENDING",
 ] as const;
 
