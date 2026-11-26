@@ -29,6 +29,8 @@ describe("getRuleDueStatus", () => {
       isDue: true,
       pendingOccurrenceCount: 4,
       pendingTotal: 4800,
+      nextUpcomingRunAt: new Date("2026-11-29T12:00:00.000Z"),
+      endsAfterPending: false,
     });
   });
 
@@ -37,7 +39,21 @@ describe("getRuleDueStatus", () => {
       isDue: false,
       pendingOccurrenceCount: 0,
       pendingTotal: 0,
+      nextUpcomingRunAt: null,
+      endsAfterPending: false,
     });
+  });
+
+  it("flags a rule whose end date falls before its next upcoming run", () => {
+    const status = getRuleDueStatus(makeRule({ endDate: "2026-09-01T12:00:00.000Z" }), NOW);
+    expect(status.endsAfterPending).toBe(true);
+    expect(status.nextUpcomingRunAt).toBeNull();
+  });
+
+  it("keeps the next upcoming run when the end date is still ahead of it", () => {
+    const status = getRuleDueStatus(makeRule({ endDate: "2027-12-31T12:00:00.000Z" }), NOW);
+    expect(status.endsAfterPending).toBe(false);
+    expect(status.nextUpcomingRunAt).toEqual(new Date("2026-11-29T12:00:00.000Z"));
   });
 
   it("is due when the next run is exactly now", () => {
@@ -76,6 +92,9 @@ describe("getRuleDueStatus", () => {
       NOW
     );
     expect(status.pendingOccurrenceCount).toBe(MAX_COUNTED_OCCURRENCES);
+    // The walk stopped early, so the real next run date isn't known.
+    expect(status.nextUpcomingRunAt).toBeNull();
+    expect(status.endsAfterPending).toBe(false);
   });
 });
 

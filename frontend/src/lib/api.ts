@@ -521,6 +521,11 @@ export type ApplyRecurringResult = {
   }>;
 };
 
+export type SkipMissedRecurringResult = {
+  recurring: RecurringTransaction;
+  skippedCount: number;
+};
+
 export type SubscriptionCadence = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUAL";
 
 /** Where a surfaced subscription came from: detected history, a known rule, or both agreeing. */
@@ -874,6 +879,8 @@ export const api = {
     }),
   applyDueRecurringTransactions: () =>
     request<ApplyRecurringResult>("/recurring/apply-due", { method: "POST" }),
+  skipMissedRecurringTransaction: (id: string) =>
+    request<SkipMissedRecurringResult>(`/recurring/${id}/skip-missed`, { method: "POST" }),
   setRecurringTransactionActive: (id: string, active: boolean) =>
     request<RecurringTransaction>(`/recurring/${id}`, {
       method: "PATCH",

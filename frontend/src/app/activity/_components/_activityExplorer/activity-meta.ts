@@ -29,6 +29,7 @@ export const ACTIVITY_META: Record<string, { label: string; color: string; icon:
   RECURRING_UPDATED: { label: "Recurring updated", color: "#a78bfa", icon: "✎" },
   RECURRING_PAUSED: { label: "Recurring paused", color: "#60a5fa", icon: "❚❚" },
   RECURRING_RESUMED: { label: "Recurring resumed", color: "#34d399", icon: "▶" },
+  RECURRING_SKIPPED: { label: "Recurring payments skipped", color: "#60a5fa", icon: "⇥" },
   RECURRING_DELETED: { label: "Recurring deleted", color: "var(--negative-soft)", icon: "×" },
   RECURRING_RESTORED: { label: "Recurring restored", color: "#34d399", icon: "↺" },
   MANUAL_ENTRY_CREATED: { label: "Entry added", color: "var(--positive)", icon: "+" },

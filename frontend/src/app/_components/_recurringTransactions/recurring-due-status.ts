@@ -9,6 +9,13 @@ export type RuleDueStatus = {
   pendingOccurrenceCount: number;
   /** Total amount of those pending occurrences. */
   pendingTotal: number;
+  /**
+   * Where the schedule picks up once the pending occurrences are applied or skipped. Null when
+   * the end date is reached first, or when the count hit the cap and the date isn't known.
+   */
+  nextUpcomingRunAt: Date | null;
+  /** True when the rule's end date falls before its next upcoming run, so it stops afterwards. */
+  endsAfterPending: boolean;
 };
 
 /** One frequency step forward, using the same UTC arithmetic as the backend's apply-due loop. */
@@ -25,7 +32,13 @@ function advanceRunDate(date: Date, frequency: RecurringFrequency): Date {
  * mirroring the backend: only active rules apply, and occurrences after the end date don't count.
  */
 export function getRuleDueStatus(rule: RecurringTransaction, now: Date): RuleDueStatus {
-  const notDue: RuleDueStatus = { isDue: false, pendingOccurrenceCount: 0, pendingTotal: 0 };
+  const notDue: RuleDueStatus = {
+    isDue: false,
+    pendingOccurrenceCount: 0,
+    pendingTotal: 0,
+    nextUpcomingRunAt: null,
+    endsAfterPending: false,
+  };
   if (!rule.active) return notDue;
 
   const endDate = rule.endDate ? new Date(rule.endDate) : null;
@@ -41,10 +54,14 @@ export function getRuleDueStatus(rule: RecurringTransaction, now: Date): RuleDue
   }
 
   if (pendingOccurrenceCount === 0) return notDue;
+  const endsAfterPending = Boolean(endDate && occurrence > endDate);
+  const isCountCapped = occurrence <= now && !endsAfterPending;
   return {
     isDue: true,
     pendingOccurrenceCount,
     pendingTotal: pendingOccurrenceCount * rule.amount,
+    nextUpcomingRunAt: endsAfterPending || isCountCapped ? null : occurrence,
+    endsAfterPending,
   };
 }
 

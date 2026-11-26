@@ -133,6 +133,22 @@ router.post("/apply-due", async (req: Request, res: Response, next: NextFunction
 });
 
 /**
+ * Skips every currently due occurrence of one rule without posting transactions.
+ */
+router.post("/:id/skip-missed", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json(
+      await recurringTransactionService.skipMissedRecurringOccurrences(
+        uid(req),
+        req.params["id"] as string
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * Activates or pauses one recurring rule.
  */
 router.patch("/:id", async (req: Request, res: Response, next: NextFunction) => {

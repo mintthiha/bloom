@@ -440,6 +440,116 @@ describe("setRecurringTransactionActive", () => {
   });
 });
 
+describe("skipMissedRecurringOccurrences", () => {
+  const now = new Date("2026-11-22T12:00:00.000Z");
+
+  beforeEach(() => {
+    prismaMock.$queryRaw.mockReset();
+    prismaMock.$executeRaw.mockReset();
+    prismaMock.$transaction.mockReset();
+    prismaMock.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+      fn({ $queryRaw: prismaMock.$queryRaw, $executeRaw: prismaMock.$executeRaw })
+    );
+    accountServiceMock.deposit.mockReset();
+    accountServiceMock.withdraw.mockReset();
+    logActivityMock.mockClear();
+  });
+
+  it("throws 404 when the rule does not exist", async () => {
+    const { skipMissedRecurringOccurrences } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([]);
+
+    await expect(skipMissedRecurringOccurrences("user-1", "missing", now)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("throws 400 when nothing is due, without updating the rule", async () => {
+    const { skipMissedRecurringOccurrences } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw.mockResolvedValueOnce([
+      makeRuleRow({ nextRunAt: new Date("2026-11-29T12:00:00.000Z") }),
+    ]);
+
+    await expect(skipMissedRecurringOccurrences("user-1", "rule-1", now)).rejects.toMatchObject({
+      statusCode: 400,
+      message: '"Rent" has no missed payments to skip',
+    });
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(logActivityMock).not.toHaveBeenCalled();
+  });
+
+  it("moves the rule to its next upcoming date without posting any transactions", async () => {
+    const { skipMissedRecurringOccurrences } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeRuleRow({ nextRunAt: new Date("2026-07-29T12:00:00.000Z") })])
+      .mockResolvedValueOnce([makeRuleRow({ nextRunAt: new Date("2026-11-29T12:00:00.000Z") })]);
+
+    const result = await skipMissedRecurringOccurrences("user-1", "rule-1", now);
+
+    expect(result.skippedCount).toBe(4);
+    expect(result.recurring.amount).toBe(1200);
+    expect(accountServiceMock.withdraw).not.toHaveBeenCalled();
+    expect(accountServiceMock.deposit).not.toHaveBeenCalled();
+    // The UPDATE receives the new next-run date and keeps the rule active.
+    const updateValues = prismaMock.$queryRaw.mock.calls[1].slice(1);
+    expect(updateValues).toContainEqual(new Date("2026-11-29T12:00:00.000Z"));
+    expect(updateValues).toContain(true);
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "RECURRING_SKIPPED",
+      'Skipped 4 missed payments for recurring withdrawal "Rent"',
+      expect.objectContaining({ recurringId: "rule-1", skippedCount: 4, skippedTotal: 4800 })
+    );
+  });
+
+  it("takes the per-user advisory lock before reading the rule", async () => {
+    const { skipMissedRecurringOccurrences } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeRuleRow({ nextRunAt: new Date("2026-11-01T12:00:00.000Z") })])
+      .mockResolvedValueOnce([makeRuleRow()]);
+
+    await skipMissedRecurringOccurrences("user-1", "rule-1", now);
+
+    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(prismaMock.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prismaMock.$queryRaw.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("deactivates the rule when skipping walks past its end date", async () => {
+    const { skipMissedRecurringOccurrences } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([
+        makeRuleRow({
+          nextRunAt: new Date("2026-09-29T12:00:00.000Z"),
+          endDate: new Date("2026-10-31T12:00:00.000Z"),
+        }),
+      ])
+      .mockResolvedValueOnce([makeRuleRow({ active: false })]);
+
+    const result = await skipMissedRecurringOccurrences("user-1", "rule-1", now);
+
+    expect(result.skippedCount).toBe(2);
+    expect(prismaMock.$queryRaw.mock.calls[1].slice(1)).toContain(false);
+  });
+
+  it("uses the singular wording for one skipped payment", async () => {
+    const { skipMissedRecurringOccurrences } = await import("./recurringTransactionService");
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([makeRuleRow({ nextRunAt: new Date("2026-11-01T12:00:00.000Z") })])
+      .mockResolvedValueOnce([makeRuleRow()]);
+
+    await skipMissedRecurringOccurrences("user-1", "rule-1", now);
+
+    expect(logActivityMock).toHaveBeenCalledWith(
+      "user-1",
+      "RECURRING_SKIPPED",
+      'Skipped 1 missed payment for recurring withdrawal "Rent"',
+      expect.anything()
+    );
+  });
+});
+
 describe("applyDueRecurringTransactions — endDate deactivation", () => {
   it("deactivates a rule whose nextRunAt has already passed endDate without applying it", async () => {
     const { applyDueRecurringTransactions } = await import("./recurringTransactionService");

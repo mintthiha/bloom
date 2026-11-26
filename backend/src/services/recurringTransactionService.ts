@@ -8,6 +8,7 @@ import {
   describeActivityFieldChanges,
   pushActivityFieldChange,
 } from "./activityChanges";
+import { advanceRunDate, planSkipMissedOccurrences } from "./recurringSchedule";
 
 export type RecurringTransactionType = "DEPOSIT" | "WITHDRAWAL";
 export type RecurringFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY";
@@ -78,23 +79,6 @@ function normalizeOptionalString(value?: string) {
   return normalized ? normalized : null;
 }
 
-function advanceRunDate(date: Date, frequency: RecurringFrequency) {
-  const next = new Date(date);
-
-  if (frequency === "WEEKLY") {
-    next.setUTCDate(next.getUTCDate() + 7);
-    return next;
-  }
-
-  if (frequency === "BIWEEKLY") {
-    next.setUTCDate(next.getUTCDate() + 14);
-    return next;
-  }
-
-  next.setUTCMonth(next.getUTCMonth() + 1);
-  return next;
-}
-
 function calculateNextRunAt(input: {
   startDate: Date;
   frequency: RecurringFrequency;
@@ -107,8 +91,13 @@ function calculateNextRunAt(input: {
   return advanceRunDate(input.lastRunAt, input.frequency);
 }
 
-async function selectRecurringTransactionById(userId: string, id: string) {
-  const rows = await prisma.$queryRaw<RecurringTransactionRecord[]>`
+/** Loads one live rule with its account labels; `client` lets a transaction reuse it. */
+async function selectRecurringTransactionById(
+  userId: string,
+  id: string,
+  client: Pick<typeof prisma, "$queryRaw"> = prisma
+) {
+  const rows = await client.$queryRaw<RecurringTransactionRecord[]>`
     SELECT
       r."id",
       r."userId",
@@ -495,6 +484,84 @@ export async function restoreRecurringTransaction(userId: string, id: string) {
     recurringId: id,
   });
   return selectRecurringTransactionById(userId, id);
+}
+
+/**
+ * Moves a rule past every occurrence that is due right now without posting any of them, for
+ * payments the user already handled elsewhere (or never wants recorded). Balances are untouched
+ * and lastRunAt stays as-is, since nothing was applied. Throws 400 when nothing is due.
+ */
+export async function skipMissedRecurringOccurrences(userId: string, id: string, now = new Date()) {
+  // Same per-user lock as apply-due, so a skip can't interleave with an apply of the same rule.
+  const result = await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+
+      const existing = await selectRecurringTransactionById(userId, id, tx);
+      if (!existing) {
+        throw new AppError(404, `Recurring transaction ${id} not found`);
+      }
+
+      const plan = planSkipMissedOccurrences(existing, now);
+      if (plan.skippedCount === 0) {
+        throw new AppError(400, `"${existing.name}" has no missed payments to skip`);
+      }
+
+      const rows = await tx.$queryRaw<RecurringTransactionRecord[]>`
+        UPDATE "RecurringTransaction"
+        SET "nextRunAt" = ${plan.nextRunAt},
+            "active" = ${plan.shouldDeactivate ? false : existing.active},
+            "updatedAt" = CURRENT_TIMESTAMP
+        WHERE "id" = ${id} AND "userId" = ${userId}
+        RETURNING
+          "id",
+          "userId",
+          "accountId",
+          "name",
+          "type",
+          "amount",
+          "category",
+          "merchant",
+          "description",
+          "frequency",
+          "startDate",
+          "endDate",
+          "nextRunAt",
+          "lastRunAt",
+          "active",
+          "createdAt",
+          "updatedAt",
+          ${existing.accountOwnerName} AS "accountOwnerName",
+          ${existing.accountNickname} AS "accountNickname",
+          ${existing.accountType} AS "accountType"
+      `;
+
+      return {
+        recurring: normalizeRecurringTransaction(rows[0]),
+        skippedCount: plan.skippedCount,
+        skippedFrom: existing.nextRunAt,
+      };
+    },
+    { timeout: 30000 }
+  );
+
+  // Logged after commit so a rolled-back skip never shows up in the activity history.
+  const { recurring, skippedCount, skippedFrom } = result;
+  const paymentLabel = skippedCount === 1 ? "payment" : "payments";
+  logActivity(
+    userId,
+    "RECURRING_SKIPPED",
+    `Skipped ${skippedCount} missed ${paymentLabel} for recurring ${recurring.type.toLowerCase()} "${recurring.name}"`,
+    {
+      recurringId: recurring.id,
+      skippedCount,
+      skippedTotal: skippedCount * recurring.amount,
+      skippedFrom: skippedFrom.toISOString(),
+      nextRunAt: recurring.nextRunAt.toISOString(),
+    }
+  );
+
+  return { recurring, skippedCount };
 }
 
 /**

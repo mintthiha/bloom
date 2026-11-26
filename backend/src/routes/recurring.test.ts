@@ -12,6 +12,7 @@ const { serviceMock } = vi.hoisted(() => ({
     setRecurringTransactionActive: vi.fn(),
     deleteRecurringTransaction: vi.fn(),
     restoreRecurringTransaction: vi.fn(),
+    skipMissedRecurringOccurrences: vi.fn(),
   },
 }));
 
@@ -26,6 +27,32 @@ describe("recurring routes", () => {
     serviceMock.setRecurringTransactionActive.mockReset();
     serviceMock.deleteRecurringTransaction.mockReset();
     serviceMock.restoreRecurringTransaction.mockReset();
+    serviceMock.skipMissedRecurringOccurrences.mockReset();
+  });
+
+  it("passes skip-missed through to the service and returns the skipped count", async () => {
+    serviceMock.skipMissedRecurringOccurrences.mockResolvedValue({
+      recurring: { id: "rule-1", name: "Rent" },
+      skippedCount: 4,
+    });
+
+    const response = await request(app)
+      .post("/api/recurring/rule-1/skip-missed")
+      .set("X-Internal-Secret", INTERNAL_SECRET)
+      .set("X-User-Id", "user-1");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ recurring: { id: "rule-1", name: "Rent" }, skippedCount: 4 });
+    expect(serviceMock.skipMissedRecurringOccurrences).toHaveBeenCalledWith("user-1", "rule-1");
+  });
+
+  it("returns 401 for skip-missed without a user id, before the service runs", async () => {
+    const response = await request(app)
+      .post("/api/recurring/rule-1/skip-missed")
+      .set("X-Internal-Secret", INTERNAL_SECRET);
+
+    expect(response.status).toBe(401);
+    expect(serviceMock.skipMissedRecurringOccurrences).not.toHaveBeenCalled();
   });
 
   it("returns 401 when x-user-id is missing", async () => {

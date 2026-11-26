@@ -22,6 +22,7 @@ import {
   MAX_COUNTED_OCCURRENCES,
   sortDueRulesFirst,
 } from "./recurring-due-status";
+import { describeSkipMissedConfirmation, describeSkipMissedSuccess } from "./skip-missed-copy";
 
 const DUE_COLOR = "var(--brand-accent-text)";
 import { EmptyState } from "@/components/EmptyState";
@@ -91,6 +92,8 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDeleteRule, setPendingDeleteRule] = useState<RecurringTransaction | null>(null);
+  const [pendingSkipRule, setPendingSkipRule] = useState<RecurringTransaction | null>(null);
+  const [skippingId, setSkippingId] = useState<string | null>(null);
   /** Why each rule failed on the last "Apply due" click, so the reason stays visible on its row. */
   const [lastApplyFailureByRuleId, setLastApplyFailureByRuleId] = useState<Record<string, string>>(
     {}
@@ -101,6 +104,13 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
   const now = new Date();
   const dueCount = rules.filter((rule) => getRuleDueStatus(rule, now).isDue).length;
   const sortedRules = sortDueRulesFirst(rules, now);
+  const skipConfirmation = pendingSkipRule
+    ? describeSkipMissedConfirmation(
+        pendingSkipRule,
+        getRuleDueStatus(pendingSkipRule, now),
+        (amount) => formatCurrency(amount, { hideCents })
+      )
+    : null;
 
   /** Sets the default accountId once accounts load, if no account is selected. */
   useEffect(() => {
@@ -250,6 +260,30 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
     }
   }
 
+  /**
+   * Moves the confirmed rule past its missed payments without posting them, then clears its
+   * stale "Last attempt failed" line, since those payments are no longer pending.
+   */
+  async function handleConfirmSkip(rule: RecurringTransaction) {
+    setSkippingId(rule.id);
+    try {
+      const result = await api.skipMissedRecurringTransaction(rule.id);
+      toast.success(describeSkipMissedSuccess(rule.name, result.skippedCount));
+      setLastApplyFailureByRuleId((previous) => {
+        const remaining = { ...previous };
+        delete remaining[rule.id];
+        return remaining;
+      });
+      await onChanged();
+      window.dispatchEvent(new CustomEvent("recurring-changed"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to skip missed payments");
+    } finally {
+      setSkippingId(null);
+      setPendingSkipRule(null);
+    }
+  }
+
   /** Soft-deletes the pending recurring rule with a 5-second undo toast. */
   async function handleConfirmDelete(id: string) {
     setDeletingId(id);
@@ -342,6 +376,42 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
                 disabled={Boolean(deletingId)}
               >
                 {deletingId ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingSkipRule !== null}
+        onOpenChange={(open) => {
+          if (!open && !skippingId) setPendingSkipRule(null);
+        }}
+      >
+        <AlertDialogContent>
+          <div style={{ padding: "12px 14px" }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{skipConfirmation?.title}</AlertDialogTitle>
+              <AlertDialogDescription>{skipConfirmation?.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                onClick={() => setPendingSkipRule(null)}
+                disabled={Boolean(skippingId)}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                type="button"
+                onClick={(event) => {
+                  // Keep the dialog open until the request settles so "Skipping..." is visible.
+                  event.preventDefault();
+                  if (pendingSkipRule) void handleConfirmSkip(pendingSkipRule);
+                }}
+                disabled={Boolean(skippingId)}
+              >
+                {skippingId ? "Skipping..." : "Skip payments"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </div>
@@ -861,6 +931,29 @@ export function RecurringTransactionsCard({ rules, accounts, onChanged }: Props)
                       )}
                     </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {dueStatus.isDue && (
+                        <button
+                          type="button"
+                          className="press"
+                          onClick={() => setPendingSkipRule(rule)}
+                          disabled={skippingId === rule.id || applying}
+                          title="Move past the missed payments without recording them"
+                          style={{
+                            padding: "8px 12px",
+                            border:
+                              "1px solid color-mix(in srgb, var(--brand-accent) 45%, transparent)",
+                            background: "transparent",
+                            color: DUE_COLOR,
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: skippingId === rule.id || applying ? "not-allowed" : "pointer",
+                            opacity: skippingId === rule.id || applying ? 0.45 : 1,
+                          }}
+                        >
+                          {skippingId === rule.id ? "Skipping..." : "Skip missed"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => startEditing(rule)}
